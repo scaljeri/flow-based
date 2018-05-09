@@ -1,0 +1,8 @@
+<article *ngIf="state" class="is-max">
+  <h1>Flow</h1>
+  <xxl-block xxlMovable *ngFor="let entry of state.entries" class="block">
+    <ng-container *ngIf="flowTypes[entry.type]"
+                  [ngComponentOutlet]="flowTypes[entry.type]"
+                  [ngComponentOutletInjector]="createInjector(entry)"></ng-container>
+  </xxl-block>
+</article>
