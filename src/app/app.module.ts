@@ -4,28 +4,28 @@ import { NgModule } from '@angular/core';
 
 
 import { AppComponent } from './app.component';
-import { SourceComponent } from './modules/flow-based/components/source/source.component';
-import { XXL_FLOW_TYPES } from './modules/flow-based/flow-based';
-import { FlowBasedModule } from './modules/flow-based/flow-based.module';
+import {FlowBasedModule, XXL_FLOW_TYPES, SourceComponent} from 'flow-based';
+import { ContextMenuComponent } from './context-menu/context-menu.component';
 
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    ContextMenuComponent
   ],
   imports: [
     BrowserModule,
     FormsModule,
     FlowBasedModule
   ],
-  providers: [
-    {
-      provide: XXL_FLOW_TYPES,
-      useValue: {
-        source: SourceComponent
-      }
-    }],
-  //entryComponents: [SourceComponent],
+  // providers: [
+  //   {
+  //     provide: XXL_FLOW_TYPES,
+  //     useValue: {
+  //       source: SourceComponent
+  //     }
+  //   }],
+  entryComponents: [SourceComponent],
   bootstrap: [AppComponent]
 })
 export class AppModule {

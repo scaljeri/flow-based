@@ -1,7 +1,11 @@
 :host {
   display: block;
-  background-color: #000;
+  background-color: #fff;
   height: 100%;
   overflow: hidden;
   padding: 1px;
+}
+
+fb-context-menu  {
+  position: absolute;
 }

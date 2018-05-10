@@ -1,1 +1,8 @@
 <xxl-flow-based [(ngModel)]="model" (ngModelChange)="onUpdate()"></xxl-flow-based>
+
+<fb-context-menu
+  *ngIf="isContextMenu"
+  [style.left.px]="menuX"
+  [style.top.px]="menuY"
+  [open]="contextMenuState"
+  (close)="closeContextMenu()"></fb-context-menu>
