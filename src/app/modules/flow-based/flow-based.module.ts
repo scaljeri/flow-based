@@ -6,14 +6,15 @@ import { FlowBasedService } from './flow-based.service';
 import { SourceComponent } from './components/source/source.component';
 import { DummyComponent } from './components/dummy/dummy.component';
 import { BlockComponent } from './block/block.component';
-import { DraggableDirective } from './block/draggable/draggable.directive';
-import { MovableDirective } from './block/movable/movable.directive';
+import { DraggableDirective } from './drag-drop/draggable/draggable.directive';
+import { MovableDirective } from './drag-drop/movable/movable.directive';
+import { MovableAreaDirective } from './drag-drop/movable-area/movable-area.directive';
 
 @NgModule({
   imports: [
     CommonModule
   ],
-  declarations: [FlowBasedComponent, SourceComponent, DummyComponent, BlockComponent, DraggableDirective, MovableDirective],
+  declarations: [FlowBasedComponent, SourceComponent, DummyComponent, BlockComponent, DraggableDirective, MovableDirective, MovableAreaDirective],
   exports: [FlowBasedComponent],
   providers: [
     {

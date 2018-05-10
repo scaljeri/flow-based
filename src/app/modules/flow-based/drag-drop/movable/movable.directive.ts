@@ -1,4 +1,4 @@
-import { Directive, HostBinding, HostListener } from '@angular/core';
+import { Directive, ElementRef, HostBinding, HostListener } from '@angular/core';
 import { DomSanitizer, SafeStyle } from '@angular/platform-browser';
 import { DraggableDirective } from '../draggable/draggable.directive';
 
@@ -15,10 +15,10 @@ export class MovableDirective extends DraggableDirective {
     return this.sanitzier.bypassSecurityTrustStyle(`translateX(${this.position.x}px) translateY(${this.position.y}px)`);
   }
 
-  private position = { x: 0, y: 0};
+  public position = { x: 0, y: 0};
   private startPosition: XxlPosition;
 
-  constructor(private sanitzier: DomSanitizer) {
+  constructor(public element: ElementRef, private sanitzier: DomSanitizer) {
     super();
   }
 
