@@ -1,4 +1,6 @@
-import {Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild} from "@angular/core";
+import {Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, ViewChild} from '@angular/core';
+
+// https://codepen.io/lbebber/pen/LELBEo
 
 @Component({
   selector: 'fb-context-menu',
@@ -7,16 +9,24 @@ import {Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild} f
 })
 export class ContextMenuComponent implements OnInit {
   @Input() open = false;
-  @Output() close = new EventEmitter();
+  @Output() close = new EventEmitter<string | void>();
 
   constructor() { }
 
   ngOnInit() {
   }
 
+  @HostListener('click', ['$event']) onMouseDown(event): void {
+    event.stopPropagation();
+  }
+
   toggle(checked): void {
     setTimeout(() => {
       this.close.emit();
     }, 200);
+  }
+
+  add(type: string): void {
+    this.close.emit(type);
   }
 }

@@ -1,9 +1,9 @@
-import {Component, HostBinding, HostListener} from "@angular/core";
+import {Component, HostListener} from '@angular/core';
 
 @Component({
-  selector: "fb-root",
-  templateUrl: "./app.component.html",
-  styleUrls: ["./app.component.scss"]
+  selector: 'fb-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
   isContextMenu = false;
@@ -13,12 +13,7 @@ export class AppComponent {
   menuY: number;
 
   model = {
-    entries: [
-      {
-        type: 'source',
-        state: 'hi'
-      }
-    ]
+    entries: []
   };
 
   onUpdate(): void {
@@ -28,6 +23,7 @@ export class AppComponent {
   @HostListener('contextmenu', ['$event']) onContextMenu(event): void {
     event.preventDefault();
 
+    console.log('click=' + event.clientX + ' ' + event.clientY);
     if (this.isContextMenu) {
       this.contextMenuState = false;
 
@@ -44,17 +40,27 @@ export class AppComponent {
     }
   }
 
-  // @HostListener('click', ['$event']) onClick(event): void {
-  //   this.contextMenuState = false;
-  //
-  //   setTimeout(() => this.isContextMenu = false, 500);
-  // }
+  @HostListener('click', ['$event']) onClick(event): void {
+    this.contextMenuState = false;
 
-  closeContextMenu(): void {
-    setTimeout(() => {
-      this.contextMenuState = false;
-      this.isContextMenu = false;
-    }, 500);
+    setTimeout(() => this.isContextMenu = false, 500);
   }
 
+  closeContextMenu(type: string): void {
+    this.contextMenuState = false;
+
+    setTimeout(() => {
+      this.isContextMenu = false;
+
+      if (type) {
+        this.model.entries.push({
+          type,
+          state: 'sdf',
+          x: this.menuX,
+          y: this.menuY
+        });
+        console.log(this.menuX + ' ' + this.menuY);
+      }
+    }, 500);
+  }
 }
