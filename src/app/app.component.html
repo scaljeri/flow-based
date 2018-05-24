@@ -1,9 +1,56 @@
-<xxl-flow-based [(ngModel)]="model" (ngModelChange)="onUpdate()"></xxl-flow-based>
+<header>
+  <button (click)="openModal(content)" class="btn btn-primary add">Add</button>
+  <h1>FLow based programming</h1>
+</header>
 
-<fb-context-menu
-  *ngIf="isContextMenu"
-  [style.left.px]="menuX"
-  [style.top.px]="menuY"
-  [open]="contextMenuState"
-  (close)="closeContextMenu($event)"></fb-context-menu>
+<main>
+  <xxl-flow-based [(ngModel)]="model" (ngModelChange)="onUpdate()"></xxl-flow-based>
+</main>
+
+<ng-template #content let-c="close" let-d="dismiss">
+  <div class="modal-header">
+    <h4 class="modal-title">Add Flow block</h4>
+    <button type="button" class="close" aria-label="Close" (click)="d('Cross click')">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div class="d-inline-block" ngbDropdown
+         #source="ngbDropdown">
+      <button class="btn btn-outline-primary mr-2" id="dropdownSource" ngbDropdownAnchor (focus)="source.open()">Sources</button>
+      <div ngbDropdownMenu aria-labelledby="dropdownSource">
+        <button class="dropdown-item" (click)="addSource('random')">Random numbers</button>
+      </div>
+    </div>
+
+    <div class="d-inline-block" ngbDropdown #filter="ngbDropdown">
+      <button class="btn btn-outline-primary mr-2" id="dropdownFilter" ngbDropdownAnchor (focus)="filter.open()">Filters</button>
+      <div ngbDropdownMenu aria-labelledby="dropdownFilter">
+        <button class="dropdown-item">Code</button>
+        <button class="dropdown-item">Random stream</button>
+        <button class="dropdown-item">Random stream</button>
+        <button class="dropdown-item">Random stream</button>
+        <button class="dropdown-item">Random stream</button>
+      </div>
+    </div>
+
+    <div class="d-inline-block" ngbDropdown #display="ngbDropdown">
+      <button class="btn btn-outline-primary mr-2" id="dropdownDisplay" ngbDropdownAnchor (focus)="display.open()">Displays</button>
+      <div ngbDropdownMenu aria-labelledby="dropdownFilter">
+        <button class="dropdown-item">Code</button>
+        <button class="dropdown-item">Random stream</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-light" (click)="c('Close click'); addBlock()">Add</button>
+  </div>
+</ng-template>
+
+<!--<fb-context-menu-->
+<!--*ngIf="isContextMenu"-->
+<!--[style.left.px]="menuX"-->
+<!--[style.top.px]="menuY"-->
+<!--[open]="contextMenuState"-->
+<!--(close)="closeContextMenu($event)"></fb-context-menu>-->
 

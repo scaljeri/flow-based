@@ -1,11 +1,50 @@
 :host {
-  display: block;
-  background-color: #000;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   overflow: hidden;
-  padding: 1px;
+  position: relative;
+  z-index: 100;
+}
+
+header {
+  align-items: center;
+  background-color: #0D025D;
+  display: flex;
+  flex: 0 0 50px;
+  justify-content: center;
+  padding: 0 16px;
+  position: relative;
+
+  .add {
+    position: absolute;
+    left: 16px;
+  }
+
+  h1 {
+    color: #fff;
+  }
+}
+
+main {
+  flex: 1;
+
+  xxl-flow-based {
+    // border: 3px solid lightgray;
+    border-radius: 3px;
+    height: 100%;
+  }
 }
 
 fb-context-menu  {
   position: absolute;
+}
+
+.bg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: -1;
 }

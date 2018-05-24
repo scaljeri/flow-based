@@ -9,6 +9,7 @@ import {BlockComponent} from './block/block.component';
 import {DraggableDirective} from './drag-drop/draggable/draggable.directive';
 import {MovableDirective} from './drag-drop/movable/movable.directive';
 import {MovableAreaDirective} from './drag-drop/movable-area/movable-area.directive';
+import { FilterComponent } from './components/filter/filter.component';
 
 @NgModule({
   imports: [
@@ -21,7 +22,8 @@ import {MovableAreaDirective} from './drag-drop/movable-area/movable-area.direct
     BlockComponent,
     DraggableDirective,
     MovableDirective,
-    MovableAreaDirective],
+    MovableAreaDirective,
+    FilterComponent],
   exports: [FlowBasedComponent],
   providers: [
     {
