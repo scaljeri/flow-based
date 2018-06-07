@@ -1,5 +1,6 @@
 import {Component, HostBinding, Input, OnInit} from '@angular/core';
 import {Observable, Subject} from 'rxjs';
+import {FlowBasedManagerService} from '../../../../projects/flow-based/src/lib/services/flow-based-manager.service';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
@@ -50,7 +51,7 @@ export const RANDOM_NUMBERS_CONFIG = {
 export class RandomNumbersComponent implements OnInit {
   @Input() @HostBinding('class.is-config') isConfig = false;
 
-  constructor() {
+  constructor(private fbManager: FlowBasedManagerService) {
   }
 
   ngOnInit() {

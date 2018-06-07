@@ -4,7 +4,7 @@
 </header>
 
 <main>
-  <xxl-flow-based [(ngModel)]="model" (ngModelChange)="onUpdate()"></xxl-flow-based>
+  <xxl-flow-based [(ngModel)]="flow" (ngModelChange)="onUpdate()"></xxl-flow-based>
 </main>
 
 <ng-template #content let-c="close" let-d="dismiss">
@@ -14,37 +14,12 @@
       <span aria-hidden="true">&times;</span>
     </button>
   </div>
-  <div class="modal-body">
-    <div class="d-inline-block" ngbDropdown
-         #source="ngbDropdown">
-      <button class="btn btn-outline-primary mr-2" id="dropdownSource" ngbDropdownAnchor (focus)="source.open()">Sources</button>
-      <div ngbDropdownMenu aria-labelledby="dropdownSource">
-        <button class="dropdown-item" (click)="addSource('random')">Random numbers</button>
-      </div>
-    </div>
 
-    <div class="d-inline-block" ngbDropdown #filter="ngbDropdown">
-      <button class="btn btn-outline-primary mr-2" id="dropdownFilter" ngbDropdownAnchor (focus)="filter.open()">Filters</button>
-      <div ngbDropdownMenu aria-labelledby="dropdownFilter">
-        <button class="dropdown-item">Code</button>
-        <button class="dropdown-item">Random stream</button>
-        <button class="dropdown-item">Random stream</button>
-        <button class="dropdown-item">Random stream</button>
-        <button class="dropdown-item">Random stream</button>
-      </div>
-    </div>
-
-    <div class="d-inline-block" ngbDropdown #display="ngbDropdown">
-      <button class="btn btn-outline-primary mr-2" id="dropdownDisplay" ngbDropdownAnchor (focus)="display.open()">Displays</button>
-      <div ngbDropdownMenu aria-labelledby="dropdownFilter">
-        <button class="dropdown-item">Code</button>
-        <button class="dropdown-item">Random stream</button>
-      </div>
-    </div>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-light" (click)="c('Close click'); addBlock()">Add</button>
-  </div>
+  <ul class="block-list">
+    <li *ngFor="let item of models" class="list-item">
+      <button (click)="c('Close click'); addBlock(item)">{{item.title}}</button>
+    </li>
+  </ul>
 </ng-template>
 
 <!--<fb-context-menu-->

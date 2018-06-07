@@ -4,16 +4,34 @@ import { NgModule } from '@angular/core';
 
 
 import { AppComponent } from './app.component';
-import {FlowBasedModule, XXL_FLOW_TYPES, SourceComponent} from 'flow-based';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
-import {NgbButtonsModule, NgbModule} from '@ng-bootstrap/ng-bootstrap';
-import {RandomNumbersComponent} from './components/random-numbers/random-numbers.component';
+import { NgbButtonsModule, NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { RANDOM_NUMBERS_CONFIG, RandomNumbersComponent } from './components/random-numbers/random-numbers.component';
+import { ConsoleComponent } from './components/console/console.component';
+import { FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
+import { RandomNumberFactory } from './shared/random-numbers';
+
+export const fbModels = {
+  'random-numbers': {
+    component: RandomNumbersComponent,
+    configuration: RANDOM_NUMBERS_CONFIG,
+    factory: RandomNumberFactory(),
+    title: 'Random number generator'
+  },
+  console: {
+    component: ConsoleComponent,
+    configuration: {},
+    factory: null,
+    title: 'Console'
+  }
+};
 
 @NgModule({
   declarations: [
     AppComponent,
     ContextMenuComponent,
-    RandomNumbersComponent
+    RandomNumbersComponent,
+    ConsoleComponent
   ],
   imports: [
     BrowserModule,
@@ -26,10 +44,12 @@ import {RandomNumbersComponent} from './components/random-numbers/random-numbers
     {
       provide: XXL_FLOW_TYPES,
       useValue: {
-        'random-numbers': RandomNumbersComponent
+        'random-numbers': RandomNumbersComponent,
+        console: ConsoleComponent,
       }
-    }],
-  entryComponents: [RandomNumbersComponent],
+    }
+  ],
+  entryComponents: [RandomNumbersComponent, ConsoleComponent],
   bootstrap: [AppComponent]
 })
 export class AppModule {

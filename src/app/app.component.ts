@@ -1,6 +1,9 @@
-import {AfterContentInit, Component, ElementRef, HostListener, ViewChild} from "@angular/core";
+import {AfterContentInit, Component, ElementRef, HostListener, ViewChild} from '@angular/core';
 import {NgbModal} from '@ng-bootstrap/ng-bootstrap';
-import {RANDOM_NUMBERS_CONFIG} from './components/random-numbers/random-numbers.component';
+import { RANDOM_NUMBERS_CONFIG, RandomNumbersComponent } from './components/random-numbers/random-numbers.component';
+import {XxlFlowBlock} from 'flow-based';
+import { ConsoleComponent } from './components/console/console.component';
+import { RandomNumberFactory } from './shared/random-numbers';
 
 @Component({
   selector: 'fb-root',
@@ -13,18 +16,11 @@ export class AppComponent implements AfterContentInit {
 
   // menuX: number;
   // menuY: number;
-  sources = {
-    random: {
-      type: 'random-numbers',
-      config: RANDOM_NUMBERS_CONFIG
-    }
-  };
 
-  selected: any;
-
-  model = {
-    entries: []
-  };
+  flow: XxlFlowBlock[] = [{
+    type: 'random-numbers',
+    config: RANDOM_NUMBERS_CONFIG
+  }];
 
   @ViewChild('bg') bgImage: ElementRef;
 
@@ -34,15 +30,8 @@ export class AppComponent implements AfterContentInit {
     this.modalService.open(content, { centered: true });
   }
 
-  addSource(source: string): void {
-    console.log('add block', source);
-    this.selected = this.sources[source];
-  }
-
-  addBlock(): void {
-    if (this.selected) {
-      this.model.entries.push(this.selected);
-    }
+  addBlock(item): void {
+    this.flow.push(item);
   }
 
   onUpdate(): void {

@@ -1,6 +1,13 @@
-<div class="socket top"></div>
-<div class="socket right"></div>
-<div class="socket bottom"></div>
-<div class="socket left"></div>
+<div class="sockets sockets-in">
+  <!--<span *ngFor="let socket of INs"></span>-->
+  <span class="socket"></span>
+</div>
 
-<ng-content></ng-content>
+<article>
+  <ng-content></ng-content>
+</article>
+
+<div class="sockets sockets-out">
+  <span class="socket"></span>
+  <span class="socket"></span>
+</div>

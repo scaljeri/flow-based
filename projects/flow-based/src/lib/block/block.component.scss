@@ -1,17 +1,70 @@
+$border-width: 3px;
+$border-color: darkray;
+$border-width: 3px;
+$socket-size: 16px;
+
 :host {
+  --inner-border-color: var(--block-border-color, #868686);
+
   background-color: #000;
-  border: 2px solid darkgray;
+  border-style: solid;
+
+  border-width: $border-width;
+  border-color: var(--inner-border-color);
+  border-radius: 12px;
+  padding: 4px;
   display: block;
   user-select: none;
   cursor: move;
   position: absolute;
-  padding: 3px;
-  overflow: hidden;
+}
+
+
+.sockets {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  height: calc(100% - 12px);
+  position: absolute;
+  top: 6px;
+  width: $socket-size;
+}
+
+
+.sockets-in {
+  left: - $border-width / 2 - $socket-size / 2;
+
+  .socket {
+    border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
+  }
+}
+
+.sockets-out {
+  right: - $border-width / 2 - $socket-size / 2;
+
+  .socket {
+    border-color: var(--inner-border-color) var(--inner-border-color)  transparent transparent;
+  }
 }
 
 .socket {
-  position: absolute;
+  cursor: pointer;
+  display: block;
+  background-color: #fff;
+  background-clip: content-box;
+  height: $socket-size;
+  width: $socket-size;
+  border: $border-width solid;
+  border-radius: 50%;
+  transform: rotate(45deg);
 }
+
+article {
+  background-color: lightgray;
+  border-radius: 8px;
+  padding: 1px;
+}
+
 
 /*
 :host-context(.is-max) {

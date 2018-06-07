@@ -1,9 +1,8 @@
 <article #area *ngIf="state" class="is-max" xxlMovableArea>
-  <h1>Flow</h1>
-  <xxl-block xxlMovable *ngFor="let entry of state.entries"
-             [style.left.px]="entry.x - 46" [style.top.px]="entry.y - 40" class="block">
-    <ng-container *ngIf="flowTypes[entry.type]"
-                  [ngComponentOutlet]="flowTypes[entry.type]"
-                  [ngComponentOutletInjector]="createInjector(entry)"></ng-container>
+  <xxl-block xxlMovable *ngFor="let block of state"
+             [style.left.px]="block.config.x" [style.top.px]="block.config.y" class="block">
+    <ng-container *ngIf="flowTypes[block.type]"
+                  [ngComponentOutlet]="flowTypes[block.type]"
+                  [ngComponentOutletInjector]="createInjector(block)"></ng-container>
   </xxl-block>
 </article>
