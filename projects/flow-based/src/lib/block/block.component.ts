@@ -1,5 +1,4 @@
 import { Component, ElementRef, OnInit } from '@angular/core';
-import { XxlFlowIN, XxlFlowOUT } from 'flow-based';
 
 @Component({
   selector: 'xxl-block',
@@ -13,11 +12,11 @@ export class BlockComponent implements OnInit {
   ngOnInit() {
   }
 
-  get socketsIn(): XxlFlowIN[] {
+  get socketsIn(): any[] {
     return [];
   }
 
-  get socketsOut(): XxlFlowOUT[] {
+  get socketsOut(): any[] {
     return [];
   }
 }

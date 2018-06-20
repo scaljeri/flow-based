@@ -1,8 +1,18 @@
 :host {
-  display: block;
+  display: inline-flex;
   overflow: hidden;
+
+  &.is-active, &.is-active > article {
+    height: 100%;
+    width: 100%;
+    border: 2px solid red;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 }
 
-article {
-  height: 100%;
+xxl-block {
+  display: inline-flex;
 }
+

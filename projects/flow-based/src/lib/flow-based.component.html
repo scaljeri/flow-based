@@ -1,8 +1,26 @@
-<article #area *ngIf="state" class="is-max" xxlMovableArea>
-  <xxl-block xxlMovable *ngFor="let block of state"
-             [style.left.px]="block.config.x" [style.top.px]="block.config.y" class="block">
-    <ng-container *ngIf="flowTypes[block.type]"
-                  [ngComponentOutlet]="flowTypes[block.type]"
-                  [ngComponentOutletInjector]="createInjector(block)"></ng-container>
+<article *ngIf="isFlow()" xxlMovableArea>
+  <xxl-flow-based
+    *ngFor="let flow of flow?.units; let i = index"
+    xxlMovable
+    [style.left.px]="flow.units[0].x"
+    [style.top.px]="flow.units[0].y"
+    [(ngModel)]="flow.units[i]"
+    [active]="isActive(i)"
+    (click)="entryClicked($event)"></xxl-flow-based>
+</article>
+
+<article *ngIf="!isFlow()">
+  <xxl-block *ngIf="flow && flow.units.length === 1" class="block">
+    <ng-container [ngComponentOutlet]="flowTypes[flow.units[0].type]"
+                  [ngComponentOutletInjector]="injectors[0]"></ng-container>
   </xxl-block>
 </article>
+
+<!--<article #area *ngIf="flow" class="is-max" xxlMovableArea>-->
+  <!--<xxl-block xxlMovable *ngFor="let block of flow; let i = index"-->
+             <!--[style.left.px]="block.config.x" [style.top.px]="block.config.y" class="block">-->
+    <!--<ng-container *ngIf="flowTypes[block.type]"-->
+                  <!--[ngComponentOutlet]="flowTypes[block.type]"-->
+                  <!--[ngComponentOutletInjector]="injector[i]"></ng-container>-->
+  <!--</xxl-block>-->
+<!--</article>-->

@@ -1,5 +1,5 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { XXL_FLOW_ENTRY } from '../../flow-based.component';
+import { XXL_BLACK_BOX } from '../../flow-based';
 
 @Component({
   selector: 'xxl-source',
@@ -9,7 +9,7 @@ import { XXL_FLOW_ENTRY } from '../../flow-based.component';
 export class SourceComponent implements OnInit {
   state: any;
 
-  constructor(@Inject(XXL_FLOW_ENTRY) state: any) {
+  constructor(@Inject(XXL_BLACK_BOX) state: any) {
    this.state =  state;
   }
 

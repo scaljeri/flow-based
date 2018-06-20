@@ -4,7 +4,9 @@
 </header>
 
 <main>
-  <xxl-flow-based [(ngModel)]="flow" (ngModelChange)="onUpdate()"></xxl-flow-based>
+  <xxl-flow-based
+    [(ngModel)]="flow"
+    (ngModelChange)="onUpdate()"></xxl-flow-based>
 </main>
 
 <ng-template #content let-c="close" let-d="dismiss">
@@ -16,8 +18,8 @@
   </div>
 
   <ul class="block-list">
-    <li *ngFor="let item of models" class="list-item">
-      <button (click)="c('Close click'); addBlock(item)">{{item.title}}</button>
+    <li *ngFor="let item of flowTypes" class="list-item">
+      <button (click)="c('Close click'); addBlock(item.type)">{{item.name}}</button>
     </li>
   </ul>
 </ng-template>

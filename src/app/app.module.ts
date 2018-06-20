@@ -47,7 +47,7 @@ export const fbModels = {
         'random-numbers': RandomNumbersComponent,
         console: ConsoleComponent,
       }
-    }
+    },
   ],
   entryComponents: [RandomNumbersComponent, ConsoleComponent],
   bootstrap: [AppComponent]

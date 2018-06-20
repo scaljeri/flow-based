@@ -15,10 +15,12 @@ $socket-size: 16px;
   padding: 4px;
   display: block;
   user-select: none;
-  cursor: move;
-  position: absolute;
-}
 
+  [xxlMovable] {
+    cursor: move;
+    position: absolute;
+  }
+}
 
 .sockets {
   display: flex;
@@ -29,7 +31,6 @@ $socket-size: 16px;
   top: 6px;
   width: $socket-size;
 }
-
 
 .sockets-in {
   left: - $border-width / 2 - $socket-size / 2;
@@ -43,7 +44,7 @@ $socket-size: 16px;
   right: - $border-width / 2 - $socket-size / 2;
 
   .socket {
-    border-color: var(--inner-border-color) var(--inner-border-color)  transparent transparent;
+    border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
   }
 }
 
@@ -64,7 +65,6 @@ article {
   border-radius: 8px;
   padding: 1px;
 }
-
 
 /*
 :host-context(.is-max) {

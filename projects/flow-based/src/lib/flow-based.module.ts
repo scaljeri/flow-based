@@ -11,10 +11,13 @@ import {MovableDirective} from './drag-drop/movable/movable.directive';
 import {MovableAreaDirective} from './drag-drop/movable-area/movable-area.directive';
 import { FilterComponent } from './components/filter/filter.component';
 import { SocketDirective } from './components/socket/socket.directive';
+import { FormsModule } from '@angular/forms';
+import { XxlFlowBasedService } from './flow-based.service';
 
 @NgModule({
   imports: [
-    CommonModule
+    CommonModule,
+    FormsModule
   ],
   declarations: [
     FlowBasedComponent,
@@ -28,6 +31,7 @@ import { SocketDirective } from './components/socket/socket.directive';
     SocketDirective],
   exports: [FlowBasedComponent],
   providers: [
+    XxlFlowBasedService,
     FlowBasedManagerService,
     {
       provide: XXL_FLOW_TYPES,
@@ -37,8 +41,6 @@ import { SocketDirective } from './components/socket/socket.directive';
     },
     FlowBasedManagerService],
   entryComponents: [DummyComponent, SourceComponent],
-
 })
-
 export class FlowBasedModule {
 }

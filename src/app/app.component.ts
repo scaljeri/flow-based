@@ -1,8 +1,7 @@
-import {AfterContentInit, Component, ElementRef, HostListener, ViewChild} from '@angular/core';
-import {NgbModal} from '@ng-bootstrap/ng-bootstrap';
-import { RANDOM_NUMBERS_CONFIG, RandomNumbersComponent } from './components/random-numbers/random-numbers.component';
-import {XxlFlowBlock} from 'flow-based';
-import { ConsoleComponent } from './components/console/console.component';
+import { AfterContentInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
 import { RandomNumberFactory } from './shared/random-numbers';
 
 @Component({
@@ -17,21 +16,30 @@ export class AppComponent implements AfterContentInit {
   // menuX: number;
   // menuY: number;
 
-  flow: XxlFlowBlock[] = [{
-    type: 'random-numbers',
-    config: RANDOM_NUMBERS_CONFIG
-  }];
+  flowTypes = [
+    { name: 'Random numbers',
+      type: 'random-numbers' },
+    { name: 'Band filter',
+      type: 'band-filter' },
+  ];
+
+  flow: XxlFlow = {
+    units: []
+  };
 
   @ViewChild('bg') bgImage: ElementRef;
 
-  constructor(private modalService: NgbModal) {}
+  constructor(private xxlService: XxlFlowBasedService, private modalService: NgbModal) {
+  }
 
   openModal(content): void {
-    this.modalService.open(content, { centered: true });
+    this.modalService.open(content, {centered: true});
   }
 
   addBlock(item): void {
-    this.flow.push(item);
+    // create worker
+    const worker = RandomNumberFactory();
+    this.xxlService.add(item, worker);
   }
 
   onUpdate(): void {
@@ -40,6 +48,7 @@ export class AppComponent implements AfterContentInit {
 
   ngAfterContentInit(): void {
   }
+
   //
   // @HostListener('contextmenu', ['$event']) onContextMenu(event): void {
   //   event.preventDefault();
@@ -76,7 +85,7 @@ export class AppComponent implements AfterContentInit {
   //     if (type) {
   //       this.model.entries.push({
   //         type,
-  //         state: 'sdf',
+  //         flow: 'sdf',
   //         x: this.menuX,
   //         y: this.menuY
   //       });
