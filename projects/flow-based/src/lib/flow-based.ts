@@ -8,20 +8,21 @@ export interface XxlTypes {
   [key: string]: Type<any>;
 }
 
-export interface XxlFlow {
-  units: (XxlBackBox | XxlFlow)[];
-  connections?: XxlConnection[];
-}
-
-export interface XxlBackBox {
-  type: string;
+export interface XxlBlackBox {
+  title?: string;
+  type?: string;
   x?: number;
   y?: number;
 }
 
+export interface XxlFlow extends XxlBlackBox {
+  units: (XxlBlackBox | XxlFlow)[];
+  connections?: XxlConnection[];
+}
+
 export interface XxlConnection {
-  from: XxlBackBox;
-  to: XxlBackBox;
+  from: XxlBlackBox;
+  to: XxlBlackBox;
   out: XxlSocket;   // from
   in:  XxlSocket;   // to
 }

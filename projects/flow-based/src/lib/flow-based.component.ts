@@ -1,5 +1,5 @@
 import {
-  Component,
+  Component, createInjector,
   ElementRef,
   forwardRef, HostBinding,
   Inject,
@@ -8,7 +8,7 @@ import {
   OnInit, SimpleChanges, ViewChild
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { XXL_FLOW_TYPES, XxlTypes, XxlService, XXL_FLOW_SERVICE, XxlFlow, XXL_BLACK_BOX, XxlWorker } from './flow-based';
+import { XXL_FLOW_TYPES, XxlTypes, XxlFlow, XXL_BLACK_BOX, XxlWorker, XxlBlackBox } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 
 @Component({
@@ -20,51 +20,71 @@ import { XxlFlowBasedService } from './flow-based.service';
 export class FlowBasedComponent implements OnInit, OnChanges, ControlValueAccessor {
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.type') type: string;
+  @Input() flow: XxlFlow;
   @ViewChild('area') area: ElementRef;
 
   flowTypes: XxlTypes;
   injectors: Injector[];
   onChange: (state: any) => void;
-  flow: XxlFlow;
-  activeFlowIndex: number;
-
+  activeFlowIndex: number = null;
+  id: number;
 
   constructor(private element: ElementRef,
               private injector: Injector,
               private flowService: XxlFlowBasedService,
               @Inject(XXL_FLOW_TYPES) flowTypes: XxlTypes) {
     this.flowTypes = flowTypes;
+    this.id = Math.random();
+    console.log(this.id);
   }
 
   ngOnInit() {
-    if (this.active) {
-      this.flowService.pushFlow(this);
-    }
   }
 
   ngOnChanges(obj: SimpleChanges): void {
+    if (obj.active) {
+      debugger;
+      if (this.active === true) {
+        this.flowService.pushFlow(this);
+      } else {
+        this.flowService.removeFlow();
+      }
+    }
+    if (obj.flow) {
+      this.createInjector();
+    }
   }
 
-  entryClicked(event): void {
-
+  entryClicked(index): void {
+    this.activeFlowIndex = index;
   }
 
   addBlackBox(type: string, worker: XxlWorker): void {
-    this.flow.units.push({type});
+    const newBlock: XxlBlackBox = {type};
 
-    this.createInjector();
+    if (this.activeFlowIndex === null) {
+      this.flow.units.push(newBlock);
+
+      this.createInjector();
+    } else { // Conver block to flow
+      const block = Object.assign({}, this.flow.units[this.activeFlowIndex]);
+      this.flow.units[this.activeFlowIndex] = block;
+      (block as XxlFlow).units = [Object.assign({}, block), {type}];
+    }
   }
 
-  isFlow(): boolean {
-    return this.flow && this.flow.units.length > 1;
+  isFlow(item: XxlBlackBox | XxlFlow): boolean {
+    const flow = item as XxlFlow;
+
+    return flow.units !== undefined ? flow.units.length > 1 : false;
   }
 
   isActive(index: number): boolean {
-    return index === 0 && this.flow.units.length === 1 || this.activeFlowIndex === index;
+    return this.activeFlowIndex === index;
   }
 
   createInjector(): void {
-    if (this.flow) {
+    if (this.flow && this.flow.units) {
       this.injectors = (this.flow.units.map(state => {
         return Injector.create({
           providers: [{provide: XXL_BLACK_BOX, useValue: state}],
@@ -81,9 +101,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, ControlValueAccess
   registerOnTouched(): void {
   }
 
-  writeValue(state: any): void {
-    this.flow = state;
-    this.createInjector();
+  writeValue(state: XxlFlow): void {
+    // this.flow = state;
+    // console.log(this.id, state);
+    // this.createInjector();
 
   }
 }

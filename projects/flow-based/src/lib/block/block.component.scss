@@ -5,6 +5,7 @@ $socket-size: 16px;
 
 :host {
   --inner-border-color: var(--block-border-color, #868686);
+  --socket-size: #{$socket-size};
 
   background-color: #000;
   border-style: solid;
@@ -13,39 +14,77 @@ $socket-size: 16px;
   border-color: var(--inner-border-color);
   border-radius: 12px;
   padding: 4px;
-  display: block;
+  display: flex;
   user-select: none;
+
+  justify-content: center;
+  align-items: center;
 
   [xxlMovable] {
     cursor: move;
     position: absolute;
   }
+
+  .sockets-in {
+    .socket {
+      border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
+    }
+  }
+
+  .sockets-out {
+    .socket {
+      border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
+    }
+  }
+
+  &.is-active {
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+
+    --socket-size: #{$socket-size * 3};
+
+
+    .sockets-in {
+      .socket {
+        border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
+      }
+    }
+
+    .sockets-out {
+      .socket {
+        border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
+      }
+    }
+  }
+}
+
+.component {
+  display: inline-flex;
+  background-color: lightgray;
+  border-radius: 8px;
+  padding: 1px;
 }
 
 .sockets {
+  // background-color:red;
+
   display: flex;
   flex-direction: column;
   justify-content: space-around;
   height: calc(100% - 12px);
   position: absolute;
   top: 6px;
-  width: $socket-size;
+  width: var(--socket-size);
 }
 
 .sockets-in {
-  left: - $border-width / 2 - $socket-size / 2;
-
-  .socket {
-    border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
-  }
+  left: calc(#{-$border-width} / 2 - var(--socket-size) / 2);
 }
 
 .sockets-out {
-  right: - $border-width / 2 - $socket-size / 2;
-
-  .socket {
-    border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
-  }
+  right: calc(#{-$border-width} / 2 - var(--socket-size) / 2);
 }
 
 .socket {
@@ -53,17 +92,11 @@ $socket-size: 16px;
   display: block;
   background-color: #fff;
   background-clip: content-box;
-  height: $socket-size;
-  width: $socket-size;
+  height: var(--socket-size);
+  width: var(--socket-size);
   border: $border-width solid;
   border-radius: 50%;
   transform: rotate(45deg);
-}
-
-article {
-  background-color: lightgray;
-  border-radius: 8px;
-  padding: 1px;
 }
 
 /*
