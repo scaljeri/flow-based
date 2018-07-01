@@ -10,6 +10,7 @@ import { RANDOM_NUMBERS_CONFIG, RandomNumbersComponent } from './components/rand
 import { ConsoleComponent } from './components/console/console.component';
 import { FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
 import { RandomNumberFactory } from './shared/random-numbers';
+import { DefaultFlowComponent } from './default-flow/default-flow.component';
 
 export const fbModels = {
   'random-numbers': {
@@ -31,7 +32,8 @@ export const fbModels = {
     AppComponent,
     ContextMenuComponent,
     RandomNumbersComponent,
-    ConsoleComponent
+    ConsoleComponent,
+    DefaultFlowComponent
   ],
   imports: [
     BrowserModule,
@@ -45,11 +47,12 @@ export const fbModels = {
       provide: XXL_FLOW_TYPES,
       useValue: {
         'random-numbers': RandomNumbersComponent,
-        console: ConsoleComponent,
+        'console': ConsoleComponent,
+        'default': DefaultFlowComponent
       }
     },
   ],
-  entryComponents: [RandomNumbersComponent, ConsoleComponent],
+  entryComponents: [RandomNumbersComponent, ConsoleComponent, DefaultFlowComponent],
   bootstrap: [AppComponent]
 })
 export class AppModule {

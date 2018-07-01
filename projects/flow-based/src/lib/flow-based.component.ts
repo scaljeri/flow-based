@@ -1,14 +1,15 @@
 import {
+  AfterContentInit,
   Component, createInjector,
-  ElementRef,
-  forwardRef, HostBinding,
+  ElementRef, EventEmitter,
+  forwardRef, HostBinding, HostListener,
   Inject,
   InjectionToken,
   Injector, Input, OnChanges,
-  OnInit, SimpleChanges, ViewChild
+  OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { XXL_FLOW_TYPES, XxlTypes, XxlFlow, XXL_BLACK_BOX, XxlWorker, XxlBlackBox } from './flow-based';
+import { XXL_FLOW_TYPES, XxlTypes, XxlFlow, XXL_BLACK_BOX, XxlWorker, XxlBlackBox, XxlPosition } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 
 @Component({
@@ -17,11 +18,14 @@ import { XxlFlowBasedService } from './flow-based.service';
   styleUrls: ['./flow-based.component.scss'],
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
-export class FlowBasedComponent implements OnInit, OnChanges, ControlValueAccessor {
+export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, ControlValueAccessor {
   @Input() @HostBinding('class.is-active') active = true;
+  @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
   @Input() flow: XxlFlow;
-  @ViewChild('area') area: ElementRef;
+
+  @Output() activeChanged = new EventEmitter<boolean>();
+  @ViewChild('dragArea') area: ElementRef;
 
   flowTypes: XxlTypes;
   injectors: Injector[];
@@ -38,13 +42,19 @@ export class FlowBasedComponent implements OnInit, OnChanges, ControlValueAccess
     console.log(this.id);
   }
 
+  @HostListener('click', ['$event'])
+  onClick(event): void {
+    console.log(this.id);
+    event.stopPropagation();
+  }
+
   ngOnInit() {
   }
 
   ngOnChanges(obj: SimpleChanges): void {
     if (obj.active) {
-      debugger;
       if (this.active === true) {
+        console.log(this.id +   ' active');
         this.flowService.pushFlow(this);
       } else {
         this.flowService.removeFlow();
@@ -55,28 +65,78 @@ export class FlowBasedComponent implements OnInit, OnChanges, ControlValueAccess
     }
   }
 
+  ngAfterContentInit(): void {
+    // if (this.flow.type && !this.flow.position) {
+    //   this.flow.position = this.centerPosition();
+    // }
+  }
+
+  activityChanged(isActive): void {
+    console.log(this.id + ' activityChanged');
+    this.activeFlowIndex = null;
+
+  }
+
+  // activeFlow(): XxlFlow {
+  //   return this.activeFlowIndex !== null ? this.flow.units[this.activeFlowIndex] as XxlFlow : null;
+  // }
+
+  deactivate(): void {
+    if(this.activeFlowIndex === null && !this.root) {
+      this.flowService.removeFlow();
+      this.activeChanged.emit(false);
+    }
+
+    this.activeFlowIndex = null;
+  }
+
   entryClicked(index): void {
-    this.activeFlowIndex = index;
+    if (this.isFlow()) {
+      this.activeFlowIndex = index;
+    }
+  }
+
+  isBlackBox(unit: XxlFlow | XxlBlackBox): boolean {
+    return !!(unit as XxlFlow).units;
   }
 
   addBlackBox(type: string, worker: XxlWorker): void {
-    const newBlock: XxlBlackBox = {type};
+    const position = this.centerPosition();
+
+    if (this.flow.units.length === 0 && !this.root) {
+      this.prepareForFlow();
+    }
+
+    const newBlock: XxlFlow = {type, position, units: []};
 
     if (this.activeFlowIndex === null) {
       this.flow.units.push(newBlock);
 
       this.createInjector();
-    } else { // Conver block to flow
-      const block = Object.assign({}, this.flow.units[this.activeFlowIndex]);
-      this.flow.units[this.activeFlowIndex] = block;
-      (block as XxlFlow).units = [Object.assign({}, block), {type}];
+    } else {
+      const block = this.flow.units[this.activeFlowIndex];
+      (block as XxlFlow).units = [Object.assign({}, block,
+        {position: Object.assign({}, block.position)}),
+        newBlock];
     }
   }
 
-  isFlow(item: XxlBlackBox | XxlFlow): boolean {
-    const flow = item as XxlFlow;
+  prepareForFlow(): void {
+    this.flow.units.push({
+      position: { x: 0, y: 0},
+      type: this.flow.type
+    });
+    this.flow.type = 'default';
+  }
 
-    return flow.units !== undefined ? flow.units.length > 1 : false;
+  centerPosition(): XxlPosition {
+    const boundingRect = this.area.nativeElement.getBoundingClientRect();
+
+    return {x: boundingRect.width / 2, y: boundingRect.height / 2};
+  }
+
+  isFlow(): boolean {
+    return this.root || this.flow && this.flow.units.length > 0;
   }
 
   isActive(index: number): boolean {

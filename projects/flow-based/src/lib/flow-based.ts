@@ -8,11 +8,15 @@ export interface XxlTypes {
   [key: string]: Type<any>;
 }
 
+export interface XxlPosition {
+  x: number;
+  y: number;
+}
+
 export interface XxlBlackBox {
   title?: string;
   type?: string;
-  x?: number;
-  y?: number;
+  position?: XxlPosition;
 }
 
 export interface XxlFlow extends XxlBlackBox {

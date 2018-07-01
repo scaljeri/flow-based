@@ -1,13 +1,24 @@
 <header>
+  <div class="buttons">
   <button (click)="openModal(content)" class="btn btn-primary add">Add</button>
-  <h1>FLow based programming</h1>
+  <button (click)="showJson = !showJson" class="btn btn-primary json">{{showJson ? 'Flow' : 'JSON'}}</button>
+  </div>
+
+  <h1>Flow based programming</h1>
 </header>
 
 <main>
   <xxl-flow-based
+    *ngIf="!showJson"
     [flow]="flow"
     [active]="true"
     (ngModelChange)="onUpdate()"></xxl-flow-based>
+
+  <article
+    *ngIf="showJson"
+    class="flow-as-json">
+    <pre>{{flow | json}}</pre>
+  </article>
 </main>
 
 <ng-template #content let-c="close" let-d="dismiss">
@@ -31,4 +42,3 @@
 <!--[style.top.px]="menuY"-->
 <!--[open]="contextMenuState"-->
 <!--(close)="closeContextMenu($event)"></fb-context-menu>-->
-

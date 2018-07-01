@@ -2,6 +2,7 @@
   display: inline-flex;
   overflow: hidden;
   position: relative;
+  background-color: #000;
 
   &.is-active, &.is-active > article {
     height: 100%;
@@ -11,10 +12,26 @@
     justify-content: center;
     align-items: center;
   }
+
+  &:not(.is-active) {
+    width: 100px;
+    height: 100px;
+
+    > * {
+      pointer-events: none;
+    }
+  }
 }
 
 xxl-flow-based,
 xxl-block {
   position: absolute;
+  // transform: translate(-50%, -50%);
+
+  &.is-active {
+    z-index: 1;
+    left: 0!important;
+    top: 0!important;
+  }
 }
 

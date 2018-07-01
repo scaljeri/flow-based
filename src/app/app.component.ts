@@ -4,6 +4,10 @@ import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
 import { RandomNumberFactory } from './shared/random-numbers';
 
+const KEY_PRESS = {
+  ESC: 27
+};
+
 @Component({
   selector: 'fb-root',
   templateUrl: './app.component.html',
@@ -16,6 +20,7 @@ export class AppComponent implements AfterContentInit {
   // menuX: number;
   // menuY: number;
 
+  showJson = false;
   flowTypes = [
     { name: 'Random numbers',
       type: 'random-numbers' },
@@ -30,6 +35,13 @@ export class AppComponent implements AfterContentInit {
   @ViewChild('bg') bgImage: ElementRef;
 
   constructor(private xxlService: XxlFlowBasedService, private modalService: NgbModal) {
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent) {
+    if (event.keyCode === KEY_PRESS.ESC) {
+      this.xxlService.removeFlow();
+    }
   }
 
   openModal(content): void {

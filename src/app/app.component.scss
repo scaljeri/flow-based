@@ -40,9 +40,13 @@ header {
   padding: 0 16px;
   position: relative;
 
-  .add {
+  .buttons {
     position: absolute;
     left: 16px;
+
+    button + button {
+      margin-left: 10px;
+    }
   }
 
   h1 {
@@ -51,11 +55,17 @@ header {
 }
 
 main {
+  display: flex;
   flex: 1;
 
   xxl-flow-based {
     // border: 3px solid lightgray;
     border-radius: 3px;
+  }
+
+  .flow-as-json {
+    background-color: #fff;
+    flex: 1;
   }
 }
 
