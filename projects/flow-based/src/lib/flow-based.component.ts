@@ -62,6 +62,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     }
     if (obj.flow) {
       this.createInjector();
+      console.log(this.flow);
     }
   }
 
@@ -82,12 +83,14 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   // }
 
   deactivate(): void {
-    if(this.activeFlowIndex === null && !this.root) {
-      this.flowService.removeFlow();
-      this.activeChanged.emit(false);
+    if (this.activeFlowIndex === null) {
+      if (!this.root) {
+        this.flowService.removeFlow();
+        this.activeChanged.emit(false);
+      }
+    } else {
+      this.activeFlowIndex = null;
     }
-
-    this.activeFlowIndex = null;
   }
 
   entryClicked(index): void {
@@ -124,7 +127,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   prepareForFlow(): void {
     this.flow.units.push({
       position: { x: 0, y: 0},
-      type: this.flow.type
+      type: this.flow.type,
+      units: []
     });
     this.flow.type = 'default';
   }

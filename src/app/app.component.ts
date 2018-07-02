@@ -3,6 +3,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
 import { RandomNumberFactory } from './shared/random-numbers';
+import { nested } from './fixtures';
 
 const KEY_PRESS = {
   ESC: 27
@@ -28,9 +29,9 @@ export class AppComponent implements AfterContentInit {
       type: 'band-filter' },
   ];
 
-  flow: XxlFlow = {
+  flow: XxlFlow = nested; /*{
     units: []
-  };
+  }; */
 
   @ViewChild('bg') bgImage: ElementRef;
 
@@ -40,7 +41,7 @@ export class AppComponent implements AfterContentInit {
   @HostListener('document:keydown.escape', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
     if (event.keyCode === KEY_PRESS.ESC) {
-      this.xxlService.removeFlow();
+      this.xxlService.back();
     }
   }
 

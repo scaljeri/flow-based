@@ -8,7 +8,7 @@ import { XxlPosition } from 'flow-based';
 })
 export class MovableDirective extends DraggableDirective {
   @Input() position: XxlPosition;
-  @Output() positionChanged = new EventEmitter<XxlPosition>();
+  @Output() positionChange = new EventEmitter<XxlPosition>();
 
   // @HostBinding('style.transform') get transform(): SafeStyle {
   //   return this.sanitzier.bypassSecurityTrustStyle(`translateX(${this.position.x}px) translateY(${this.position.y}px)`);
@@ -36,18 +36,15 @@ export class MovableDirective extends DraggableDirective {
   }
 
   @HostListener('dragMove', ['$event']) onDragMove(event: PointerEvent) {
-    // this.position = {
-    //   x: event.clientX - this.startPosition.x,
-    //   y: event.clientY - this.startPosition.y
-    // };
+    this.position = {
+      x: event.clientX - this.startPosition.x,
+      y: event.clientY - this.startPosition.y
+    };
 
-    this.position.x = event.clientX - this.startPosition.x;
-    this.position.y = event.clientY - this.startPosition.y;
-
-    this.positionChanged.emit(this.position);
+    this.positionChange.emit(this.position);
   }
 
   @HostListener('dragEnd', ['$event']) onDragEnd(event: PointerEvent) {
-    this.positionChanged.emit(this.position);
+    this.positionChange.emit(this.position);
   }
 }

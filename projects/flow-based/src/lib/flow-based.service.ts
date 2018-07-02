@@ -9,15 +9,20 @@ export class XxlFlowBasedService {
   private flowStack: FlowBasedComponent[] = [];
 
   pushFlow(flow: FlowBasedComponent): void {
-    if (this.flowStack.indexOf(flow) === -1) {
-      this.flowStack.unshift(flow);
-    }
+    // if (this.flowStack.indexOf(flow) === -1) {
+    this.flowStack.unshift(flow);
+    console.log(this.flowStack);
+    // }
   }
 
   removeFlow(): void {
+    console.log(this.flowStack);
+    this.flowStack.shift();
+  }
+
+  back(): void {
     if (this.flowStack.length > 0) {
-      console.log(this.flowStack);
-      this.flowStack.shift().deactivate();
+      this.flowStack[0].deactivate();
     }
   }
 
