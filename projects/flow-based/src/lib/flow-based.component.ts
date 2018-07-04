@@ -54,13 +54,15 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   ngOnChanges(obj: SimpleChanges): void {
     if (obj.active) {
       if (this.active === true) {
-        console.log(this.id +   ' active');
+        console.log(this.id + ' active');
         this.flowService.pushFlow(this);
       } else {
         this.flowService.removeFlow();
       }
     }
     if (obj.flow) {
+      if (this.flow.units.length === 0) {
+      }
       this.createInjector();
       console.log(this.flow);
     }
@@ -94,9 +96,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   }
 
   entryClicked(index): void {
-    if (this.isFlow()) {
-      this.activeFlowIndex = index;
-    }
+    // if (this.isFlow()) {
+    this.activeFlowIndex = index;
+    // }
   }
 
   isBlackBox(unit: XxlFlow | XxlBlackBox): boolean {
@@ -106,31 +108,27 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   addBlackBox(type: string, worker: XxlWorker): void {
     const position = this.centerPosition();
 
-    if (this.flow.units.length === 0 && !this.root) {
-      this.prepareForFlow();
-    }
-
-    const newBlock: XxlFlow = {type, position, units: []};
+    const newBlock: XxlBlackBox = {type, position};
 
     if (this.activeFlowIndex === null) {
       this.flow.units.push(newBlock);
 
       this.createInjector();
     } else {
-      const block = this.flow.units[this.activeFlowIndex];
-      (block as XxlFlow).units = [Object.assign({}, block,
-        {position: Object.assign({}, block.position)}),
-        newBlock];
+      this.convertBlock2Flow(this.activeFlowIndex);
+      (this.flow.units[this.activeFlowIndex] as XxlFlow).units.push(newBlock);
     }
   }
 
-  prepareForFlow(): void {
-    this.flow.units.push({
-      position: { x: 0, y: 0},
-      type: this.flow.type,
-      units: []
-    });
-    this.flow.type = 'default';
+  convertBlock2Flow(index: number): void {
+    const block = {
+      type: this.flow.units[index].type,
+      position: Object.assign({}, this.flow.units[index].position)
+      };
+
+    (this.flow.units[index] as XxlFlow).units = [block];
+
+    this.flow.units[index].type = 'default';
   }
 
   centerPosition(): XxlPosition {
@@ -139,8 +137,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     return {x: boundingRect.width / 2, y: boundingRect.height / 2};
   }
 
-  isFlow(): boolean {
-    return this.root || this.flow && this.flow.units.length > 0;
+  isFlow(index: number): boolean {
+    const flow = this.flow.units[index] as XxlFlow;
+
+    return flow.units && flow.units.length > 0;
   }
 
   isActive(index: number): boolean {
