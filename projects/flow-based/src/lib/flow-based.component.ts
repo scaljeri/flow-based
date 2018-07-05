@@ -9,8 +9,10 @@ import {
   OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { XXL_FLOW_TYPES, XxlTypes, XxlFlow, XXL_BLACK_BOX, XxlWorker, XxlBlackBox, XxlPosition } from './flow-based';
+import { XXL_FLOW_TYPES, XxlTypes, XxlFlow, XXL_BLACK_BOX, XxlWorker, XxlBlackBox, XxlPosition, XxlConfig } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
+import { Subject } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'xxl-flow-based',
@@ -32,6 +34,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   onChange: (state: any) => void;
   activeFlowIndex: number = null;
   id: number;
+  activeIndex$ = new Subject<number>();
 
   constructor(private element: ElementRef,
               private injector: Injector,
@@ -39,7 +42,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
               @Inject(XXL_FLOW_TYPES) flowTypes: XxlTypes) {
     this.flowTypes = flowTypes;
     this.id = Math.random();
-    console.log(this.id);
   }
 
   @HostListener('click', ['$event'])
@@ -91,13 +93,15 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
         this.activeChanged.emit(false);
       }
     } else {
-      this.activeFlowIndex = null;
+      this.entryClicked(null);
     }
   }
 
   entryClicked(index): void {
     // if (this.isFlow()) {
+    console.log('entry clicked ' + index);
     this.activeFlowIndex = index;
+    this.activeIndex$.next(index);
     // }
   }
 
@@ -124,7 +128,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     const block = {
       type: this.flow.units[index].type,
       position: Object.assign({}, this.flow.units[index].position)
-      };
+    };
 
     (this.flow.units[index] as XxlFlow).units = [block];
 
@@ -148,10 +152,22 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   }
 
   createInjector(): void {
+    console.log('create');
     if (this.flow && this.flow.units) {
-      this.injectors = (this.flow.units.map(state => {
+      this.injectors = (this.flow.units.map((state, index) => {
+        console.log('comp ' + index);
         return Injector.create({
-          providers: [{provide: XXL_BLACK_BOX, useValue: state}],
+          providers: [
+            {
+              provide: XXL_BLACK_BOX,
+              useValue: {state, active$: this.activeIndex$.pipe(
+                tap(v => {
+                  console.log(index + ' ==> ' + v);
+                }),
+                map(currentIndex => currentIndex === index)
+              )} as XxlConfig
+            }
+          ],
           parent: this.injector
         });
       }));

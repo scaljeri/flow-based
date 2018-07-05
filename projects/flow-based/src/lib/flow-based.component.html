@@ -1,11 +1,11 @@
-<!-- The component rendered when the flow behaves like a block -->
-<xxl-block *ngIf="!active && !root" class="is-active block">
-  <ng-container [ngComponentOutlet]="flowTypes[flow.type]"
-                [ngComponentOutletInjector]="injectors[0]"></ng-container>
-</xxl-block>
+<!--&lt;!&ndash; The component rendered when the flow behaves like a block &ndash;&gt;-->
+<!--<xxl-block *ngIf="!active && !root" class="is-active block">-->
+  <!--<ng-container [ngComponentOutlet]="flowTypes[flow.type]"-->
+                <!--[ngComponentOutletInjector]="injectors[1]"></ng-container>-->
+<!--</xxl-block>-->
 
 <article *ngIf="active" xxlMovableArea #dragArea>
-  <ng-container *ngFor="let unit of flow.units; let i = index">
+  <ng-container *ngFor="let unit of flow.units; index as i">
     <xxl-block *ngIf="!isFlow(i) || activeFlowIndex !== i"
                class="block"
                xxlMovable
@@ -13,7 +13,7 @@
                [active]="activeFlowIndex === i"
                (noDrag)="entryClicked(i)">
       <ng-container [ngComponentOutlet]="flowTypes[unit.type]"
-                    [ngComponentOutletInjector]="injectors[0]"></ng-container>
+                    [ngComponentOutletInjector]="injectors[i]"></ng-container>
     </xxl-block>
 
     <xxl-flow-based

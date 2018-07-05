@@ -1,4 +1,5 @@
 import { InjectionToken, Type } from '@angular/core';
+import { Observable } from 'rxjs';
 
 export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
 export const XXL_FLOW_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
@@ -11,6 +12,11 @@ export interface XxlTypes {
 export interface XxlPosition {
   x: number;
   y: number;
+}
+
+export interface XxlConfig {
+  state: XxlBlackBox;
+  active$: Observable<boolean>;
 }
 
 export interface XxlBlackBox {

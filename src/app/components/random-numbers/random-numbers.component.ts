@@ -1,6 +1,8 @@
-import {Component, HostBinding, Input, OnInit} from '@angular/core';
+import { Component, HostBinding, Inject, Input, OnInit } from '@angular/core';
 import {Observable, Subject} from 'rxjs';
 import {FlowBasedManagerService} from '../../../../projects/flow-based/src/lib/services/flow-based-manager.service';
+import { XXL_BLACK_BOX, XxlBlackBox } from 'flow-based';
+import { XxlConfig } from '../../../../projects/flow-based/src/lib/flow-based';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
@@ -46,14 +48,21 @@ export const RANDOM_NUMBERS_CONFIG = {
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
-  styleUrls: ['./random-numbers.component.css']
+  styleUrls: ['./random-numbers.component.scss']
 })
 export class RandomNumbersComponent implements OnInit {
   @Input() @HostBinding('class.is-config') isConfig = false;
 
-  constructor(private fbManager: FlowBasedManagerService) {
+  isActive: boolean = false;
+
+  constructor(@Inject(XXL_BLACK_BOX) private state: XxlConfig,
+              private fbManager: FlowBasedManagerService) {
   }
 
   ngOnInit() {
+    this.state.active$.subscribe(isActive => {
+      console.log('update state ', isActive);
+      this.isActive = isActive;
+    });
   }
 }
