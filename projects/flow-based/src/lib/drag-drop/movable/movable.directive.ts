@@ -15,11 +15,11 @@ export class MovableDirective extends DraggableDirective {
   // }
 
   @HostBinding('style.top.px') get top(): number {
-    return this.position.y;
+    return this.position ? this.position.y : 0;
   }
 
   @HostBinding('style.left.px') get left(): number {
-    return this.position.x;
+    return this.position ? this.position.x : 0;
   }
 
   private startPosition: XxlPosition;
@@ -30,8 +30,8 @@ export class MovableDirective extends DraggableDirective {
 
   @HostListener('dragStart', ['$event']) onDragStart(event: PointerEvent) {
     this.startPosition = {
-      x: event.clientX - this.position.x,
-      y: event.clientY - this.position.y
+      x: event.clientX - this.left,
+      y: event.clientY - this.top
     };
   }
 

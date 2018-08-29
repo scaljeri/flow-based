@@ -2,11 +2,11 @@ import { Component, ElementRef, HostBinding, Input, OnChanges, OnInit, SimpleCha
 import { XxlFlowBasedService } from '../flow-based.service';
 
 @Component({
-  selector: 'xxl-block',
-  templateUrl: './block.component.html',
-  styleUrls: ['./block.component.scss']
+  selector: 'xxl-flow-unit',
+  templateUrl: './flow-unit.component.html',
+  styleUrls: ['./flow-unit.component.scss']
 })
-export class BlockComponent implements OnInit, OnChanges {
+export class FlowUnitComponent implements OnInit, OnChanges {
   @Input() @HostBinding('class.is-active') active = false;
 
   constructor(private element: ElementRef,

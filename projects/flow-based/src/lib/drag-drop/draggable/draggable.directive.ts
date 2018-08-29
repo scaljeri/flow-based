@@ -1,4 +1,5 @@
 import { Directive, EventEmitter, HostBinding, HostListener, Output } from '@angular/core';
+import { fromEvent, Subscription } from 'rxjs';
 
 @Directive({
   selector: '[xxlDraggable]'
@@ -14,6 +15,7 @@ export class DraggableDirective {
 
   private dragState;
   private isDragging = false;
+  private pointerMoveSubscription: Subscription;
 
   @HostListener('pointerdown', ['$event']) onPointerDown(event) {
     event.stopPropagation();
@@ -25,9 +27,19 @@ export class DraggableDirective {
     this.pointerId = event.pointerId;
 
     this.dragState = event;
+
+    console.log(event.timeStamp);
+    this.pointerMoveSubscription = fromEvent(document, 'pointermove')
+      .subscribe(e => this.onPointerMove(e));
   }
 
-  @HostListener('document:pointerup', ['$event']) onPointerUp(event) {
+  @HostListener('document:pointerup', ['$event'])
+  @HostListener('document:pointercancel', ['$event'])
+  onPointerUp(event) {
+    if (this.pointerMoveSubscription) {
+      this.pointerMoveSubscription.unsubscribe();
+    }
+
     if (this.isDragging) {
       this.dragEnd.emit(event);
     } else if (this.dragState) {
@@ -38,7 +50,8 @@ export class DraggableDirective {
     this.isDragging = false;
   }
 
-  @HostListener('document:pointermove', ['$event']) onPointerMove(event) {
+  onPointerMove(event) {
+    console.count('ok');
     if (!this.dragState || event.pointerId !== this.pointerId) {
       return;
     }

@@ -1,9 +1,9 @@
 import { InjectionToken, Type } from '@angular/core';
-import { Observable } from 'rxjs';
 
 export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
 export const XXL_FLOW_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
-export const XXL_BLACK_BOX = new InjectionToken<XxlTypes>('xxl-black-box');
+export const XXL_STATE = new InjectionToken<XxlTypes>('xxl-state');
+export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
 
 export interface XxlTypes {
   [key: string]: Type<any>;
@@ -14,25 +14,27 @@ export interface XxlPosition {
   y: number;
 }
 
-export interface XxlConfig {
-  state: XxlBlackBox;
-  active$: Observable<boolean>;
-}
-
-export interface XxlBlackBox {
+export interface XxlFlowUnit {
   title?: string;
-  type?: string;
+  type: string;
   position?: XxlPosition;
+  id: number;
+  config: any;
 }
 
-export interface XxlFlow extends XxlBlackBox {
-  units: (XxlBlackBox | XxlFlow)[];
+export interface XxlComponent {
+  start: () => void;
+  stop: () => void;
+}
+
+export interface XxlFlow extends Partial<XxlFlowUnit> {
   connections?: XxlConnection[];
+  children: XxlFlowUnit[];
 }
 
 export interface XxlConnection {
-  from: XxlBlackBox;
-  to: XxlBlackBox;
+  from: number;
+  to: number;
   out: XxlSocket;   // from
   in:  XxlSocket;   // to
 }
@@ -47,13 +49,13 @@ export interface XxlWorker {
   // getTitle(): string;
   // getSocket(number?): Observable<any>;
   // setSocket(number?): void;
-  // start(): XxlWorker;
-  // stop(): XxlWorker;
-  destroy(worker: XxlWorker): void;
+  start(): XxlWorker;
+  stop(): XxlWorker;
+  destroy(): void;
 }
 
-export interface XxlService {
-  createWorker(type: string): XxlWorker;
+export interface XxlWorkerService {
+  create(id: string, type: string): XxlWorker;
 }
 
 export class XxlDriver {

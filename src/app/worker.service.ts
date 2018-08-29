@@ -1,18 +1,33 @@
 import { Injectable } from '@angular/core';
-import { XxlWorker } from '../../projects/flow-based/src/lib/flow-based';
+import { XxlWorker, XxlWorkerService } from 'flow-based';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class WorkerService implements XxlWorker {
+export class DummyWorker implements XxlWorker {
+  constructor(public id: string) {}
+
+  destroy(): void {
+  }
+
+  start(): XxlWorker {
+    return this;
+  }
+
+  stop(): XxlWorker {
+    return this;
+  }
+}
+
+@Injectable()
+export class WorkerService implements XxlWorkerService {
+  workers: XxlWorker[];
+  workerCount = 0;
+
   constructor() { }
 
   create(): XxlWorker {
-    return null;
+    return new DummyWorker(this.workerCount++ + '');
   }
 
   destroy(worker: XxlWorker): void {
 
   }
 }
-

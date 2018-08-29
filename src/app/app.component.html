@@ -1,18 +1,16 @@
 <header>
   <div class="buttons">
   <button (click)="openModal(content)" class="btn btn-primary add">Add</button>
-  <button (click)="showJson = !showJson" class="btn btn-primary json">{{showJson ? 'Flow' : 'JSON'}}</button>
+    <button (click)="showJson = !showJson" class="btn btn-primary json">{{showJson ? 'Flow' : 'JSON'}}</button>
+  <button (click)="startStop()" class="btn btn-primary json">{{isRunning ? 'Stop' : 'Stop'}}</button>
+  <button (click)="reset()" class="btn btn-primary json">Reset</button>
   </div>
 
   <h1>Flow based programming</h1>
 </header>
 
 <main>
-  <xxl-flow-based
-    *ngIf="!showJson"
-    [flow]="flow"
-    [active]="true"
-    (ngModelChange)="onUpdate()"></xxl-flow-based>
+  <fb-flow *ngIf="!showJson" [flow]="flow"></fb-flow>
 
   <article
     *ngIf="showJson"

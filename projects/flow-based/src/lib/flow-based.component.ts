@@ -1,18 +1,23 @@
 import {
   AfterContentInit,
-  Component, createInjector,
+  Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
   Inject,
-  InjectionToken,
   Injector, Input, OnChanges,
   OnInit, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { XXL_FLOW_TYPES, XxlTypes, XxlFlow, XXL_BLACK_BOX, XxlWorker, XxlBlackBox, XxlPosition, XxlConfig } from './flow-based';
+import {
+  XXL_FLOW_TYPES,
+  XxlTypes,
+  XxlFlow,
+  XxlWorker,
+  XxlPosition,
+  XXL_STATE, XxlFlowUnit
+} from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { Subject } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'xxl-flow-based',
@@ -29,41 +34,38 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
 
-  flowTypes: XxlTypes;
   injectors: Injector[];
   onChange: (state: any) => void;
   activeFlowIndex: number = null;
-  id: number;
   activeIndex$ = new Subject<number>();
 
   constructor(private element: ElementRef,
               private injector: Injector,
               private flowService: XxlFlowBasedService,
-              @Inject(XXL_FLOW_TYPES) flowTypes: XxlTypes) {
-    this.flowTypes = flowTypes;
-    this.id = Math.random();
-  }
+              @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes) {}
 
   @HostListener('click', ['$event'])
   onClick(event): void {
-    console.log(this.id);
     event.stopPropagation();
   }
 
   ngOnInit() {
+    if (this.root) {
+      this.flowService.activate(this);
+
+    }
   }
 
   ngOnChanges(obj: SimpleChanges): void {
     if (obj.active) {
       if (this.active === true) {
-        console.log(this.id + ' active');
-        this.flowService.pushFlow(this);
+        this.flowService.activate(this);
       } else {
-        this.flowService.removeFlow();
+        this.flowService.deactivate();
       }
     }
     if (obj.flow) {
-      if (this.flow.units.length === 0) {
+      if (this.flow.children.length === 0) {
       }
       this.createInjector();
       console.log(this.flow);
@@ -76,8 +78,29 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     // }
   }
 
+  createInjector(): void {
+    console.log('create');
+    if (this.flow && this.flow.children) {
+      this.injectors = (this.flow.children.map((state, index) => {
+        return Injector.create({
+          providers: [
+            {
+              provide: XXL_STATE,
+              useValue: state,
+            }
+          ],
+          parent: this.injector
+        });
+      }));
+    }
+  }
+
+  addUnit(unit: XxlFlowUnit): void {
+    this.flow.children.push(unit);
+    this.createInjector();
+  }
+
   activityChanged(isActive): void {
-    console.log(this.id + ' activityChanged');
     this.activeFlowIndex = null;
 
   }
@@ -89,7 +112,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   deactivate(): void {
     if (this.activeFlowIndex === null) {
       if (!this.root) {
-        this.flowService.removeFlow();
+        this.flowService.deactivate();
         this.activeChanged.emit(false);
       }
     } else {
@@ -97,42 +120,39 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     }
   }
 
-  entryClicked(index): void {
-    // if (this.isFlow()) {
-    console.log('entry clicked ' + index);
+  entryClicked(index: number): void {
     this.activeFlowIndex = index;
     this.activeIndex$.next(index);
-    // }
   }
 
-  isBlackBox(unit: XxlFlow | XxlBlackBox): boolean {
-    return !!(unit as XxlFlow).units;
+  isFlow(child: XxlFlow): boolean {
+    return !!child.children;
   }
 
   addBlackBox(type: string, worker: XxlWorker): void {
-    const position = this.centerPosition();
-
-    const newBlock: XxlBlackBox = {type, position};
-
-    if (this.activeFlowIndex === null) {
-      this.flow.units.push(newBlock);
-
-      this.createInjector();
-    } else {
-      this.convertBlock2Flow(this.activeFlowIndex);
-      (this.flow.units[this.activeFlowIndex] as XxlFlow).units.push(newBlock);
-    }
+    // const position = this.centerPosition();
+    //
+    // const newBlock: XxlBlackBox = {type, position, worker};
+    //
+    // if (this.activeFlowIndex === null) {
+    //   this.flow.units.push(newBlock);
+    //
+    //   this.createInjector();
+    // } else {
+    //   this.convertBlock2Flow(this.activeFlowIndex);
+    //   (this.flow.units[this.activeFlowIndex] as XxlFlow).units.push(newBlock);
+    // }
   }
 
-  convertBlock2Flow(index: number): void {
-    const block = {
-      type: this.flow.units[index].type,
-      position: Object.assign({}, this.flow.units[index].position)
-    };
-
-    (this.flow.units[index] as XxlFlow).units = [block];
-
-    this.flow.units[index].type = 'default';
+  convertUnitToFlow(index: number): void {
+    // const block = {
+    //   type: this.flow.units[index].type,
+    //   position: Object.assign({}, this.flow.units[index].position)
+    // };
+    //
+    // (this.flow.units[index] as XxlFlow).units = [block];
+    //
+    // this.flow.units[index].type = 'default';
   }
 
   centerPosition(): XxlPosition {
@@ -141,37 +161,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     return {x: boundingRect.width / 2, y: boundingRect.height / 2};
   }
 
-  isFlow(index: number): boolean {
-    const flow = this.flow.units[index] as XxlFlow;
-
-    return flow.units && flow.units.length > 0;
-  }
-
   isActive(index: number): boolean {
     return this.activeFlowIndex === index;
-  }
-
-  createInjector(): void {
-    console.log('create');
-    if (this.flow && this.flow.units) {
-      this.injectors = (this.flow.units.map((state, index) => {
-        console.log('comp ' + index);
-        return Injector.create({
-          providers: [
-            {
-              provide: XXL_BLACK_BOX,
-              useValue: {state, active$: this.activeIndex$.pipe(
-                tap(v => {
-                  console.log(index + ' ==> ' + v);
-                }),
-                map(currentIndex => currentIndex === index)
-              )} as XxlConfig
-            }
-          ],
-          parent: this.injector
-        });
-      }));
-    }
   }
 
   registerOnChange(onChange: (state: any) => void): void {
@@ -183,8 +174,15 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
 
   writeValue(state: XxlFlow): void {
     // this.flow = state;
-    // console.log(this.id, state);
     // this.createInjector();
 
   }
 }
+//
+// function convertUnitToFlow(flow: XxlFlow, service: XxlFlowBasedService) {
+//   (flow.children || []).forEach(box => {
+//     if (box.type) {
+//       // box.worker = service.createWorker(box);
+//     }
+//   });
+// }

@@ -6,26 +6,11 @@ import { NgModule } from '@angular/core';
 import { AppComponent } from './app.component';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { NgbButtonsModule, NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { RANDOM_NUMBERS_CONFIG, RandomNumbersComponent } from './components/random-numbers/random-numbers.component';
+import { RandomNumbersComponent } from './components/random-numbers/random-numbers.component';
 import { ConsoleComponent } from './components/console/console.component';
-import { FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
-import { RandomNumberFactory } from './shared/random-numbers';
 import { DefaultFlowComponent } from './default-flow/default-flow.component';
-
-export const fbModels = {
-  'random-numbers': {
-    component: RandomNumbersComponent,
-    configuration: RANDOM_NUMBERS_CONFIG,
-    factory: RandomNumberFactory(),
-    title: 'Random number generator'
-  },
-  console: {
-    component: ConsoleComponent,
-    configuration: {},
-    factory: null,
-    title: 'Console'
-  }
-};
+import { FlowComponent } from './flow/flow.component';
+import { FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
 
 @NgModule({
   declarations: [
@@ -33,7 +18,8 @@ export const fbModels = {
     ContextMenuComponent,
     RandomNumbersComponent,
     ConsoleComponent,
-    DefaultFlowComponent
+    DefaultFlowComponent,
+    FlowComponent
   ],
   imports: [
     BrowserModule,
@@ -50,7 +36,7 @@ export const fbModels = {
         'console': ConsoleComponent,
         'default': DefaultFlowComponent
       }
-    },
+    }
   ],
   entryComponents: [RandomNumbersComponent, ConsoleComponent, DefaultFlowComponent],
   bootstrap: [AppComponent]

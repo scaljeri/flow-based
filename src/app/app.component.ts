@@ -2,7 +2,6 @@ import { AfterContentInit, Component, ElementRef, HostListener, ViewChild } from
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
-import { RandomNumberFactory } from './shared/random-numbers';
 import { nested } from './fixtures';
 
 const KEY_PRESS = {
@@ -21,6 +20,7 @@ export class AppComponent implements AfterContentInit {
   // menuX: number;
   // menuY: number;
 
+  isRunning = false;
   showJson = false;
   flowTypes = [
     { name: 'Random numbers',
@@ -29,9 +29,7 @@ export class AppComponent implements AfterContentInit {
       type: 'band-filter' },
   ];
 
-  flow: XxlFlow = nested; /*{
-    units: []
-  }; */
+  flow: XxlFlow = nested as XxlFlow;
 
   @ViewChild('bg') bgImage: ElementRef;
 
@@ -49,10 +47,10 @@ export class AppComponent implements AfterContentInit {
     this.modalService.open(content, {centered: true});
   }
 
-  addBlock(item): void {
+  addBlock(type: string): void {
     // create worker
-    const worker = RandomNumberFactory();
-    this.xxlService.add(item, worker);
+    // const worker = RandomNumberFactory();
+    this.xxlService.add(type);
   }
 
   onUpdate(): void {
