@@ -22,11 +22,6 @@ $socket-size: 16px;
   min-height: 50px;
   align-items: center;
 
-  [xxlMovable] {
-    cursor: move;
-    position: absolute;
-  }
-
   .sockets-in {
     .socket {
       border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
@@ -39,9 +34,13 @@ $socket-size: 16px;
     }
   }
 
+  &:not(.is-active) {
+    cursor: move;
+    position: absolute;
+  }
+
   &.is-active {
-    right: 0;
-    bottom: 0;
+    height: 100%;
     transform: translate(0,0);
 
     --socket-size: #{$socket-size * 3};

@@ -15,6 +15,7 @@ export class XxlFlowBasedService {
   }
 
   deactivate(): void {
+    debugger;
     this.flowStack.shift();
   }
 

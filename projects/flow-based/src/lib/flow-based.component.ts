@@ -49,6 +49,14 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     event.stopPropagation();
   }
 
+  @HostListener('document:keydown.escape', ['$event'])
+  onKeydownHandler(evt: KeyboardEvent) {
+    if (this.activeFlowIndex >= 0) {
+      evt.stopPropagation();
+      this.activeFlowIndex = null;
+    }
+  }
+
   ngOnInit() {
     if (this.root) {
       this.flowService.activate(this);
@@ -121,12 +129,19 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
   }
 
   entryClicked(index: number): void {
+    console.log('activity');
     this.activeFlowIndex = index;
     this.activeIndex$.next(index);
   }
 
   isFlow(child: XxlFlow): boolean {
     return !!child.children;
+  }
+
+  close(event): void {
+    console.log('blur');
+    this.activeFlowIndex = null;
+    // event.stopPropagation();
   }
 
   addBlackBox(type: string, worker: XxlWorker): void {

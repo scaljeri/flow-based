@@ -35,13 +35,13 @@ export class AppComponent implements AfterContentInit {
 
   constructor(private xxlService: XxlFlowBasedService, private modalService: NgbModal) {
   }
-
-  @HostListener('document:keydown.escape', ['$event'])
-  handleKeyboardEvent(event: KeyboardEvent) {
-    if (event.keyCode === KEY_PRESS.ESC) {
-      this.xxlService.back();
-    }
-  }
+  //
+  // @HostListener('document:keydown.escape', ['$event'])
+  // handleKeyboardEvent(event: KeyboardEvent) {
+  //   if (event.keyCode === KEY_PRESS.ESC) {
+  //     this.xxlService.back();
+  //   }
+  // }
 
   openModal(content): void {
     this.modalService.open(content, {centered: true});

@@ -5,10 +5,13 @@
 <!--</xxl-block>-->
 
 <article *ngIf="active" xxlMovableArea #dragArea>
+  <button *ngIf="active && !root" (click)="close($event)" class="close"></button>
+
   <ng-container *ngFor="let unit of flow.children; index as i">
     <xxl-flow-unit *ngIf="!isFlow(i) || activeFlowIndex !== i"
                class="block"
                xxlMovable
+               [class.is-active]="activeFlowIndex === i"
                [(position)]="unit.position"
                [active]="activeFlowIndex === i"
                (noDrag)="entryClicked(i)">
@@ -19,6 +22,7 @@
     <xxl-flow-based
       *ngIf="isFlow(i) && activeFlowIndex === i"
       class="block"
+      [class.is-active]="activeFlowIndex === i"
       [flow]="flow.children[i]"
       [root]="false"
       [active]="activeFlowIndex === i"

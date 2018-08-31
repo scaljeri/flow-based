@@ -39,12 +39,13 @@ export class MovableAreaDirective implements AfterContentInit {
   private measureBoundaries(movable: MovableDirective): void {
     const areaRect = this.element.nativeElement.getBoundingClientRect();
     const movableRect = movable.element.nativeElement.getBoundingClientRect();
+    const movablePos = movable.position || { x: 0, y: 0};
 
     this.boundaries = {
-      minX: areaRect.left - movableRect.left + movable.position.x,
-      maxX: areaRect.right - movableRect.right + movable.position.x,
-      minY: areaRect.top - movableRect.top + movable.position.y,
-      maxY: areaRect.bottom - movableRect.bottom + movable.position.y
+      minX: areaRect.left - movableRect.left + movablePos.x,
+      maxX: areaRect.right - movableRect.right + movablePos.x,
+      minY: areaRect.top - movableRect.top + movablePos.y,
+      maxY: areaRect.bottom - movableRect.bottom + movablePos.y
     };
   }
 
