@@ -2,6 +2,7 @@ import { Component, HostBinding, Inject, Input, OnDestroy, OnInit } from '@angul
 import { Observable, Subject, Subscription } from 'rxjs';
 
 import { XXL_ACTIVE, XXL_STATE, XxlComponentState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { FormControl } from '@angular/forms';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
@@ -54,6 +55,7 @@ let count = 0;
 export class RandomNumbersComponent implements OnInit, OnDestroy {
   @Input() @HostBinding('class.is-config') isConfig = false;
 
+  name = new FormControl('');
   isActive = false;
   id = 0;
   subscription: Subscription;

@@ -1,11 +1,30 @@
 <section *ngIf="!(isActive$ | async)">
-  random-numbers works!
+  <img src="/assets/config.svg">
+
+  <h1 class="title">{{name.value}}</h1>
+
 </section>
 
 <section *ngIf="isActive$ | async">
 random-numbers config
-  <br>
-  Yo YO
-  <br>
-  dqwdqw<br>asdfsdf<br>sdfsdf
+  <form>
+    <div class="form-group">
+  <label>
+    Name:
+    <input type="text" [formControl]="name" placeholder="Title" class="form-control">
+  </label>
+    </div>
+  </form>
+
+
+  <p>
+    Value: {{ name.value }}
+  </p>
+
+  <!--
+    * title
+    * log depth
+    * random number range
+    * height in rows
+  -->
 </section>
