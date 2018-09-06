@@ -28,7 +28,6 @@ export class DraggableDirective {
 
     this.dragState = event;
 
-    console.log(event.timeStamp);
     this.pointerMoveSubscription = fromEvent(document, 'pointermove')
       .subscribe(e => this.onPointerMove(e));
   }
@@ -51,7 +50,6 @@ export class DraggableDirective {
   }
 
   onPointerMove(event) {
-    console.count('ok');
     if (!this.dragState || event.pointerId !== this.pointerId) {
       return;
     }

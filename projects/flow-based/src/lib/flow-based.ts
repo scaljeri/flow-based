@@ -1,8 +1,10 @@
 import { InjectionToken, Type } from '@angular/core';
+import { Observable } from 'rxjs';
 
 export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
 export const XXL_FLOW_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
 export const XXL_STATE = new InjectionToken<XxlTypes>('xxl-state');
+export const XXL_ACTIVE = new InjectionToken<Observable<boolean>>('xxl-active');
 export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
 
 export interface XxlTypes {
@@ -22,6 +24,10 @@ export interface XxlFlowUnit {
   config: any;
 }
 
+export interface XxlComponentState {
+  state: XxlFlowUnit,
+  isActive$: Observable<boolean>;
+}
 export interface XxlComponent {
   start: () => void;
   stop: () => void;

@@ -1,7 +1,11 @@
-<section *ngIf="!isActive">
+<section *ngIf="!(isActive$ | async)">
   random-numbers works!
 </section>
 
-<section *ngIf="isActive">
+<section *ngIf="isActive$ | async">
 random-numbers config
+  <br>
+  Yo YO
+  <br>
+  dqwdqw<br>asdfsdf<br>sdfsdf
 </section>

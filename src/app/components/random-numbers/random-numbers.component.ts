@@ -1,8 +1,7 @@
-import { Component, HostBinding, Inject, Input, OnInit } from '@angular/core';
-import {Observable, Subject} from 'rxjs';
-import {FlowBasedManagerService} from '../../../../projects/flow-based/src/lib/services/flow-based-manager.service';
+import { Component, HostBinding, Inject, Input, OnDestroy, OnInit } from '@angular/core';
+import { Observable, Subject, Subscription } from 'rxjs';
 
-import { XXL_STATE, XxlFlow } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XXL_ACTIVE, XXL_STATE, XxlComponentState } from '../../../../projects/flow-based/src/lib/flow-based';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
@@ -45,24 +44,38 @@ export const RANDOM_NUMBERS_CONFIG = {
   factory: () => new RandomNumbers()
 };
 
+let count = 0;
+
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss']
 })
-export class RandomNumbersComponent implements OnInit {
+export class RandomNumbersComponent implements OnInit, OnDestroy {
   @Input() @HostBinding('class.is-config') isConfig = false;
 
-  isActive: boolean = false;
+  isActive = false;
+  id = 0;
+  subscription: Subscription;
 
-  constructor(@Inject(XXL_STATE) private state: XxlFlow,
-              private fbManager: FlowBasedManagerService) {
+  constructor(@Inject(XXL_STATE) private state: XxlComponentState,
+      @Inject(XXL_ACTIVE) public isActive$: Observable<boolean>) {
+    this.id = ++count;
+    console.log('new RN ' + this.id);
   }
 
-  ngOnInit() {
+  ngOnInit(): void {
     // this.state.active$.subscribe(isActive => {
     //   console.log('update state ', isActive);
     //   this.isActive = isActive;
     // });
+
+    this.subscription = this.isActive$.subscribe((x) => {
+      console.log(this.id + ' rn: ' + x);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
   }
 }

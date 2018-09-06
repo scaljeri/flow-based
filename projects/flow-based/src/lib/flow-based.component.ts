@@ -14,10 +14,11 @@ import {
   XxlFlow,
   XxlWorker,
   XxlPosition,
-  XXL_STATE, XxlFlowUnit
+  XXL_STATE, XxlFlowUnit, XXL_ACTIVE
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { Subject } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'xxl-flow-based',
@@ -55,6 +56,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
       evt.stopPropagation();
       this.activeFlowIndex = null;
     }
+
+    this.activeIndex$.next();
   }
 
   ngOnInit() {
@@ -94,7 +97,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
           providers: [
             {
               provide: XXL_STATE,
-              useValue: state,
+              useValue: state
+            }, {
+              provide: XXL_ACTIVE,
+              useValue: this.activeIndex$.pipe(map(num => num === index))
             }
           ],
           parent: this.injector
