@@ -22,6 +22,9 @@ $socket-size: 16px;
   min-height: 50px;
   align-items: center;
 
+  min-width: 72px;
+  min-height: 72px;
+
   .sockets-in {
     .socket {
       border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);

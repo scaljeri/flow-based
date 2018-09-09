@@ -2,11 +2,7 @@ import { Component, forwardRef, HostBinding, Inject, Input, OnDestroy, OnInit } 
 import { Observable, Subject, Subscription } from 'rxjs';
 
 import {
-  XXL_ACTIVE,
-  XXL_FLW_UNIT_SERVICE,
-  XXL_STATE,
-  XxlComponentState,
-  XxlFlowComponent,
+  XXL_FLW_UNIT_SERVICE, XxlFlowUnit,
   XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormControl } from '@angular/forms';
@@ -63,7 +59,7 @@ let count = 0;
     provide: XXL_FLW_UNIT_SERVICE, useExisting: forwardRef(() => RandomNumbersComponent), multi: true
   }]
 })
-export class RandomNumbersComponent extends XxlFlowComponent implements OnInit, OnDestroy {
+export class RandomNumbersComponent  implements XxlFlowUnit, OnInit, OnDestroy {
   @Input() @HostBinding('class.is-config') isConfig = false;
 
   name = new FormControl('');
@@ -71,9 +67,7 @@ export class RandomNumbersComponent extends XxlFlowComponent implements OnInit, 
   id = 0;
   subscription: Subscription;
 
-  constructor(@Inject(XXL_STATE) private state: XxlComponentState,
-      @Inject(XXL_ACTIVE) public isActive$: Observable<boolean>) {
-    super();
+  constructor() {
     this.id = ++count;
     console.log('new RN ' + this.id);
   }
@@ -83,10 +77,10 @@ export class RandomNumbersComponent extends XxlFlowComponent implements OnInit, 
     //   console.log('update state ', isActive);
     //   this.isActive = isActive;
     // });
-
-    this.subscription = this.isActive$.subscribe((x) => {
-      console.log(this.id + ' rn: ' + x);
-    });
+    //
+    // this.subscription = this.isActive$.subscribe((x) => {
+    //   console.log(this.id + ' rn: ' + x);
+    // });
   }
 
   ngOnDestroy(): void {
@@ -95,5 +89,10 @@ export class RandomNumbersComponent extends XxlFlowComponent implements OnInit, 
 
   getSockets(): XxlSocket[] {
     return [];
+  }
+
+  setActive(state: boolean): void {
+    console.log('state = ' + state);
+    this.isActive = state;
   }
 }

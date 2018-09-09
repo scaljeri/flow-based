@@ -1,11 +1,10 @@
 import {
   AfterContentInit, AfterViewInit,
-  Component, ContentChildren,
+  Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
   Inject,
-  Injector, Input, OnChanges,
-  OnInit, Output, QueryList, SimpleChanges, ViewChild, ViewChildren
+  Injector, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
@@ -14,7 +13,7 @@ import {
   XxlFlow,
   XxlWorker,
   XxlPosition,
-  XXL_STATE, XxlFlowUnit, XXL_ACTIVE, XxlSocketEvent, XXL_FLW_UNIT_SERVICE, XxlFlowComponent
+  XXL_STATE, XXL_ACTIVE, XxlSocketEvent, XxlFlowUnitState
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { Subject } from 'rxjs';
@@ -34,8 +33,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
-
-  @ContentChildren(XxlFlowComponent) units: QueryList<XxlFlowComponent>;
 
   injectors: Injector[];
   onChange: (state: any) => void;
@@ -86,12 +83,12 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => {
-      console.log('ok ' + this.units.length);
-    this.units.forEach(c => {
-      console.log(c.getSockets());
-    });
-    }, 10000);
+    // setTimeout(() => {
+    //   console.log('ok ' + this.units.length);
+    // this.units.forEach(c => {
+    //   console.log(c.getSockets());
+    // });
+    // }, 10000);
   }
 
   ngAfterContentInit(): void {
@@ -120,7 +117,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     }
   }
 
-  addUnit(unit: XxlFlowUnit): void {
+  addUnit(unit: XxlFlowUnitState): void {
     this.flow.children.push(unit);
     this.createInjector();
   }

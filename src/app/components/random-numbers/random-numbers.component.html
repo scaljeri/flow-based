@@ -1,11 +1,11 @@
-<section *ngIf="!(isActive$ | async)">
+<section *ngIf="!isActive">
   <img src="/assets/config.svg">
 
   <h1 class="title">{{name.value}}</h1>
 
 </section>
 
-<section *ngIf="isActive$ | async">
+<section *ngIf="isActive">
 random-numbers config
   <form>
     <div class="form-group">

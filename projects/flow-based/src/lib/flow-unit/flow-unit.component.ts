@@ -1,17 +1,14 @@
 import {
-  Component,
-  ElementRef,
+  Component, ComponentFactoryResolver, ComponentRef,
   EventEmitter,
-  HostBinding,
-  HostListener,
+  HostBinding, Injector,
   Input,
   OnChanges,
   OnInit, Output,
-  SimpleChange,
-  SimpleChanges, ViewChildren
+  SimpleChanges, ViewChild, ViewContainerRef
 } from '@angular/core';
-import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlFlowComponent, XxlSocketEvent } from 'flow-based';
+import { XxlFlowUnit, XxlSocketEvent } from 'flow-based';
+import { DynamicComponentDirective } from '../dynamic-component.directive';
 
 @Component({
   selector: 'xxl-flow-unit',
@@ -20,16 +17,29 @@ import { XxlFlowComponent, XxlSocketEvent } from 'flow-based';
 })
 export class FlowUnitComponent implements OnInit, OnChanges {
   @Input() @HostBinding('class.is-active') active = false;
-  @Output() socketActive = new EventEmitter<any>();
+  @Input() component: any;
+  @Input() state: any;
 
-  constructor(private element: ElementRef,
-              private flowService: XxlFlowBasedService) {
+  @Output() socketActive = new EventEmitter<any>();
+  @ViewChild(DynamicComponentDirective) ref: ComponentRef<XxlFlowUnit>;
+// , { read: ViewContainerRef }) entry: ViewContainerRef;
+
+  // private instance: ComponentRef<XxlFlowUnit>;
+
+  constructor() {
+
   }
 
   ngOnInit() {
+    console.log('yp', this.ref.instance);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    const active = changes.active;
+
+    if (active && active.currentValue !== active.previousValue && this.ref.instance) {
+      this.ref.instance.setActive(active.currentValue);
+    }
   }
 
   socketClick(type: string, event: PointerEvent): void {

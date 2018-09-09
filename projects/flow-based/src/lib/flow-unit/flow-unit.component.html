@@ -4,7 +4,7 @@
 </section>
 
 <section class="component">
-  <ng-content></ng-content>
+  <ng-container *xxlDynamicComponent="component"></ng-container>
 </section>
 
 
@@ -12,3 +12,4 @@
   <span (pointerdown)="socketClick('out', $event)" class="socket"></span>
   <span (pointerdown)="socketClick('out', $event)" class="socket"></span>
 </section>
+

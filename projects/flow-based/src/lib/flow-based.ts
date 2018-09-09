@@ -7,6 +7,10 @@ export const XXL_STATE = new InjectionToken<XxlTypes>('xxl-state');
 export const XXL_ACTIVE = new InjectionToken<Observable<boolean>>('xxl-active');
 export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
 
+export interface XxlFlowUnit {
+  setActive(boolean): void;
+}
+
 export interface XxlTypes {
   [key: string]: Type<any>;
 }
@@ -16,25 +20,17 @@ export interface XxlPosition {
   y: number;
 }
 
-export interface XxlFlowUnit {
+export interface XxlFlowUnitState {
   title?: string;
   type: string;
   position?: XxlPosition;
   id: number;
-  config: any;
+  state: any;
 }
 
-export interface XxlComponentState {
-  state: XxlFlowUnit,
-  isActive$: Observable<boolean>;
-}
-export abstract class XxlFlowComponent {
-  abstract getSockets(): XxlSocket[];
-}
-
-export interface XxlFlow extends Partial<XxlFlowUnit> {
+export interface XxlFlow extends Partial<XxlFlowUnitState> {
   connections?: XxlConnection[];
-  children: XxlFlowUnit[];
+  children: XxlFlowUnitState[];
 }
 
 export interface XxlConnection {

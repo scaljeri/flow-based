@@ -11,13 +11,12 @@
     <xxl-flow-unit *ngIf="!isFlow(i) || activeFlowIndex !== i"
                class="block"
                xxlMovable
-               [class.is-active]="activeFlowIndex === i"
                [(position)]="unit.position"
                [active]="activeFlowIndex === i"
+               [component]="flowTypes[unit.type]"
+               [state]="unit.state"
                (socketActive)="socketActive($event)"
                (noDrag)="entryClicked(i)">
-      <ng-container [ngComponentOutlet]="flowTypes[unit.type]"
-                    [ngComponentOutletInjector]="injectors[i]"></ng-container>
     </xxl-flow-unit>
 
     <xxl-flow-based

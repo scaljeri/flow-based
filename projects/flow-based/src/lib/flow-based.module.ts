@@ -14,6 +14,7 @@ import { FilterComponent } from './components/filter/filter.component';
 import { SocketDirective } from './components/socket/socket.directive';
 import { XxlFlowBasedService } from './flow-based.service';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';
+import { DynamicComponentDirective } from './dynamic-component.directive';
 
 @NgModule({
   imports: [
@@ -21,6 +22,7 @@ import { FlowUnitComponent } from './flow-unit/flow-unit.component';
     FormsModule
   ],
   declarations: [
+    DynamicComponentDirective,
     FlowBasedComponent,
     SourceComponent,
     DummyComponent,

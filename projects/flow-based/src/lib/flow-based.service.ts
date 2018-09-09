@@ -1,5 +1,5 @@
-import { Inject, Injectable, Optional } from '@angular/core';
-import { XXL_WORKERS, XxlFlowUnit, XxlWorker, XxlWorkerService } from './flow-based';
+import { Injectable } from '@angular/core';
+import { XxlFlowUnitState } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 
 @Injectable({
@@ -15,18 +15,17 @@ export class XxlFlowBasedService {
   }
 
   deactivate(): void {
-    debugger;
     this.flowStack.shift();
   }
 
   back(): void {
     if (this.flowStack.length > 0) {
       this.deactivate();
-      //this.flowStack[0].deactivate();
+      // this.flowStack[0].deactivate();
     }
   }
 
-  add(type: string, config = {}): void {
-    this.flowStack[0].addUnit( { type, config } as XxlFlowUnit);
+  add(type: string, state = {}): void {
+    this.flowStack[0].addUnit( { type, state } as XxlFlowUnitState);
   }
 }
