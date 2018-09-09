@@ -2,7 +2,7 @@ import { InjectionToken, Type } from '@angular/core';
 import { Observable } from 'rxjs';
 
 export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
-export const XXL_FLOW_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
+export const XXL_FLW_UNIT_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
 export const XXL_STATE = new InjectionToken<XxlTypes>('xxl-state');
 export const XXL_ACTIVE = new InjectionToken<Observable<boolean>>('xxl-active');
 export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
@@ -28,9 +28,8 @@ export interface XxlComponentState {
   state: XxlFlowUnit,
   isActive$: Observable<boolean>;
 }
-export interface XxlComponent {
-  start: () => void;
-  stop: () => void;
+export abstract class XxlFlowComponent {
+  abstract getSockets(): XxlSocket[];
 }
 
 export interface XxlFlow extends Partial<XxlFlowUnit> {
@@ -48,6 +47,11 @@ export interface XxlConnection {
 export interface XxlSocket {
   name: string;
   id: number;
+  type: 'in' | 'out';
+}
+
+export interface XxlSocketEvent extends XxlSocket {
+  element: HTMLElement;
 }
 
 // Describes the class doing the actual work

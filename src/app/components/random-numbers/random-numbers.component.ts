@@ -1,7 +1,14 @@
-import { Component, HostBinding, Inject, Input, OnDestroy, OnInit } from '@angular/core';
+import { Component, forwardRef, HostBinding, Inject, Input, OnDestroy, OnInit } from '@angular/core';
 import { Observable, Subject, Subscription } from 'rxjs';
 
-import { XXL_ACTIVE, XXL_STATE, XxlComponentState } from '../../../../projects/flow-based/src/lib/flow-based';
+import {
+  XXL_ACTIVE,
+  XXL_FLW_UNIT_SERVICE,
+  XXL_STATE,
+  XxlComponentState,
+  XxlFlowComponent,
+  XxlSocket
+} from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormControl } from '@angular/forms';
 
 export interface RandomNumberConfig {
@@ -40,9 +47,10 @@ export class RandomNumbers {
 }
 
 export const RANDOM_NUMBERS_CONFIG = {
+  sockets: [
+  ],
   start: 0,
   end: 100,
-  factory: () => new RandomNumbers()
 };
 
 let count = 0;
@@ -50,9 +58,12 @@ let count = 0;
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
-  styleUrls: ['./random-numbers.component.scss']
+  styleUrls: ['./random-numbers.component.scss'],
+  providers: [{
+    provide: XXL_FLW_UNIT_SERVICE, useExisting: forwardRef(() => RandomNumbersComponent), multi: true
+  }]
 })
-export class RandomNumbersComponent implements OnInit, OnDestroy {
+export class RandomNumbersComponent extends XxlFlowComponent implements OnInit, OnDestroy {
   @Input() @HostBinding('class.is-config') isConfig = false;
 
   name = new FormControl('');
@@ -62,6 +73,7 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
 
   constructor(@Inject(XXL_STATE) private state: XxlComponentState,
       @Inject(XXL_ACTIVE) public isActive$: Observable<boolean>) {
+    super();
     this.id = ++count;
     console.log('new RN ' + this.id);
   }
@@ -79,5 +91,9 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+  }
+
+  getSockets(): XxlSocket[] {
+    return [];
   }
 }

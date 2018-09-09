@@ -1,11 +1,11 @@
 import {
-  AfterContentInit,
-  Component,
+  AfterContentInit, AfterViewInit,
+  Component, ContentChildren,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
   Inject,
   Injector, Input, OnChanges,
-  OnInit, Output, SimpleChanges, ViewChild
+  OnInit, Output, QueryList, SimpleChanges, ViewChild, ViewChildren
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
@@ -14,7 +14,7 @@ import {
   XxlFlow,
   XxlWorker,
   XxlPosition,
-  XXL_STATE, XxlFlowUnit, XXL_ACTIVE
+  XXL_STATE, XxlFlowUnit, XXL_ACTIVE, XxlSocketEvent, XXL_FLW_UNIT_SERVICE, XxlFlowComponent
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { Subject } from 'rxjs';
@@ -26,7 +26,7 @@ import { map } from 'rxjs/operators';
   styleUrls: ['./flow-based.component.scss'],
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
-export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, ControlValueAccessor {
+export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, AfterContentInit, ControlValueAccessor {
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
@@ -34,6 +34,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
+
+  @ContentChildren(XxlFlowComponent) units: QueryList<XxlFlowComponent>;
 
   injectors: Injector[];
   onChange: (state: any) => void;
@@ -81,6 +83,15 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
       this.createInjector();
       console.log(this.flow);
     }
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      console.log('ok ' + this.units.length);
+    this.units.forEach(c => {
+      console.log(c.getSockets());
+    });
+    }, 10000);
   }
 
   ngAfterContentInit(): void {
@@ -138,6 +149,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterContentInit, 
     console.log('activity');
     this.activeFlowIndex = index;
     this.activeIndex$.next(index);
+  }
+
+  socketActive(event: XxlSocketEvent): void {
+    console.log('socket clicked', event);
   }
 
   isFlow(child: XxlFlow): boolean {

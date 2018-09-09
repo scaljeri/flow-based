@@ -1,6 +1,6 @@
 <section class="sockets sockets-in">
   <!--<span *ngFor="let socket of INs"></span>-->
-  <span class="socket"></span>
+  <span (pointerdown)="socketClick('in', $event)" class="socket"></span>
 </section>
 
 <section class="component">
@@ -9,6 +9,6 @@
 
 
 <section class="sockets sockets-out">
-  <span class="socket"></span>
-  <span class="socket"></span>
+  <span (pointerdown)="socketClick('out', $event)" class="socket"></span>
+  <span (pointerdown)="socketClick('out', $event)" class="socket"></span>
 </section>
