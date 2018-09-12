@@ -2,7 +2,7 @@
 
 TODO
 
-Angular library to define flows + demo 
+Angular library for building workflows + demo 
 
 ### Create project specific component
 
