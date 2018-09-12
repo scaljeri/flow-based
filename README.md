@@ -1,12 +1,14 @@
+## Flow based programming
+
+TODO
+
+Angular library to define flows + demo 
+
 ### Create project specific component
 
     $>  ng g c foo --project=flow-based
     
-### Terminology
-
-plugs and sockets - output and input
-
-driver - software that coordinates all pieces
+![Example](fb-example.jpg)
 
 ## Resources
 
