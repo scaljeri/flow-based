@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
 import { XXL_FLOW_TYPES } from './flow-based';
@@ -12,14 +12,15 @@ import { MovableDirective } from './drag-drop/movable/movable.directive';
 import { MovableAreaDirective } from './drag-drop/movable-area/movable-area.directive';
 import { FilterComponent } from './components/filter/filter.component';
 import { SocketDirective } from './components/socket/socket.directive';
-import { XxlFlowBasedService } from './flow-based.service';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';
 import { DynamicComponentDirective } from './dynamic-component.directive';
+import { AddSocketComponent } from './flow-unit/add-socket/add-socket.component';
 
 @NgModule({
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    ReactiveFormsModule
   ],
   declarations: [
     DynamicComponentDirective,
@@ -31,10 +32,10 @@ import { DynamicComponentDirective } from './dynamic-component.directive';
     MovableDirective,
     MovableAreaDirective,
     FilterComponent,
-    SocketDirective],
+    SocketDirective,
+    AddSocketComponent],
   exports: [FlowBasedComponent],
   providers: [
-    XxlFlowBasedService,
     FlowBasedManagerService,
     {
       provide: XXL_FLOW_TYPES,

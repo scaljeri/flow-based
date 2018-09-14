@@ -1,6 +1,9 @@
+<xxl-add-socket [type]="newSocketType"
+  (add)="addSocket($event)" (cancel)="newSocketType = null"></xxl-add-socket>
+
 <section class="sockets sockets-in">
-  <!--<span *ngFor="let socket of INs"></span>-->
-  <span (pointerdown)="socketClick('in', $event)" class="socket"></span>
+  <button class="add-socket" (click)="newSocketIn()">+</button>
+  <span *ngFor="let socket of socketIn;let i = index" (pointerdown)="socketClick(i, $event)" class="socket"></span>
 </section>
 
 <section class="component">
@@ -9,7 +12,7 @@
 
 
 <section class="sockets sockets-out">
-  <span (pointerdown)="socketClick('out', $event)" class="socket"></span>
-  <span (pointerdown)="socketClick('out', $event)" class="socket"></span>
+  <button class="add-socket" (click)="newSocketOut()">+</button>
+  <span *ngFor="let socket of socketOut;let i = index" (pointerdown)="socketClick(i, $event)" class="socket"></span>
 </section>
 

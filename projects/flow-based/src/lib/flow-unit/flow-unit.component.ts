@@ -1,14 +1,16 @@
 import {
-  Component, ComponentFactoryResolver, ComponentRef,
+  AfterContentInit, ChangeDetectorRef,
+  Component, ComponentRef,
   EventEmitter,
-  HostBinding, Injector,
+  HostBinding,
   Input,
   OnChanges,
   OnInit, Output,
-  SimpleChanges, ViewChild, ViewContainerRef
+  SimpleChanges, ViewChild,
 } from '@angular/core';
-import { XxlFlowUnit, XxlSocketEvent } from 'flow-based';
+import { XxlFlowUnit, XxlSocket, XxlSocketEvent, XxlSocketType } from 'flow-based';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
+import { XxlSocketBuilderService } from '../socket-builder.service';
 
 @Component({
   selector: 'xxl-flow-unit',
@@ -21,17 +23,20 @@ export class FlowUnitComponent implements OnInit, OnChanges {
   @Input() state: any;
 
   @Output() socketActive = new EventEmitter<any>();
-  @ViewChild(DynamicComponentDirective) ref: ComponentRef<XxlFlowUnit>;
-// , { read: ViewContainerRef }) entry: ViewContainerRef;
+  @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
-  // private instance: ComponentRef<XxlFlowUnit>;
+  newSocketType: XxlSocketType;
+  socketIn: XxlSocket[];
+  socketOut: XxlSocket[];
 
-  constructor() {
-
-  }
+  constructor(private viewRef: ChangeDetectorRef) {}
 
   ngOnInit() {
-    console.log('yp', this.ref.instance);
+    this.ref.instance$.subscribe(instance => {
+      this.socketIn = this.ref.instance.getSocketsIn();
+      this.socketOut = this.ref.instance.getSocketsOut();
+      this.viewRef.detectChanges();
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -43,9 +48,32 @@ export class FlowUnitComponent implements OnInit, OnChanges {
   }
 
   socketClick(type: string, event: PointerEvent): void {
+    console.log('clcock');
     event.stopImmediatePropagation();
 
-    this.socketActive.emit({ } as XxlSocketEvent);
+    if (!this.active) {
+      this.socketActive.emit({} as XxlSocketEvent);
+    } else {
+
+    }
+  }
+
+  AddSocket(socket: XxlSocket): void {
+    if (socket.type === XxlSocketBuilderService.SOCKET_IN) {
+      this.socketsIn.push(socket);
+    } else {
+
+    }
+
+    this.newSocketType = null;
+  }
+
+  newSocketIn(): void {
+    this.newSocketType = XxlSocketBuilderService.SOCKET_IN;
+  }
+
+  newSocketOut(): void {
+    this.newSocketType = XxlSocketBuilderService.SOCKET_OUT;
   }
 
   get socketsIn(): any[] {

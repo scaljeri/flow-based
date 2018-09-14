@@ -164,5 +164,10 @@
       }
     }
   },
-  "defaultProject": "flow-based-demo"
+  "defaultProject": "flow-based-demo",
+  "schematics": {
+    "@schematics/angular:component": {
+      "styleext": "scss"
+    }
+  }
 }

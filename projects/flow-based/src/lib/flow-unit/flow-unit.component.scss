@@ -1,3 +1,6 @@
+@import '../utils/utils';
+@import '../utils/variables';
+
 $border-width: 3px;
 $border-color: darkray;
 $border-width: 3px;
@@ -40,6 +43,10 @@ $socket-size: 16px;
   &:not(.is-active) {
     cursor: move;
     position: absolute;
+
+    .add-socket {
+      display: none;
+    }
   }
 
   &.is-active {
@@ -47,7 +54,7 @@ $socket-size: 16px;
     transform: translate(0,0);
     top: 0!important;
     left: 0!important;
-    z-index: 2;
+    z-index: $xxl-flow-unit-active;
     position: relative;
 
     --socket-size: #{$socket-size * 3};
@@ -63,15 +70,31 @@ $socket-size: 16px;
       .socket {
         border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
       }
+
+      .add-socket {
+        left: auto;
+        right: 30px;
+      }
     }
   }
 }
 
+.add-socket-form {
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  @include xxl-position(absolute, 0px 0px 0px 0px);
+}
 .component {
   display: inline-flex;
   background-color: lightgray;
   border-radius: 8px;
   padding: 1px;
+}
+
+.add-socket {
+  position: absolute;
+  top: 10px;
+  left: 30px;
 }
 
 .sockets {

@@ -39,7 +39,7 @@ export class DraggableDirective {
       this.pointerMoveSubscription.unsubscribe();
     }
 
-    if (this.isDragging) {
+    if (this.isDragging && event.timeStamp - this.dragState.timeStamp > 200) {
       this.dragEnd.emit(event);
     } else if (this.dragState) {
       this.noDrag.emit(event);
@@ -56,9 +56,10 @@ export class DraggableDirective {
 
     if (!this.isDragging) {
       this.dragStart.emit(this.dragState);
-      this.isDragging = true;
+
+        this.isDragging = true;
     }
 
     this.dragMove.emit(event);
- }
+  }
 }

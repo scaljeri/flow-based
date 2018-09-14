@@ -20,7 +20,8 @@ export class RandomNumbers {
   private lower: number;
   private upper: number;
 
-  constructor() {}
+  constructor() {
+  }
 
   set config(config: RandomNumberConfig) {
     this.lower = config.range.start;
@@ -37,14 +38,13 @@ export class RandomNumbers {
     }, 1000);
   }
 
-  stop(): void  {
+  stop(): void {
     clearInterval(this.intervalId);
   }
 }
 
 export const RANDOM_NUMBERS_CONFIG = {
-  sockets: [
-  ],
+  sockets: [],
   start: 0,
   end: 100,
 };
@@ -59,7 +59,7 @@ let count = 0;
     provide: XXL_FLW_UNIT_SERVICE, useExisting: forwardRef(() => RandomNumbersComponent), multi: true
   }]
 })
-export class RandomNumbersComponent  implements XxlFlowUnit, OnInit, OnDestroy {
+export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   @Input() @HostBinding('class.is-config') isConfig = false;
 
   name = new FormControl('');
@@ -87,8 +87,21 @@ export class RandomNumbersComponent  implements XxlFlowUnit, OnInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
-  getSockets(): XxlSocket[] {
-    return [];
+  getSocketsIn(): XxlSocket[] {
+    return [{
+      type: 'in',
+      id: 'rnc-a'
+    }];
+  }
+
+  getSocketsOut(): XxlSocket[] {
+    return [{
+      type: 'out',
+      id: 'rnc-a'
+    }, {
+      type: 'out',
+      id: 'rnc-b'
+    }];
   }
 
   setActive(state: boolean): void {

@@ -1,0 +1,21 @@
+@import '../../utils/utils';
+@import '../../utils/variables';
+
+:host {
+  background-color: #fff;
+  display: none;
+  z-index: $xxl-add-socket-form;
+  @include xxl-position(absolute, 50px 0 0 0);
+
+  &.active {
+    display: flex;
+
+    &.socket-in {
+      left: 50px;
+    }
+
+    &.socket-out {
+      right: 50px;
+    }
+  }
+}
