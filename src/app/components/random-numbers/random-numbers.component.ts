@@ -87,15 +87,11 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
-  getSocketsIn(): XxlSocket[] {
+  getSockets(): XxlSocket[] {
     return [{
       type: 'in',
       id: 'rnc-a'
-    }];
-  }
-
-  getSocketsOut(): XxlSocket[] {
-    return [{
+    }, {
       type: 'out',
       id: 'rnc-a'
     }, {

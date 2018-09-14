@@ -13,11 +13,7 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
   ngOnInit() {
   }
 
-  getSocketsIn(): XxlSocket[] {
-    return [];
-  }
-
-  getSocketsOut(): XxlSocket[] {
+  getSockets(): XxlSocket[] {
     return [];
   }
 

@@ -15,6 +15,9 @@ import { SocketDirective } from './components/socket/socket.directive';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';
 import { DynamicComponentDirective } from './dynamic-component.directive';
 import { AddSocketComponent } from './flow-unit/add-socket/add-socket.component';
+import { ConnectionLinesComponent } from './connection-lines/connection-lines.component';
+import { SocketInPipe } from './pipes/socket-in.pipe';
+import { SocketOutPipe } from './pipes/socket-out.pipe';
 
 @NgModule({
   imports: [
@@ -33,7 +36,10 @@ import { AddSocketComponent } from './flow-unit/add-socket/add-socket.component'
     MovableAreaDirective,
     FilterComponent,
     SocketDirective,
-    AddSocketComponent],
+    AddSocketComponent,
+    ConnectionLinesComponent,
+    SocketInPipe,
+    SocketOutPipe],
   exports: [FlowBasedComponent],
   providers: [
     FlowBasedManagerService,

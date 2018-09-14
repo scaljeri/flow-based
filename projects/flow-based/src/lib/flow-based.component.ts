@@ -13,7 +13,7 @@ import {
   XxlFlow,
   XxlWorker,
   XxlPosition,
-  XXL_STATE, XXL_ACTIVE, XxlSocketEvent, XxlFlowUnitState
+  XXL_STATE, XXL_ACTIVE, XxlSocketEvent, XxlFlowUnitState, XxlSocket
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { Subject } from 'rxjs';
@@ -77,7 +77,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     if (obj.flow) {
       if (this.flow.children.length === 0) {
       }
-      this.createInjector();
+      // this.createInjector();
       console.log(this.flow);
     }
   }
@@ -97,29 +97,33 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     // }
   }
 
-  createInjector(): void {
-    console.log('create');
-    if (this.flow && this.flow.children) {
-      this.injectors = (this.flow.children.map((state, index) => {
-        return Injector.create({
-          providers: [
-            {
-              provide: XXL_STATE,
-              useValue: state
-            }, {
-              provide: XXL_ACTIVE,
-              useValue: this.activeIndex$.pipe(map(num => num === index))
-            }
-          ],
-          parent: this.injector
-        });
-      }));
-    }
+  updateConnections(): void {
+    console.log('update connections');
   }
+
+  // createInjector(): void {
+  //   console.log('create');
+  //   if (this.flow && this.flow.children) {
+  //     this.injectors = (this.flow.children.map((state, index) => {
+  //       return Injector.create({
+  //         providers: [
+  //           {
+  //             provide: XXL_STATE,
+  //             useValue: state
+  //           }, {
+  //             provide: XXL_ACTIVE,
+  //             useValue: this.activeIndex$.pipe(map(num => num === index))
+  //           }
+  //         ],
+  //         parent: this.injector
+  //       });
+  //     }));
+  //   }
+  // }
 
   addUnit(unit: XxlFlowUnitState): void {
     this.flow.children.push(unit);
-    this.createInjector();
+    // this.createInjector();
   }
 
   activityChanged(isActive): void {
@@ -130,17 +134,17 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   // activeFlow(): XxlFlow {
   //   return this.activeFlowIndex !== null ? this.flow.units[this.activeFlowIndex] as XxlFlow : null;
   // }
-
-  deactivate(): void {
-    if (this.activeFlowIndex === null) {
-      if (!this.root) {
-        this.flowService.deactivate();
-        this.activeChanged.emit(false);
-      }
-    } else {
-      this.entryClicked(null);
-    }
-  }
+  //
+  // deactivate(): void {
+  //   if (this.activeFlowIndex === null) {
+  //     if (!this.root) {
+  //       this.flowService.deactivate();
+  //       this.activeChanged.emit(false);
+  //     }
+  //   } else {
+  //     this.entryClicked(null);
+  //   }
+  // }
 
   entryClicked(index: number): void {
     console.log('activity');
@@ -148,7 +152,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     this.activeIndex$.next(index);
   }
 
-  socketActive(event: XxlSocketEvent): void {
+  socketClick(socket: XxlSocket, event: XxlSocketEvent): void {
     console.log('socket clicked', event);
   }
 

@@ -9,8 +9,7 @@ export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
 
 export interface XxlFlowUnit {
   setActive(boolean): void;
-  getSocketsIn(): XxlSocket[];
-  getSocketsOut(): XxlSocket[];
+  getSockets(): XxlSocket[];
 }
 
 export interface XxlTypes {
@@ -28,7 +27,7 @@ export interface XxlFlowUnitState {
   state?: any;
   title?: string;
   position?: XxlPosition;
-  sockets?: XxlSockets;
+  sockets?: XxlSocket[];
 }
 
 export interface XxlFlow extends Partial<XxlFlowUnitState> {
@@ -43,10 +42,6 @@ export interface XxlConnection {
   in:  XxlSocket;   // to
 }
 
-export interface XxlSockets {
-  in: XxlSocket[];
-  out: XxlSocket[];
-}
 
 export type XxlSocketType = 'in' | 'out';
 
@@ -57,6 +52,7 @@ export interface XxlSocket {
 }
 
 export interface XxlSocketEvent extends XxlSocket {
+  socket: XxlSocket;
   element: HTMLElement;
 }
 

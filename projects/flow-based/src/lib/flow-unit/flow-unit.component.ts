@@ -22,7 +22,7 @@ export class FlowUnitComponent implements OnInit, OnChanges {
   @Input() component: any;
   @Input() state: XxlFlowUnitState;
 
-  @Output() socketActive = new EventEmitter<any>();
+  @Output() socketClick = new EventEmitter<any>();
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
   newSocketType: XxlSocketType;
@@ -32,12 +32,9 @@ export class FlowUnitComponent implements OnInit, OnChanges {
 
   ngOnInit() {
     this.ref.instance$.subscribe(instance => {
-      if (!this.state.sockets) { // TODO: Remove in future
-        this.state.sockets = {} as any;
+      if (!this.state.sockets || !this.state.sockets.length) { // TODO: Remove in future
+        this.state.sockets = instance.getSockets();
       }
-      //
-      this.state.sockets.in = this.state.sockets.in || instance.getSocketsIn();
-      this.state.sockets.out = this.state.sockets.out || instance.getSocketsOut();
 
       this.viewRef.detectChanges();
     });
@@ -46,6 +43,8 @@ export class FlowUnitComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     const active = changes.active;
 
+    console.log(this.state);
+
     if (active && active.currentValue !== active.previousValue && this.ref.instance) {
       this.ref.instance.setActive(active.currentValue);
     }
@@ -53,23 +52,23 @@ export class FlowUnitComponent implements OnInit, OnChanges {
     this.newSocketType = null;
   }
 
-  socketClick(type: string, event: PointerEvent): void {
+  onSocketClick(index, event: PointerEvent): void {
     console.log('clcock');
     event.stopImmediatePropagation();
 
     if (!this.active) {
-      this.socketActive.emit({} as XxlSocketEvent);
+      this.socketClick.emit({socket: this.state.sockets[index], element: event.target} as XxlSocketEvent);
     } else {
 
     }
   }
 
+  socketTrackByFn(index, item): XxlSocket {
+    return item;
+  }
+
   createSocket(socket: XxlSocket): void {
-    if (socket.type === XxlSocketBuilderService.SOCKET_IN) {
-      this.state.sockets.in.push(socket);
-    } else {
-      this.state.sockets.out.push(socket);
-    }
+    this.state.sockets = [...this.state.sockets, socket];
 
     this.newSocketType = null;
   }
