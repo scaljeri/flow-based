@@ -1,9 +1,9 @@
 <xxl-add-socket [type]="newSocketType"
-  (add)="addSocket($event)" (cancel)="newSocketType = null"></xxl-add-socket>
+  (create)="createSocket($event)" (cancel)="newSocketType = null"></xxl-add-socket>
 
-<section class="sockets sockets-in">
+<section *ngIf="state?.sockets" class="sockets sockets-in">
   <button class="add-socket" (click)="newSocketIn()">+</button>
-  <span *ngFor="let socket of socketIn;let i = index" (pointerdown)="socketClick(i, $event)" class="socket"></span>
+  <span *ngFor="let socket of state.sockets.in;let i = index" (pointerdown)="socketClick(i, $event)" class="socket"></span>
 </section>
 
 <section class="component">
@@ -11,8 +11,8 @@
 </section>
 
 
-<section class="sockets sockets-out">
+<section *ngIf="state?.sockets" class="sockets sockets-out">
   <button class="add-socket" (click)="newSocketOut()">+</button>
-  <span *ngFor="let socket of socketOut;let i = index" (pointerdown)="socketClick(i, $event)" class="socket"></span>
+  <span *ngFor="let socket of state.sockets.out;let i = index" (pointerdown)="socketClick(i, $event)" class="socket"></span>
 </section>
 

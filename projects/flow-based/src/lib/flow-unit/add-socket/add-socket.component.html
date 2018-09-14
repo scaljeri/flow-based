@@ -1,6 +1,10 @@
-<form [formGroup]="socketForm">
+<form [formGroup]="socketForm" (ngSubmit)="onSubmit()">
   <label>
-    Name:
-    <input type="text" [formControl]="name" placeholder="Socket name" class="form-control">
+    Name: <input type="text" formControlName="name" placeholder="Socket name" class="form-control">
   </label>
+
+  <footer>
+    <button type="button" (click)="onCancel()" class="btn btn-secondar">Cancel</button>
+    <button type="submit" class="btn btn-primary">Create</button>
+  </footer>
 </form>

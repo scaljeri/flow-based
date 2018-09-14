@@ -1,4 +1,4 @@
-import { Component, HostBinding, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, HostBinding, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { XxlSocket, XxlSocketType } from 'flow-based';
 import { XxlSocketBuilderService } from '../../socket-builder.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -9,6 +9,9 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
   styleUrls: ['./add-socket.component.scss']
 })
 export class AddSocketComponent implements OnInit, OnChanges {
+  @Output() cancel = new EventEmitter<void>();
+  @Output() create = new EventEmitter<XxlSocket>();
+
   socket: XxlSocket;
 
   @Input() @HostBinding('class.active') type: XxlSocketType;
@@ -40,5 +43,15 @@ export class AddSocketComponent implements OnInit, OnChanges {
     if (changes.type.currentValue) {
       this.socket = this.socketBuilder.create(changes.type.currentValue);
     }
+  }
+
+  onSubmit(): void {
+    console.log('submit');
+    this.create.emit(this.socket);
+  }
+
+  onCancel(): void {
+    console.log('cancel');
+    this.cancel.emit();
   }
 }

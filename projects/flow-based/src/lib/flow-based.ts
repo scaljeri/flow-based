@@ -23,17 +23,17 @@ export interface XxlPosition {
 }
 
 export interface XxlFlowUnitState {
-  title?: string;
   type: string;
+  id?: number;
+  state?: any;
+  title?: string;
   position?: XxlPosition;
-  id: number;
-  state: any;
-  sockets: XxlSockets;
+  sockets?: XxlSockets;
 }
 
 export interface XxlFlow extends Partial<XxlFlowUnitState> {
   connections?: XxlConnection[];
-  children: XxlFlowUnitState[];
+  children: (XxlFlowUnitState | XxlFlow)[];
 }
 
 export interface XxlConnection {
@@ -48,7 +48,7 @@ export interface XxlSockets {
   out: XxlSocket[];
 }
 
-export type XxlSocketType = 'in' | 'out'
+export type XxlSocketType = 'in' | 'out';
 
 export interface XxlSocket {
   name?: string;

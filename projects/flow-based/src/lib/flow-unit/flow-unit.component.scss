@@ -54,8 +54,8 @@ $socket-size: 16px;
     transform: translate(0,0);
     top: 0!important;
     left: 0!important;
-    z-index: $xxl-flow-unit-active;
     position: relative;
+    z-index: $xxl-flow-unit-active;
 
     --socket-size: #{$socket-size * 3};
 
@@ -93,6 +93,7 @@ $socket-size: 16px;
 
 .add-socket {
   position: absolute;
+  cursor: pointer;
   top: 10px;
   left: 30px;
 }

@@ -8,7 +8,7 @@ import {
   OnInit, Output,
   SimpleChanges, ViewChild,
 } from '@angular/core';
-import { XxlFlowUnit, XxlSocket, XxlSocketEvent, XxlSocketType } from 'flow-based';
+import { XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketEvent, XxlSocketType } from 'flow-based';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { XxlSocketBuilderService } from '../socket-builder.service';
 
@@ -20,21 +20,25 @@ import { XxlSocketBuilderService } from '../socket-builder.service';
 export class FlowUnitComponent implements OnInit, OnChanges {
   @Input() @HostBinding('class.is-active') active = false;
   @Input() component: any;
-  @Input() state: any;
+  @Input() state: XxlFlowUnitState;
 
   @Output() socketActive = new EventEmitter<any>();
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
   newSocketType: XxlSocketType;
-  socketIn: XxlSocket[];
-  socketOut: XxlSocket[];
 
-  constructor(private viewRef: ChangeDetectorRef) {}
+  constructor(private viewRef: ChangeDetectorRef) {
+  }
 
   ngOnInit() {
     this.ref.instance$.subscribe(instance => {
-      this.socketIn = this.ref.instance.getSocketsIn();
-      this.socketOut = this.ref.instance.getSocketsOut();
+      if (!this.state.sockets) { // TODO: Remove in future
+        this.state.sockets = {} as any;
+      }
+      //
+      this.state.sockets.in = this.state.sockets.in || instance.getSocketsIn();
+      this.state.sockets.out = this.state.sockets.out || instance.getSocketsOut();
+
       this.viewRef.detectChanges();
     });
   }
@@ -45,6 +49,8 @@ export class FlowUnitComponent implements OnInit, OnChanges {
     if (active && active.currentValue !== active.previousValue && this.ref.instance) {
       this.ref.instance.setActive(active.currentValue);
     }
+
+    this.newSocketType = null;
   }
 
   socketClick(type: string, event: PointerEvent): void {
@@ -58,11 +64,11 @@ export class FlowUnitComponent implements OnInit, OnChanges {
     }
   }
 
-  AddSocket(socket: XxlSocket): void {
+  createSocket(socket: XxlSocket): void {
     if (socket.type === XxlSocketBuilderService.SOCKET_IN) {
-      this.socketsIn.push(socket);
+      this.state.sockets.in.push(socket);
     } else {
-
+      this.state.sockets.out.push(socket);
     }
 
     this.newSocketType = null;

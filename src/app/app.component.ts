@@ -1,4 +1,4 @@
-import { AfterContentInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { AfterContentInit, Component, ElementRef, ViewChild } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';

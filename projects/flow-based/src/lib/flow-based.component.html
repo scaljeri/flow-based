@@ -7,14 +7,14 @@
 <article *ngIf="active" xxlMovableArea #dragArea>
   <button *ngIf="active && !root" (click)="close($event)" class="close"></button>
 
-  <ng-container *ngFor="let unit of flow.children; index as i">
+  <ng-container *ngFor="let state of flow.children; index as i">
     <xxl-flow-unit *ngIf="!isFlow(i) || activeFlowIndex !== i"
                class="block"
                xxlMovable
-               [(position)]="unit.position"
+               [(position)]="state.position"
                [active]="activeFlowIndex === i"
-               [component]="flowTypes[unit.type]"
-               [state]="unit.state"
+               [component]="flowTypes[state.type]"
+               [state]="state"
                (socketActive)="socketActive($event)"
                (noDrag)="entryClicked(i)">
     </xxl-flow-unit>

@@ -1,15 +1,27 @@
 import { Component, OnInit } from '@angular/core';
+import { XxlFlowUnit, XxlSocket } from 'flow-based';
 
 @Component({
   selector: 'fb-default-flow',
   templateUrl: './default-flow.component.html',
   styleUrls: ['./default-flow.component.css']
 })
-export class DefaultFlowComponent implements OnInit {
+export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
 
   constructor() { }
 
   ngOnInit() {
+  }
+
+  getSocketsIn(): XxlSocket[] {
+    return [];
+  }
+
+  getSocketsOut(): XxlSocket[] {
+    return [];
+  }
+
+  setActive(boolean): void {
   }
 
 }
