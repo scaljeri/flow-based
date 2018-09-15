@@ -1,6 +1,6 @@
 import {
-  AfterContentInit, ChangeDetectorRef,
-  Component, ComponentRef,
+  ChangeDetectorRef,
+  Component,
   EventEmitter,
   HostBinding,
   Input,
@@ -22,7 +22,7 @@ export class FlowUnitComponent implements OnInit, OnChanges {
   @Input() component: any;
   @Input() state: XxlFlowUnitState;
 
-  @Output() socketClick = new EventEmitter<any>();
+  @Output() socketClick = new EventEmitter<XxlSocketEvent>();
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
   newSocketType: XxlSocketType;

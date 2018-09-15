@@ -1,9 +1,11 @@
+@import 'utils/utils';
+
 :host {
   align-items: center;
-  justify-content: center;
   display: inline-flex;
-  min-width: 72px;
+  justify-content: center;
   min-height: 72px;
+  min-width: 72px;
 
   img {
     pointer-events: none;
@@ -12,15 +14,11 @@
 }
 
 .title {
-  background-color: rgba(0, 0, 0, .2);
-  position: absolute;
-  width: 300px;
-  bottom: -34px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #fff;
   font-size: 14px;
   text-align: center;
-  color: #fff;
-
   transform: translateX(-50%);
-  text-align: center;
-  left: 50%;
+  width: 300px;
+  @include xxl-position(absolute, 0 0 -34px 50%);
 }

@@ -8,16 +8,14 @@ fb-root {
   background-color: #000;
 }
 
-xxl-block {
-}
-
 @keyframes create {
   0% {
-    border-radius: 50%;
     background-color: #ff4081;
+    border-radius: 50%;
   }
+
   100% {
-    border-radius: 3px;
     background-color: #000;
+    border-radius: 3px;
   }
 }

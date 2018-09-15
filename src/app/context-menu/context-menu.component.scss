@@ -8,7 +8,7 @@ $pi: 3.14;
 //config
 $menu-items: 5;
 $open-distance: 115px;
-$opening-angle: $pi - .2;
+$opening-angle: $pi - 0.2;
 
 :host {
   transform: translate(-150px, -55px);
@@ -19,48 +19,45 @@ $opening-angle: $pi - .2;
 }
 
 %ball {
-  display: flex;
-  justify-content: center;
   align-items: center;
-
   background: $fg;
   border-radius: 100%;
-  width: 80px;
+  color: #fff;
+  display: flex;
   height: 80px;
+  justify-content: center;
+
+  line-height: 80px;
   margin-left: -40px;
   position: absolute;
-  top: 20px;
-  color: white;
   text-align: center;
-  line-height: 80px;
+  top: 20px;
   transform: translate3d(0, 0, 0);
   transition: transform ease-out 200ms;
+  width: 80px;
 }
 
 .menu-open {
   display: none;
 }
 
-.menu-item {
-  @extend %ball;
-}
-
 .hamburger {
   $width: 25px;
   $height: 3px;
-  width: $width;
-  height: $height;
-  background: white;
+  background: #fff;
   display: block;
-  position: absolute;
-  top: 50%;
+  height: $height;
   left: 50%;
   margin-left: -$width/2;
   margin-top: -$height/2;
+  position: absolute;
+  top: 50%;
   transition: transform 200ms;
+  width: $width;
 }
 
 $hamburger-spacing: 8px;
+
 .hamburger-1 {
   transform: translate3d(0, -$hamburger-spacing, 0);
 }
@@ -73,37 +70,27 @@ $hamburger-spacing: 8px;
   transform: translate3d(0, $hamburger-spacing, 0);
 }
 
-.menu-open:checked + .menu-open-button {
-  .hamburger-1 {
-    transform: translate3d(0, 0, 0) rotate(45deg);
-  }
-  .hamburger-2 {
-    transform: translate3d(0, 0, 0) scale(0.1, 1);
-  }
-  .hamburger-3 {
-    transform: translate3d(0, 0, 0) rotate(-45deg);
-  }
-}
-
 .menu {
   @extend %goo;
   $width: 380px;
   $height: 250px;
-  position: absolute;
-  left: 50%;
-  margin-left: -$width/2;
-  padding-top: 20px;
-  padding-left: $width/2;
-  width: $width;
-  height: $height;
   box-sizing: border-box;
   font-size: 20px;
+  height: $height;
+  left: 50%;
+  margin-left: -$width/2;
+  padding-left: $width/2;
+  padding-top: 20px;
+  position: absolute;
   text-align: left;
+  width: $width;
 }
 
 .menu-item {
+  @extend %ball;
+
   &:hover {
-    background: white;
+    background: #fff;
     color: $fg;
   }
   @for $i from 1 through $menu-items {
@@ -115,11 +102,11 @@ $hamburger-spacing: 8px;
 
 .menu-open-button {
   @extend %ball;
-  z-index: 2;
-  transition-timing-function: cubic-bezier(0.175, 0.885, 0.320, 1.275);
-  transition-duration: 400ms;
-  transform: scale(1.1, 1.1) translate3d(0, 0, 0);
   cursor: pointer;
+  transform: scale(1.1, 1.1) translate3d(0, 0, 0);
+  transition-duration: 400ms;
+  transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 2;
 }
 
 .menu-open-button:hover {
@@ -127,41 +114,53 @@ $hamburger-spacing: 8px;
 }
 
 .menu-open:checked + .menu-open-button {
-  transition-timing-function: linear;
-  transition-duration: 200ms;
+  .hamburger-1 {
+    transform: translate3d(0, 0, 0) rotate(45deg);
+  }
+
+  .hamburger-2 {
+    transform: translate3d(0, 0, 0) scale(0.1, 1);
+  }
+
+  .hamburger-3 {
+    transform: translate3d(0, 0, 0) rotate(-45deg);
+  }
+
   transform: scale(0.8, 0.8) translate3d(0, 0, 0);
+  transition-duration: 200ms;
+  transition-timing-function: linear;
 }
 
 .menu-open:checked ~ .menu-item {
-  transition-timing-function: cubic-bezier(0.935, 0.000, 0.340, 1.330);
+  transition-timing-function: cubic-bezier(0.935, 0, 0.34, 1.33);
   @for $i from 1 through $menu-items {
     $angle: (($pi - $opening-angle)/2)+(($opening-angle/($menu-items - 1))*($i - 1));
 
     &:nth-child(#{$i+2}) {
-      transition-duration: 80ms+(80ms*$i);
 
       $cos: cos($angle);
       $sin: sin($angle);
       transform: translate3d($cos * $open-distance, $sin * $open-distance, 0);
+      transition-duration: 80ms+(80ms*$i);
     }
   }
 }
 
 // custom
 .custom-filter {
+  align-items: center;
   display: flex;
   justify-content: center;
-  align-items: center;
 
   svg {
-    stroke: #fff;
     fill: #fff;
-    width: 40px;
     height: 40px;
+    stroke: #fff;
+    width: 40px;
 
     &:hover {
-      stroke: #ff4081;
       fill: #ff4081;
+      stroke: #ff4081;
     }
   }
 
@@ -170,7 +169,7 @@ $hamburger-spacing: 8px;
 .icon {
   img {
     box-shadow: none;
-    width: 40px;
     height: 40px;
+    width: 40px;
   }
 }

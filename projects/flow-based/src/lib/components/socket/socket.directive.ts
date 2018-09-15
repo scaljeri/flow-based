@@ -1,7 +1,7 @@
 import { Directive } from '@angular/core';
 
 @Directive({
-  selector: '[appSocket]'
+  selector: '[xxlSocket]'
 })
 export class SocketDirective {
 

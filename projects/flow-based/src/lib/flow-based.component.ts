@@ -152,7 +152,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     this.activeIndex$.next(index);
   }
 
-  socketClick(socket: XxlSocket, event: XxlSocketEvent): void {
+  onSocketClick(event: XxlSocketEvent): void {
     console.log('socket clicked', event);
   }
 

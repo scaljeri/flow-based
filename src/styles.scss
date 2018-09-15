@@ -1,3 +1,4 @@
+/* stylelint-disable */
 /* You can add global styles to this file, and also import other style files */
 html, body {
   height: 100%;
@@ -51,5 +52,6 @@ table {
   border-collapse: collapse;
   border-spacing: 0;
 }
+/* stylelint-enable */
 
 @import 'styles/index';

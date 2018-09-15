@@ -3,7 +3,7 @@
 
 <section *ngIf="state?.sockets" class="sockets sockets-in">
   <button class="add-socket" (click)="newSocketIn()">+</button>
-  <span *ngFor="let socket of state.sockets | socketIn;trackBy: socketTrackByFn;let i = index" (pointerdown)="onSocketClick('in', i, $event)" class="socket"></span>
+  <span *ngFor="let socket of state.sockets | socketIn;trackBy: socketTrackByFn;let i = index" (pointerdown)="onSocketClick(i, $event)" class="socket"></span>
 </section>
 
 <section class="component">
@@ -13,6 +13,6 @@
 
 <section *ngIf="state?.sockets" class="sockets sockets-out">
   <button class="add-socket" (click)="newSocketOut()">+</button>
-  <span *ngFor="let socket of state.sockets | socketOut;let i = index" (pointerdown)="onSocketClick('out', i, $event)" class="socket"></span>
+  <span *ngFor="let socket of state.sockets | socketOut;let i = index" (pointerdown)="onSocketClick(i, $event)" class="socket"></span>
 </section>
 

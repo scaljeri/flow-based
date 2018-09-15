@@ -28,7 +28,7 @@
               "node_modules/bootstrap/dist/css/bootstrap.css"
             ],
             "stylePreprocessorOptions": {
-              "includePaths": ["src/styles"]
+              "includePaths": ["src/styles", "projects/flow-based/src/lib/"]
             },
             "scripts": [
             ]

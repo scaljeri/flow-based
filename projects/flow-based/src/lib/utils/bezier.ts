@@ -1,3 +1,4 @@
+// tslint:disable
 export interface Data {
   isAbsolute: boolean;
   points: Point[];
@@ -146,4 +147,4 @@ function round(num: number): number {
   return Math.round(num * 100) / 100;
 }
 
-
+// tslint:enable

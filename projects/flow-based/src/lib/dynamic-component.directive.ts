@@ -5,7 +5,9 @@ import { ReplaySubject } from 'rxjs';
   selector: '[xxlDynamicComponent]'
 })
 export class DynamicComponentDirective<T = any> implements OnChanges {
+  // tslint:disable:no-input-rename
   @Input('xxlDynamicComponent') component: Type<T>;
+  // tslint:enable:no-input-rename
 
   instance: T;
   instance$ = new ReplaySubject<T>(1);

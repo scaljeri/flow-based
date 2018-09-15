@@ -43,3 +43,8 @@
     left: $left;
   }
 }
+
+@mixin xxl-size($width, $height: $width) {
+  height: $height;
+  width: $width;
+}

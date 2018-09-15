@@ -1,3 +1,5 @@
+@import 'utils/utils';
+
 :host {
   display: flex;
   flex-direction: column;
@@ -9,31 +11,22 @@
 
 .bg {
   display: block;
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -2;
   //filter: blur(5px);
   filter: brightness(20%);
+  z-index: -2;
+  @include xxl-position(absolute, 0px 0px 0px 0px);
+  @include xxl-size(100%);
 }
 
 fb-thunder {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
   filter: blur(2px);
+  z-index: -1;
+  @include xxl-position(absolute, 0px 0px 0px 0px);
 }
 
 header {
   align-items: center;
-  background-color: #0D025D;
+  background-color: #0d025d;
   display: flex;
   flex: 0 0 50px;
   justify-content: center;
@@ -41,8 +34,7 @@ header {
   position: relative;
 
   .buttons {
-    position: absolute;
-    left: 16px;
+    @include xxl-position(absolute, 0 0 0 16px);
 
     button + button {
       margin-left: 10px;
@@ -70,17 +62,8 @@ main {
   }
 }
 
-fb-context-menu  {
+fb-context-menu {
   position: absolute;
-}
-
-.bg {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: -1;
 }
 
 // dialog
@@ -88,6 +71,6 @@ fb-context-menu  {
   padding: 20px;
 
   .list-item + .list-item {
-     margin-top: 5px;
+    margin-top: 5px;
   }
 }

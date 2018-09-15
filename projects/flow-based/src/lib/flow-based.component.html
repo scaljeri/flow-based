@@ -6,6 +6,7 @@
 
 <article *ngIf="active" xxlMovableArea #dragArea>
   <xxl-connection-lines></xxl-connection-lines>
+
   <button *ngIf="active && !root" (click)="close($event)" class="close"></button>
 
   <ng-container *ngFor="let state of flow.children; index as i">
