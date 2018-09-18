@@ -8,7 +8,8 @@ import { FlowBasedComponent } from './flow-based.component';
 export class XxlFlowBasedService {
   private flowStack: FlowBasedComponent[] = [];
 
-  constructor() {}
+  constructor() {
+  }
 
   activate(flow: FlowBasedComponent): void {
     this.flowStack.unshift(flow);
@@ -26,6 +27,10 @@ export class XxlFlowBasedService {
   }
 
   add(type: string, state = {}): void {
-    this.flowStack[0].addUnit( { type, state } as XxlFlowUnitState);
+    this.flowStack[0].addUnit({
+      type,
+      state,
+      id: Date.now().toString()
+    } as XxlFlowUnitState);
   }
 }

@@ -1,7 +1,6 @@
 import { UnitWrapper } from './unit-wrapper';
 import { XxlPosition } from 'flow-based';
 import { ElementRef } from '@angular/core';
-import { Subject } from 'rxjs';
 
 const ID = 'fake';
 
@@ -10,7 +9,9 @@ export class FakeUnitWrapper extends UnitWrapper {
   private x: number;
   private y: number;
 
-  constructor(private element: ElementRef, private update: Subject<string>) {
+  public isActive = false;
+
+  constructor(private element: ElementRef) {
     super(null);
 
     this.callback = this.trackPointer.bind(this);
@@ -21,22 +22,22 @@ export class FakeUnitWrapper extends UnitWrapper {
   }
 
   getSocketPosition(socketId: string): XxlPosition {
-    return {x: this.x, y: this.y};
+    return this.x === null ? null : {x: this.x, y: this.y};
   }
 
   activate(): void {
+    this.isActive = true;
     this.element.nativeElement.addEventListener('pointermove', this.callback);
+    this.x = null;
   }
 
   deactivate(): void {
+    this.isActive = false;
     this.element.nativeElement.removeEventListener('pointermove', this.callback);
   }
 
   private trackPointer(event: PointerEvent): void {
     this.x = event.pageX;
     this.y = event.pageY;
-    console.log(this.x, this.y, this.element.nativeElement.getBoundingClientRect());
-
-  this.update.next(ID);
   }
 }

@@ -67,8 +67,6 @@ export class FlowUnitComponent implements OnInit, OnChanges, OnDestroy {
     console.log('clcock');
     event.stopImmediatePropagation();
 
-    debugger;
-
     this.wrapper.addSocket(socket.id, event.target as HTMLElement);
 
     if (!this.active) {

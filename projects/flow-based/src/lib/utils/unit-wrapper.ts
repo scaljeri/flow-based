@@ -11,8 +11,6 @@ export class UnitWrapper {
   }
 
   addSocket(socketId: string, element: HTMLElement): void {
-    console.log('adding ' + socketId, element);
-
     this.sockets[socketId] = element;
   }
 
@@ -22,7 +20,6 @@ export class UnitWrapper {
 
 
   getSocketPosition(socketId: string): XxlPosition {
-    console.log('load pos for ' + socketId);
     const rect = this.sockets[socketId].getBoundingClientRect();
 
     return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};

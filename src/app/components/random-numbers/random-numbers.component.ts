@@ -93,10 +93,10 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
       id: 'rnc-a'
     }, {
       type: 'out',
-      id: 'rnc-a'
+      id: 'rnc-b'
     }, {
       type: 'out',
-      id: 'rnc-b'
+      id: 'rnc-c'
     }];
   }
 

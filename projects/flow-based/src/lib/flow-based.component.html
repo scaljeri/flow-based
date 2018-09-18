@@ -5,7 +5,9 @@
 <!--</xxl-block>-->
 
 <article *ngIf="active" xxlMovableArea #dragArea>
-  <xxl-connection-lines [connections]="flow.connections" [updates]="updateSubject"></xxl-connection-lines>
+  <xxl-connection-lines
+    [connections]="flow.connections"
+    (lineClick)="removeConnection($event)"></xxl-connection-lines>
 
   <button *ngIf="active && !root" (click)="close($event)" class="close"></button>
 
