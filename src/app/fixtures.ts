@@ -1,8 +1,9 @@
-import { XxlFlow, XxlFlowUnit, XxlFlowUnitState } from 'flow-based';
+import { XxlFlow } from 'flow-based';
 
 // export const nested = { children: [] };
 
 export const nested = {
+  connections: [],
   'children': [
     {
       'type': 'default',
@@ -10,6 +11,7 @@ export const nested = {
         'x': 497.1171875,
         'y': 53.015625
       },
+      connections: [],
       'children': [
         {
           'position': {
@@ -68,6 +70,7 @@ export const nested = {
         'x': 496.41796875,
         'y': 183.31640625
       },
+      connections: [],
       'children': [
         {
           'position': {
@@ -75,6 +78,7 @@ export const nested = {
             'y': 481.4140625
           },
           'type': 'default',
+          connections: [],
           'children': [
             {
               'position': {
@@ -106,6 +110,7 @@ export const nested = {
     },
     {
       'type': 'random-numbers',
+      'id': '1',
       'position': {
         'x': 480,
         'y': 493

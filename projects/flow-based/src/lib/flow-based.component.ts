@@ -18,11 +18,16 @@ import {
 import { XxlFlowBasedService } from './flow-based.service';
 import { Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { FlowUnitService } from './flow-unit-service';
+import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
+import { DocumentService } from './utils/document.service';
+import { UnitWrapper } from './utils/unit-wrapper';
 
 @Component({
   selector: 'xxl-flow-based',
   templateUrl: './flow-based.component.html',
   styleUrls: ['./flow-based.component.scss'],
+  viewProviders: [ FlowUnitService ],
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
 export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, AfterContentInit, ControlValueAccessor {
@@ -34,36 +39,28 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
 
-  injectors: Injector[];
+  // injectors: Injector[];
+  wrapper: FakeUnitWrapper;
   onChange: (state: any) => void;
   activeFlowIndex: number = null;
   activeIndex$ = new Subject<number>();
+  updateSubject = new Subject<string>();
 
-  constructor(private element: ElementRef,
+  constructor(
+    private unitService: FlowUnitService,
+    private element: ElementRef,
               private injector: Injector,
               private flowService: XxlFlowBasedService,
               @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes) {}
-
-  @HostListener('click', ['$event'])
-  onClick(event): void {
-    event.stopPropagation();
-  }
-
-  @HostListener('document:keydown.escape', ['$event'])
-  onKeydownHandler(evt: KeyboardEvent) {
-    if (this.activeFlowIndex >= 0) {
-      evt.stopPropagation();
-      this.activeFlowIndex = null;
-    }
-
-    this.activeIndex$.next();
-  }
 
   ngOnInit() {
     if (this.root) {
       this.flowService.activate(this);
 
     }
+
+    this.wrapper = new FakeUnitWrapper(this.element, this.updateSubject);
+    this.unitService.register(this.wrapper);
   }
 
   ngOnChanges(obj: SimpleChanges): void {
@@ -97,29 +94,37 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     // }
   }
 
-  updateConnections(): void {
-    console.log('update connections');
+  @HostListener('click', ['$event'])
+  onClick(event): void {
+    event.stopPropagation();
+
+    // TODO: ??
   }
 
-  // createInjector(): void {
-  //   console.log('create');
-  //   if (this.flow && this.flow.children) {
-  //     this.injectors = (this.flow.children.map((state, index) => {
-  //       return Injector.create({
-  //         providers: [
-  //           {
-  //             provide: XXL_STATE,
-  //             useValue: state
-  //           }, {
-  //             provide: XXL_ACTIVE,
-  //             useValue: this.activeIndex$.pipe(map(num => num === index))
-  //           }
-  //         ],
-  //         parent: this.injector
-  //       });
-  //     }));
-  //   }
-  // }
+  @HostListener('document:keydown.escape', ['$event'])
+  onKeydownHandler(evt: KeyboardEvent) {
+    if (this.activeFlowIndex >= 0) {
+      evt.stopPropagation();
+      this.activeFlowIndex = null;
+    }
+
+    this.activeIndex$.next();
+  }
+
+  onDragStart(state: XxlFlowUnitState): void {
+    console.log('drag-start');
+  }
+
+  onDragEnd(state: XxlFlowUnitState): void {
+    console.log('drag-end');
+  }
+
+  updateConnections(event: XxlPosition, state: XxlFlowUnitState): void {
+    // this.updateSubject.next(state);
+
+    // console.log('update connections');
+    this.unitService.movement.next(state);
+  }
 
   addUnit(unit: XxlFlowUnitState): void {
     this.flow.children.push(unit);
@@ -147,13 +152,20 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   // }
 
   entryClicked(index: number): void {
-    console.log('activity');
     this.activeFlowIndex = index;
     this.activeIndex$.next(index);
   }
 
-  onSocketClick(event: XxlSocketEvent): void {
-    console.log('socket clicked', event);
+  onSocketClick(socket: XxlSocket, state: XxlFlowUnitState): void {
+    this.flow.connections.push({
+       from: state.id,
+       out: socket.id,
+       to: this.wrapper.unitId,
+       in: 'fake'
+    });
+
+    this.wrapper.activate();
+    // this.updateSubject.next();
   }
 
   isFlow(child: XxlFlow): boolean {

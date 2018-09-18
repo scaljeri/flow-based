@@ -10,23 +10,18 @@ $socket-size: 16px;
   --inner-border-color: var(--block-border-color, #868686);
   --socket-size: #{$socket-size};
 
-  background-color: #000;
-  border-style: solid;
-
-  border-width: $border-width;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.8);
   border-color: var(--inner-border-color);
   border-radius: 12px;
-  padding: 4px;
+  border-style: solid;
+  border-width: $border-width;
   display: flex;
-  user-select: none;
-  background-color: rgba(0, 0, 0, .8);
-
   justify-content: center;
-  min-height: 50px;
-  align-items: center;
-
-  min-width: 72px;
   min-height: 72px;
+  min-width: 72px;
+  padding: 4px;
+  user-select: none;
 
   .sockets-in {
     .socket {
@@ -59,7 +54,6 @@ $socket-size: 16px;
 
     --socket-size: #{$socket-size * 3};
 
-
     .sockets-in {
       .socket {
         border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
@@ -85,26 +79,23 @@ $socket-size: 16px;
   @include xxl-position(absolute, 0px 0px 0px 0px);
 }
 .component {
-  display: inline-flex;
   background-color: lightgray;
   border-radius: 8px;
+  display: inline-flex;
   padding: 1px;
 }
 
 .add-socket {
-  position: absolute;
   cursor: pointer;
-  top: 10px;
-  left: 30px;
+  position: absolute;
+  @include xxl-position(absolute, 10px 0 0 30px);
 }
 
 .sockets {
-  // background-color:red;
-
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
   height: calc(100% - 12px);
+  justify-content: space-around;
   position: absolute;
   top: 6px;
   width: var(--socket-size);
@@ -119,15 +110,15 @@ $socket-size: 16px;
 }
 
 .socket {
-  cursor: pointer;
-  display: block;
-  background-color: #fff;
   background-clip: content-box;
-  height: var(--socket-size);
-  width: var(--socket-size);
+  background-color: #fff;
   border: $border-width solid;
   border-radius: 50%;
+  cursor: pointer;
+  display: block;
+  height: var(--socket-size);
   transform: rotate(45deg);
+  width: var(--socket-size);
 }
 
 /*

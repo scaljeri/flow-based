@@ -1,33 +1,38 @@
 import {
   ChangeDetectorRef,
-  Component,
+  Component, ElementRef,
   EventEmitter,
   HostBinding,
   Input,
-  OnChanges,
+  OnChanges, OnDestroy,
   OnInit, Output,
   SimpleChanges, ViewChild,
 } from '@angular/core';
 import { XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketEvent, XxlSocketType } from 'flow-based';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { XxlSocketBuilderService } from '../socket-builder.service';
+import { FlowUnitService } from '../flow-unit-service';
+import { UnitWrapper } from '../utils/unit-wrapper';
 
 @Component({
   selector: 'xxl-flow-unit',
   templateUrl: './flow-unit.component.html',
   styleUrls: ['./flow-unit.component.scss']
 })
-export class FlowUnitComponent implements OnInit, OnChanges {
+export class FlowUnitComponent implements OnInit, OnChanges, OnDestroy {
   @Input() @HostBinding('class.is-active') active = false;
   @Input() component: any;
   @Input() state: XxlFlowUnitState;
 
-  @Output() socketClick = new EventEmitter<XxlSocketEvent>();
+  @Output() socketClick = new EventEmitter<XxlSocket>();
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
   newSocketType: XxlSocketType;
+  wrapper: UnitWrapper;
 
-  constructor(private viewRef: ChangeDetectorRef) {
+  constructor(private viewRef: ChangeDetectorRef,
+              private element: ElementRef,
+              private unitService: FlowUnitService) {
   }
 
   ngOnInit() {
@@ -36,8 +41,14 @@ export class FlowUnitComponent implements OnInit, OnChanges {
         this.state.sockets = instance.getSockets();
       }
 
+      this.wrapper = new UnitWrapper(this.state);
+      this.unitService.register(this.wrapper);
       this.viewRef.detectChanges();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.unitService.unregister(this.state.id);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -52,12 +63,16 @@ export class FlowUnitComponent implements OnInit, OnChanges {
     this.newSocketType = null;
   }
 
-  onSocketClick(index, event: PointerEvent): void {
+  onSocketClick(socket: XxlSocket, event: PointerEvent): void {
     console.log('clcock');
     event.stopImmediatePropagation();
 
+    debugger;
+
+    this.wrapper.addSocket(socket.id, event.target as HTMLElement);
+
     if (!this.active) {
-      this.socketClick.emit({socket: this.state.sockets[index], element: event.target} as XxlSocketEvent);
+      this.socketClick.emit(socket);
     } else {
 
     }
