@@ -1,12 +1,12 @@
 @import './utils/utils';
 
 :host {
+  background-color: #000;
   display: inline-flex;
+  height: 100%;
   overflow: hidden;
   position: relative;
-  background-color: #000;
   width: 100%;
-  height: 100%;
 
   //&.is-active, &.is-active > article {
   //  height: 100%;
@@ -33,7 +33,12 @@
 }
 
 xxl-connection-lines {
+  z-index: 1;
   @include xxl-position(absolute, 0px 0px 0px 0px);
+}
+
+xxl-flow-unit {
+  z-index: 2;
 }
 
 //xxl-flow-based,

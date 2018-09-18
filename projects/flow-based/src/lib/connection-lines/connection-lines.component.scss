@@ -1,10 +1,11 @@
 svg {
+  fill: none;
   stroke: #fff;
   stroke-width: 3px;
 
   path:hover {
-    stroke-width: 5px;
     cursor: pointer;
     stroke: #fa0;
+    stroke-width: 5px;
   }
 }

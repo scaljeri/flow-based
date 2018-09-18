@@ -27,6 +27,8 @@ export class AppComponent implements AfterContentInit {
       type: 'random-numbers' },
     { name: 'Band filter',
       type: 'band-filter' },
+    { name: 'Composite unit',
+      type: 'composite-unit' },
   ];
 
   flow: XxlFlow = nested as XxlFlow;

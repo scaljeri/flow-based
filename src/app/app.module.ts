@@ -35,7 +35,8 @@ import { FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
       useValue: {
         'random-numbers': RandomNumbersComponent,
         'console': ConsoleComponent,
-        'default': DefaultFlowComponent
+        'default': DefaultFlowComponent,
+        'composite-unit': DefaultFlowComponent
       }
     }
   ],

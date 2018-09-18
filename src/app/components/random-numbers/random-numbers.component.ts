@@ -49,8 +49,6 @@ export const RANDOM_NUMBERS_CONFIG = {
   end: 100,
 };
 
-let count = 0;
-
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
@@ -65,26 +63,14 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   name = new FormControl('');
   isActive = false;
   id = 0;
-  subscription: Subscription;
 
   constructor() {
-    this.id = ++count;
-    console.log('new RN ' + this.id);
   }
 
   ngOnInit(): void {
-    // this.state.active$.subscribe(isActive => {
-    //   console.log('update state ', isActive);
-    //   this.isActive = isActive;
-    // });
-    //
-    // this.subscription = this.isActive$.subscribe((x) => {
-    //   console.log(this.id + ' rn: ' + x);
-    // });
   }
 
   ngOnDestroy(): void {
-    this.subscription.unsubscribe();
   }
 
   getSockets(): XxlSocket[] {

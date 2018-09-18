@@ -80,18 +80,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   ngAfterViewInit(): void {
-    // setTimeout(() => {
-    //   console.log('ok ' + this.units.length);
-    // this.units.forEach(c => {
-    //   console.log(c.getSockets());
-    // });
-    // }, 10000);
   }
 
   ngAfterContentInit(): void {
-    // if (this.flow.type && !this.flow.position) {
-    //   this.flow.position = this.centerPosition();
-    // }
   }
 
   @HostListener('click', ['$event'])
@@ -137,9 +128,17 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   addUnit(unit: XxlFlowUnitState): void {
-    console.log('add', unit);
+    // if (this.activeFlowIndex !== null) {
+    //   unit = {
+    //     id: Date.now().toString(),
+    //     children: [unit]
+    //   }
+    //   const child = this.flow.children[this.activeFlowIndex];
+    //   debugger;
+    // } else {
+    //
+    // }
     this.flow.children.push(unit);
-    // this.createInjector();
   }
 
   activityChanged(isActive): void {
@@ -168,7 +167,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   removeConnection(conn: XxlConnection): void {
-    debugger;
     this.flow.connections = this.flow.connections
       .filter(item => item !== conn);
   }

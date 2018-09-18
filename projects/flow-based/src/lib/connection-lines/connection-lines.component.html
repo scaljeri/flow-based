@@ -1,6 +1,6 @@
 <svg #svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
   <path *ngFor="let connection of connections"
-        click="onClick(connection)"
+        (pointerdown)="onClick(connection)"
         [attr.d]="d(connection)"
         class="create-path"
         stroke-linecap="round"></path>

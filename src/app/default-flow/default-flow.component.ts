@@ -19,5 +19,4 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
 
   setActive(boolean): void {
   }
-
 }
