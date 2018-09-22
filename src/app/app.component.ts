@@ -23,12 +23,19 @@ export class AppComponent implements AfterContentInit {
   isRunning = false;
   showJson = false;
   flowTypes = [
-    { name: 'Random numbers',
-      type: 'random-numbers' },
-    { name: 'Band filter',
-      type: 'band-filter' },
-    { name: 'Composite unit',
-      type: 'composite-unit' },
+    {
+      name: 'Random numbers',
+      type: 'random-numbers'
+    },
+    {
+      name: 'Band filter',
+      type: 'band-filter'
+    },
+    {
+      name: 'Flow',
+      type: 'default',
+      isFlow: true
+    },
   ];
 
   flow: XxlFlow = nested as XxlFlow;
@@ -37,6 +44,7 @@ export class AppComponent implements AfterContentInit {
 
   constructor(private xxlService: XxlFlowBasedService, private modalService: NgbModal) {
   }
+
   //
   // @HostListener('document:keydown.escape', ['$event'])
   // handleKeyboardEvent(event: KeyboardEvent) {
@@ -49,10 +57,10 @@ export class AppComponent implements AfterContentInit {
     this.modalService.open(content, {centered: true});
   }
 
-  addBlock(type: string): void {
+  addBlock(item: { type: string, isFlow: boolean }): void {
     // create worker
     // const worker = RandomNumberFactory();
-    this.xxlService.add(type);
+    this.xxlService.add(item.type, {isFlow: item.isFlow});
   }
 
   onUpdate(): void {

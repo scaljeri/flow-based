@@ -1,8 +1,5 @@
 <section *ngIf="!isActive">
-  <img src="/assets/config.svg">
-
-  <h1 class="title">{{name.value}}</h1>
-
+  <fb-default-front [title]="name.value"></fb-default-front>
 </section>
 
 <section *ngIf="isActive">

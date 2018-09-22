@@ -39,6 +39,10 @@ xxl-connection-lines {
 
 xxl-flow-unit {
   z-index: 2;
+
+  &.is-active {
+    z-index: 3;
+  }
 }
 
 //xxl-flow-based,

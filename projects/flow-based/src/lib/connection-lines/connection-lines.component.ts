@@ -45,6 +45,8 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   }
 
   d(connection: XxlConnection): string {
+    let cx1, cx2, cy1, cy2;
+
     const from = this.unitService.units[connection.from];
     const to = this.unitService.units[connection.to];
 
@@ -55,11 +57,20 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     const y1 = start.y - this.rect.top;
     const x2 = end.x - this.rect.left;
     const y2 = end.y - this.rect.top;
-    const cx1 = x1 + Math.abs(x1 -  x2) / 2;
-    const cy1 = y1 + Math.abs(y1 -  y2) / 2;
-    const cx2 = x1 + Math.abs(x1 -  x2) / 2;
-    const cy2 = y1 + Math.abs(y1 -  y2) / 2;
 
-    return `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
+    cx1 = Math.round(x1 + Math.abs(x1 - x2) / 2);
+    cx2 = Math.round(x2 - Math.abs(x1 - x2) / 2);
+    cy1 = y1;
+    cy2 = y2;
+
+    if (x2 < x1) {
+      cy1 = y1 + (y2 - y1) / 2;
+      cy2 = y2 - (y2 - y1) / 2;
+    }
+
+    const output = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
+    console.log(output);
+
+    return output;
   }
 }

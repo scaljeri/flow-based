@@ -12,7 +12,7 @@
   <button *ngIf="active && !root" (click)="close($event)" class="close"></button>
 
   <ng-container *ngFor="let state of flow.children; index as i">
-    <xxl-flow-unit *ngIf="!isFlow(i) || activeFlowIndex !== i"
+    <xxl-flow-unit *ngIf="!state.flow || activeFlowIndex !== i"
                class="block"
                xxlMovable
                [(position)]="state.position"
@@ -20,14 +20,14 @@
                (positionChange)="updateConnections($event, state)"
                (dragEnd)="onDragEnd($event. state)"
                [active]="activeFlowIndex === i"
-               [component]="flowTypes[state.type]"
+               [component]="flowUnitTypes[state.type]"
                [state]="state"
                (socketClick)="onSocketClick($event, state)"
                (noDrag)="entryClicked(i)">
     </xxl-flow-unit>
 
     <xxl-flow-based
-      *ngIf="isFlow(i) && activeFlowIndex === i"
+      *ngIf="state.flow && activeFlowIndex === i"
       class="block"
       [class.is-active]="activeFlowIndex === i"
       [flow]="flow.children[i]"

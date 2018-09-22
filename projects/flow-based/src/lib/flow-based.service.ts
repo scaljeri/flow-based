@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { XxlFlowUnitState } from './flow-based';
+import { XxlFlowUnitOptions, XxlFlowUnitState } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 
 @Injectable({
@@ -26,11 +26,21 @@ export class XxlFlowBasedService {
     }
   }
 
-  add(type: string, state = {}): void {
-    this.flowStack[0].addUnit({
+  add(type: string, options: XxlFlowUnitOptions = {}): void {
+    const state = {
       type,
-      state,
+      state: {},
       id: Date.now().toString()
-    } as XxlFlowUnitState);
+    };
+
+    if (options.isFlow) {
+      this.flowStack[0].addFlow({
+        ...state,
+        children: [],
+        connections: []
+      });
+    } else {
+      this.flowStack[0].addUnit(state);
+    }
   }
 }

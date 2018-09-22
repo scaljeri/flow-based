@@ -13,7 +13,7 @@ import {
   XxlFlow,
   XxlWorker,
   XxlPosition,
-  XXL_STATE, XXL_ACTIVE, XxlSocketEvent, XxlFlowUnitState, XxlSocket, XxlConnection
+  XXL_STATE, XXL_ACTIVE, XxlSocketEvent, XxlFlowUnitState, XxlSocket, XxlConnection, XXL_FLOW_UNIT_TYPES
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { Subject } from 'rxjs';
@@ -50,7 +50,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     private element: ElementRef,
     private injector: Injector,
     private flowService: XxlFlowBasedService,
-    @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes) {
+    @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes,
+    @Inject(XXL_FLOW_UNIT_TYPES) public flowUnitTypes: XxlTypes) {
   }
 
   ngOnInit() {
@@ -112,11 +113,12 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     }
   }
 
-  onDragStart(state: XxlFlowUnitState): void {
+  onDragStart(event: PointerEvent, state: XxlFlowUnitState): void {
     console.log('drag-start');
+    const index = this.flow.children.indexOf(state);
   }
 
-  onDragEnd(state: XxlFlowUnitState): void {
+  onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
     console.log('drag-end');
   }
 
@@ -139,6 +141,11 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     //
     // }
     this.flow.children.push(unit);
+  }
+
+  addFlow(flow: XxlFlow): void {
+    debugger;
+    this.flow.children.push(flow);
   }
 
   activityChanged(isActive): void {

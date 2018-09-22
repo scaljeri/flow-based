@@ -29,7 +29,7 @@
 
   <ul class="block-list">
     <li *ngFor="let item of flowTypes" class="list-item">
-      <button (click)="c('Close click'); addBlock(item.type)">{{item.name}}</button>
+      <button (click)="c('Close click'); addBlock(item)">{{item.name}}</button>
     </li>
   </ul>
 </ng-template>

@@ -1,0 +1,10 @@
+@import 'utils/utils';
+
+:host {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 72px;
+  min-width: 72px;
+}
+
