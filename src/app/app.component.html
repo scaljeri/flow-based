@@ -1,13 +1,22 @@
-<header>
-  <div class="buttons">
-  <button (click)="openModal(content)" class="btn btn-primary add">Add</button>
-    <button (click)="showJson = !showJson" class="btn btn-primary json">{{showJson ? 'Flow' : 'JSON'}}</button>
-  <button (click)="startStop()" class="btn btn-primary json">{{isRunning ? 'Stop' : 'Stop'}}</button>
-  <button (click)="reset()" class="btn btn-primary json">Reset</button>
-  </div>
+<!--<header>-->
+<!--<div class="buttons">-->
+<!--<button mat-button (click)="openModal(content)" class="btn btn-primary add">Add</button>-->
+<!--<button (click)="showJson = !showJson" class="btn btn-primary json">{{showJson ? 'Flow' : 'JSON'}}</button>-->
+<!--<button (click)="startStop()" class="btn btn-primary json">{{isRunning ? 'Stop' : 'Stop'}}</button>-->
+<!--<button (click)="reset()" class="btn btn-primary json">Reset</button>-->
+<!--</div>-->
 
-  <h1>Flow based programming</h1>
-</header>
+<!--<h1>Flow based programming</h1>-->
+<!--</header>-->
+<mat-toolbar [color]="'primary'">
+  <span>Flow based programming</span>
+  <div class="button-wrapper">
+    <button mat-button (click)="openModal(content)" class="add">Add</button>
+    <button mat-button (click)="showJson = !showJson" class="btn btn-primary json" class="json">{{showJson ? 'Flow' :
+      'JSON'}}
+    </button>
+  </div>
+</mat-toolbar>
 
 <main>
   <fb-flow *ngIf="!showJson" [flow]="flow"></fb-flow>
@@ -34,9 +43,4 @@
   </ul>
 </ng-template>
 
-<!--<fb-context-menu-->
-<!--*ngIf="isContextMenu"-->
-<!--[style.left.px]="menuX"-->
-<!--[style.top.px]="menuY"-->
-<!--[open]="contextMenuState"-->
-<!--(close)="closeContextMenu($event)"></fb-context-menu>-->
+

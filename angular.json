@@ -23,9 +23,9 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.scss",
+              "node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
               "node_modules/bootstrap/dist/css/bootstrap-reboot.min.css",
-              "node_modules/bootstrap/dist/css/bootstrap.css"
+              "src/styles.scss"
             ],
             "stylePreprocessorOptions": {
               "includePaths": ["src/styles", "projects/flow-based/src/lib/"]

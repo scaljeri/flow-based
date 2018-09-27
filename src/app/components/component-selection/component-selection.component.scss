@@ -1,0 +1,15 @@
+:host {
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+mat-toolbar {
+  display: flex;
+  justify-content: center;
+}
+
+.type-selection {
+  margin: var(--fb-gutter-size);
+}

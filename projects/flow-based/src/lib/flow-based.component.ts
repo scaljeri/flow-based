@@ -1,5 +1,5 @@
 import {
-  AfterContentInit, AfterViewInit,
+  AfterContentInit, AfterViewInit, ChangeDetectorRef,
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
@@ -40,6 +40,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   constructor(
     private element: ElementRef,
+    private viewRef: ChangeDetectorRef,
     public flowService: XxlFlowBasedService,
     @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes,
     @Inject(XXL_FLOW_UNIT_TYPES) public flowUnitTypes: XxlTypes) {
@@ -128,6 +129,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
         this.flowService.deactivate();
         this.flowService.blur();
     }
+
+    this.viewRef.detectChanges();
   }
 
   entryClicked(index: number): void {

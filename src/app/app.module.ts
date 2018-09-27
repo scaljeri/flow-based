@@ -5,13 +5,20 @@ import { NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
-import { NgbButtonsModule, NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { RandomNumbersComponent } from './units/random-numbers/random-numbers.component';
 import { ConsoleComponent } from './units/console/console.component';
 import { DefaultFlowComponent } from './default-flow/default-flow.component';
 import { FlowComponent } from './flow/flow.component';
 import { FlowBasedModule, XXL_FLOW_TYPES, XXL_FLOW_UNIT_TYPES } from 'flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import {
+  MatButtonModule,
+  MatInputModule, MatListModule, MatToolbarModule
+} from '@angular/material';
+import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
+import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
+import { ComponentSelectionService } from './component-selection.service';
 
 @NgModule({
   declarations: [
@@ -21,17 +28,24 @@ import { DefaultFrontComponent } from './components/default-front/default-front.
     ConsoleComponent,
     DefaultFlowComponent,
     FlowComponent,
-    DefaultFrontComponent
+    DefaultFrontComponent,
+    ComponentSelectionComponent
   ],
   imports: [
     BrowserModule,
+    BrowserAnimationsModule,
     ReactiveFormsModule,
     FormsModule,
-    NgbModule.forRoot(),
-    NgbButtonsModule,
-    FlowBasedModule
+    MatToolbarModule,
+    MatInputModule,
+    FlowBasedModule,
+    MatButtonModule,
+    MatListModule,
+    OverlayModule
   ],
   providers: [
+    ComponentSelectionService,
+    {provide: OverlayContainer, useClass: FullscreenOverlayContainer},
     {
       provide: XXL_FLOW_UNIT_TYPES,
       useValue: {
@@ -47,7 +61,7 @@ import { DefaultFrontComponent } from './components/default-front/default-front.
       }
     }
   ],
-  entryComponents: [RandomNumbersComponent, ConsoleComponent, DefaultFlowComponent],
+  entryComponents: [ComponentSelectionComponent, RandomNumbersComponent, ConsoleComponent, DefaultFlowComponent],
   bootstrap: [AppComponent]
 })
 export class AppModule {

@@ -100,11 +100,17 @@
     "@angular-devkit/core" "0.6.8"
     rxjs "^6.0.0"
 
-"@angular/animations@^6.0.0":
-  version "6.1.7"
-  resolved "https://npmjs.build.edubase.malmberg.nl/repository/npm/@angular/animations/-/animations-6.1.7.tgz#5d1ca6a2f2e5827ac751c88265b7916d17a732d0"
+"@angular/animations@^6.1.9":
+  version "6.1.9"
+  resolved "https://npmjs.build.edubase.malmberg.nl/repository/npm/@angular/animations/-/animations-6.1.9.tgz#1d87469e6f6b89a8713570dfbe97700ea85bd007"
   dependencies:
     tslib "^1.9.0"
+
+"@angular/cdk@^6.4.7":
+  version "6.4.7"
+  resolved "https://npmjs.build.edubase.malmberg.nl/repository/npm/@angular/cdk/-/cdk-6.4.7.tgz#1549b304dd412e82bd854cc55a7d5c6772ee0411"
+  dependencies:
+    tslib "^1.7.1"
 
 "@angular/cli@~6.0.0":
   version "6.0.8"
@@ -165,6 +171,14 @@
 "@angular/language-service@^6.0.0":
   version "6.1.7"
   resolved "https://npmjs.build.edubase.malmberg.nl/repository/npm/@angular/language-service/-/language-service-6.1.7.tgz#f25335c32a7617344cf92736753a434c46678ebb"
+
+"@angular/material@^6.4.7":
+  version "6.4.7"
+  resolved "https://npmjs.build.edubase.malmberg.nl/repository/npm/@angular/material/-/material-6.4.7.tgz#3c8f2d6a6a7904d97be29e06a84ffb62a8da6c16"
+  dependencies:
+    tslib "^1.7.1"
+  optionalDependencies:
+    parse5 "^5.0.0"
 
 "@angular/platform-browser-dynamic@^6.0.0":
   version "6.1.7"
@@ -5137,6 +5151,10 @@ parse-json@^4.0.0:
 parse5@^4.0.0:
   version "4.0.0"
   resolved "https://npmjs.build.edubase.malmberg.nl/repository/npm/parse5/-/parse5-4.0.0.tgz#6d78656e3da8d78b4ec0b906f7c08ef1dfe3f608"
+
+parse5@^5.0.0:
+  version "5.1.0"
+  resolved "https://npmjs.build.edubase.malmberg.nl/repository/npm/parse5/-/parse5-5.1.0.tgz#c59341c9723f414c452975564c7c00a68d58acd2"
 
 parsejson@0.0.3:
   version "0.0.3"

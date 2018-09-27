@@ -1,11 +1,21 @@
 @import 'utils/trigonometry';
 
-* {
+:root {
+  --fb-gutter-size: 16px;
+
   font-family: 'Source Code Pro', monospace;
+
+  *:focus {
+    outline: none;
+  }
 }
 
 fb-root {
   background-color: #000;
+}
+
+.dark-backdrop {
+  background-color: rgba(0, 0, 0, .8);
 }
 
 @keyframes create {

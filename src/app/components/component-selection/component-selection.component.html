@@ -1,0 +1,19 @@
+<mat-toolbar color="secondary">
+  <span>Component selection</span>
+</mat-toolbar>
+
+<section class="type-selection">
+  <h2>Flow units</h2>
+  <mat-list>
+    <mat-list-item *ngFor="let key of unitKeys ">
+      <button mat-button (click)="onSelection(key)">{{key}}</button>
+    </mat-list-item>
+  </mat-list>
+
+  <h2>Composite units</h2>
+  <mat-list>
+    <mat-list-item *ngFor="let key of flowKeys ">
+      <button mat-button (click)="onSelection(key, true)">{{key}}</button>
+    </mat-list-item>
+  </mat-list>
+</section>

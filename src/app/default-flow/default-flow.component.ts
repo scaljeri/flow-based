@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { XxlFlowUnit, XxlSocket } from 'flow-based';
 
 @Component({
@@ -7,6 +7,7 @@ import { XxlFlowUnit, XxlSocket } from 'flow-based';
   styleUrls: ['./default-flow.component.scss']
 })
 export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
+  @Input() title: string;
 
   constructor() { }
 

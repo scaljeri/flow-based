@@ -98,9 +98,10 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
   }
 
   createSocket(socket: XxlSocket): void {
-    this.state.sockets = [...this.state.sockets, socket];
+    this.state.sockets = [socket, ...this.state.sockets];
 
     this.newSocketType = null;
+    this.viewRef.detectChanges();
   }
 
   newSocketIn(): void {

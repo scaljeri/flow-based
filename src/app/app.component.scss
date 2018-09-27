@@ -9,6 +9,20 @@
   z-index: 100;
 }
 
+mat-toolbar {
+  display: flex;
+  justify-content: center;
+
+  .button-wrapper {
+    left: var(--fb-gutter-size);
+    position: absolute;
+
+    button + button {
+      margin-left: var(--fb-gutter-size);
+    }
+  }
+}
+
 .bg {
   display: block;
   //filter: blur(5px);
@@ -24,27 +38,27 @@ fb-thunder {
   @include xxl-position(absolute, 0px 0px 0px 0px);
 }
 
-header {
-  align-items: center;
-  background-color: #0d025d;
-  display: flex;
-  flex: 0 0 50px;
-  justify-content: center;
-  padding: 0 16px;
-  position: relative;
-
-  .buttons {
-    @include xxl-position(absolute, 0 0 0 16px);
-
-    button + button {
-      margin-left: 10px;
-    }
-  }
-
-  h1 {
-    color: #fff;
-  }
-}
+//header {
+//  align-items: center;
+//  background-color: #0d025d;
+//  display: flex;
+//  flex: 0 0 50px;
+//  justify-content: center;
+//  padding: 0 16px;
+//  position: relative;
+//
+//  .buttons {
+//    @include xxl-position(absolute, 0 0 0 16px);
+//
+//    button + button {
+//      margin-left: 10px;
+//    }
+//  }
+//
+//  h1 {
+//    color: #fff;
+//  }
+//}
 
 main {
   display: flex;
@@ -62,15 +76,15 @@ main {
   }
 }
 
-fb-context-menu {
-  position: absolute;
-}
-
-// dialog
-.block-list {
-  padding: 20px;
-
-  .list-item + .list-item {
-    margin-top: 5px;
-  }
-}
+//fb-context-menu {
+//  position: absolute;
+//}
+//
+//// dialog
+//.block-list {
+//  padding: 20px;
+//
+//  .list-item + .list-item {
+//    margin-top: 5px;
+//  }
+//}

@@ -1,8 +1,11 @@
-import { AfterContentInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { AfterContentInit, Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
 import { nested } from './fixtures';
+import { Overlay, OverlayContainer, OverlayRef } from '@angular/cdk/overlay';
+import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
+import { ComponentPortal } from '@angular/cdk/portal';
+import { ComponentSelectionService } from './component-selection.service';
 
 const KEY_PRESS = {
   ESC: 27
@@ -13,14 +16,14 @@ const KEY_PRESS = {
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements AfterContentInit {
+export class AppComponent implements OnInit {
   // isContextMenu = false;
   // contextMenuState = false;
 
   // menuX: number;
   // menuY: number;
 
-  isModal = false;
+  activeOverlay: OverlayRef;
   isRunning = false;
   showJson = false;
   flowTypes = [
@@ -43,32 +46,60 @@ export class AppComponent implements AfterContentInit {
 
   @ViewChild('bg') bgImage: ElementRef;
 
-  constructor(private xxlService: XxlFlowBasedService, private modalService: NgbModal) {
+  constructor(private selectionService: ComponentSelectionService,
+              private xxlService: XxlFlowBasedService,
+              private overlay: Overlay) {
+  }
+
+  ngOnInit(): void {
+    this.selectionService.selection$.subscribe(type => {
+      this.xxlService.add(type);
+      this.activeOverlay.dispose();
+    });
   }
 
   openModal(content): void {
-    this.modalService.open(content, {centered: true});
+    // this.modalService.open(content, {centered: true});
 
-    this.isModal = true;
+    const portal = new ComponentPortal(ComponentSelectionComponent);
+    const positionStrategy = this.overlay.position()
+      .global()
+      .centerHorizontally()
+      .centerVertically();
+
+    this.activeOverlay = this.overlay.create({
+      hasBackdrop: true,
+      backdropClass: 'dark-backdrop',
+      panelClass: 'comp-selection',
+      height: '600px',
+      width: '400px',
+      positionStrategy
+    });
+
+    this.activeOverlay.attach(portal);
+
+    this.activeOverlay.backdropClick().subscribe((e: PointerEvent) => {
+      this.activeOverlay.dispose();
+      this.activeOverlay = null;
+    });
   }
 
   addBlock(item: { type: string, isFlow: boolean }): void {
     // create worker
     // const worker = RandomNumberFactory();
-    this.xxlService.add(item.type, {isFlow: item.isFlow});
+    // this.xxlService.add(item.type, {isFlow: item.isFlow});
   }
 
   onUpdate(): void {
     console.log('updated');
   }
 
-  ngAfterContentInit(): void {
-  }
-
   @HostListener('document:keydown.escape', ['$event'])
   escape(event): void {
-   if (this.isModal) {
-     this.isModal = false;
+   if (this.activeOverlay) {
+     this.activeOverlay.dispose();
+
+     this.activeOverlay = null;
    } else {
      this.xxlService.blur();
    }

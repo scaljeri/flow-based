@@ -73,7 +73,6 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
     const output = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
 
-    console.log('d="' + output + '"');
     return output;
   }
 }

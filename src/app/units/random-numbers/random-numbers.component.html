@@ -3,20 +3,13 @@
 </section>
 
 <section *ngIf="isActive" class="config">
-random-numbers config
+  <h2>Configuration</h2>
+
   <form>
-    <div class="form-group">
-  <label>
-    Name:
-    <input type="text" [formControl]="name" placeholder="Title" class="form-control">
-  </label>
-    </div>
+    <mat-form-field>
+      <input matInput type="text" [formControl]="name" placeholder="Title" class="form-control">
+    </mat-form-field>
   </form>
-
-
-  <p>
-    Value: {{ name.value }}
-  </p>
 
   <!--
     * title

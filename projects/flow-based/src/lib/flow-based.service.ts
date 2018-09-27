@@ -47,14 +47,14 @@ export class XxlFlowBasedService {
     this.flowStack[0].blur();
   }
 
-  add(type: string, options: XxlFlowUnitOptions = {}): void {
+  add({type, isFlow = false}): void {
     const state = {
       type,
       state: {},
       id: Date.now().toString()
     };
 
-    if (options.isFlow) {
+    if (isFlow) {
       this.flowStack[0].addFlow({
         ...state,
         children: [],
