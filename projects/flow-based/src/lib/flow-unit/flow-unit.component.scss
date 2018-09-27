@@ -22,6 +22,7 @@ $socket-size: 16px;
   min-width: 72px;
   padding: 4px;
   user-select: none;
+  z-index: 100;
 
   .sockets-in {
     .socket {
@@ -73,16 +74,24 @@ $socket-size: 16px;
   }
 }
 
+xxl-flow-based {
+  // @include xxl-position(absolute, 0px 0px 0px 0px);
+  height: 100%;
+  width: 100%;
+  // background-color: red;
+}
+
 .add-socket-form {
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 10;
   @include xxl-position(absolute, 0px 0px 0px 0px);
 }
+
 .component {
-  background-color: lightgray;
   border-radius: 8px;
   display: inline-flex;
+  justify-content: center;
   padding: 1px;
+  @include xxl-size(100%);
 }
 
 .add-socket {
@@ -119,6 +128,10 @@ $socket-size: 16px;
   height: var(--socket-size);
   transform: rotate(45deg);
   width: var(--socket-size);
+
+  &:hover {
+    background-color: green;
+  }
 }
 
 /*

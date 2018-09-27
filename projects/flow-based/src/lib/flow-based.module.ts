@@ -11,13 +11,13 @@ import { DraggableDirective } from './drag-drop/draggable/draggable.directive';
 import { MovableDirective } from './drag-drop/movable/movable.directive';
 import { MovableAreaDirective } from './drag-drop/movable-area/movable-area.directive';
 import { FilterComponent } from './components/filter/filter.component';
-import { SocketDirective } from './components/socket/socket.directive';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';
 import { DynamicComponentDirective } from './dynamic-component.directive';
 import { AddSocketComponent } from './flow-unit/add-socket/add-socket.component';
 import { ConnectionLinesComponent } from './connection-lines/connection-lines.component';
 import { SocketInPipe } from './pipes/socket-in.pipe';
 import { SocketOutPipe } from './pipes/socket-out.pipe';
+import { SocketDirective } from './socket/socket.directive';
 
 @NgModule({
   imports: [
@@ -35,11 +35,11 @@ import { SocketOutPipe } from './pipes/socket-out.pipe';
     MovableDirective,
     MovableAreaDirective,
     FilterComponent,
-    SocketDirective,
     AddSocketComponent,
     ConnectionLinesComponent,
     SocketInPipe,
-    SocketOutPipe],
+    SocketOutPipe,
+    SocketDirective],
   exports: [FlowBasedComponent],
   providers: [
     FlowBasedManagerService,

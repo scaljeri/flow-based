@@ -1,8 +1,7 @@
-import { Component, ElementRef, EventEmitter, Input, OnChanges, OnInit, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Host, Input, OnChanges, OnInit, Output } from '@angular/core';
 import { XxlConnection, XxlFlowUnitState } from 'flow-based';
 import { Observable } from 'rxjs';
-import { FlowUnitService } from '../flow-unit-service';
-import { UnitWrapper } from '../utils/unit-wrapper';
+import { XxlFlowBasedService } from '../flow-based.service';
 
 @Component({
   selector: 'xxl-connection-lines',
@@ -18,16 +17,16 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   private rect;
 
   constructor(private element: ElementRef,
-              private unitService: FlowUnitService) {
+              private flowService: XxlFlowBasedService) {
   }
 
   ngOnInit() {
-    this.unitService.movement.subscribe(fromTo => {
+    this.flowService.movement.subscribe(fromTo => {
       console.log('in ines');
     });
 
     // this.updates.subscribe((unitId: string) => {
-    //   console.log('update it', this.unitService.units[unitId]);
+    //   console.log('update it', this.flowService.units[unitId]);
     //
     // });
   }
@@ -47,11 +46,15 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   d(connection: XxlConnection): string {
     let cx1, cx2, cy1, cy2;
 
-    const from = this.unitService.units[connection.from];
-    const to = this.unitService.units[connection.to];
+    const from = this.flowService.units[connection.from];
+    const to = this.flowService.units[connection.to];
 
     const start = from.getSocketPosition(connection.out);
     const end = to.getSocketPosition(connection.in) || start;
+
+    if (!start || !start.x || !end || !end.x) {
+      return;
+    }
 
     const x1 = start.x - this.rect.left;
     const y1 = start.y - this.rect.top;
@@ -69,8 +72,8 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     }
 
     const output = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
-    console.log(output);
 
+    console.log('d="' + output + '"');
     return output;
   }
 }

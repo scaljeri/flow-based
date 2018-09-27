@@ -4,7 +4,7 @@ import { XxlFlowUnit, XxlSocket } from 'flow-based';
 @Component({
   selector: 'fb-default-flow',
   templateUrl: './default-flow.component.html',
-  styleUrls: ['./default-flow.component.css']
+  styleUrls: ['./default-flow.component.scss']
 })
 export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
 

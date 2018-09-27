@@ -10,6 +10,10 @@ export class UnitWrapper {
     return this.state.id;
   }
 
+  reset(): void {
+    this.sockets = {};
+  }
+
   addSocket(socketId: string, element: HTMLElement): void {
     this.sockets[socketId] = element;
   }

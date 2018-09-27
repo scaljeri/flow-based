@@ -4,24 +4,19 @@ import {
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
   Inject,
-  Injector, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild,
+  Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   XXL_FLOW_TYPES,
   XxlTypes,
   XxlFlow,
-  XxlWorker,
   XxlPosition,
-  XXL_STATE, XXL_ACTIVE, XxlSocketEvent, XxlFlowUnitState, XxlSocket, XxlConnection, XXL_FLOW_UNIT_TYPES
+  XxlFlowUnitState, XxlSocket, XxlConnection, XXL_FLOW_UNIT_TYPES
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
-import { Subject } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { FlowUnitService } from './flow-unit-service';
 import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
-import { DocumentService } from './utils/document.service';
-import { UnitWrapper } from './utils/unit-wrapper';
 
 @Component({
   selector: 'xxl-flow-based',
@@ -30,7 +25,7 @@ import { UnitWrapper } from './utils/unit-wrapper';
   viewProviders: [FlowUnitService],
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
-export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, AfterContentInit, ControlValueAccessor {
+export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, AfterContentInit, OnDestroy, ControlValueAccessor {
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
@@ -39,51 +34,35 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
 
-  // injectors: Injector[];
   wrapper: FakeUnitWrapper;
   onChange: (state: any) => void;
   activeFlowIndex: number = null;
-  activeIndex$ = new Subject<number>();
 
   constructor(
-    private unitService: FlowUnitService,
     private element: ElementRef,
-    private injector: Injector,
-    private flowService: XxlFlowBasedService,
+    public flowService: XxlFlowBasedService,
     @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes,
     @Inject(XXL_FLOW_UNIT_TYPES) public flowUnitTypes: XxlTypes) {
   }
 
   ngOnInit() {
-    if (this.root) {
-      this.flowService.activate(this);
+    this.flowService.activate(this);
 
-    }
-
-    this.wrapper = new FakeUnitWrapper(this.element);
-    this.unitService.register(this.wrapper);
+    this.wrapper = new FakeUnitWrapper(this.element, this.flow.id);
+    this.flowService.register(this.wrapper);
   }
 
   ngOnChanges(obj: SimpleChanges): void {
-    if (obj.active) {
-      if (this.active === true) {
-        this.flowService.activate(this);
-      } else {
-        this.flowService.deactivate();
-      }
-    }
-    if (obj.flow) {
-      if (this.flow.children.length === 0) {
-      }
-      // this.createInjector();
-      console.log(this.flow);
-    }
   }
 
   ngAfterViewInit(): void {
   }
 
   ngAfterContentInit(): void {
+  }
+
+  ngOnDestroy(): void {
+    this.wrapper.deactivate();
   }
 
   @HostListener('click', ['$event'])
@@ -93,15 +72,15 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     // TODO: ??
   }
 
-  @HostListener('document:keydown.escape', ['$event'])
-  onKeydownHandler(evt: KeyboardEvent) {
-    if (this.activeFlowIndex >= 0) {
-      evt.stopPropagation();
-      this.activeFlowIndex = null;
-    }
-
-    this.activeIndex$.next();
-  }
+  // @HostListener('document:keydown.escape', ['$event'])
+  // onKeydownHandler(evt: KeyboardEvent) {
+  //   if (this.activeFlowIndex >= 0) {
+  //     evt.stopPropagation();
+  //     this.activeFlowIndex = null;
+  //   }
+  //
+  //   this.activeIndex$.next();
+  // }
 
   @HostListener('document:pointerdown')
   onPointerDown(): void {
@@ -126,25 +105,14 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     // this.updateSubject.next(state);
 
     // console.log('update connections');
-    this.unitService.movement.next(state);
+    this.flowService.movement.next(state);
   }
 
   addUnit(unit: XxlFlowUnitState): void {
-    // if (this.activeFlowIndex !== null) {
-    //   unit = {
-    //     id: Date.now().toString(),
-    //     children: [unit]
-    //   }
-    //   const child = this.flow.children[this.activeFlowIndex];
-    //   debugger;
-    // } else {
-    //
-    // }
     this.flow.children.push(unit);
   }
 
   addFlow(flow: XxlFlow): void {
-    debugger;
     this.flow.children.push(flow);
   }
 
@@ -153,24 +121,18 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   }
 
-  // activeFlow(): XxlFlow {
-  //   return this.activeFlowIndex !== null ? this.flow.units[this.activeFlowIndex] as XxlFlow : null;
-  // }
-  //
-  // deactivate(): void {
-  //   if (this.activeFlowIndex === null) {
-  //     if (!this.root) {
-  //       this.flowService.deactivate();
-  //       this.activeChanged.emit(false);
-  //     }
-  //   } else {
-  //     this.entryClicked(null);
-  //   }
-  // }
+  blur(): void {
+    if (this.activeFlowIndex !== null) {
+      this.activeFlowIndex = null;
+    } else if (!this.root) {
+        this.flowService.deactivate();
+        this.flowService.blur();
+    }
+  }
 
   entryClicked(index: number): void {
     this.activeFlowIndex = index;
-    this.activeIndex$.next(index);
+    // this.activeIndex$.next(index);
   }
 
   removeConnection(conn: XxlConnection): void {
@@ -178,22 +140,27 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
       .filter(item => item !== conn);
   }
 
-  onSocketClick(socket: XxlSocket, state: XxlFlowUnitState): void {
+  onSocketClick(socket: XxlSocket, unitId: string): void {
     if (this.wrapper.isActive) {
       const conn = this.flow.connections.slice(-1)[0];
-      conn.to = state.id;
-      conn.in = socket.id;
+      if (conn.in === this.flow.id + '-fake') {
+        conn.to = unitId;
+        conn.in = socket.id;
+      } else {
+        conn.from = unitId;
+        conn.out = socket.id;
+      }
 
       this.wrapper.deactivate();
     } else {
       this.flow.connections.push({
-        from: state.id,
-        out: socket.id,
-        to: this.wrapper.unitId,
-        in: 'fake'
+        from: socket.type === 'out' ? unitId : this.wrapper.unitId,
+        out: socket.type === 'out' ? socket.id : this.wrapper.unitId,
+        to: socket.type === 'out' ? this.wrapper.unitId : unitId,
+        in: socket.type === 'out' ? this.wrapper.unitId : socket.id
       });
 
-      this.wrapper.activate();
+      this.wrapper.activate(); // Wake up the mouse listener!
     }
   }
 
@@ -205,32 +172,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     console.log('blur');
     this.activeFlowIndex = null;
     // event.stopPropagation();
-  }
-
-  addBlackBox(type: string, worker: XxlWorker): void {
-    // const position = this.centerPosition();
-    //
-    // const newBlock: XxlBlackBox = {type, position, worker};
-    //
-    // if (this.activeFlowIndex === null) {
-    //   this.flow.units.push(newBlock);
-    //
-    //   this.createInjector();
-    // } else {
-    //   this.convertBlock2Flow(this.activeFlowIndex);
-    //   (this.flow.units[this.activeFlowIndex] as XxlFlow).units.push(newBlock);
-    // }
-  }
-
-  convertUnitToFlow(index: number): void {
-    // const block = {
-    //   type: this.flow.units[index].type,
-    //   position: Object.assign({}, this.flow.units[index].position)
-    // };
-    //
-    // (this.flow.units[index] as XxlFlow).units = [block];
-    //
-    // this.flow.units[index].type = 'default';
   }
 
   centerPosition(): XxlPosition {
@@ -256,12 +197,3 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   }
 }
-
-//
-// function convertUnitToFlow(flow: XxlFlow, service: XxlFlowBasedService) {
-//   (flow.children || []).forEach(box => {
-//     if (box.type) {
-//       // box.worker = service.createWorker(box);
-//     }
-//   });
-// }

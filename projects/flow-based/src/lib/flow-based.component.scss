@@ -1,39 +1,17 @@
 @import './utils/utils';
 
 :host {
-  background-color: #000;
+  background-color: transparent;
+  border-radius: 13px;
   display: inline-flex;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-
-  //&.is-active, &.is-active > article {
-  //  height: 100%;
-  //  width: 100%;
-  //  //border: 2px solid red;
-  //  display: flex;
-  //  justify-content: center;
-  //  align-items: center;
-  //}
-  //
-  //&:not(.is-active) {
-  //  width: 100px;
-  //  height: 100px;
-  //
-  //  > * {
-  //    pointer-events: none;
-  //  }
-  //}
+  @include xxl-size(100%);
 
   > [xxlmovablearea] {
-    height: 100%;
-    width: 100%;
+    @include xxl-size(100%);
   }
 }
 
 xxl-connection-lines {
-  z-index: 1;
   @include xxl-position(absolute, 0px 0px 0px 0px);
 }
 
@@ -45,50 +23,32 @@ xxl-flow-unit {
   }
 }
 
-//xxl-flow-based,
-//xxl-block {
-//  position: absolute;
-//  // transform: translate(-50%, -50%);
-//
-//  &.is-active {
-//    z-index: 1;
-//    left: 0!important;
-//    top: 0!important;
-//    bottom: 0!important;
-//    right: 0;
-//  }
-//}
-
 // close cross
 .close {
-  position: absolute;
-  right: 32px;
-  top: 32px;
-  width: 32px;
-  height: 32px;
+  cursor: pointer;
   opacity: 0.3;
   outline: none;
-  cursor: pointer;
+  @include xxl-position(absolute, 32px 32px 0 0);
+  @include xxl-size(32px);
 
   &:hover {
     opacity: 1;
   }
 
-  &:before, &:after {
-    position: absolute;
-    top: 0;
-    left: 15px;
+  &::after,
+  &::before {
+    background-color: #fff;
     content: ' ';
     height: 33px;
     width: 2px;
-    background-color: #fff;
+    @include xxl-position(absolute, 0px 0 0 15px);
   }
 
-  &:before {
+  &::before {
     transform: rotate(45deg);
   }
 
-  &:after {
+  &::after {
     transform: rotate(-45deg);
   }
 

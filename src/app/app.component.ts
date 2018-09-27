@@ -1,4 +1,4 @@
-import { AfterContentInit, Component, ElementRef, ViewChild } from '@angular/core';
+import { AfterContentInit, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
@@ -20,6 +20,7 @@ export class AppComponent implements AfterContentInit {
   // menuX: number;
   // menuY: number;
 
+  isModal = false;
   isRunning = false;
   showJson = false;
   flowTypes = [
@@ -45,16 +46,10 @@ export class AppComponent implements AfterContentInit {
   constructor(private xxlService: XxlFlowBasedService, private modalService: NgbModal) {
   }
 
-  //
-  // @HostListener('document:keydown.escape', ['$event'])
-  // handleKeyboardEvent(event: KeyboardEvent) {
-  //   if (event.keyCode === KEY_PRESS.ESC) {
-  //     this.xxlService.back();
-  //   }
-  // }
-
   openModal(content): void {
     this.modalService.open(content, {centered: true});
+
+    this.isModal = true;
   }
 
   addBlock(item: { type: string, isFlow: boolean }): void {
@@ -68,6 +63,15 @@ export class AppComponent implements AfterContentInit {
   }
 
   ngAfterContentInit(): void {
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  escape(event): void {
+   if (this.isModal) {
+     this.isModal = false;
+   } else {
+     this.xxlService.blur();
+   }
   }
 
   //
