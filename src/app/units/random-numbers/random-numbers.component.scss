@@ -9,8 +9,18 @@
 }
 
 .config {
-  background-color: lightgray;
-  border-radius: 8px;
-  padding: 10px;
+  background-color: #fff;
+  min-width: 300px;
+
+  form {
+    display: flex;
+    flex-direction: column;
+    padding: var(--fb-gutter-size);
+
+    label span {
+      display: inline-flex;
+      width: 70px;
+    }
+  }
 }
 

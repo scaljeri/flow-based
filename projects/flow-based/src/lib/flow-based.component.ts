@@ -1,5 +1,5 @@
 import {
-  AfterContentInit, AfterViewInit, ChangeDetectorRef,
+  AfterContentInit, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef,
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
@@ -22,7 +22,8 @@ import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
   selector: 'xxl-flow-based',
   templateUrl: './flow-based.component.html',
   styleUrls: ['./flow-based.component.scss'],
-  viewProviders: [FlowUnitService],
+  // viewProviders: [FlowUnitService],
+  // changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
 export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, AfterContentInit, OnDestroy, ControlValueAccessor {
@@ -40,13 +41,21 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   constructor(
     private element: ElementRef,
-    private viewRef: ChangeDetectorRef,
+    private cdr: ChangeDetectorRef,
     public flowService: XxlFlowBasedService,
     @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes,
     @Inject(XXL_FLOW_UNIT_TYPES) public flowUnitTypes: XxlTypes) {
   }
 
   ngOnInit() {
+    if (!this.flow.children) {
+      this.flow.children = [];
+    }
+
+    if (!this.flow.connections) {
+      this.flow.connections = [];
+    }
+
     this.flowService.activate(this);
 
     this.wrapper = new FakeUnitWrapper(this.element, this.flow.id);
@@ -57,6 +66,18 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   ngAfterViewInit(): void {
+    this.reset();
+  }
+
+  reset(): void {
+    setTimeout(() => {
+      this.flow.children.forEach(child => this.flowService.update(child.id));
+      this.repaint();
+    });
+  }
+
+  repaint(): void {
+    this.flow.connections = [...this.flow.connections];
   }
 
   ngAfterContentInit(): void {
@@ -64,6 +85,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   ngOnDestroy(): void {
     this.wrapper.deactivate();
+  }
+
+  onMove(): void {
+    this.flow.connections = [...this.flow.connections];
   }
 
   @HostListener('click', ['$event'])
@@ -103,10 +128,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   updateConnections(event: XxlPosition, state: XxlFlowUnitState): void {
-    // this.updateSubject.next(state);
-
-    // console.log('update connections');
-    this.flowService.movement.next(state);
+    this.flowService.update(state.id);
+    this.repaint();
   }
 
   addUnit(unit: XxlFlowUnitState): void {
@@ -119,23 +142,26 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   activityChanged(isActive): void {
     this.activeFlowIndex = null;
-
   }
 
   blur(): void {
     if (this.activeFlowIndex !== null) {
       this.activeFlowIndex = null;
+    } else if (this.wrapper.isActive) {
+      this.wrapper.deactivate();
+      this.flow.connections = this.flow.connections.filter(conn => conn.to !== this.wrapper.unitId && conn.from !== this.wrapper.unitId);
     } else if (!this.root) {
-        this.flowService.deactivate();
-        this.flowService.blur();
+      this.wrapper.deactivate();
+      this.flowService.deactivate();
+      this.flowService.blur();
     }
 
-    this.viewRef.detectChanges();
+    this.reset();
   }
 
   entryClicked(index: number): void {
     this.activeFlowIndex = index;
-    // this.activeIndex$.next(index);
+    this.reset();
   }
 
   removeConnection(conn: XxlConnection): void {
@@ -163,7 +189,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
         in: socket.type === 'out' ? this.wrapper.unitId : socket.id
       });
 
-      this.wrapper.activate(); // Wake up the mouse listener!
+      // TODO: remove callback hack
+      this.wrapper.activate(() => {
+        this.flow.connections = [...this.flow.connections];
+      }); // Wake up the mouse listener!
     }
   }
 

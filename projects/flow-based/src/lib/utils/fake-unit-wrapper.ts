@@ -6,7 +6,7 @@ export class FakeUnitWrapper extends UnitWrapper {
   private readonly callback: (event: PointerEvent) => void;
   private x: number;
   private y: number;
-  private parentRect;
+  private cb;
 
   public isActive = false;
 
@@ -24,8 +24,9 @@ export class FakeUnitWrapper extends UnitWrapper {
     return this.x === null ? null : {x: this.x, y: this.y};
   }
 
-  activate(): void {
+  activate(cb): void {
     this.isActive = true;
+    this.cb = cb;
     this.element.nativeElement.addEventListener('pointermove', this.callback);
     this.x = null;
   }
@@ -36,8 +37,8 @@ export class FakeUnitWrapper extends UnitWrapper {
   }
 
   private trackPointer(event: PointerEvent): void {
-    console.count('active');
     this.x = event.pageX; //  - this.parentRect.left;
     this.y = event.pageY; // - this.parentRect.top;
+    this.cb();
   }
 }

@@ -12,12 +12,14 @@
     <button class="add-socket" (click)="newSocketIn()">+</button>
     <span *ngFor="let socket of state.sockets | socketIn;trackBy: socketTrackByFn"
           [xxlSocket]="socket"
+          [attr.data-socket-id]="socket.id"
           (pointerdown)="onSocketClick(1, socket, $event)" class="socket"></span>
   </section>
 
   <section *ngIf="state?.sockets" class="sockets sockets-out">
     <button class="add-socket" (click)="newSocketOut()">+</button>
     <span *ngFor="let socket of state.sockets | socketOut" [xxlSocket]="socket" (pointerdown)="onSocketClick(2,socket, $event)"
+          [attr.data-socket-id]="socket.id"
           class="socket"></span>
   </section>
 </section>

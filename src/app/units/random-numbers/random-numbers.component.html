@@ -1,14 +1,29 @@
 <section *ngIf="!isActive">
-  <fb-default-front [title]="name.value"></fb-default-front>
+  <fb-default-front [title]="title"></fb-default-front>
 </section>
 
 <section *ngIf="isActive" class="config">
-  <h2>Configuration</h2>
+  <mat-toolbar color="primary">
+    <span>Configuration</span>
+  </mat-toolbar>
 
-  <form>
+  <form [formGroup]="configForm">
     <mat-form-field>
-      <input matInput type="text" [formControl]="name" placeholder="Title" class="form-control">
+      <input matInput type="text" formControlName="title" placeholder="Title" class="form-control">
     </mat-form-field>
+    <label>
+      <span>Start</span>
+      <mat-slider min="1" max="5" step=".1"
+                  [thumbLabel]="true"
+                  formControlName="startValue"></mat-slider>
+    </label>
+
+    <label>
+      <span>End</span>
+      <mat-slider min="1" max="5" step=".1"
+                  [thumbLabel]="true"
+                  formControlName="endValue"></mat-slider>
+    </label>
   </form>
 
   <!--

@@ -14,7 +14,7 @@ import { DefaultFrontComponent } from './components/default-front/default-front.
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
   MatButtonModule,
-  MatInputModule, MatListModule, MatToolbarModule
+  MatInputModule, MatListModule, MatSliderModule, MatToolbarModule
 } from '@angular/material';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
@@ -38,6 +38,7 @@ import { ComponentSelectionService } from './component-selection.service';
     FormsModule,
     MatToolbarModule,
     MatInputModule,
+    MatSliderModule,
     FlowBasedModule,
     MatButtonModule,
     MatListModule,

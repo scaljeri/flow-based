@@ -16,8 +16,11 @@ export class XxlFlowBasedService {
 
   // Unit stuff
   register(wrapper: UnitWrapper): void {
-    console.log('wrapper', wrapper.unitId);
     this.units[wrapper.unitId] = wrapper;
+  }
+
+  update(unitId: string): void {
+    this.units[unitId].update();
   }
 
   unregister(id: string): void {
@@ -26,13 +29,10 @@ export class XxlFlowBasedService {
 
   // Flow stuff
   activate(flow: FlowBasedComponent): void {
-    console.log('yes', flow, this.flowStack);
-
     this.flowStack.unshift(flow);
   }
 
   deactivate(): void {
-    console.log('no', this.flowStack);
     this.flowStack.shift();
   }
 

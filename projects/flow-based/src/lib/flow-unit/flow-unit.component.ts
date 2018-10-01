@@ -17,13 +17,11 @@ import { SocketDirective } from '../socket/socket.directive';
 import { XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
 import { FlowBasedComponent } from '../flow-based.component';
 
-class QueryLlist {
-}
-
 @Component({
   selector: 'xxl-flow-unit',
   templateUrl: './flow-unit.component.html',
-  styleUrls: ['./flow-unit.component.scss']
+  styleUrls: ['./flow-unit.component.scss'],
+  // changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() @HostBinding('class.is-active') active = false;
@@ -34,6 +32,8 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
   @ViewChildren(SocketDirective) sockets: QueryList<SocketDirective>;
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
   @ViewChild('flow') flow: FlowBasedComponent;
+
+  private observer;
 
   newSocketType: XxlSocketType;
   wrapper: UnitWrapper;
@@ -52,10 +52,11 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
       this.wrapper = new UnitWrapper(this.state);
       this.flowService.register(this.wrapper);
       this.viewRef.detectChanges();
-    });
 
-    this.sockets.forEach((socket: SocketDirective) => {
-      this.wrapper.addSocket(socket.id, socket.element.nativeElement);
+      this.sockets.forEach((socket: SocketDirective) => {
+        console.log('register socket ' + socket.id);
+        this.wrapper.addSocket(socket.id, socket.element.nativeElement);
+      });
     });
 
     this.sockets.changes.subscribe(sockets => {
@@ -81,10 +82,12 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
       this.ref.instance.setActive(active.currentValue);
     }
 
-    if (changes.active.currentValue === true ) {
-      console.log('active', this.state);
-    }
     this.newSocketType = null;
+
+    // Hack to fix it
+    // setTimeout(() => {
+    //   this.viewRef.detectChanges();
+    // });
   }
 
   onSocketClick(x, socket: XxlSocket, event: PointerEvent): void {

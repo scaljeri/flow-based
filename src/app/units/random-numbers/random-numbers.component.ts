@@ -5,7 +5,7 @@ import {
   XXL_FLW_UNIT_SERVICE, XxlFlowUnit,
   XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
-import { FormControl } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
@@ -58,16 +58,26 @@ export const RANDOM_NUMBERS_CONFIG = {
   }]
 })
 export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
-  @Input() @HostBinding('class.is-config') isConfig = false;
-
-  name = new FormControl('');
+  configForm: FormGroup;
   isActive = false;
   id = 0;
 
-  constructor() {
+  constructor(private fb: FormBuilder) {
   }
 
   ngOnInit(): void {
+    this.configForm = this.fb.group({
+      title: [''],
+      startValue: [0],
+      endValue: [1]
+    });
+
+    this.configForm.valueChanges.subscribe(form => {
+      console.log(form);
+      if (form.startValue > this.configForm.controls.endValue.value) {
+        this.configForm.controls.endValue.setValue(form.startValue, { onlySelf: true, emitEvent: true});
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -87,7 +97,10 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   }
 
   setActive(state: boolean): void {
-    console.log('state = ' + state);
     this.isActive = state;
+  }
+
+  get title(): string {
+    return this.configForm.controls.title.value;
   }
 }

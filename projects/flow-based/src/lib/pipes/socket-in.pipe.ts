@@ -9,7 +9,7 @@ export class SocketInPipe implements PipeTransform {
 
   transform(sockets: XxlSocket[]): XxlSocket[] {
     const result = sockets.filter(socket => socket.type === XxlSocketBuilderService.SOCKET_IN);
-    console.log(result);
+
     return result;
   }
 

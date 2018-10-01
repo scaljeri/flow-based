@@ -3,188 +3,207 @@ import { XxlFlow } from 'flow-based';
 // export const nested = { children: [] };
 
 export const nested =
+{
+  "children": [
   {
-    'id': 'f1',
-    'connections': [
+    "type": "random-numbers",
+    "state": {},
+    "id": "1538393253483",
+    "sockets": [
       {
-        'from': '1',
-        'out': 'rnc-b',
-        'to': '1538033386800',
-        'in': 'rnc-a'
+        "type": "in",
+        "id": "rnc-a"
+      },
+      {
+        "type": "out",
+        "id": "rnc-b"
+      },
+      {
+        "type": "out",
+        "id": "rnc-c"
       }
     ],
-    'children': [
+    "position": {
+      "x": 128.90625,
+      "y": 173.046875
+    }
+  },
+  {
+    "type": "random-numbers",
+    "state": {},
+    "id": "1538393256972",
+    "sockets": [
       {
-        'id': 'xxxx',
-        'type': 'default',
-        'position': {
-          'x': 497.1171875,
-          'y': 53.015625
-        },
-        'connections': [],
-        'children': [
-          {
-            'position': {
-              'x': 227.7421875,
-              'y': 278.5859375
-            },
-            'type': 'random-numbers'
-          },
-          {
-            'type': 'default',
-            'position': {
-              'x': 498.55078125,
-              'y': 282.7890625
-            },
-            'children': [
-              {
-                'position': {
-                  'x': 206.75,
-                  'y': 515.8203125
-                },
-                'type': 'random-numbers',
-                'children': []
-              },
-              {
-                'type': 'default',
-                'position': {
-                  'x': 480,
-                  'y': 515
-                },
-                'children': [
-                  {
-                    'position': {
-                      'x': 199.53125,
-                      'y': 855.79296875
-                    },
-                    'type': 'random-numbers',
-                    'children': []
-                  },
-                  {
-                    'type': 'random-numbers',
-                    'position': {
-                      'x': 480,
-                      'y': 515
-                    },
-                    'children': []
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        'sockets': []
+        "type": "in",
+        "id": "rnc-a"
       },
       {
-        'id': 'f2',
-        'type': 'default',
-        'position': {
-          'x': 496.41796875,
-          'y': 183.31640625
-        },
-        'connections': [],
-        'children': [
+        "type": "out",
+        "id": "rnc-b"
+      },
+      {
+        "type": "out",
+        "id": "rnc-c"
+      }
+    ],
+    "position": {
+      "x": 713.92578125,
+      "y": 566.546875
+    }
+  },
+  {
+    "type": "default",
+    "state": {},
+    "id": "1538393361621",
+    "children": [
+      {
+        "type": "random-numbers",
+        "state": {},
+        "id": "1538393372016",
+        "sockets": [
           {
-            'id': 'f3',
-            'position': {
-              'x': 375.49609375,
-              'y': 481.4140625
-            },
-            'type': 'default',
-            'connections': [],
-            'children': [
+            "type": "in",
+            "id": "rnc-a"
+          },
+          {
+            "type": "out",
+            "id": "rnc-b"
+          },
+          {
+            "type": "out",
+            "id": "rnc-c"
+          }
+        ],
+        "position": {
+          "x": 432.68359375,
+          "y": 285.89453125
+        }
+      },
+      {
+        "type": "default",
+        "state": {},
+        "id": "1538393395260",
+        "children": [
+          {
+            "type": "random-numbers",
+            "state": {},
+            "id": "1538393403911",
+            "sockets": [
               {
-                'id': 'qwerty',
-                'position': {
-                  'x': 0,
-                  'y': 0
-                },
-                'type': 'random-numbers'
+                "type": "in",
+                "id": "rnc-a"
               },
               {
-                'type': 'random-numbers',
-                'position': {
-                  'x': 480,
-                  'y': 515
-                }
+                "type": "out",
+                "id": "rnc-b"
+              },
+              {
+                "type": "out",
+                "id": "rnc-c"
               }
             ],
-            'sockets': []
-          },
-          {
-            'id': 'zzz',
-            'type': 'random-numbers',
-            'position': {
-              'x': 480,
-              'y': 515
-            },
-            'sockets': [
-              {
-                'type': 'in',
-                'id': 'rnc-a'
-              },
-              {
-                'type': 'out',
-                'id': 'rnc-b'
-              },
-              {
-                'type': 'out',
-                'id': 'rnc-c'
-              }
-            ]
+            "position": {
+              "x": 596.01953125,
+              "y": 36.78125
+            }
           }
         ],
-        'sockets': [
+        "connections": [
           {
-            'type': 'in',
-            'id': '1538035179596'
-          }
-        ]
-      },
-      {
-        'type': 'random-numbers',
-        'id': '1',
-        'position': {
-          'x': 237.58984375,
-          'y': 328.93359375
-        },
-        'sockets': [
-          {
-            'type': 'in',
-            'id': 'rnc-a'
+            "from": "1538393395260",
+            "out": "1538393397848",
+            "to": "1538393403911",
+            "in": "rnc-a"
           },
           {
-            'type': 'out',
-            'id': 'rnc-b'
-          },
-          {
-            'type': 'out',
-            'id': 'rnc-c'
-          }
-        ]
-      },
-      {
-        'type': 'random-numbers',
-        'state': {},
-        'id': '1538033386800',
-        'sockets': [
-          {
-            'type': 'in',
-            'id': 'rnc-a'
-          },
-          {
-            'type': 'out',
-            'id': 'rnc-b'
-          },
-          {
-            'type': 'out',
-            'id': 'rnc-c'
+            "from": "1538393403911",
+            "out": "rnc-b",
+            "to": "1538393395260",
+            "in": "1538393399770"
           }
         ],
-        'position': {
-          'x': 633.3828125,
-          'y': 327.8984375
+        "sockets": [
+          {
+            "type": "out",
+            "id": "1538393399770"
+          },
+          {
+            "type": "in",
+            "id": "1538393397848"
+          }
+        ],
+        "position": {
+          "x": 911.8671875,
+          "y": 154.23046875
         }
       }
-    ]
-  };
+    ],
+    "connections": [
+      {
+        "from": "1538393361621",
+        "out": "1538393366190",
+        "to": "1538393372016",
+        "in": "rnc-a"
+      },
+      {
+        "from": "1538393372016",
+        "out": "rnc-b",
+        "to": "1538393395260",
+        "in": "1538393397848"
+      },
+      {
+        "from": "1538393395260",
+        "out": "1538393399770",
+        "to": "1538393361621",
+        "in": "1538393368372"
+      },
+      {
+        "from": "1538393372016",
+        "out": "rnc-c",
+        "to": "1538393361621-fake",
+        "in": "1538393361621-fake"
+      }
+    ],
+    "sockets": [
+      {
+        "type": "out",
+        "id": "1538393368372"
+      },
+      {
+        "type": "in",
+        "id": "1538393366190"
+      }
+    ],
+    "position": {
+      "x": 1141.640625,
+      "y": 41.81640625
+    }
+  }
+],
+  "connections": [
+  {
+    "from": "1538393253483",
+    "out": "rnc-c",
+    "to": "1538393256972",
+    "in": "rnc-a"
+  },
+  {
+    "from": "1538393256972",
+    "out": "rnc-b",
+    "to": "1538393253483",
+    "in": "rnc-a"
+  },
+  {
+    "from": "1538393253483",
+    "out": "rnc-b",
+    "to": "1538393361621",
+    "in": "1538393366190"
+  },
+  {
+    "from": "1538393361621",
+    "out": "1538393368372",
+    "to": "1538393256972",
+    "in": "rnc-a"
+  }
+]
+}

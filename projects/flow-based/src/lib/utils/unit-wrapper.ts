@@ -15,18 +15,27 @@ export class UnitWrapper {
   }
 
   addSocket(socketId: string, element: HTMLElement): void {
-    this.sockets[socketId] = element;
+    this.sockets[socketId] = {element};
+  }
+
+  update(): void {
+    Object.keys(this.sockets).forEach(socketId => {
+      this.sockets[socketId].position = this.computeSocketPosition(socketId);
+    });
   }
 
   removeSocket(socketId: string): void {
     delete this.sockets[socketId];
   }
 
-
-  getSocketPosition(socketId: string): XxlPosition {
-    const rect = this.sockets[socketId].getBoundingClientRect();
+  computeSocketPosition(socketId: string): XxlPosition {
+    const rect = this.sockets[socketId].element.getBoundingClientRect();
 
     return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
-    // return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+  }
+
+
+  getSocketPosition(socketId: string): XxlPosition {
+    return this.sockets[socketId].position;
   }
 }

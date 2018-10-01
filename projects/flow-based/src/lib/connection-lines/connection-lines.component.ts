@@ -1,4 +1,15 @@
-import { Component, ElementRef, EventEmitter, Host, Input, OnChanges, OnInit, Output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Host,
+  Input,
+  OnChanges,
+  OnInit,
+  Output
+} from '@angular/core';
 import { XxlConnection, XxlFlowUnitState } from 'flow-based';
 import { Observable } from 'rxjs';
 import { XxlFlowBasedService } from '../flow-based.service';
@@ -6,7 +17,8 @@ import { XxlFlowBasedService } from '../flow-based.service';
 @Component({
   selector: 'xxl-connection-lines',
   templateUrl: './connection-lines.component.html',
-  styleUrls: ['./connection-lines.component.scss']
+  styleUrls: ['./connection-lines.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ConnectionLinesComponent implements OnInit, OnChanges {
   @Input() connections: XxlConnection[];
@@ -17,13 +29,13 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   private rect;
 
   constructor(private element: ElementRef,
+              private viewRef: ChangeDetectorRef,
               private flowService: XxlFlowBasedService) {
   }
 
   ngOnInit() {
-    this.flowService.movement.subscribe(fromTo => {
-      console.log('in ines');
-    });
+    // this.flowService.movement.subscribe(fromTo => {
+    // });
 
     // this.updates.subscribe((unitId: string) => {
     //   console.log('update it', this.flowService.units[unitId]);
