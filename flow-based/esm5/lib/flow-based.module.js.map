@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "flow-based.module.js",
+  "sources": [
+    "ng://flow-based/projects/flow-based/src/lib/flow-based.module.ts"
+  ],
+  "sourcesContent": [
+    "import {NgModule} from '@angular/core';\nimport {CommonModule} from '@angular/common';\nimport {XXL_FLOW_TYPES} from './flow-based';\nimport {FlowBasedComponent} from './flow-based.component';\nimport {FlowBasedService} from './flow-based.service';\nimport {SourceComponent} from './components/source/source.component';\nimport {DummyComponent} from './components/dummy/dummy.component';\nimport {BlockComponent} from './block/block.component';\nimport {DraggableDirective} from './drag-drop/draggable/draggable.directive';\nimport {MovableDirective} from './drag-drop/movable/movable.directive';\nimport {MovableAreaDirective} from './drag-drop/movable-area/movable-area.directive';\n\n@NgModule({\n  imports: [\n    CommonModule\n  ],\n  declarations: [\n    FlowBasedComponent,\n    SourceComponent,\n    DummyComponent,\n    BlockComponent,\n    DraggableDirective,\n    MovableDirective,\n    MovableAreaDirective],\n  exports: [FlowBasedComponent],\n  providers: [\n    {\n      provide: XXL_FLOW_TYPES,\n      useValue: {\n        source: DummyComponent\n      }\n    },\n    FlowBasedService],\n  entryComponents: [DummyComponent, SourceComponent],\n\n})\n\nexport class FlowBasedModule {\n}\n"
+  ],
+  "names": [],
+  "mappings": ";;;;AAAA,OAAO,EAAC,QAAQ,EAAC,MAAM,eAAe,CAAC;AACvC,OAAO,EAAC,YAAY,EAAC,MAAM,iBAAiB,CAAC;AAC7C,OAAO,EAAC,cAAc,EAAC,MAAM,cAAc,CAAC;AAC5C,OAAO,EAAC,kBAAkB,EAAC,MAAM,wBAAwB,CAAC;AAC1D,OAAO,EAAC,gBAAgB,EAAC,MAAM,sBAAsB,CAAC;AACtD,OAAO,EAAC,eAAe,EAAC,MAAM,sCAAsC,CAAC;AACrE,OAAO,EAAC,cAAc,EAAC,MAAM,oCAAoC,CAAC;AAClE,OAAO,EAAC,cAAc,EAAC,MAAM,yBAAyB,CAAC;AACvD,OAAO,EAAC,kBAAkB,EAAC,MAAM,2CAA2C,CAAC;AAC7E,OAAO,EAAC,gBAAgB,EAAC,MAAM,uCAAuC,CAAC;AACvE,OAAO,EAAC,oBAAoB,EAAC,MAAM,iDAAiD,CAAC;WAkBrE;IACR,MAAM,EAAE,cAAc;CACvB;AAOP,MAAM;;;YAzBL,QAAQ,SAAC;gBACR,OAAO,EAAE;oBACP,YAAY;iBACb;gBACD,YAAY,EAAE;oBACZ,kBAAkB;oBAClB,eAAe;oBACf,cAAc;oBACd,cAAc;oBACd,kBAAkB;oBAClB,gBAAgB;oBAChB,oBAAoB;iBAAC;gBACvB,OAAO,EAAE,CAAC,kBAAkB,CAAC;gBAC7B,SAAS,EAAE;oBACT;wBACE,OAAO,EAAE,cAAc;wBACvB,QAAQ,IAEP;qBACF;oBACD,gBAAgB;iBAAC;gBACnB,eAAe,EAAE,CAAC,cAAc,EAAE,eAAe,CAAC;aAEnD"
+}

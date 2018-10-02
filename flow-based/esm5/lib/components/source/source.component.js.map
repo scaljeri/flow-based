@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "source.component.js",
+  "sources": [
+    "ng://flow-based/projects/flow-based/src/lib/components/source/source.component.ts"
+  ],
+  "sourcesContent": [
+    "import { Component, Inject, OnInit } from '@angular/core';\nimport { XXL_FLOW_ENTRY } from '../../flow-based.component';\n\n@Component({\n  selector: 'xxl-source',\n  template: `<p>\n  Source: {{state.state}}\n</p>\n`,\n  styles: [``]\n})\nexport class SourceComponent implements OnInit {\n  state: any;\n\n  constructor(@Inject(XXL_FLOW_ENTRY) state: any) {\n   this.state =  state;\n  }\n\n  ngOnInit() {\n  }\n\n}\n"
+  ],
+  "names": [],
+  "mappings": ";;;;AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,EAAU,MAAM,eAAe,CAAC;AAC1D,OAAO,EAAE,cAAc,EAAE,MAAM,4BAA4B,CAAC;AAU5D,MAAM;;;;IAGJ,YAAoC;QACnC,IAAI,CAAC,KAAK,GAAI,KAAK,CAAC;KACpB;;;;IAED,QAAQ;KACP;;;YAhBF,SAAS,SAAC;gBACT,QAAQ,EAAE,YAAY;gBACtB,QAAQ,EAAE;;;CAGX;gBACC,MAAM,EAAE,CAAC,EAAE,CAAC;aACb;;;;4CAIc,MAAM,SAAC,cAAc"
+}
