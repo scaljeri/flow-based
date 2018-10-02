@@ -38,6 +38,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   wrapper: FakeUnitWrapper;
   onChange: (state: any) => void;
   activeFlowIndex: number = null;
+  activeSocket: 'in' | 'out';
 
   constructor(
     private element: ElementRef,
@@ -48,12 +49,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   ngOnInit() {
-    if (!this.flow.children) {
-      this.flow.children = [];
-    }
-
-    if (!this.flow.connections) {
-      this.flow.connections = [];
+    if (this.root) {
+      this.flowService.initialize(this.flow);
     }
 
     this.flowService.activate(this);
@@ -156,6 +153,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
       this.flowService.blur();
     }
 
+    this.activeSocket = null;
     this.reset();
   }
 
@@ -172,6 +170,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   onSocketClick(socket: XxlSocket, unitId: string): void {
     if (this.wrapper.isActive) {
       const conn = this.flow.connections.slice(-1)[0];
+
       if (conn.in === this.flow.id + '-fake') {
         conn.to = unitId;
         conn.in = socket.id;
@@ -180,7 +179,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
         conn.out = socket.id;
       }
 
+      this.activeSocket = null;
       this.wrapper.deactivate();
+
+      this.flowService.addConnection(conn);
     } else {
       this.flow.connections.push({
         from: socket.type === 'out' ? unitId : this.wrapper.unitId,
@@ -189,6 +191,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
         in: socket.type === 'out' ? this.wrapper.unitId : socket.id
       });
 
+      this.activeSocket = socket.type;
       // TODO: remove callback hack
       this.wrapper.activate(() => {
         this.flow.connections = [...this.flow.connections];

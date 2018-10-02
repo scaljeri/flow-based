@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { XxlFlowUnit, XxlSocket } from 'flow-based';
+import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
 
 @Component({
   selector: 'fb-default-flow',
@@ -19,5 +19,13 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
   }
 
   setActive(boolean): void {
+  }
+
+  setState(state: XxlFlowUnitState): void {
+
+  }
+
+  register(cb: () => void): void {
+
   }
 }

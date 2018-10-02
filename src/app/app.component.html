@@ -1,17 +1,7 @@
-<!--<header>-->
-<!--<div class="buttons">-->
-<!--<button mat-button (click)="openModal(content)" class="btn btn-primary add">Add</button>-->
-<!--<button (click)="showJson = !showJson" class="btn btn-primary json">{{showJson ? 'Flow' : 'JSON'}}</button>-->
-<!--<button (click)="startStop()" class="btn btn-primary json">{{isRunning ? 'Stop' : 'Stop'}}</button>-->
-<!--<button (click)="reset()" class="btn btn-primary json">Reset</button>-->
-<!--</div>-->
-
-<!--<h1>Flow based programming</h1>-->
-<!--</header>-->
 <mat-toolbar [color]="'primary'">
   <span>Flow based programming</span>
   <div class="button-wrapper">
-    <button mat-button (click)="openModal(content)" class="add">Add</button>
+    <button mat-button (click)="openModal()" class="add">Add</button>
     <button mat-button (click)="showJson = !showJson" class="btn btn-primary json" class="json">{{showJson ? 'Flow' :
       'JSON'}}
     </button>
@@ -27,20 +17,4 @@
     <pre>{{flow | json}}</pre>
   </article>
 </main>
-
-<ng-template #content let-c="close" let-d="dismiss">
-  <div class="modal-header">
-    <h4 class="modal-title">Add Flow block</h4>
-    <button type="button" class="close" aria-label="Close" (click)="d('Cross click')">
-      <span aria-hidden="true">&times;</span>
-    </button>
-  </div>
-
-  <ul class="block-list">
-    <li *ngFor="let item of flowTypes" class="list-item">
-      <button (click)="c('Close click'); addBlock(item)">{{item.name}}</button>
-    </li>
-  </ul>
-</ng-template>
-
 

@@ -1,16 +1,17 @@
 import { InjectionToken, Type } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 
 export const XXL_FLOW_UNIT_TYPES = new InjectionToken<XxlTypes>('xxl-flow-unit-types');
 export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
 export const XXL_FLW_UNIT_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
 export const XXL_STATE = new InjectionToken<XxlTypes>('xxl-state');
 export const XXL_ACTIVE = new InjectionToken<Observable<boolean>>('xxl-active');
-// export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
+export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
 
 export interface XxlFlowUnit {
-  setActive(boolean): void;
   getSockets(): XxlSocket[];
+  setActive(boolean): void;
+  setState(state: XxlFlowUnitState): void;
 }
 
 export interface XxlFlowUnitOptions {
@@ -66,9 +67,10 @@ export interface XxlWorker {
   // getTitle(): string;
   // getSocket(number?): Observable<any>;
   // setSocket(number?): void;
-  start(): XxlWorker;
-  stop(): XxlWorker;
+  setFrom(id: string, subject: Subject<any>): void;
+  setTo(id: string, observable: Observable<any>): void;
   destroy(): void;
+  register(cb: () => void): void;
 }
 
 export interface XxlWorkerService {

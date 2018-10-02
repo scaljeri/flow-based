@@ -49,6 +49,8 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
         this.state.sockets = instance.getSockets();
       }
 
+      instance.setState(this.state);
+
       this.wrapper = new UnitWrapper(this.state);
       this.flowService.register(this.wrapper);
       this.viewRef.detectChanges();

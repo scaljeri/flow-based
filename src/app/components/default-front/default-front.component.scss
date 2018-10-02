@@ -2,9 +2,12 @@
 
 :host {
   background-color: lightgray;
-  display: block;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
   pointer-events: none;
-  width: 60px;
+  width: 72px;
 }
 
 img {

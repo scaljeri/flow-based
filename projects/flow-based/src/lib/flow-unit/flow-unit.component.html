@@ -22,5 +22,7 @@
           [attr.data-socket-id]="socket.id"
           class="socket"></span>
   </section>
+
+  <input class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title" [readonly]="!active">
 </section>
 

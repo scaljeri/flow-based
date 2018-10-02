@@ -1,46 +1,13 @@
-import { Component, forwardRef, HostBinding, Inject, Input, OnDestroy, OnInit } from '@angular/core';
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Component, forwardRef, OnDestroy, OnInit } from '@angular/core';
 
 import {
-  XXL_FLW_UNIT_SERVICE, XxlFlowUnit,
+  XXL_FLW_UNIT_SERVICE, XxlFlowUnit, XxlFlowUnitState,
   XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup } from '@angular/forms';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
-}
-
-/* *** SOURCE / PRODUCER *** */
-
-export class RandomNumbers {
-  private output = new Subject<number>();
-  private intervalId: number;
-
-  private lower: number;
-  private upper: number;
-
-  constructor() {
-  }
-
-  set config(config: RandomNumberConfig) {
-    this.lower = config.range.start;
-    this.upper = config.range.end;
-  }
-
-  getOutputFor(name?: string): Observable<number> {
-    return this.output.asObservable();
-  }
-
-  start(): void {
-    this.intervalId = setInterval(() => {
-      this.output.next(this.lower + Math.round(Math.random() * (this.upper - this.lower)));
-    }, 1000);
-  }
-
-  stop(): void {
-    clearInterval(this.intervalId);
-  }
 }
 
 export const RANDOM_NUMBERS_CONFIG = {
@@ -61,6 +28,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   configForm: FormGroup;
   isActive = false;
   id = 0;
+  state: XxlFlowUnitState;
 
   constructor(private fb: FormBuilder) {
   }
@@ -81,6 +49,10 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+  }
+
+  setState(state: XxlFlowUnitState): void {
+    this.state = state;
   }
 
   getSockets(): XxlSocket[] {

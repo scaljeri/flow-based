@@ -1,15 +1,9 @@
-<!--&lt;!&ndash; The component rendered when the flow behaves like a block &ndash;&gt;-->
-<!--<xxl-block *ngIf="!active && !root" class="is-active block">-->
-  <!--<ng-container [ngComponentOutlet]="flowTypes[flow.type]"-->
-                <!--[ngComponentOutletInjector]="injectors[1]"></ng-container>-->
-<!--</xxl-block>-->
-
-<article *ngIf="active" xxlMovableArea #dragArea>
+<article *ngIf="active" xxlMovableArea #dragArea [ngClass]="'active-socket-' + activeSocket">
   <xxl-connection-lines
     [connections]="flow.connections"
     (lineClick)="removeConnection($event)"></xxl-connection-lines>
 
-  <button *ngIf="active && !root" (click)="close($event)" class="close"></button>
+  <!--<button *ngIf="active && !root" (click)="close($event)" class="close"></button>-->
 
   <ng-container *ngFor="let state of flow.children; index as i">
     <xxl-flow-unit
@@ -24,69 +18,5 @@
                [state]="state"
                (noDrag)="entryClicked(i)">
     </xxl-flow-unit>
-
-    <!--<xxl-flow-based-->
-      <!--*ngIf="state.flow && activeFlowIndex === i"-->
-      <!--class="block"-->
-      <!--[class.is-active]="activeFlowIndex === i"-->
-      <!--[flow]="flow.children[i]"-->
-      <!--[root]="false"-->
-      <!--[active]="activeFlowIndex === i"-->
-      <!--(activeChanged)="activityChanged($event)"-->
-      <!--(noDrag)="entryClicked(i, $event)"></xxl-flow-based>-->
   </ng-container>
-
-  <!--<ng-container *ngIf="!isFlow()">-->
-    <!--<xxl-block class="block is-active">-->
-      <!--<ng-container [ngComponentOutlet]="flowTypes[flow.type]"-->
-                    <!--[ngComponentOutletInjector]="injectors[0]"></ng-container>-->
-    <!--</xxl-block>-->
-  <!--</ng-container>-->
 </article>
-
-<!--<article *ngIf="flow && active" xxlMovableArea #dragArea>-->
-<!--<ng-container *ngFor="let flow of flow.units; let i = index">-->
-<!--<xxl-flow-based *ngIf="isActive(i)"-->
-<!--xxlMovable-->
-<!--[(position)]="flow.position"-->
-<!--[flow]="flow"-->
-<!--[active]="isActive(i)"-->
-<!--[root]="false"-->
-<!--(noDrag)="entryClicked(i)">-->
-<!--</xxl-flow-based>-->
-
-<!--<xxl-block-->
-<!--*ngIf="!isFlow(flow)"-->
-<!--[(position)]="flow.position"-->
-<!--class="block"-->
-<!--xxlMovable-->
-<!--[active]="isActive(i)"-->
-<!--(noDrag)="entryClicked(i)">-->
-<!--<ng-container [ngComponentOutlet]="flowTypes[flow.type]"-->
-<!--[ngComponentOutletInjector]="injectors[0]"></ng-container>-->
-<!--</xxl-block>-->
-<!--</ng-container>-->
-<!--</article>-->
-
-<!--<article *ngIf="!isFlow() && flow?.units.length > 0">-->
-<!--<xxl-block *ngIf="flow && flow.units.length === 1" class="block">-->
-<!--<ng-container [ngComponentOutlet]="flowTypes[flow.units[0].type]"-->
-<!--[ngComponentOutletInjector]="injectors[0]"></ng-container>-->
-<!--</xxl-block>-->
-<!--</article>-->
-
-<!--<article #area *ngIf="flow" class="is-max" xxlMovableArea>-->
-<!--<xxl-block xxlMovable *ngFor="let block of flow; let i = index"-->
-<!--[style.left.px]="block.config.x" [style.top.px]="block.config.y" class="block">-->
-<!--<ng-container *ngIf="flowTypes[block.type]"-->
-<!--[ngComponentOutlet]="flowTypes[block.type]"-->
-<!--[ngComponentOutletInjector]="injector[i]"></ng-container>-->
-<!--</xxl-block>-->
-<!--</article>-->
-
-<!--
-
-// Set title and maybe more
-<xxl-flow-config></xxl-flow-config>
-
--->

@@ -41,7 +41,6 @@ export class MovableDirective extends DraggableDirective {
       y: event.clientY - this.startPosition.y
     };
 
-    console.log('movin');
     this.positionChange.emit(this.position);
   }
 

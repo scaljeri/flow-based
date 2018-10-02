@@ -26,12 +26,14 @@ $socket-size: 16px;
 
   .sockets-in {
     .socket {
+      background-color: var(--socket-in-disabled, #fff);
       border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
     }
   }
 
   .sockets-out {
     .socket {
+      background-color: var(--socket-out-disabled, #fff);
       border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
     }
   }
@@ -43,17 +45,35 @@ $socket-size: 16px;
     .add-socket {
       display: none;
     }
+
+    .title {
+      background-color: rgba(0, 0, 0, 0.2);
+      color: #fff;
+      font-size: 14px;
+      pointer-events: none;
+      text-align: center;
+      transform: translateX(-50%);
+      width: 300px;
+      @include xxl-position(absolute, 110% 0 0px 50%);
+
+      &::placeholder {
+        color: transparent;
+      }
+
+      &:focus {
+
+      }
+    }
   }
 
   &.is-active {
-    height: 100%;
-    transform: translate(0,0);
-    top: 0!important;
-    left: 0!important;
-    position: relative;
-    z-index: $xxl-flow-unit-active;
-
     --socket-size: #{$socket-size * 3};
+    height: 100%;
+    left: 0 !important;
+    position: relative;
+    top: 0 !important;
+    transform: translate(0, 0);
+    z-index: $xxl-flow-unit-active;
 
     .sockets-in {
       .socket {
@@ -71,6 +91,28 @@ $socket-size: 16px;
         right: 30px;
       }
     }
+  }
+}
+
+.title {
+  align-self: center;
+  background-color: rgba(153, 153, 255, 0.4);
+  border: none;
+  border-radius: 8px;
+  caret-color: #fff;
+  color: #fff;
+  outline: none;
+  padding: 8px;
+  text-align: center;
+  transform: translateX(-50%);
+  @include xxl-position(absolute, $xxl-gutter-size 0 0 50%);
+
+  &::placeholder {
+    color: #fff;
+  }
+
+  &:focus {
+    background-color: rgb(153, 153, 255);
   }
 }
 
@@ -95,9 +137,20 @@ xxl-flow-based {
 }
 
 .add-socket {
+  background-color: transparent;
+  border: 2px solid rgb(153, 153, 255);
+  border-radius: 100%;
+  color: #fff;
   cursor: pointer;
+  font-size: 20px;
+  outline: none;
   position: absolute;
   @include xxl-position(absolute, 10px 0 0 30px);
+  @include xxl-size(40px);
+
+  &:active {
+    top: 11px;
+  }
 }
 
 .sockets {
@@ -120,7 +173,6 @@ xxl-flow-based {
 
 .socket {
   background-clip: content-box;
-  background-color: #fff;
   border: $border-width solid;
   border-radius: 50%;
   cursor: pointer;

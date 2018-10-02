@@ -1,10 +1,27 @@
 @import './utils/utils';
+@import './utils/variables';
 
 :host {
   background-color: transparent;
   border-radius: 13px;
   display: inline-flex;
   @include xxl-size(100%);
+
+  .active-socket-in {
+    --socket-in-disabled: #900;
+
+    ::ng-deep .sockets-in .socket {
+      pointer-events: none;
+    }
+  }
+
+  .active-socket-out {
+    --socket-out-disabled: #900;
+
+    ::ng-deep .sockets-out .socket {
+      pointer-events: none;
+    }
+  }
 
   > [xxlmovablearea] {
     @include xxl-size(100%);
@@ -24,37 +41,37 @@ xxl-flow-unit {
 }
 
 // close cross
-.close {
-  cursor: pointer;
-  opacity: 0.3;
-  outline: none;
-  @include xxl-position(absolute, 32px 32px 0 0);
-  @include xxl-size(32px);
-
-  &:hover {
-    opacity: 1;
-  }
-
-  &::after,
-  &::before {
-    background-color: #fff;
-    content: ' ';
-    height: 33px;
-    width: 2px;
-    @include xxl-position(absolute, 0px 0 0 15px);
-  }
-
-  &::before {
-    transform: rotate(45deg);
-  }
-
-  &::after {
-    transform: rotate(-45deg);
-  }
-
-  &:active {
-    top: 33px;
-    transform: scale(0.9);
-  }
-}
+//.close {
+//  cursor: pointer;
+//  opacity: 0.3;
+//  outline: none;
+//  @include xxl-position(absolute, 32px 32px 0 0);
+//  @include xxl-size(32px);
+//
+//  &:hover {
+//    opacity: 1;
+//  }
+//
+//  &::after,
+//  &::before {
+//    background-color: #fff;
+//    content: ' ';
+//    height: 33px;
+//    width: 2px;
+//    @include xxl-position(absolute, 0px 0 0 15px);
+//  }
+//
+//  &::before {
+//    transform: rotate(45deg);
+//  }
+//
+//  &::after {
+//    transform: rotate(-45deg);
+//  }
+//
+//  &:active {
+//    top: 33px;
+//    transform: scale(0.9);
+//  }
+//}
 

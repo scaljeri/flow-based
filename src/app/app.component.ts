@@ -53,12 +53,12 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.selectionService.selection$.subscribe(type => {
-      this.xxlService.add(type);
       this.activeOverlay.dispose();
+      const state = this.xxlService.add(type);
     });
   }
 
-  openModal(content): void {
+  openModal(): void {
     // this.modalService.open(content, {centered: true});
 
     const portal = new ComponentPortal(ComponentSelectionComponent);

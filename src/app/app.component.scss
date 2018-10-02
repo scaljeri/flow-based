@@ -11,8 +11,9 @@
 
 mat-toolbar {
   display: flex;
-  justify-content: center;
   height: 64px;
+  justify-content: center;
+  user-select: none;
 
   .button-wrapper {
     left: var(--fb-gutter-size);
@@ -72,8 +73,15 @@ main {
 
   .flow-as-json {
     background-color: #fff;
+    display: block;
     flex: 1;
-    overflow: scroll;
+    overflow: auto;
+
+    pre {
+      background-color: #fff;
+      border: 1px solid #898989;
+      padding: 20px;
+    }
   }
 }
 
