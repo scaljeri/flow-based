@@ -1,0 +1,15 @@
+@import './utils/utils';
+
+:host {
+  align-self: center;
+  @include xxl-size(400px, 300px);
+
+  &.is-active {
+    padding: 70px 15%;
+  }
+
+  &.is-active,
+  .chart {
+    @include xxl-size(100%);
+  }
+}

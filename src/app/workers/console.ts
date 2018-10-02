@@ -3,8 +3,9 @@ import { Observable, Subject, Subscription } from 'rxjs';
 
 export class ConsoleWorker implements XxlWorker {
   private subscription: Subscription;
-  public logs$: Observable<any>
+  public logs$: Observable<any>;
   private cb: () => void;
+  out: Subject<any>;
 
   public logs: number[] = [];
 
@@ -15,6 +16,7 @@ export class ConsoleWorker implements XxlWorker {
   }
 
   setFrom(id: string, subject: Subject<any>): void {
+    this.out = subject;
   }
 
   setTo(id: string, observable: Observable<any>): void {
@@ -23,6 +25,9 @@ export class ConsoleWorker implements XxlWorker {
     //   console.log(log);
     //   this.logs.push(log);
     // });
+
+    this.logs$.subscribe(x => this.out.next(x));
+
     if (this.cb) {
       this.cb();
     }

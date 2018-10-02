@@ -32,6 +32,10 @@ export class AppComponent implements OnInit {
       type: 'random-numbers'
     },
     {
+      name: 'Basic Graph',
+      type: 'basic-graph'
+    },
+    {
       name: 'Band filter',
       type: 'band-filter'
     },

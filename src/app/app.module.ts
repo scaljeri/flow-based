@@ -21,6 +21,8 @@ import { ComponentSelectionService } from './component-selection.service';
 import { RandomNumbersComponent } from './units/random-numbers/random-numbers.component';
 import { RandomNumbersWorker } from './workers/random-numbers';
 import { ConsoleWorker } from './workers/console';
+import { BasicGraphComponent } from './units/basic-graph/basic-graph.component';
+import { BasicGraphWorker } from './workers/basic-graph';
 
 @NgModule({
   declarations: [
@@ -31,7 +33,8 @@ import { ConsoleWorker } from './workers/console';
     DefaultFlowComponent,
     FlowComponent,
     DefaultFrontComponent,
-    ComponentSelectionComponent
+    ComponentSelectionComponent,
+    BasicGraphComponent
   ],
   imports: [
     BrowserModule,
@@ -53,6 +56,7 @@ import { ConsoleWorker } from './workers/console';
       provide: XXL_FLOW_UNIT_TYPES,
       useValue: {
         'random-numbers': RandomNumbersComponent,
+        'basic-graoh': BasicGraphComponent,
         'console': ConsoleComponent,
         'default': DefaultFlowComponent
       }
@@ -67,11 +71,18 @@ import { ConsoleWorker } from './workers/console';
       provide: XXL_WORKERS,
       useValue: {
         'random-numbers': RandomNumbersWorker,
+        'basic-graoh': BasicGraphWorker,
         'console': ConsoleWorker
       }
     }
   ],
-  entryComponents: [ComponentSelectionComponent, RandomNumbersComponent, ConsoleComponent, DefaultFlowComponent],
+  entryComponents: [
+    ComponentSelectionComponent,
+    BasicGraphComponent,
+    RandomNumbersComponent,
+    ConsoleComponent,
+    DefaultFlowComponent
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule {

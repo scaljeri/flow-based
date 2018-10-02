@@ -12,14 +12,16 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit {
   log: any;
   worker: ConsoleWorker;
   state: XxlFlowUnitState;
+  isActive = false;
 
   constructor(private cdr: ChangeDetectorRef,
-              private flowService: XxlFlowBasedService) { }
+              private flowService: XxlFlowBasedService) {
+  }
 
   ngOnInit() {
   }
 
-  setState(state: XxlFlowUnitState): void  {
+  setState(state: XxlFlowUnitState): void {
     this.state = state;
 
     this.worker = this.flowService.getWorker(state.id) as ConsoleWorker;
@@ -34,10 +36,15 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit {
     return [{
       type: 'in',
       id: 'csl-a'
-    }];
+    },
+      {
+        type: 'out',
+        id: 'csl-b'
+      }];
   }
 
-  setActive(boolean): void {
+  setActive(state: boolean): void {
+    this.isActive = state;
   }
 
 }

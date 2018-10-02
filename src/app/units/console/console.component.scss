@@ -1,3 +1,13 @@
 :host {
   color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  .is-active {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    font-size: 70px;
+    padding: 8px;
+  }
 }
