@@ -1,12 +1,19 @@
 ## Flow based programming
 
-TODO
+Although a lot is still changing and very buggy, the current state can be seen [here](https://scaljeri.github.io/flow-based/) 
 
 Angular library for building workflows + demo 
 
 ### Create project specific component
 
     $>  ng g c foo --project=flow-based
+    
+### Deploy to gh-pages
+
+  $>  ng build --prod --base-href "https://scaljeri.github.io/flow-based/"
+  $>  ngh
+  
+TODO: Fix circular dependency issues
     
 ![Example](fb-example.jpg)
 
