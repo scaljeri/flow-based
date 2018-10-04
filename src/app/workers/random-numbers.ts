@@ -1,36 +1,46 @@
-import { XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject } from 'rxjs';
 
-export class RandomNumbersWorker implements XxlWorker {
-  private outputs: Subject<any>[] = [];
-  private interval: number;
-  private cb: () => void;
+export const RANDOM_NUMBER_CONFIR = {
+  sockets: [
+    {
+      type: 'in',
+      id: 'rnc-a'
+    }, {
+      type: 'out',
+      id: 'rnc-b'
+    }, {
+      type: 'out',
+      id: 'rnc-c'
+    }
+  ]
+};
 
-  constructor(private config?) {
+export class RandomNumbersWorker implements XxlWorker {
+  private readonly interval: number;
+  private subject = new Subject<any>();
+
+  constructor(private state: XxlFlowUnitState) {
+    this.interval = setInterval(() => {
+      this.subject.next(Math.random());
+    }, 10000);
   }
 
   destroy(): void {
     clearInterval(this.interval);
   }
 
-  setFrom(id: string, subject: Subject<any>): void {
-    this.outputs.push(subject);
-
-    this.interval = setInterval(() => {
-      this.outputs.forEach(output => {
-        output.next(Math.random());
-      });
-    }, 1000);
-
-    // if (this.outputs.length === 1) {
-    //   this.cb();
-    // }
+  getStream(id: string): Observable<any> {
+    return this.subject.asObservable();
   }
 
-  setTo(id: string, subject: Observable<any>): void {
+  getSockets(): XxlSocket[] {
+    return this.state.config.sockets;
   }
 
-  register(cb: () => void): void {
-    // this.cb = cb;
+  removeStream(id: string): void {
+  }
+
+  setStream(stream: Observable<any>, id?: string): void {
   }
 }

@@ -1,8 +1,8 @@
-import { ChangeDetectorRef, Component, ElementRef, HostBinding, Input, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostBinding, Inject, Input, OnInit, ViewChild } from '@angular/core';
 import { GoogleCharts } from 'google-charts';
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
-import { ConsoleWorker } from '../../workers/console';
+import { XXL_FLOW_UNIT_STATE, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
+import { BasicGraphWorker } from '../../workers/basic-graph';
 
 @Component({
   selector: 'fb-basic-graph',
@@ -14,8 +14,7 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   @ViewChild('graph') graph: ElementRef;
   chart;
   log: any;
-  worker: ConsoleWorker;
-  state: XxlFlowUnitState;
+  worker: BasicGraphWorker;
   data: number[] = [];
   dataTable;
   count = 0;
@@ -23,7 +22,8 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
 
 
   constructor(private cdr: ChangeDetectorRef,
-              private flowService: XxlFlowBasedService) {
+              private flowService: XxlFlowBasedService,
+              @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {
     GoogleCharts.load(() => {
       this.dataTable = new GoogleCharts.api.visualization.DataTable();
       this.dataTable.addColumn('number', 'Count');
@@ -37,7 +37,7 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   }
 
   ngOnInit() {
-
+    this.worker = this.flowService.getWorker(this.state.id) as BasicGraphWorker;
   }
 
   update(value: number): void {
@@ -80,13 +80,6 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
     // }
   }
 
-  getSockets(): XxlSocket[] {
-    return [{
-      type: 'in',
-      id: 'bg-a'
-    }];
-  }
-
   setActive(state): void {
     this.isActive = state;
     // setTimeout(() => {
@@ -97,17 +90,21 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   addValue(value: number): void {
 
   }
+  //
+  // setState(state: XxlFlowUnitState): void {
+  //   this.state = state;
+  //
+  //   this.worker = this.flowService.getWorker(state.id) as ConsoleWorker;
+  //   this.worker.register(() => {
+  //     this.worker.logs$.subscribe(log => {
+  //       this.log = log.toFixed(3);
+  //       this.update(parseFloat(this.log));
+  //       console.log('received: ' + parseFloat(this.log));
+  //     });
+  //   });
+  // }
 
-  setState(state: XxlFlowUnitState): void {
-    this.state = state;
-
-    this.worker = this.flowService.getWorker(state.id) as ConsoleWorker;
-    this.worker.register(() => {
-      this.worker.logs$.subscribe(log => {
-        this.log = log.toFixed(3);
-        this.update(parseFloat(this.log));
-        console.log('received: ' + parseFloat(this.log));
-      });
-    });
+  getSockets(): XxlSocket[] {
+    return [];
   }
 }

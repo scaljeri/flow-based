@@ -11,10 +11,9 @@
                xxlMovable
                [(position)]="state.position"
                (dragStart)="onDragStart($event, state)"
-               (positionChange)="updateConnections($event, state)"
+               (positionChange)="unitPositionChanged($event, state)"
                (dragEnd)="onDragEnd($event. state)"
                [active]="activeFlowIndex === i"
-               [component]="flowUnitTypes[state.type]"
                [state]="state"
                (noDrag)="entryClicked(i)">
     </xxl-flow-unit>

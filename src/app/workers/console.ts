@@ -1,43 +1,57 @@
-import { XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
+export const CONSOLE_CONFIG = {
+  sockets: [{
+    type: 'in',
+    id: 'csl-a'
+  },
+    {
+      type: 'out',
+      id: 'csl-b'
+    }]
+};
+
 export class ConsoleWorker implements XxlWorker {
-  private subscription: Subscription;
-  public logs$: Observable<any>;
-  private cb: () => void;
-  out: Subject<any>;
+  private subscriptions: { [id: string]: Subscription };
+  private subjects: { [id: string]: Subject<any> };
 
-  public logs: number[] = [];
+  public currentValue: any;
 
-  constructor(private config?) {
+  constructor(private state?: XxlFlowUnitState) {
   }
 
   destroy(): void {
+    Object.keys(this.subscriptions).forEach(key => this.subscriptions[key].unsubscribe());
   }
 
-  setFrom(id: string, subject: Subject<any>): void {
-    this.out = subject;
+  getSockets(): XxlSocket[] {
+    return this.state.config.sockets;
   }
 
-  setTo(id: string, observable: Observable<any>): void {
-    this.logs$ = observable;
-    // this.subscription = observable.subscribe((log: number) => {
-    //   console.log(log);
-    //   this.logs.push(log);
-    // });
-
-    this.logs$.subscribe(x => this.out.next(x));
-
-    if (this.cb) {
-      this.cb();
+  getStream(id: string) {
+    if (!this.subjects[id]) {
+      this.subjects[id] = new Subject<any>();
     }
+
+    return this.subjects[id].asObservable();
   }
 
-  register(cb: () => void): void {
-    this.cb = cb;
+  setStream(stream: Observable<any>, id: string): void {
+    this.subscriptions[id] = stream.subscribe(val => this.receivedValue(val, id));
+  }
 
-    if (this.logs$) {
-      this.cb();
+  removeStream(id: string): void {
+    this.subscriptions[id].unsubscribe();
+
+    delete this.subscriptions[id];
+  }
+
+  private receivedValue(val: any, id: string): void {
+    this.currentValue = val;
+
+    if (this.subjects[id]) {
+      this.subjects[id].next(val);
     }
   }
 }

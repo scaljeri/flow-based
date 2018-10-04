@@ -8,7 +8,7 @@ import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { ConsoleComponent } from './units/console/console.component';
 import { DefaultFlowComponent } from './default-flow/default-flow.component';
 import { FlowComponent } from './flow/flow.component';
-import { FlowBasedModule, XXL_FLOW_TYPES, XXL_FLOW_UNIT_TYPES, XXL_WORKERS } from 'flow-based';
+import { FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
@@ -19,8 +19,8 @@ import { ComponentSelectionComponent } from './components/component-selection/co
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
 import { RandomNumbersComponent } from './units/random-numbers/random-numbers.component';
-import { RandomNumbersWorker } from './workers/random-numbers';
-import { ConsoleWorker } from './workers/console';
+import { RANDOM_NUMBER_CONFIR, RandomNumbersWorker } from './workers/random-numbers';
+import { CONSOLE_CONFIG, ConsoleWorker } from './workers/console';
 import { BasicGraphComponent } from './units/basic-graph/basic-graph.component';
 import { BasicGraphWorker } from './workers/basic-graph';
 
@@ -53,26 +53,17 @@ import { BasicGraphWorker } from './workers/basic-graph';
     ComponentSelectionService,
     {provide: OverlayContainer, useClass: FullscreenOverlayContainer},
     {
-      provide: XXL_FLOW_UNIT_TYPES,
-      useValue: {
-        'random-numbers': RandomNumbersComponent,
-        'basic-graoh': BasicGraphComponent,
-        'console': ConsoleComponent,
-        'default': DefaultFlowComponent
-      }
-    },
-    {
       provide: XXL_FLOW_TYPES,
       useValue: {
-        'default': DefaultFlowComponent
-      }
-    },
-    {
-      provide: XXL_WORKERS,
-      useValue: {
-        'random-numbers': RandomNumbersWorker,
-        'basic-graoh': BasicGraphWorker,
-        'console': ConsoleWorker
+        'random-numbers': {
+          title: 'Random number generator',
+          component: RandomNumbersComponent,
+          config: RANDOM_NUMBER_CONFIR,
+          worker: RandomNumbersWorker },
+        'basic-graph': { title: 'Baisc Graph', component: BasicGraphComponent, worker: BasicGraphWorker },
+        'console': { component: ConsoleComponent, config: CONSOLE_CONFIG, title: 'Console.log', worker: ConsoleWorker },
+        // 'default': { component: DefaultFlowComponent },
+        'flow': { component: DefaultFlowComponent, title: 'Composite Unit', isFlow: true }
       }
     }
   ],

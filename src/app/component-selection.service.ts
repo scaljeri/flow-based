@@ -5,14 +5,15 @@ import { Observable, Subject } from 'rxjs';
   providedIn: 'root'
 })
 export class ComponentSelectionService {
-  private selection: Subject<{ type: string, isFlow: boolean}>;
-  public selection$: Observable<{ type: string, isFlow: boolean}>;
+  private selection: Subject<string>;
+  public selection$: Observable<string>;
 
   constructor() {
     this.selection = new Subject();
     this.selection$ = this.selection.asObservable();
   }
-  select(type: { type: string, isFlow: boolean}): void {
+
+  select(type: string): void {
     this.selection.next(type);
   }
 }

@@ -2,7 +2,7 @@ import { AfterContentInit, Component, ElementRef, HostListener, OnInit, ViewChil
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
 import { nested } from './fixtures';
-import { Overlay, OverlayContainer, OverlayRef } from '@angular/cdk/overlay';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ComponentSelectionService } from './component-selection.service';
@@ -24,28 +24,7 @@ export class AppComponent implements OnInit {
   // menuY: number;
 
   activeOverlay: OverlayRef;
-  isRunning = false;
   showJson = false;
-  flowTypes = [
-    {
-      name: 'Random numbers',
-      type: 'random-numbers'
-    },
-    {
-      name: 'Basic Graph',
-      type: 'basic-graph'
-    },
-    {
-      name: 'Band filter',
-      type: 'band-filter'
-    },
-    {
-      name: 'Flow',
-      type: 'default',
-      isFlow: true
-    },
-  ];
-
   flow: XxlFlow = nested as XxlFlow;
 
   @ViewChild('bg') bgImage: ElementRef;
@@ -58,13 +37,11 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.selectionService.selection$.subscribe(type => {
       this.activeOverlay.dispose();
-      const state = this.xxlService.add(type);
+      this.xxlService.add(type);
     });
   }
 
   openModal(): void {
-    // this.modalService.open(content, {centered: true});
-
     const portal = new ComponentPortal(ComponentSelectionComponent);
     const positionStrategy = this.overlay.position()
       .global()
@@ -86,12 +63,6 @@ export class AppComponent implements OnInit {
       this.activeOverlay.dispose();
       this.activeOverlay = null;
     });
-  }
-
-  addBlock(item: { type: string, isFlow: boolean }): void {
-    // create worker
-    // const worker = RandomNumberFactory();
-    // this.xxlService.add(item.type, {isFlow: item.isFlow});
   }
 
   onUpdate(): void {

@@ -1,5 +1,5 @@
 import {
-  AfterContentInit, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef,
+  AfterContentInit, AfterViewInit, ChangeDetectorRef,
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
@@ -8,14 +8,11 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
-  XXL_FLOW_TYPES,
-  XxlTypes,
   XxlFlow,
   XxlPosition,
-  XxlFlowUnitState, XxlSocket, XxlConnection, XXL_FLOW_UNIT_TYPES
+  XxlFlowUnitState, XxlSocket, XxlConnection
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
-import { FlowUnitService } from './flow-unit-service';
 import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
 
 @Component({
@@ -42,10 +39,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   constructor(
     private element: ElementRef,
-    private cdr: ChangeDetectorRef,
-    public flowService: XxlFlowBasedService,
-    @Inject(XXL_FLOW_TYPES) public flowTypes: XxlTypes,
-    @Inject(XXL_FLOW_UNIT_TYPES) public flowUnitTypes: XxlTypes) {
+    public flowService: XxlFlowBasedService) {
   }
 
   ngOnInit() {
@@ -54,7 +48,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     }
 
     this.flowService.activate(this);
-
     this.wrapper = new FakeUnitWrapper(this.element, this.flow.id);
     this.flowService.register(this.wrapper);
   }
@@ -68,9 +61,13 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   reset(): void {
     setTimeout(() => {
-      this.flow.children.forEach(child => this.flowService.update(child.id));
+      // this.flow.children.forEach(child => this.flowService.update(child.id));
       this.repaint();
     });
+  }
+
+  get id(): string {
+    return this.flow.id;
   }
 
   repaint(): void {
@@ -84,10 +81,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     this.wrapper.deactivate();
   }
 
-  onMove(): void {
-    this.flow.connections = [...this.flow.connections];
-  }
-
   @HostListener('click', ['$event'])
   onClick(event): void {
     event.stopPropagation();
@@ -95,46 +88,28 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     // TODO: ??
   }
 
-  // @HostListener('document:keydown.escape', ['$event'])
-  // onKeydownHandler(evt: KeyboardEvent) {
-  //   if (this.activeFlowIndex >= 0) {
-  //     evt.stopPropagation();
-  //     this.activeFlowIndex = null;
-  //   }
-  //
-  //   this.activeIndex$.next();
-  // }
-
   @HostListener('document:pointerdown')
   onPointerDown(): void {
-    console.log('pointer down');
     if (this.wrapper.isActive) {
       this.wrapper.deactivate();
 
-      this.flow.connections = this.flow.connections.filter(conn => conn.to !== this.wrapper.unitId);
+      this.flowService.removeConnection(this.flow.connections.slice(-1)[0]);
     }
   }
 
   onDragStart(event: PointerEvent, state: XxlFlowUnitState): void {
-    console.log('drag-start');
-    const index = this.flow.children.indexOf(state);
+    // const index = this.flow.children.indexOf(state);
   }
 
   onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
-    console.log('drag-end');
   }
 
-  updateConnections(event: XxlPosition, state: XxlFlowUnitState): void {
-    this.flowService.update(state.id);
+  unitPositionChanged(event: XxlPosition, state: XxlFlowUnitState): void {
     this.repaint();
   }
 
-  addUnit(unit: XxlFlowUnitState): void {
+  add(unit: XxlFlowUnitState): void {
     this.flow.children.push(unit);
-  }
-
-  addFlow(flow: XxlFlow): void {
-    this.flow.children.push(flow);
   }
 
   activityChanged(isActive): void {
@@ -163,8 +138,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   removeConnection(conn: XxlConnection): void {
-    this.flow.connections = this.flow.connections
-      .filter(item => item !== conn);
+    this.flowService.removeConnection(conn);
   }
 
   onSocketClick(socket: XxlSocket, unitId: string): void {
@@ -182,9 +156,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
       this.activeSocket = null;
       this.wrapper.deactivate();
 
-      this.flowService.addConnection(conn);
+      this.flowService.updateConnection(conn);
     } else {
-      this.flow.connections.push({
+      const conn = this.flowService.createConnection({
         from: socket.type === 'out' ? unitId : this.wrapper.unitId,
         out: socket.type === 'out' ? socket.id : this.wrapper.unitId,
         to: socket.type === 'out' ? this.wrapper.unitId : unitId,
@@ -193,9 +167,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
       this.activeSocket = socket.type;
       // TODO: remove callback hack
-      this.wrapper.activate(() => {
-        this.flow.connections = [...this.flow.connections];
-      }); // Wake up the mouse listener!
+      this.wrapper.activate(() => this.flowService.updateConnection(conn));
     }
   }
 
@@ -229,6 +201,5 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   writeValue(state: XxlFlow): void {
     // this.flow = state;
     // this.createInjector();
-
   }
 }

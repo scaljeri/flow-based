@@ -1,24 +1,35 @@
-import { Inject, Injectable, Optional } from '@angular/core';
-import { XXL_WORKERS, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlTypes, XxlWorker } from './flow-based';
+import { Inject, Injectable } from '@angular/core';
+import {
+  XXL_FLOW_TYPES,
+  XxlConnection,
+  XxlFlow,
+  XxlFlowType,
+  XxlFlowUnitState,
+  XxlSocket,
+  XxlWorker
+} from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 import { UnitWrapper } from './utils/unit-wrapper';
 import { Observable, Subject } from 'rxjs';
 
 class FlowWorker implements XxlWorker {
-  setFrom(id: string, subject: Subject<any>): void {
-
-  }
-
-  setTo(id: string, observable: Observable<any>): void {
-
+  setStream(subject: Subject<any>, id: string): void {
+    // TODO
   }
 
   destroy(): void {
-
+    // TODO
   }
 
-  register(cb: () => void): void {
+  getSockets(): XxlSocket[] {
+    return [];
+  }
 
+  getStream(id: string): Observable<any> {
+    return undefined;
+  }
+
+  removeStream(id: string): void {
   }
 }
 
@@ -27,14 +38,14 @@ class FlowWorker implements XxlWorker {
 })
 export class XxlFlowBasedService {
   private flowStack: FlowBasedComponent[] = [];
-  public units: {[key: string]: UnitWrapper} = {};
-  private sockets = {};
+  public units: { [key: string]: UnitWrapper } = {};
   private workers = {};
 
-  constructor(@Optional() @Inject(XXL_WORKERS) private workerClasses: XxlTypes) {}
+  constructor(@Inject(XXL_FLOW_TYPES) private flowTypes: XxlFlowType) {
+  }
 
-  getWorker(id: string): XxlWorker {
-    return this.workers[id];
+  get currentFlow(): FlowBasedComponent {
+    return this.flowStack[0];
   }
 
   initialize(flow: XxlFlow): void {
@@ -46,63 +57,54 @@ export class XxlFlowBasedService {
       flow.connections = [];
     }
 
-    if (this.workerClasses) {
-      this.initializeFlow(flow);
-    }
+    this.initializeFlow(flow);
   }
 
-  private initializeFlow(flow: XxlFlow): void {
-    flow.children.forEach((child: XxlFlow) => {
-      if (child.children) {
-        this.workers[child.id] = new FlowWorker();
-        this.initializeFlow(child);
-      } else {
-        this.workers[child.id] = new this.workerClasses[child.type]();
-      }
-    });
+  setupConnection(conn: XxlConnection): void {
+    const subject = this.workers[conn.from].getStream(conn.out);
 
-    flow.connections.forEach((conn: XxlConnection) => {
-      this.initializeConnection(conn);
-    });
+    this.workers[conn.to].setStream(conn.in, subject.asObservable());
   }
 
-  private initializeConnection(conn: XxlConnection): void {
-    const subject = new Subject<any>();
-    const key = conn.from + conn.out;
+  createConnection(connection: Partial<XxlConnection>): XxlConnection {
+    const newConnection = {...connection, id: Date.now().toString()} as XxlConnection;
 
-    if (!this.sockets[key]) {
-      this.sockets[key] = subject;
-      this.workers[conn.from].setFrom(conn.out, subject);
-    }
+    this.currentFlow.flow.connections = [
+      ...this.currentFlow.flow.connections,
+      newConnection
+    ];
 
-    this.workers[conn.to].setTo(conn.in, this.sockets[key].asObservable());
+    this.setupConnection(newConnection);
+    return newConnection;
   }
 
-  add({type, isFlow = false}): XxlFlowUnitState {
+  updateConnection(connection: XxlConnection): void {
+    this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn.id !== connection.id);
+    this.currentFlow.flow.connections.push(connection);
+  }
+
+  add(flowType: string): XxlFlowUnitState {
     const state = {
-      type,
-      state: {},
-      id: Date.now().toString()
+      type: flowType,
+      title: this.flowTypes[flowType].title,
+      id: Date.now().toString(),
+      config: this.flowTypes[flowType].config || {},
+      ...(this.flowTypes[flowType].isFlow ? {children: [], connections: []} : {})
     };
 
-    this.workers[state.id] = new this.workerClasses[type]();
+    const {worker} = this.flowTypes[flowType];
 
-    if (isFlow) {
-      this.flowStack[0].addFlow({
-        ...state,
-        children: [],
-        connections: []
-      });
-    } else {
-      this.flowStack[0].addUnit(state);
+    if (worker) {
+      this.workers[state.id] = new worker(state);
     }
 
+    this.currentFlow.add(state);
 
     return state;
   }
 
-  addConnection(connection: XxlConnection): void {
-    this.initializeConnection(connection);
+  removeConnection(connection: XxlConnection): void {
+    this.workers[connection.to].removeStream(connection.in);
   }
 
   // Unit stuff
@@ -127,18 +129,37 @@ export class XxlFlowBasedService {
     this.flowStack.shift();
   }
 
-  // back(): void {
-  //   if (this.flowStack.length > 0) {
-  //     this.deactivate();
-  //     // this.flowStack[0].deactivate();
-  //   }
-  // }
-
   blur(): void {
-    this.flowStack[0].blur();
+    this.currentFlow.blur();
   }
 
   socketClicked(socket: XxlSocket, unitId: string): void {
-    this.flowStack[0].onSocketClick(socket, unitId);
+    this.currentFlow.onSocketClick(socket, unitId);
+  }
+
+  getWorker(unitId): XxlWorker {
+    return this.workers[unitId];
+  }
+
+  getSockets(unitId: string): XxlSocket[] {
+    return this.workers[unitId].getSockets();
+  }
+
+  // Create workers and the connections between them
+  private initializeFlow(flow: XxlFlow): void {
+    flow.children.forEach((child: XxlFlow) => {
+      const {worker} = this.flowTypes[child.type].worker;
+
+      if (child.children) {
+        this.workers[child.id] = new FlowWorker();
+        this.initializeFlow(child);
+      } else if (worker) {
+        this.workers[child.id] = new worker(child.config);
+      }
+    });
+
+    flow.connections.forEach((conn: XxlConnection) => {
+      this.setupConnection(conn);
+    });
   }
 }

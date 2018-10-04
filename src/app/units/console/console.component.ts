@@ -1,50 +1,39 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
+import { XXL_FLOW_UNIT_STATE, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { ConsoleWorker } from '../../workers/console';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'fb-console',
   templateUrl: './console.component.html',
   styleUrls: ['./console.component.scss']
 })
-export class ConsoleComponent implements XxlFlowUnit, OnInit {
-  log: any;
-  worker: ConsoleWorker;
-  state: XxlFlowUnitState;
+export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
+  private worker: ConsoleWorker;
+
   isActive = false;
+  subscription: Subscription;
+  value: any;
 
-  constructor(private cdr: ChangeDetectorRef,
-              private flowService: XxlFlowBasedService) {
+  constructor(private flowService: XxlFlowBasedService,
+              @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {}
+
+  ngOnInit(): void {
+    this.worker = this.flowService.getWorker(this.state.id) as ConsoleWorker;
+
+    this.subscription = this.worker.getStream(this.worker.getSockets()[0].id).subscribe(log => this.value = log.toFixed(3));
   }
 
-  ngOnInit() {
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
   }
 
-  setState(state: XxlFlowUnitState): void {
-    this.state = state;
-
-    this.worker = this.flowService.getWorker(state.id) as ConsoleWorker;
-    this.worker.register(() => {
-      this.worker.logs$.subscribe(log => {
-        this.log = log.toFixed(3);
-      });
-    });
+  setActive(isActive: boolean): void {
+    this.isActive = isActive;
   }
 
   getSockets(): XxlSocket[] {
-    return [{
-      type: 'in',
-      id: 'csl-a'
-    },
-      {
-        type: 'out',
-        id: 'csl-b'
-      }];
+    return this.worker.getSockets();
   }
-
-  setActive(state: boolean): void {
-    this.isActive = state;
-  }
-
 }

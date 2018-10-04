@@ -14,8 +14,7 @@ import { XxlSocketBuilderService } from '../socket-builder.service';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDirective } from '../socket/socket.directive';
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
-import { FlowBasedComponent } from '../flow-based.component';
+import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
 
 @Component({
   selector: 'xxl-flow-unit',
@@ -25,49 +24,44 @@ import { FlowBasedComponent } from '../flow-based.component';
 })
 export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() @HostBinding('class.is-active') active = false;
-  @Input() component: any;
   @Input() state: XxlFlowUnitState;
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
-  @ViewChildren(SocketDirective) sockets: QueryList<SocketDirective>;
+  @ViewChildren(SocketDirective) socketsRefs: QueryList<SocketDirective>;
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
-  @ViewChild('flow') flow: FlowBasedComponent;
-
-  private observer;
 
   newSocketType: XxlSocketType;
   wrapper: UnitWrapper;
+  sockets: XxlSocket[];
 
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
+              private cdr: ChangeDetectorRef,
               private flowService: XxlFlowBasedService) {
   }
 
   ngAfterViewInit(): void {
-    this.ref.instance$.subscribe(instance => {
-      if (!this.state.sockets || !this.state.sockets.length) { // TODO: Remove in future
-        this.state.sockets = instance.getSockets();
-      }
+    this.sockets = this.flowService.getSockets(this.state.id);
 
-      instance.setState(this.state);
-
-      this.wrapper = new UnitWrapper(this.state);
-      this.flowService.register(this.wrapper);
-      this.viewRef.detectChanges();
-
-      this.sockets.forEach((socket: SocketDirective) => {
-        console.log('register socket ' + socket.id);
-        this.wrapper.addSocket(socket.id, socket.element.nativeElement);
-      });
+    this.socketsRefs.forEach((socket: SocketDirective) => {
+      this.wrapper.addSocket(socket.id, socket.element.nativeElement);
     });
 
-    this.sockets.changes.subscribe(sockets => {
-      this.wrapper.reset();
+    this.wrapper = new UnitWrapper(this.state);
 
-      this.sockets.forEach((socket: SocketDirective) => {
-        this.wrapper.addSocket(socket.id, socket.element.nativeElement);
-      });
-    });
+    // if (this.sockets) {
+    //   this.ref.instance$.subscribe(instance => {
+    //     this.wrapper = new UnitWrapper(this.state);
+    //     this.flowService.register(this.wrapper);
+    //     // this.viewRef.detectChanges();
+    //
+    //     this.socketsRefs.forEach((socket: SocketDirective) => {
+    //       this.wrapper.addSocket(socket.id, socket.element.nativeElement);
+    //     });
+    //   });
+    // }
+
+    this.cdr.detectChanges();
   }
 
   ngOnInit(): void {
@@ -78,7 +72,7 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const active = changes.active;
+    const { active } = changes;
 
     if (this.ref && active && active.currentValue !== active.previousValue && this.ref.instance) {
       this.ref.instance.setActive(active.currentValue);
@@ -92,36 +86,28 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
     // });
   }
 
-  onSocketClick(x, socket: XxlSocket, event: PointerEvent): void {
+  onSocketClick(socket: XxlSocket, event: PointerEvent): void {
     event.stopImmediatePropagation();
 
     this.flowService.socketClicked(socket, this.state.id);
   }
 
-  socketTrackByFn(index, item): XxlSocket {
-    return item;
-  }
-
-  createSocket(socket: XxlSocket): void {
-    this.state.sockets = [socket, ...this.state.sockets];
-
-    this.newSocketType = null;
-    this.viewRef.detectChanges();
-  }
-
-  newSocketIn(): void {
-    this.newSocketType = XxlSocketBuilderService.SOCKET_IN;
-  }
+  // createSocket(socket: XxlSocket): void {
+  //   this.sockets = [socket, ...this.state.sockets];
+  //
+  //   this.newSocketType = null;
+  //   this.viewRef.detectChanges();
+  // }
+  //
+  // newSocketIn(): void {
+  //   this.newSocketType = XxlSocketBuilderService.SOCKET_IN;
+  // }
 
   newSocketOut(): void {
     this.newSocketType = XxlSocketBuilderService.SOCKET_OUT;
   }
 
-  get socketsIn(): any[] {
-    return [];
-  }
-
-  get socketsOut(): any[] {
-    return [];
+  isFlow(): boolean {
+    return !!(this.state as XxlFlow).children;
   }
 }

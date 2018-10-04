@@ -1,10 +1,13 @@
-import { Component, forwardRef, OnDestroy, OnInit } from '@angular/core';
+import { Component, forwardRef, Inject, OnDestroy, OnInit } from '@angular/core';
 
 import {
-  XXL_FLW_UNIT_SERVICE, XxlFlowUnit, XxlFlowUnitState,
+  XXL_FLOW_UNIT_STATE,
+  XXL_FLOW_UNIT_SERVICE, XxlFlowUnit, XxlFlowUnitState,
   XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { RandomNumbersWorker } from '../../workers/random-numbers';
+import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
@@ -21,19 +24,22 @@ export const RANDOM_NUMBERS_CONFIG = {
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss'],
   providers: [{
-    provide: XXL_FLW_UNIT_SERVICE, useExisting: forwardRef(() => RandomNumbersComponent), multi: true
+    provide: XXL_FLOW_UNIT_SERVICE, useExisting: forwardRef(() => RandomNumbersComponent), multi: true
   }]
 })
 export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
+  private worker: RandomNumbersWorker;
   configForm: FormGroup;
   isActive = false;
-  id = 0;
-  state: XxlFlowUnitState;
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder,
+              private flowService: XxlFlowBasedService,
+              @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {
   }
 
   ngOnInit(): void {
+    this.worker = this.flowService.getWorker(this.state.id) as RandomNumbersWorker;
+
     this.configForm = this.fb.group({
       title: [''],
       startValue: [0],
@@ -51,28 +57,15 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   ngOnDestroy(): void {
   }
 
-  setState(state: XxlFlowUnitState): void {
-    this.state = state;
-  }
-
-  getSockets(): XxlSocket[] {
-    return [{
-      type: 'in',
-      id: 'rnc-a'
-    }, {
-      type: 'out',
-      id: 'rnc-b'
-    }, {
-      type: 'out',
-      id: 'rnc-c'
-    }];
-  }
-
   setActive(state: boolean): void {
     this.isActive = state;
   }
 
   get title(): string {
     return this.configForm.controls.title.value;
+  }
+
+  getSockets(): XxlSocket[] {
+    return this.worker.getSockets();
   }
 }
