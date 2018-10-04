@@ -14,7 +14,7 @@ export const CONSOLE_CONFIG = {
 
 export class ConsoleWorker implements XxlWorker {
   private subscriptions: { [id: string]: Subscription };
-  private subjects: { [id: string]: Subject<any> };
+  private subjects: { [id: string]: Subject<any> } = {};
 
   public currentValue: any;
 

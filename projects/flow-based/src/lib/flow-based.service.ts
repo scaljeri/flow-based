@@ -61,9 +61,11 @@ export class XxlFlowBasedService {
   }
 
   setupConnection(conn: XxlConnection): void {
-    const subject = this.workers[conn.from].getStream(conn.out);
+    if (this.workers[conn.to]) {
+      const subject = this.workers[conn.from].getStream(conn.out);
 
-    this.workers[conn.to].setStream(conn.in, subject.asObservable());
+      this.workers[conn.to].setStream(conn.in, subject.asObservable());
+    }
   }
 
   createConnection(connection: Partial<XxlConnection>): XxlConnection {

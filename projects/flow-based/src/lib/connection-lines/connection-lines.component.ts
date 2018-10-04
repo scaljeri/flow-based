@@ -62,6 +62,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     const to = this.flowService.units[connection.to];
 
     const start = from.getSocketPosition(connection.out);
+    console.log(connection.to + ' en ', to);
     const end = to.getSocketPosition(connection.in) || start;
 
     if (!start || !start.x || !end || !end.x) {

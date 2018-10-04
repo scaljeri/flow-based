@@ -22,7 +22,7 @@ import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from
   styleUrls: ['./flow-unit.component.scss'],
   // changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
+export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() @HostBinding('class.is-active') active = false;
   @Input() state: XxlFlowUnitState;
 
@@ -40,14 +40,17 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
               private flowService: XxlFlowBasedService) {
   }
 
-  ngAfterViewInit(): void {
+  ngOnInit(): void {
     this.sockets = this.flowService.getSockets(this.state.id);
+    this.wrapper = new UnitWrapper(this.state);
+    this.flowService.register(this.wrapper);
+  }
 
+  ngAfterViewInit(): void {
     this.socketsRefs.forEach((socket: SocketDirective) => {
       this.wrapper.addSocket(socket.id, socket.element.nativeElement);
     });
 
-    this.wrapper = new UnitWrapper(this.state);
 
     // if (this.sockets) {
     //   this.ref.instance$.subscribe(instance => {
@@ -62,9 +65,6 @@ export class FlowUnitComponent implements OnInit, OnChanges, AfterViewInit, OnDe
     // }
 
     this.cdr.detectChanges();
-  }
-
-  ngOnInit(): void {
   }
 
   ngOnDestroy(): void {
