@@ -61,7 +61,7 @@ export class XxlFlowBasedService {
   }
 
   setupConnection(conn: XxlConnection): void {
-    if (this.workers[conn.to]) {
+    if (this.workers[conn.to] && this.workers[conn.from]) {
       const stream = this.workers[conn.from].getStream(conn.out);
 
       this.workers[conn.to].setStream(stream, conn);
@@ -110,7 +110,7 @@ export class XxlFlowBasedService {
   }
 
   removeConnection(connection: XxlConnection): void {
-    if (this.workers[connection.to]) {
+    if (this.workers[connection.to] && this.workers[connection.from]) {
       this.workers[connection.to].removeStream(connection);
     }
 
