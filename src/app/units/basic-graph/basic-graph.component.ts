@@ -38,6 +38,12 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
 
   ngOnInit() {
     this.worker = this.flowService.getWorker(this.state.id) as BasicGraphWorker;
+
+    this.worker.getStream().subscribe(val => this.update(val));
+  }
+
+  getSockets(): XxlSocket[] {
+    return this.worker.getSockets();
   }
 
   update(value: number): void {
@@ -103,8 +109,4 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   //     });
   //   });
   // }
-
-  getSockets(): XxlSocket[] {
-    return [];
-  }
 }

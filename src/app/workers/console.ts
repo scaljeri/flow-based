@@ -1,4 +1,4 @@
-import { XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
 export const CONSOLE_CONFIG = {
@@ -13,8 +13,9 @@ export const CONSOLE_CONFIG = {
 };
 
 export class ConsoleWorker implements XxlWorker {
+  private stream: Observable<any>;
   private subscriptions: { [id: string]: Subscription } = {};
-  private subjects: { [id: string]: Subject<any> } = {};
+  private subject = new Subject<any>();
 
   public currentValue: any;
 
@@ -29,30 +30,25 @@ export class ConsoleWorker implements XxlWorker {
     return this.state.config.sockets;
   }
 
-  getStream(id: string) {
-    if (!this.subjects[id]) {
-      this.subjects[id] = new Subject<any>();
-    }
-
-    return this.subjects[id].asObservable();
+  getStream(): Observable<any> {
+    return this.subject.asObservable();
   }
 
-  setStream(stream: Observable<any>, id: string): void {
-    this.subscriptions[id] = stream.subscribe(val => this.receivedValue(val, id));
+  setStream(stream: Observable<any>, connection: XxlConnection): void {
+    const key = connection.from + connection.out;
+    this.stream = stream;
+
+    this.subscriptions[key] = stream.subscribe(val => {
+      this.currentValue = val;
+      this.subject.next(val);
+    });
   }
 
-  removeStream(id: string): void {
-    this.subscriptions[id].unsubscribe();
+  removeStream(connection: XxlConnection): void {
+    const key = connection.from + connection.out;
 
-    delete this.subscriptions[id];
-  }
+    this.subscriptions[key].unsubscribe();
 
-  private receivedValue(val: any, id: string): void {
-    console.log(val);
-    this.currentValue = val;
-
-    if (this.subjects[id]) {
-      this.subjects[id].next(val);
-    }
+    delete this.subscriptions[key];
   }
 }

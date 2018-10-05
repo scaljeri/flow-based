@@ -1,17 +1,11 @@
-import { XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_CONFIR = {
   sockets: [
     {
-      type: 'in',
+      type: 'out',
       id: 'rnc-a'
-    }, {
-      type: 'out',
-      id: 'rnc-b'
-    }, {
-      type: 'out',
-      id: 'rnc-c'
     }
   ]
 };
@@ -38,9 +32,9 @@ export class RandomNumbersWorker implements XxlWorker {
     return this.state.config.sockets;
   }
 
-  removeStream(id: string): void {
+  removeStream(connection: XxlConnection): void {
   }
 
-  setStream(stream: Observable<any>, id?: string): void {
+  setStream(stream: Observable<any>, connection: XxlConnection): void {
   }
 }

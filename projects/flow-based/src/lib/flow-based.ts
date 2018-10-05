@@ -20,6 +20,15 @@ export interface XxlFlowUnit {
   setActive(boolean): void;
 }
 
+// Describes the class doing the actual work
+export interface XxlWorker {
+  getSockets(): XxlSocket[];
+  getStream?(id: string): Observable<any>;
+  setStream?(stream: Observable<any>, connection?: XxlConnection): void;
+  removeStream?(connection?: XxlConnection): void;
+  destroy(): void;
+}
+
 export interface XxlFlowUnitOptions {
   isFlow?: boolean;
 }
@@ -67,15 +76,6 @@ export interface XxlSocket {
 export interface XxlSocketEvent extends XxlSocket {
   socket: XxlSocket;
   element: HTMLElement;
-}
-
-// Describes the class doing the actual work
-export interface XxlWorker {
-  getSockets(): XxlSocket[];
-  getStream?(id: string): Observable<any>;
-  setStream?(stream: Observable<any>, id?: string): void;
-  removeStream?(id: string): void;
-  destroy(): void;
 }
 
 export interface XxlWorkerService {

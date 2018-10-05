@@ -22,7 +22,7 @@ import { RandomNumbersComponent } from './units/random-numbers/random-numbers.co
 import { RANDOM_NUMBER_CONFIR, RandomNumbersWorker } from './workers/random-numbers';
 import { CONSOLE_CONFIG, ConsoleWorker } from './workers/console';
 import { BasicGraphComponent } from './units/basic-graph/basic-graph.component';
-import { BasicGraphWorker } from './workers/basic-graph';
+import { BASIC_GRAPH_CONFIG, BasicGraphWorker } from './workers/basic-graph';
 
 @NgModule({
   declarations: [
@@ -59,11 +59,17 @@ import { BasicGraphWorker } from './workers/basic-graph';
           title: 'Random number generator',
           component: RandomNumbersComponent,
           config: RANDOM_NUMBER_CONFIR,
-          worker: RandomNumbersWorker },
-        'basic-graph': { title: 'Baisc Graph', component: BasicGraphComponent, worker: BasicGraphWorker },
-        'console': { component: ConsoleComponent, config: CONSOLE_CONFIG, title: 'Console.log', worker: ConsoleWorker },
+          worker: RandomNumbersWorker
+        },
+        'basic-graph': {
+          title: 'Baisc Graph',
+          component: BasicGraphComponent,
+          config: BASIC_GRAPH_CONFIG,
+          worker: BasicGraphWorker
+        },
+        'console': {component: ConsoleComponent, config: CONSOLE_CONFIG, title: 'Console.log', worker: ConsoleWorker},
         // 'default': { component: DefaultFlowComponent },
-        'flow': { component: DefaultFlowComponent, title: 'Composite Unit', isFlow: true }
+        'flow': {component: DefaultFlowComponent, title: 'Composite Unit', isFlow: true}
       }
     }
   ],

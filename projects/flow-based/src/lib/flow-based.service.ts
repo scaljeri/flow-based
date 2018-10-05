@@ -13,7 +13,7 @@ import { UnitWrapper } from './utils/unit-wrapper';
 import { Observable, Subject } from 'rxjs';
 
 class FlowWorker implements XxlWorker {
-  setStream(subject: Subject<any>, id: string): void {
+  setStream(subject: Subject<any>, connection: XxlConnection): void {
     // TODO
   }
 
@@ -29,7 +29,7 @@ class FlowWorker implements XxlWorker {
     return undefined;
   }
 
-  removeStream(id: string): void {
+  removeStream(connection: XxlConnection): void {
   }
 }
 
@@ -64,7 +64,7 @@ export class XxlFlowBasedService {
     if (this.workers[conn.to]) {
       const stream = this.workers[conn.from].getStream(conn.out);
 
-      this.workers[conn.to].setStream(stream, conn.in);
+      this.workers[conn.to].setStream(stream, conn);
     }
   }
 
@@ -111,7 +111,7 @@ export class XxlFlowBasedService {
 
   removeConnection(connection: XxlConnection): void {
     if (this.workers[connection.to]) {
-      this.workers[connection.to].removeStream(connection.in);
+      this.workers[connection.to].removeStream(connection);
     }
 
    this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn !== connection);
