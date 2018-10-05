@@ -1,5 +1,5 @@
-<!--<xxl-add-socket [type]="newSocketType"-->
-                <!--(create)="createSocket($event)" (cancel)="newSocketType = null"></xxl-add-socket>-->
+<xxl-add-socket [type]="newSocketType"
+                (create)="createSocket($event)" (cancel)="newSocketType = null"></xxl-add-socket>
 
 <section class="component">
   <xxl-flow-based #flow *ngIf="isFlow() && active" [flow]="state" [active]="active" [root]="false"></xxl-flow-based>
@@ -8,16 +8,16 @@
     <ng-container *xxlDynamicComponent="state"></ng-container>
   </ng-container>
 
-  <section *ngIf="sockets" class="sockets sockets-in">
-    <!--<button class="add-socket" (click)="newSocketIn()">+</button>-->
+  <section class="sockets sockets-in">
+    <button *ngIf="isFlow()" class="add-socket" (click)="newSocketIn()">+</button>
     <span *ngFor="let socket of sockets | socketIn"
           [xxlSocket]="socket"
           [attr.data-socket-id]="socket.id"
           (pointerdown)="onSocketClick(socket, $event)" class="socket"></span>
   </section>
 
-  <section *ngIf="sockets" class="sockets sockets-out">
-    <!--<button class="add-socket" (click)="newSocketOut()">+</button>-->
+  <section class="sockets sockets-out">
+    <button *ngIf="isFlow()" class="add-socket" (click)="newSocketOut()">+</button>
     <span *ngFor="let socket of sockets | socketOut" [xxlSocket]="socket" (pointerdown)="onSocketClick(socket, $event)"
           [attr.data-socket-id]="socket.id"
           class="socket"></span>

@@ -34,7 +34,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
   newSocketType: XxlSocketType;
   wrapper: UnitWrapper;
-  sockets: XxlSocket[];
 
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
@@ -44,7 +43,10 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   ngOnInit(): void {
-    this.sockets = this.flowService.getSockets(this.state.id);
+    if (!this.state.sockets) {
+      this.state.sockets = this.flowService.getSockets(this.state.id);
+    }
+
     this.wrapper = new UnitWrapper(this.state);
     this.flowService.register(this.wrapper);
 
@@ -55,10 +57,11 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   ngAfterViewInit(): void {
-    this.socketsRefs.forEach((socket: SocketDirective) => {
-      this.wrapper.addSocket(socket.id, socket.element.nativeElement);
-    });
+    this.updateWrapper();
 
+    this.socketsRefs.changes.subscribe(() => {
+      this.updateWrapper();
+    });
 
     // if (this.sockets) {
     //   this.ref.instance$.subscribe(instance => {
@@ -98,22 +101,30 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     // });
   }
 
+  get sockets(): XxlSocket[] {
+    return this.state.sockets;
+  }
+
+  set sockets(sockets: XxlSocket[]) {
+    this.state.sockets = sockets;
+  }
+
   onSocketClick(socket: XxlSocket, event: PointerEvent): void {
     event.stopImmediatePropagation();
 
     this.flowService.socketClicked(socket, this.state.id);
   }
 
-  // createSocket(socket: XxlSocket): void {
-  //   this.sockets = [socket, ...this.state.sockets];
-  //
-  //   this.newSocketType = null;
-  //   this.viewRef.detectChanges();
-  // }
-  //
-  // newSocketIn(): void {
-  //   this.newSocketType = XxlSocketBuilderService.SOCKET_IN;
-  // }
+  createSocket(socket: XxlSocket): void {
+    this.sockets = [socket, ...this.state.sockets];
+
+    this.newSocketType = null;
+    this.viewRef.detectChanges();
+  }
+
+  newSocketIn(): void {
+    this.newSocketType = XxlSocketBuilderService.SOCKET_IN;
+  }
 
   newSocketOut(): void {
     this.newSocketType = XxlSocketBuilderService.SOCKET_OUT;
@@ -121,5 +132,13 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
   isFlow(): boolean {
     return !!(this.state as XxlFlow).children;
+  }
+
+  private updateWrapper(): void {
+    this.wrapper.reset();
+
+    this.socketsRefs.forEach((socket: SocketDirective) => {
+      this.wrapper.addSocket(socket.id, socket.element.nativeElement);
+    });
   }
 }

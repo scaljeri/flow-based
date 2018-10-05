@@ -48,6 +48,7 @@ export interface XxlFlowUnitState {
   config?: any;
   title?: string;
   position?: XxlPosition;
+  sockets?: XxlSocket[];
 }
 
 export interface XxlFlow extends Partial<XxlFlowUnitState> {

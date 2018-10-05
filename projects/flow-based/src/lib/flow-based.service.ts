@@ -10,28 +10,7 @@ import {
 } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 import { UnitWrapper } from './utils/unit-wrapper';
-import { Observable, Subject } from 'rxjs';
-
-class FlowWorker implements XxlWorker {
-  setStream(subject: Subject<any>, connection: XxlConnection): void {
-    // TODO
-  }
-
-  destroy(): void {
-    // TODO
-  }
-
-  getSockets(): XxlSocket[] {
-    return [];
-  }
-
-  getStream(id: string): Observable<any> {
-    return undefined;
-  }
-
-  removeStream(connection: XxlConnection): void {
-  }
-}
+import { FlowWorker } from './utils/flow-worker';
 
 @Injectable({
   providedIn: 'root'
@@ -98,11 +77,8 @@ export class XxlFlowBasedService {
       ...(this.flowTypes[flowType].isFlow ? {children: [], connections: []} : {})
     };
 
-    const {worker} = this.flowTypes[flowType];
-
-    if (worker) {
-      this.workers[state.id] = new worker(state);
-    }
+    const worker = this.flowTypes[flowType].worker || FlowWorker;
+    this.workers[state.id] = new worker(state);
 
     this.currentFlow.add(state);
 
@@ -114,7 +90,7 @@ export class XxlFlowBasedService {
       this.workers[connection.to].removeStream(connection);
     }
 
-   this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn !== connection);
+    this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn !== connection);
   }
 
   // Unit stuff
@@ -152,7 +128,7 @@ export class XxlFlowBasedService {
   }
 
   getSockets(unitId: string): XxlSocket[] {
-    return this.workers[unitId].getSockets();
+    return this.workers[unitId].getSockets() || [];
   }
 
   // Create workers and the connections between them
@@ -161,7 +137,7 @@ export class XxlFlowBasedService {
       const {worker} = this.flowTypes[child.type];
 
       if (child.children) {
-        this.workers[child.id] = new FlowWorker();
+        this.workers[child.id] = new FlowWorker(child);
         this.initializeFlow(child);
       } else if (worker) {
         this.workers[child.id] = new worker(child);

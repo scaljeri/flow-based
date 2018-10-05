@@ -32,6 +32,7 @@ export class AddSocketComponent implements OnInit, OnChanges {
 
   ngOnInit() {
     this.socketForm = this.fb.group({
+        id: Date.now().toString(),
         name: ['', Validators.required],
         description: [''],
         color: []
@@ -46,12 +47,10 @@ export class AddSocketComponent implements OnInit, OnChanges {
   }
 
   onSubmit(): void {
-    console.log('submit');
     this.create.emit(this.socket);
   }
 
   onCancel(): void {
-    console.log('cancel');
     this.cancel.emit();
   }
 }
