@@ -15,6 +15,7 @@ import { UnitWrapper } from '../utils/unit-wrapper';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDirective } from '../socket/socket.directive';
 import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
+import { MovableDirective } from '../drag-drop/movable/movable.directive';
 
 @Component({
   selector: 'xxl-flow-unit',
@@ -27,6 +28,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   @Input() state: XxlFlowUnitState;
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
+  @Output() updated = new EventEmitter<void>();
   @ViewChildren(SocketDirective) socketsRefs: QueryList<SocketDirective>;
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
@@ -37,13 +39,19 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
               private cdr: ChangeDetectorRef,
-              private flowService: XxlFlowBasedService) {
+              private flowService: XxlFlowBasedService,
+              private movable: MovableDirective) {
   }
 
   ngOnInit(): void {
     this.sockets = this.flowService.getSockets(this.state.id);
     this.wrapper = new UnitWrapper(this.state);
     this.flowService.register(this.wrapper);
+
+    this.movable.positionChange.subscribe(() => {
+      this.flowService.updateConnection();
+      this.wrapper.update();
+    });
   }
 
   ngAfterViewInit(): void {
@@ -72,10 +80,14 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    const { active } = changes;
+    const {active} = changes;
 
     if (this.ref && active && active.currentValue !== active.previousValue && this.ref.instance) {
       this.ref.instance.setActive(active.currentValue);
+      setTimeout(() => {
+        this.wrapper.update();
+        this.updated.next();
+      });
     }
 
     this.newSocketType = null;

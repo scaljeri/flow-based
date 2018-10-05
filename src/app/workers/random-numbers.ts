@@ -23,7 +23,7 @@ export class RandomNumbersWorker implements XxlWorker {
   constructor(private state: XxlFlowUnitState) {
     this.interval = setInterval(() => {
       this.subject.next(Math.random());
-    }, 10000);
+    }, 1000);
   }
 
   destroy(): void {

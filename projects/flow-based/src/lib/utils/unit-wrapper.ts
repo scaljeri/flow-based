@@ -18,9 +18,9 @@ export class UnitWrapper {
     this.sockets[socketId] = {element};
   }
 
-  update(): void {
-    Object.keys(this.sockets).forEach(socketId => {
-      this.sockets[socketId].position = this.computeSocketPosition(socketId);
+  update(socketId?: string): void {
+    (socketId ? [socketId] : Object.keys(this.sockets)).forEach(id => {
+      this.sockets[id].position = this.computeSocketPosition(id);
     });
   }
 
@@ -36,6 +36,10 @@ export class UnitWrapper {
 
 
   getSocketPosition(socketId: string): XxlPosition {
+    if (!this.sockets[socketId].position) {
+      this.update(socketId);
+    }
+
     return this.sockets[socketId].position;
   }
 }

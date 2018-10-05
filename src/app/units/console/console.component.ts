@@ -22,7 +22,10 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   ngOnInit(): void {
     this.worker = this.flowService.getWorker(this.state.id) as ConsoleWorker;
 
-    this.subscription = this.worker.getStream(this.worker.getSockets()[0].id).subscribe(log => this.value = log.toFixed(3));
+    this.subscription = this.worker.getStream(this.worker.getSockets()[0].id).subscribe(log => {
+      this.value = log.toFixed(3);
+      console.log('receieved ' + this.value);
+    });
   }
 
   ngOnDestroy(): void {

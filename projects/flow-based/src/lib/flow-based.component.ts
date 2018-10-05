@@ -88,24 +88,11 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
     // TODO: ??
   }
 
-  @HostListener('document:pointerdown')
-  onPointerDown(): void {
-    if (this.wrapper.isActive) {
-      this.wrapper.deactivate();
-
-      this.flowService.removeConnection(this.flow.connections.slice(-1)[0]);
-    }
-  }
-
   onDragStart(event: PointerEvent, state: XxlFlowUnitState): void {
     // const index = this.flow.children.indexOf(state);
   }
 
   onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
-  }
-
-  unitPositionChanged(event: XxlPosition, state: XxlFlowUnitState): void {
-    this.repaint();
   }
 
   add(unit: XxlFlowUnitState): void {
@@ -138,12 +125,18 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   removeConnection(conn: XxlConnection): void {
+    if (this.wrapper.isActive) {
+      this.wrapper.deactivate();
+      this.activeSocket = null;
+    }
+
     this.flowService.removeConnection(conn);
   }
 
   onSocketClick(socket: XxlSocket, unitId: string): void {
     if (this.wrapper.isActive) {
       const conn = this.flow.connections.slice(-1)[0];
+      this.flowService.removeConnection(conn);
 
       if (conn.in === this.flow.id + '-fake') {
         conn.to = unitId;
@@ -156,7 +149,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
       this.activeSocket = null;
       this.wrapper.deactivate();
 
-      this.flowService.updateConnection(conn);
+      this.flowService.createConnection(conn);
     } else {
       const conn = this.flowService.createConnection({
         from: socket.type === 'out' ? unitId : this.wrapper.unitId,

@@ -10,8 +10,8 @@
                class="block"
                xxlMovable
                [(position)]="state.position"
+               (updated)="reset()"
                (dragStart)="onDragStart($event, state)"
-               (positionChange)="unitPositionChanged($event, state)"
                (dragEnd)="onDragEnd($event. state)"
                [active]="activeFlowIndex === i"
                [state]="state"

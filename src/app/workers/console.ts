@@ -13,7 +13,7 @@ export const CONSOLE_CONFIG = {
 };
 
 export class ConsoleWorker implements XxlWorker {
-  private subscriptions: { [id: string]: Subscription };
+  private subscriptions: { [id: string]: Subscription } = {};
   private subjects: { [id: string]: Subject<any> } = {};
 
   public currentValue: any;
@@ -48,6 +48,7 @@ export class ConsoleWorker implements XxlWorker {
   }
 
   private receivedValue(val: any, id: string): void {
+    console.log(val);
     this.currentValue = val;
 
     if (this.subjects[id]) {

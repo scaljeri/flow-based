@@ -25,6 +25,7 @@ export class FakeUnitWrapper extends UnitWrapper {
   }
 
   activate(cb): void {
+    this.cb = cb;
     this.isActive = true;
     this.element.nativeElement.addEventListener('pointermove', this.callback);
     this.x = null;
@@ -38,5 +39,6 @@ export class FakeUnitWrapper extends UnitWrapper {
   private trackPointer(event: PointerEvent): void {
     this.x = event.pageX; //  - this.parentRect.left;
     this.y = event.pageY; // - this.parentRect.top;
+    this.cb();
   }
 }

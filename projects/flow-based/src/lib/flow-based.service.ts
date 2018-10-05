@@ -62,9 +62,9 @@ export class XxlFlowBasedService {
 
   setupConnection(conn: XxlConnection): void {
     if (this.workers[conn.to]) {
-      const subject = this.workers[conn.from].getStream(conn.out);
+      const stream = this.workers[conn.from].getStream(conn.out);
 
-      this.workers[conn.to].setStream(conn.in, subject.asObservable());
+      this.workers[conn.to].setStream(stream, conn.in);
     }
   }
 
@@ -80,9 +80,13 @@ export class XxlFlowBasedService {
     return newConnection;
   }
 
-  updateConnection(connection: XxlConnection): void {
-    this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn.id !== connection.id);
-    this.currentFlow.flow.connections.push(connection);
+  updateConnection(connection?: XxlConnection): void {
+    if (connection) {
+      this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn.id !== connection.id);
+      this.currentFlow.flow.connections.push(connection);
+    } else {
+      this.currentFlow.flow.connections = [...this.currentFlow.flow.connections];
+    }
   }
 
   add(flowType: string): XxlFlowUnitState {
@@ -106,7 +110,11 @@ export class XxlFlowBasedService {
   }
 
   removeConnection(connection: XxlConnection): void {
-    this.workers[connection.to].removeStream(connection.in);
+    if (this.workers[connection.to]) {
+      this.workers[connection.to].removeStream(connection.in);
+    }
+
+   this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn !== connection);
   }
 
   // Unit stuff
@@ -150,13 +158,13 @@ export class XxlFlowBasedService {
   // Create workers and the connections between them
   private initializeFlow(flow: XxlFlow): void {
     flow.children.forEach((child: XxlFlow) => {
-      const {worker} = this.flowTypes[child.type].worker;
+      const {worker} = this.flowTypes[child.type];
 
       if (child.children) {
         this.workers[child.id] = new FlowWorker();
         this.initializeFlow(child);
       } else if (worker) {
-        this.workers[child.id] = new worker(child.config);
+        this.workers[child.id] = new worker(child);
       }
     });
 
