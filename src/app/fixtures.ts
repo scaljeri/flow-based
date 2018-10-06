@@ -13,7 +13,7 @@ export const nested =
         "children": [
           {
             "type": "console",
-            "title": "Console.log",
+            "title": "Log",
             "id": "1538746765966",
             "config": {
               "sockets": [
@@ -84,7 +84,7 @@ export const nested =
       },
       {
         "type": "console",
-        "title": "Console.log",
+        "title": "Log",
         "id": "1538747720255",
         "config": {
           "sockets": [

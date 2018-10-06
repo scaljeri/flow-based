@@ -20,7 +20,7 @@ export class FlowWorker implements XxlWorker {
   }
 
   getSockets(): XxlSocket[] {
-    return [];
+    return this.state.sockets;
   }
 
   getStream(socketId: string): Observable<any> {
@@ -38,5 +38,6 @@ export class FlowWorker implements XxlWorker {
 
   removeStream(connection: XxlConnection): void {
     console.log('FlowWorker: remove stream');
+    this.subscriptions[connection.id].unsubscribe();
   }
 }

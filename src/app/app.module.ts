@@ -67,7 +67,7 @@ import { BASIC_GRAPH_CONFIG, BasicGraphWorker } from './workers/basic-graph';
           config: BASIC_GRAPH_CONFIG,
           worker: BasicGraphWorker
         },
-        'console': {component: ConsoleComponent, config: CONSOLE_CONFIG, title: 'Console.log', worker: ConsoleWorker},
+        'console': {component: ConsoleComponent, config: CONSOLE_CONFIG, title: 'Log', worker: ConsoleWorker},
         // 'default': { component: DefaultFlowComponent },
         'flow': {component: DefaultFlowComponent, title: 'Composite Unit', isFlow: true}
       }
