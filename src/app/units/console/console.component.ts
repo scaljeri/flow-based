@@ -23,7 +23,7 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
     this.worker = this.flowService.getWorker(this.state.id) as ConsoleWorker;
 
     this.subscription = this.worker.getStream().subscribe(log => {
-      this.value = log.toFixed(3);
+      this.value = log.toFixed(2);
     });
   }
 

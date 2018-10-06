@@ -7,17 +7,19 @@ export const RANDOM_NUMBER_CONFIR = {
       type: 'out',
       id: 'rnc-a'
     }
-  ]
+  ],
+  min: 0,
+  max: 100,
+  start: 0,
+  end: 1
 };
 
 export class RandomNumbersWorker implements XxlWorker {
-  private readonly interval: number;
+  private interval: number;
   private subject = new Subject<any>();
 
   constructor(private state: XxlFlowUnitState) {
-    this.interval = setInterval(() => {
-      this.subject.next(Math.random());
-    }, 1000);
+    this.initialize();
   }
 
   destroy(): void {
@@ -36,5 +38,40 @@ export class RandomNumbersWorker implements XxlWorker {
   }
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
+  }
+
+  initialize(): void {
+    clearInterval(this.interval);
+
+    this.interval = setInterval(() => {
+      const random = Math.random() * (this.end - this.start) + this.start;
+
+      this.subject.next(random);
+    }, 1000);
+
+  }
+
+  get start(): number {
+    return this.state.config.start;
+  }
+
+  set start(value: number) {
+    this.state.config.start = value;
+  }
+
+  get end(): number {
+    return this.state.config.end;
+  }
+
+  set end(value: number) {
+    this.state.config.end = value;
+  }
+
+  get min(): number {
+    return this.state.config.min;
+  }
+
+  get max(): number {
+    return this.state.config.min;
   }
 }

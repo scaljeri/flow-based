@@ -41,16 +41,19 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
     this.worker = this.flowService.getWorker(this.state.id) as RandomNumbersWorker;
 
     this.configForm = this.fb.group({
-      title: [''],
-      startValue: [0],
-      endValue: [1]
+      startValue: [this.worker.start],
+      endValue: [this.worker.end]
     });
 
     this.configForm.valueChanges.subscribe(form => {
-      console.log(form);
       if (form.startValue > this.configForm.controls.endValue.value) {
-        this.configForm.controls.endValue.setValue(form.startValue, { onlySelf: true, emitEvent: true});
+        this.configForm.controls.endValue.setValue(form.startValue, {onlySelf: true, emitEvent: true});
       }
+
+      setTimeout(() => {
+        this.worker.start = form.startValue;
+        this.worker.end = form.endValue;
+      });
     });
   }
 
@@ -62,7 +65,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   }
 
   get title(): string {
-    return this.configForm.controls.title.value;
+    return this.state.title;
   }
 
   getSockets(): XxlSocket[] {
