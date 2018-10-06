@@ -63,18 +63,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
       this.updateWrapper();
     });
 
-    // if (this.sockets) {
-    //   this.ref.instance$.subscribe(instance => {
-    //     this.wrapper = new UnitWrapper(this.state);
-    //     this.flowService.register(this.wrapper);
-    //     // this.viewRef.detectChanges();
-    //
-    //     this.socketsRefs.forEach((socket: SocketDirective) => {
-    //       this.wrapper.addSocket(socket.id, socket.element.nativeElement);
-    //     });
-    //   });
-    // }
-
     this.cdr.detectChanges();
   }
 
@@ -94,11 +82,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     }
 
     this.newSocketType = null;
-
-    // Hack to fix it
-    // setTimeout(() => {
-    //   this.viewRef.detectChanges();
-    // });
   }
 
   get sockets(): XxlSocket[] {
@@ -111,6 +94,10 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
   onSocketClick(socket: XxlSocket, event: PointerEvent): void {
     event.stopImmediatePropagation();
+
+    if (this.active && this.isFlow()) {
+      socket = Object.assign({}, socket, { type: socket.type === 'out' ? 'in' : 'out'});
+    }
 
     this.flowService.socketClicked(socket, this.state.id);
   }
