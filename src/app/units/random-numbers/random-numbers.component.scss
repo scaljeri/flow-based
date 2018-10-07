@@ -8,6 +8,11 @@
   min-width: 72px;
 }
 
+footer {
+  display: flex;
+  justify-content: space-between;
+}
+
 .config {
   background-color: #fff;
   min-width: 300px;

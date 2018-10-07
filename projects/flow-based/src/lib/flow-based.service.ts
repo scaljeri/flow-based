@@ -119,6 +119,11 @@ export class XxlFlowBasedService {
     this.currentFlow.blur();
   }
 
+
+  close(state: XxlFlowUnitState): void {
+    this.blur();
+  }
+
   socketClicked(socket: XxlSocket, unitId: string): void {
     this.currentFlow.onSocketClick(socket, unitId);
   }
@@ -129,6 +134,26 @@ export class XxlFlowBasedService {
 
   getSockets(unitId: string): XxlSocket[] {
     return this.workers[unitId].getSockets() || [];
+  }
+
+  delete(state: XxlFlowUnitState): void {
+    const flow = this.currentFlow.flow;
+    const index = flow.children.indexOf(state);
+    this.blur();
+
+    const newConns = [];
+    flow.connections.forEach(conn => {
+      if (conn.to === state.id) {
+        this.workers[state.id].removeStream(conn);
+      } else if ( conn.from === state.id) {
+        this.workers[conn.to].removeStream(conn);
+      } else {
+        newConns.push(conn);
+      }
+    });
+
+    flow.connections = newConns;
+    this.currentFlow.flow.children.splice(index, 1);
   }
 
   // Create workers and the connections between them

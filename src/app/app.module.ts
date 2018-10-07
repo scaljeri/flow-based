@@ -15,6 +15,7 @@ import {
   MatButtonModule,
   MatInputModule, MatListModule, MatSliderModule, MatToolbarModule
 } from '@angular/material';
+import {MatIconModule} from '@angular/material/icon';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
@@ -46,6 +47,7 @@ import { BASIC_GRAPH_CONFIG, BasicGraphWorker } from './workers/basic-graph';
     MatSliderModule,
     FlowBasedModule,
     MatButtonModule,
+    MatIconModule,
     MatListModule,
     OverlayModule
   ],

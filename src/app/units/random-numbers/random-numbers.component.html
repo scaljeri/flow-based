@@ -4,7 +4,7 @@
 
 <section *ngIf="isActive" class="config">
   <mat-toolbar color="primary">
-    <span>Configuration</span>
+    <span>Configurationx</span>
   </mat-toolbar>
 
   <form [formGroup]="configForm">
@@ -22,4 +22,12 @@
                   formControlName="endValue"></mat-slider>
     </label>
   </form>
+
+  <footer>
+    <button mat-button color="warn" (click)="delete()">
+      <mat-icon>delete_forever</mat-icon>
+    </button>
+
+    <button mat-button (click)="close()">Close</button>
+  </footer>
 </section>

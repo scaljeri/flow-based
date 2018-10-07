@@ -71,4 +71,12 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   getSockets(): XxlSocket[] {
     return this.worker.getSockets();
   }
+
+  delete(): void {
+    this.flowService.delete(this.state);
+  }
+
+  close(): void {
+    this.flowService.close(this.state);
+  }
 }
