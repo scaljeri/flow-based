@@ -10,9 +10,10 @@ import {
   OnInit,
   Output
 } from '@angular/core';
-import { XxlConnection, XxlFlowUnitState } from 'flow-based';
+import { XxlConnection, XxlFlowUnitState, XxlPosition } from 'flow-based';
 import { Observable } from 'rxjs';
 import { XxlFlowBasedService } from '../flow-based.service';
+import * as bezier from './bezier';
 
 @Component({
   selector: 'xxl-connection-lines',
@@ -24,6 +25,8 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   @Input() connections: XxlConnection[];
   @Input() updates: Observable<string>;
   @Output() lineClick = new EventEmitter<XxlConnection>();
+
+  controlPoints: XxlPosition[];
 
   lines: string[] = [];
   private rect;
@@ -45,6 +48,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   ngOnChanges(): void {
     this.rect = this.element.nativeElement.getBoundingClientRect();
+    this.controlPoints = [];
   }
 
   update(state: XxlFlowUnitState) {
@@ -57,6 +61,10 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   d(connection: XxlConnection): string {
     let cx1, cx2, cy1, cy2;
+
+    if (!this.flowService) {
+      return;
+    }
 
     const from = this.flowService.units[connection.from];
     const to = this.flowService.units[connection.to];
@@ -83,8 +91,30 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       cy2 = y2 - (y2 - y1) / 2;
     }
 
-    const output = `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
+    this.controlPoints[connection.id] = [
+      {x: x1, y: y1},
+      {x: cx1, y: cy1},
+      {x: cx2, y: cy2},
+      {x: x2, y: y2},
+    ];
 
-    return output;
+    return `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
+  }
+
+  arrow(connection: XxlConnection): string {
+    const points = this.controlPoints[connection.id];
+
+    const {x, y} = bezier.normal(.5, points);
+    const der = bezier.derivative(.5, points);
+
+    const grad = bezier.gradient(der);
+
+    let deg = Math.atan(grad) * 180 / Math.PI;
+
+    if (der.x < 0) {
+      deg += 180;
+    }
+
+    return `translate(${x}, ${y}) rotate(${deg})`;
   }
 }

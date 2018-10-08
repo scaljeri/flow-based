@@ -122,12 +122,16 @@ xxl-flow-based {
   height: 100%;
   width: 100%;
   // background-color: red;
-}
 
-.add-socket-form {
-  background-color: rgba(0, 0, 0, 0.5);
-  @include xxl-position(absolute, 0px 0px 0px 0px);
+  & + footer {
+    @include xxl-position(absolute, 0 0 5px 50%);
+  }
 }
+//
+//.add-socket-form {
+//  background-color: rgba(0, 0, 0, 0.5);
+//  @include xxl-position(absolute, 0px 0px 0px 0px);
+//}
 
 .component {
   border-radius: 8px;
@@ -181,10 +185,10 @@ xxl-flow-based {
   height: var(--socket-size);
   transform: rotate(45deg);
   width: var(--socket-size);
-
-  &:hover {
-    background-color: green;
-  }
+  //
+  //&:hover {
+  //  background-color: green;
+  //}
 }
 
 /*

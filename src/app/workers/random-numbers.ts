@@ -34,12 +34,6 @@ export class RandomNumbersWorker implements XxlWorker {
     return this.state.config.sockets;
   }
 
-  removeStream(connection: XxlConnection): void {
-  }
-
-  setStream(stream: Observable<any>, connection: XxlConnection): void {
-  }
-
   initialize(): void {
     clearInterval(this.interval);
 
@@ -50,6 +44,10 @@ export class RandomNumbersWorker implements XxlWorker {
     }, 1000);
 
   }
+
+  removeStream(connection: XxlConnection): void { /* not used */ }
+
+  setStream(stream: Observable<any>, connection: XxlConnection): void {  /* not used */ }
 
   get start(): number {
     return this.state.config.start;

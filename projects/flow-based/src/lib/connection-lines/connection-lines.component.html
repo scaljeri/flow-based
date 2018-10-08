@@ -1,7 +1,10 @@
 <svg #svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-  <path *ngFor="let connection of connections"
-        (pointerdown)="onClick(connection)"
-        [attr.d]="d(connection)"
-        class="create-path"
-        stroke-linecap="round"></path>
+  <ng-container *ngFor="let connection of connections">
+    <path
+      (pointerdown)="onClick(connection)"
+      [attr.d]="d(connection)"
+      class="create-path"
+      stroke-linecap="round"></path>
+      <path class="arrow" d="M0 10 L 10 0 L0 -10z" [attr.transform]="arrow(connection)" fill="#fff"></path>
+  </ng-container>
 </svg>
