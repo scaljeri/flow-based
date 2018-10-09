@@ -50,8 +50,6 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
     this.count += 1;
     this.dataTable.addRow([this.count, value]);
 
-    console.log('values == ' + this.dataTable.length);
-
     if (this.view) {
       const options = {
             chartArea: {width: '100%', height: '100%'},

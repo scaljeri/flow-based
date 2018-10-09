@@ -24,6 +24,9 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.worker = this.flowService.getWorker(this.state.id) as ConsoleWorker;
+    if (this.worker.currentValue !== undefined) {
+      this.value = this.worker.currentValue.toFixed(2);
+    }
 
     this.subscription = this.worker.getStream().subscribe(log => {
       this.count++;
