@@ -38,6 +38,11 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   @ViewChildren(SocketDirective) socketsRefs: QueryList<SocketDirective>;
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
+  @HostBinding('class.not-active')
+  get isNotActive(): boolean {
+    return !this.active;
+  }
+
   newSocketType: XxlSocketType;
   wrapper: UnitWrapper;
 

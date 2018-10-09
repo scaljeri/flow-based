@@ -90,11 +90,6 @@ $socket-size: 16px;
         right: 30px;
       }
     }
-
-    .title {
-      padding: 8px;
-      width: 400px;
-    }
   }
 }
 
@@ -118,6 +113,11 @@ $socket-size: 16px;
   &:focus {
     background-color: rgb(153, 153, 255);
   }
+}
+
+input.title {
+  padding: 8px;
+  width: 400px;
 }
 
 xxl-flow-based {
@@ -184,10 +184,6 @@ xxl-flow-based {
   height: var(--socket-size);
   transform: rotate(45deg);
   width: var(--socket-size);
-  //
-  //&:hover {
-  //  background-color: green;
-  //}
 }
 
 /*
