@@ -51,17 +51,16 @@ $socket-size: 16px;
       color: #fff;
       font-size: 14px;
       height: 20px;
+      line-height: 19px;
+      padding: 0 8px;
       pointer-events: none;
       text-align: center;
+      top: calc(100% + 4px);
       transform: translateX(-50%);
-      @include xxl-position(absolute, 101% 0 0 50%);
+      @include xxl-position(absolute, 0 0 0 50%);
 
       &::placeholder {
         color: transparent;
-      }
-
-      &:focus {
-
       }
     }
   }
@@ -93,6 +92,7 @@ $socket-size: 16px;
     }
 
     .title {
+      padding: 8px;
       width: 400px;
     }
   }
@@ -106,9 +106,9 @@ $socket-size: 16px;
   caret-color: #fff;
   color: #fff;
   outline: none;
-  padding: 8px;
   text-align: center;
   transform: translateX(-50%);
+  white-space: nowrap;
   @include xxl-position(absolute, $xxl-gutter-size 0 0 50%);
 
   &::placeholder {

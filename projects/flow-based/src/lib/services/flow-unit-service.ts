@@ -30,7 +30,6 @@ export class XxlFlowUnitService {
   }
 
   delete(): void {
-    debugger;
     this.flowService.delete(this.state);
   }
 

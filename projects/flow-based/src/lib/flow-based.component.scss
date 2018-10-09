@@ -35,43 +35,11 @@ xxl-connection-lines {
 xxl-flow-unit {
   z-index: 2;
 
+  &.is-moving {
+    z-index: 3;
+  }
+
   &.is-active {
     z-index: 3;
   }
 }
-
-// close cross
-//.close {
-//  cursor: pointer;
-//  opacity: 0.3;
-//  outline: none;
-//  @include xxl-position(absolute, 32px 32px 0 0);
-//  @include xxl-size(32px);
-//
-//  &:hover {
-//    opacity: 1;
-//  }
-//
-//  &::after,
-//  &::before {
-//    background-color: #fff;
-//    content: ' ';
-//    height: 33px;
-//    width: 2px;
-//    @include xxl-position(absolute, 0px 0 0 15px);
-//  }
-//
-//  &::before {
-//    transform: rotate(45deg);
-//  }
-//
-//  &::after {
-//    transform: rotate(-45deg);
-//  }
-//
-//  &:active {
-//    top: 33px;
-//    transform: scale(0.9);
-//  }
-//}
-

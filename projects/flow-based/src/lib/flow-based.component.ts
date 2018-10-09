@@ -93,6 +93,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
+    this.flow.children = [...this.flow.children.filter(child => child !== state), state];
   }
 
   add(unit: XxlFlowUnitState): void {

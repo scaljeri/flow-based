@@ -23,7 +23,7 @@
           class="socket"></span>
   </section>
 
-  <input class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title"
-         [readonly]="!active">
+  <input *ngIf="active" class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title">
+  <span class="title" *ngIf="!active">{{state.title}}</span>
 </section>
 

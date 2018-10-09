@@ -19,7 +19,6 @@ export class RandomNumbersWorker implements XxlWorker {
   private subject = new Subject<any>();
 
   constructor(private state: XxlFlowUnitState) {
-    debugger;
     this.initialize();
   }
 

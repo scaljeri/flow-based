@@ -10,6 +10,8 @@ export class MovableDirective extends DraggableDirective {
   @Input() position: XxlPosition;
   @Output() positionChange = new EventEmitter<XxlPosition>();
 
+  @HostBinding('class.is-moving') isMoving = false;
+
   // @HostBinding('style.transform') get transform(): SafeStyle {
   //   return this.sanitzier.bypassSecurityTrustStyle(`translateX(${this.position.x}px) translateY(${this.position.y}px)`);
   // }
@@ -36,6 +38,8 @@ export class MovableDirective extends DraggableDirective {
   }
 
   @HostListener('dragMove', ['$event']) onDragMove(event: PointerEvent) {
+    this.isMoving = true;
+
     this.position = {
       x: event.clientX - this.startPosition.x,
       y: event.clientY - this.startPosition.y
@@ -45,6 +49,7 @@ export class MovableDirective extends DraggableDirective {
   }
 
   @HostListener('dragEnd', ['$event']) onDragEnd(event: PointerEvent) {
+    this.isMoving = false;
     this.positionChange.emit(this.position);
   }
 }

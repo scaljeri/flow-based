@@ -12,7 +12,7 @@
                [(position)]="state.position"
                (updated)="reset()"
                (dragStart)="onDragStart($event, state)"
-               (dragEnd)="onDragEnd($event. state)"
+               (dragEnd)="onDragEnd($event, state)"
                [active]="activeFlowIndex === i"
                [state]="state"
                (noDrag)="entryClicked(i)">
