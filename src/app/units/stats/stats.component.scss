@@ -1,0 +1,56 @@
+@import '../../../../projects/flow-based/src/lib/utils/utils';
+
+:host {
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 150px;
+
+  &.is-active {
+    width: 500px;
+  }
+}
+
+.minified {
+  text-align: center;
+}
+
+.expanded {
+  background-color: #fff;
+
+  .wrapper {
+    display: flex;
+    padding: 8px;
+
+    .values {
+      flex: 1;
+      height: 170px;
+
+      mat-card-content {
+        display: flex;
+        flex-direction: column;
+
+        .value {
+          font-size: 30px;
+          padding-top: 8px;
+        }
+      }
+    }
+
+    .distribution {
+      flex: 2;
+      height: 200px;
+      margin-left: 8px;
+    }
+  }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+
+    .close {
+      color: #000;
+    }
+  }
+}

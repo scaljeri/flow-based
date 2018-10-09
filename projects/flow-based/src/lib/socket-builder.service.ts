@@ -10,7 +10,7 @@ export class XxlSocketBuilderService {
 
   constructor() { }
 
-  create(type: XxlSocketType): XxlSocket {
+  static create(type: XxlSocketType): XxlSocket {
     return {
       type,
       id: '' + Date.now()

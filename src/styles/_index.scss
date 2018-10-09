@@ -15,7 +15,11 @@ fb-root {
 }
 
 .dark-backdrop {
-  background-color: rgba(0, 0, 0, .8);
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.add-socket-dialog mat-dialog-container {
+  padding: 0;
 }
 
 @keyframes create {

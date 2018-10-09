@@ -17,6 +17,7 @@ export interface XxlFlowType {
 
 export interface XxlFlowUnit {
   getSockets(): XxlSocket[];
+  socketClicked?(XxlSocket): void;
   setActive(boolean): void;
 }
 
@@ -69,6 +70,7 @@ export type XxlSocketType = 'in' | 'out';
 
 export interface XxlSocket {
   name?: string;
+  description?: string,
   id: string;
   position: number;
   type: XxlSocketType;

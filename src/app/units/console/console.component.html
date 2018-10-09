@@ -1,1 +1,35 @@
-<p [class.is-active]="isActive">{{value}}</p>
+<p *ngIf="!isActive">{{value}}</p>
+
+<section *ngIf="isActive" class="expanded">
+  <mat-toolbar color="primary">
+    <span>Logging</span>
+  </mat-toolbar>
+
+  <article>
+    <div class="wrapper-current">
+      <mat-card class="current">
+        <mat-card-title>Current value</mat-card-title>
+        <mat-card-content>{{value}}</mat-card-content>
+      </mat-card>
+      <mat-card class="total">
+        <mat-card-title>Values received</mat-card-title>
+        <mat-card-content>{{count}}</mat-card-content>
+      </mat-card>
+    </div>
+
+    <mat-card class="history">
+      <mat-card-title>History</mat-card-title>
+      <mat-card-content>
+        <span *ngFor="let val of history">{{val}}</span>
+      </mat-card-content>
+    </mat-card>
+  </article>
+
+  <footer>
+    <button mat-button color="warn" (click)="onDelete()">
+      <mat-icon>delete_forever</mat-icon>
+    </button>
+
+    <button mat-button (click)="onClose()" class="close">Close</button>
+  </footer>
+</section>

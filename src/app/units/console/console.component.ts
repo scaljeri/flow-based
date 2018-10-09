@@ -11,10 +11,13 @@ import { Subscription } from 'rxjs';
 })
 export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   private worker: ConsoleWorker;
+  public history;
 
   isActive = false;
   subscription: Subscription;
   value: any;
+  values: any[];
+  count = 0;
 
   constructor(private flowService: XxlFlowBasedService,
               @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {}
@@ -23,6 +26,15 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
     this.worker = this.flowService.getWorker(this.state.id) as ConsoleWorker;
 
     this.subscription = this.worker.getStream().subscribe(log => {
+      this.count++;
+
+      if (!this.history) {
+        this.history = [];
+      } else {
+        this.history.unshift(this.value);
+        this.history = this.history.slice(0, 33);
+      }
+
       this.value = log.toFixed(2);
     });
   }
@@ -37,5 +49,13 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
 
   getSockets(): XxlSocket[] {
     return this.worker.getSockets();
+  }
+
+  onDelete(): void {
+    this.flowService.delete(this.state);
+  }
+
+  onClose(): void {
+    this.flowService.close(this.state);
   }
 }

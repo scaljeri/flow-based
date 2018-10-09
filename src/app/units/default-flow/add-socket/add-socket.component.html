@@ -1,0 +1,18 @@
+<mat-toolbar color="primary">
+  <h1>Create socket</h1>
+  <button *ngIf="!isNew" mat-button color="warn" (click)="onDelete()">
+    <mat-icon>delete_forever</mat-icon>
+  </button>
+</mat-toolbar>
+
+<form [formGroup]="socketForm" (ngSubmit)="onSubmit()">
+  <mat-form-field>
+    <input matInput formControlName="name" placeholder="Socket name">
+  </mat-form-field>
+
+  <footer>
+    <button type="button" (click)="onCancel()" mat-button color="warn">Cancel</button>
+    <button *ngIf="!isNew" type="submit" mat-button>Edit</button>
+    <button *ngIf="isNew" type="submit" mat-button>Create</button>
+  </footer>
+</form>

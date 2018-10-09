@@ -1,0 +1,35 @@
+<section *ngIf="!isActive" class="minified">
+  <p>Min: {{min}}</p>
+  <p>Max: {{max}}</p>
+</section>
+
+<section *ngIf="isActive" class="expanded">
+  <mat-toolbar color="primary">
+    <span>Statistics</span>
+  </mat-toolbar>
+
+  <div class="wrapper">
+    <mat-card class="values">
+      <mat-card-content>
+        <span>Max value</span>
+        <span class="value">{{max}}</span>
+      </mat-card-content>
+      <mat-card-content>
+        <span>Min value</span>
+        <span class="value">{{min}}</span>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="distribution">
+      <mat-card-title>Distribution</mat-card-title>
+      <mat-card-content>TODO</mat-card-content>
+    </mat-card>
+  </div>
+
+  <footer>
+    <button mat-button color="warn" (click)="onDelete()">
+      <mat-icon>delete_forever</mat-icon>
+    </button>
+
+    <button mat-button (click)="onClose()" class="close">Close</button>
+  </footer>
+</section>

@@ -13,7 +13,6 @@ import { MovableAreaDirective } from './drag-drop/movable-area/movable-area.dire
 import { FilterComponent } from './components/filter/filter.component';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';
 import { DynamicComponentDirective } from './dynamic-component.directive';
-import { AddSocketComponent } from './flow-unit/add-socket/add-socket.component';
 import { ConnectionLinesComponent } from './connection-lines/connection-lines.component';
 import { SocketInPipe } from './pipes/socket-in.pipe';
 import { SocketOutPipe } from './pipes/socket-out.pipe';
@@ -35,7 +34,6 @@ import { SocketDirective } from './socket/socket.directive';
     MovableDirective,
     MovableAreaDirective,
     FilterComponent,
-    AddSocketComponent,
     ConnectionLinesComponent,
     SocketInPipe,
     SocketOutPipe,

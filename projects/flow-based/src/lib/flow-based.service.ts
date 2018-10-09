@@ -18,6 +18,7 @@ import { FlowWorker } from './utils/flow-worker';
 export class XxlFlowBasedService {
   private flowStack: FlowBasedComponent[] = [];
   public units: { [key: string]: UnitWrapper } = {};
+  private unitBlur: () => void;
   private workers = {};
 
   constructor(@Inject(XXL_FLOW_TYPES) private flowTypes: XxlFlowType) {
@@ -116,9 +117,22 @@ export class XxlFlowBasedService {
   }
 
   blur(): void {
-    this.currentFlow.blur();
+    if (this.unitBlur) {
+      this.unitBlur();
+      this.removeBlurForUnit();
+    } else {
+      this.currentFlow.blur();
+    }
   }
 
+  blurForUnit(cb: () => void): void {
+    this.unitBlur = cb;
+
+  }
+
+  removeBlurForUnit(): void {
+    this.unitBlur = null;
+  }
 
   close(state: XxlFlowUnitState): void {
     this.blur();
@@ -136,23 +150,34 @@ export class XxlFlowBasedService {
     return this.workers[unitId].getSockets() || [];
   }
 
-  delete(state: XxlFlowUnitState): void {
-    const flow = this.currentFlow.flow;
-    const index = flow.children.indexOf(state);
+  delete(state: XxlFlow | XxlFlowUnitState): void {
+    let flow = this.currentFlow.flow,
+        index = flow.children.indexOf(state);
     this.blur();
 
-    const newConns = [];
-    flow.connections.forEach(conn => {
+    if (index === -1) {
+      flow = this.currentFlow.flow;
+      index = flow.children.indexOf(state);
+    }
+
+    // Remove all connection from/to this unit
+    flow.connections = flow.connections.reduce((out, conn) => {
       if (conn.to === state.id) {
         this.workers[state.id].removeStream(conn);
-      } else if ( conn.from === state.id) {
+      } else if (conn.from === state.id) {
         this.workers[conn.to].removeStream(conn);
       } else {
-        newConns.push(conn);
+        out.push(conn);
       }
+
+      return out;
+    }, []);
+
+    // If it is a flow, destroy all children
+    ((state as XxlFlow).children || []).forEach(child => {
+      this.delete(child);
     });
 
-    flow.connections = newConns;
     this.currentFlow.flow.children.splice(index, 1);
   }
 

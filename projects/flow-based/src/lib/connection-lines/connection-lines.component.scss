@@ -1,11 +1,26 @@
+$active-color: #fa0;
+
 svg {
   fill: none;
   stroke: #fff;
   stroke-width: 3px;
 
-  path:hover {
+  .connection:hover,
+  .arrow:hover,
+  .connection:hover ~ .arrow {
     cursor: pointer;
-    stroke: #fa0;
+    stroke: $active-color;
     stroke-width: 5px;
+  }
+
+  .arrow:hover,
+  .connection:hover ~ .arrow {
+    fill: $active-color;
+
+  }
+
+  .arrow {
+    fill: #fff;
+    pointer-events: none;
   }
 }

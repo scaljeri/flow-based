@@ -1,4 +1,4 @@
-import { Component, forwardRef, Inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, Host, Inject, OnDestroy, OnInit } from '@angular/core';
 
 import {
   XXL_FLOW_UNIT_STATE,
@@ -8,6 +8,8 @@ import {
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
 import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
+import { FlowUnitComponent } from '../../../../projects/flow-based/src/lib/flow-unit/flow-unit.component';
+import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 
 export interface RandomNumberConfig {
   range: { start: number, end: number };
@@ -22,19 +24,18 @@ export const RANDOM_NUMBERS_CONFIG = {
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
-  styleUrls: ['./random-numbers.component.scss'],
-  providers: [{
-    provide: XXL_FLOW_UNIT_SERVICE, useExisting: forwardRef(() => RandomNumbersComponent), multi: true
-  }]
+  styleUrls: ['./random-numbers.component.scss']
 })
 export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   private worker: RandomNumbersWorker;
   configForm: FormGroup;
   isActive = false;
+  state: XxlFlowUnitState;
 
   constructor(private fb: FormBuilder,
               private flowService: XxlFlowBasedService,
-              @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {
+              @Host() private service: XxlFlowUnitService) {
+    this.state = service.state;
   }
 
   ngOnInit(): void {

@@ -1,7 +1,7 @@
 import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject } from 'rxjs';
 
-export const RANDOM_NUMBER_CONFIR = {
+export const RANDOM_NUMBER_CONFIG = {
   sockets: [
     {
       type: 'out',
@@ -19,6 +19,7 @@ export class RandomNumbersWorker implements XxlWorker {
   private subject = new Subject<any>();
 
   constructor(private state: XxlFlowUnitState) {
+    debugger;
     this.initialize();
   }
 

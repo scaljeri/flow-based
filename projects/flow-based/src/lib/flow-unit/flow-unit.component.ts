@@ -2,8 +2,8 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component, ElementRef,
-  EventEmitter,
-  HostBinding,
+  EventEmitter, forwardRef,
+  HostBinding, Inject,
   Input,
   OnChanges, OnDestroy,
   OnInit, Output, QueryList,
@@ -14,14 +14,20 @@ import { XxlSocketBuilderService } from '../socket-builder.service';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDirective } from '../socket/socket.directive';
-import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
+import { XXL_FLOW_UNIT_SERVICE, XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
+import { XxlFlowUnitService } from '../services/flow-unit-service';
 
 @Component({
   selector: 'xxl-flow-unit',
   templateUrl: './flow-unit.component.html',
   styleUrls: ['./flow-unit.component.scss'],
   // changeDetection: ChangeDetectionStrategy.OnPush
+  // viewProviders: [FlowUnitService]
+  providers: [XxlFlowUnitService]
+  // viewProviders: [{
+  //   provide: XXL_FLOW_UNIT_SERVICE, useClass: XxlFlowUnitService
+  // }]
 })
 export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() @HostBinding('class.is-active') active = false;
@@ -39,10 +45,14 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
               private element: ElementRef,
               private cdr: ChangeDetectorRef,
               private flowService: XxlFlowBasedService,
+              private unitService: XxlFlowUnitService,
+              // @Inject(XXL_FLOW_UNIT_SERVICE) private unitService: XxlFlowUnitService,
               private movable: MovableDirective) {
   }
 
   ngOnInit(): void {
+    this.unitService.setState(this.state);
+
     if (!this.state.sockets) {
       this.state.sockets = this.flowService.getSockets(this.state.id);
     }

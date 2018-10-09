@@ -1,0 +1,23 @@
+@import '../../../../../projects/flow-based/src/lib/utils/utils';
+@import '../../../../../projects/flow-based/src/lib/utils/variables';
+
+:host {
+  background-color: #fff;
+}
+
+mat-toolbar {
+  display: flex;
+  justify-content: space-between;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  margin: $xxl-gutter-size;
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2 * $xxl-gutter-size;
+  }
+}

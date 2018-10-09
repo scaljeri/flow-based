@@ -50,11 +50,11 @@ $socket-size: 16px;
       background-color: rgba(0, 0, 0, 0.2);
       color: #fff;
       font-size: 14px;
+      height: 20px;
       pointer-events: none;
       text-align: center;
       transform: translateX(-50%);
-      width: 300px;
-      @include xxl-position(absolute, 110% 0 0px 50%);
+      @include xxl-position(absolute, 101% 0 0 50%);
 
       &::placeholder {
         color: transparent;
@@ -91,6 +91,10 @@ $socket-size: 16px;
         right: 30px;
       }
     }
+
+    .title {
+      width: 400px;
+    }
   }
 }
 
@@ -105,7 +109,6 @@ $socket-size: 16px;
   padding: 8px;
   text-align: center;
   transform: translateX(-50%);
-  width: 400px;
   @include xxl-position(absolute, $xxl-gutter-size 0 0 50%);
 
   &::placeholder {
@@ -121,12 +124,8 @@ xxl-flow-based {
   // @include xxl-position(absolute, 0px 0px 0px 0px);
   height: 100%;
   width: 100%;
-  // background-color: red;
-
-  & + footer {
-    @include xxl-position(absolute, 0 0 5px 50%);
-  }
 }
+
 //
 //.add-socket-form {
 //  background-color: rgba(0, 0, 0, 0.5);

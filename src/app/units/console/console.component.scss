@@ -1,13 +1,79 @@
+@import '../../../../projects/flow-based/src/lib/utils/utils';
+
 :host {
   color: #fff;
   display: flex;
   flex-direction: column;
   justify-content: center;
 
-  .is-active {
-    background-color: rgba(0, 0, 0, 0.4);
-    border-radius: 8px;
-    font-size: 70px;
+}
+
+section {
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  width: 500px;
+  @include xxl-size(500px, 450px);
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+
+    .close {
+      color: #000;
+    }
+  }
+}
+
+article {
+  display: flex;
+  flex: 1;
+  margin-bottom: 20px;
+
+  .wrapper-current,
+  .history {
+    flex: 1;
+  }
+
+  .wrapper-current {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     padding: 8px;
+  }
+
+  .current {
+    padding: 8px;
+    @include xxl-size(100%, 150px);
+
+    mat-card-content {
+      color: #000;
+      display: flex;
+      font-size: 70px;
+      text-align: left;
+    }
+  }
+
+  .total {
+    mat-card-content {
+      font-size: 40px;
+    }
+  }
+
+  .history {
+    margin: 8px;
+
+    mat-card-content {
+      display: flex;
+      flex-direction: column;
+      flex-wrap: wrap;
+      height: 90%;
+
+      span {
+        font-size: 20px;
+        text-align: left;
+      }
+    }
   }
 }

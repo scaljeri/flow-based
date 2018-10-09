@@ -4,7 +4,6 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  Host,
   Input,
   OnChanges,
   OnInit,
@@ -103,6 +102,10 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   arrow(connection: XxlConnection): string {
     const points = this.controlPoints[connection.id];
+
+    if (!points) {
+      return;
+    }
 
     const {x, y} = bezier.normal(.5, points);
     const der = bezier.derivative(.5, points);
