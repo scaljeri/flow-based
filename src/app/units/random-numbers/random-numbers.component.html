@@ -10,16 +10,23 @@
   <form [formGroup]="configForm">
     <label>
       <span>Start</span>
-      <mat-slider min="worker.min" max="worker.max" step=".1"
+      <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
                   [thumbLabel]="true"
                   formControlName="startValue"></mat-slider>
     </label>
 
     <label>
       <span>End</span>
-      <mat-slider min="worker.min" max="worker.max" step=".1"
+      <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
                   [thumbLabel]="true"
                   formControlName="endValue"></mat-slider>
+    </label>
+
+    <label>
+      <span>Interval</span>
+      <mat-slider [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"
+                  [thumbLabel]="true"
+                  formControlName="intervalValue"></mat-slider>
     </label>
   </form>
 

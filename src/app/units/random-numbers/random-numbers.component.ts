@@ -27,7 +27,7 @@ export const RANDOM_NUMBERS_CONFIG = {
   styleUrls: ['./random-numbers.component.scss']
 })
 export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
-  private worker: RandomNumbersWorker;
+  worker: RandomNumbersWorker;
   configForm: FormGroup;
   isActive = false;
   state: XxlFlowUnitState;
@@ -43,8 +43,10 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
 
     this.configForm = this.fb.group({
       startValue: [this.worker.start],
-      endValue: [this.worker.end]
+      endValue: [this.worker.end],
+      intervalValue: [this.worker.interval]
     });
+
 
     this.configForm.valueChanges.subscribe(form => {
       if (form.startValue > this.configForm.controls.endValue.value) {
@@ -54,6 +56,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
       setTimeout(() => {
         this.worker.start = form.startValue;
         this.worker.end = form.endValue;
+        this.worker.interval = form.intervalValue;
       });
     });
   }

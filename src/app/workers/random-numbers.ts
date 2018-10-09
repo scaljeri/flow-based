@@ -11,11 +11,14 @@ export const RANDOM_NUMBER_CONFIG = {
   min: 0,
   max: 100,
   start: 0,
-  end: 1
+  end: 1,
+  intervalMax: 10000,
+  intervalMin: 100,
+  interval: 1000
 };
 
 export class RandomNumbersWorker implements XxlWorker {
-  private interval: number;
+  private intervalId: number;
   private subject = new Subject<any>();
 
   constructor(private state: XxlFlowUnitState) {
@@ -35,13 +38,13 @@ export class RandomNumbersWorker implements XxlWorker {
   }
 
   initialize(): void {
-    clearInterval(this.interval);
+    clearInterval(this.intervalId);
 
-    this.interval = setInterval(() => {
+    this.intervalId = setInterval(() => {
       const random = Math.random() * (this.end - this.start) + this.start;
 
       this.subject.next(random);
-    }, 1000);
+    }, this.state.config.interval);
 
   }
 
@@ -70,6 +73,23 @@ export class RandomNumbersWorker implements XxlWorker {
   }
 
   get max(): number {
-    return this.state.config.min;
+    return this.state.config.max;
+  }
+
+  get interval(): number {
+    return this.state.config.interval;
+  }
+
+  set interval(val) {
+    this.state.config.interval = val;
+    this.initialize();
+  }
+
+  get intervalMin(): number {
+    return this.state.config.intervalMin;
+  }
+
+  get intervalMax(): number {
+    return this.state.config.intervalMax;
   }
 }

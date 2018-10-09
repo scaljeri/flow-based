@@ -61,7 +61,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   reset(): void {
     setTimeout(() => {
-      // this.flow.children.forEach(child => this.flowService.update(child.id));
       this.repaint();
     });
   }
@@ -93,7 +92,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
-    this.flow.children = [...this.flow.children.filter(child => child !== state), state];
+    if (this.activeFlowIndex === null) {
+      this.flow.children = [...this.flow.children.filter(child => child !== state), state];
+    }
   }
 
   add(unit: XxlFlowUnitState): void {
