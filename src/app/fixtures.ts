@@ -4,6 +4,7 @@ import { XxlFlow } from 'flow-based';
 
 export const nested =
   {
+    "id": "main",
     "children": [
       {
         "type": "random-numbers",

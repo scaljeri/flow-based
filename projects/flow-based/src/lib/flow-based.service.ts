@@ -150,10 +150,13 @@ export class XxlFlowBasedService {
     return this.workers[unitId].getSockets() || [];
   }
 
-  delete(state: XxlFlow | XxlFlowUnitState): void {
-    let flow = this.currentFlow.flow,
+  delete(state: XxlFlow | XxlFlowUnitState, parentState?: XxlFlow): void {
+    let flow = parentState || this.currentFlow.flow,
         index = flow.children.indexOf(state);
-    this.blur();
+
+    if (!parentState) {
+      this.blur();
+    }
 
     if (index === -1) {
       flow = this.currentFlow.flow;
@@ -175,10 +178,10 @@ export class XxlFlowBasedService {
 
     // If it is a flow, destroy all children
     ((state as XxlFlow).children || []).forEach(child => {
-      this.delete(child);
+      this.delete(child, state as XxlFlow);
     });
 
-    this.currentFlow.flow.children.splice(index, 1);
+    flow.children.splice(index, 1);
   }
 
   // Create workers and the connections between them
