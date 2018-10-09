@@ -1,7 +1,7 @@
 @import '../../../../projects/flow-based/src/lib/utils/utils';
 
 :host {
-  width: 72px;
+  @include xxl-size(72px);
 
   img {
     pointer-events: none;

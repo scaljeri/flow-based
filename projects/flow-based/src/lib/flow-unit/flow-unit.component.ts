@@ -111,7 +111,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     event.stopImmediatePropagation();
 
     if (this.active && this.isFlow()) {
-      socket = Object.assign({}, socket, { type: socket.type === 'out' ? 'in' : 'out'});
+      socket = Object.assign({}, socket, {type: socket.type === 'out' ? 'in' : 'out'});
     }
 
     this.flowService.socketClicked(socket, this.state.id);
