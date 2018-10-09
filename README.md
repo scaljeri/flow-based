@@ -15,7 +15,7 @@ Angular library for building workflows + demo
   
 TODO: Fix circular dependency issues
     
-![Example](fb-example.jpg)
+![Example](fbp.jpg)
 
 ## Resources
 
