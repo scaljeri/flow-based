@@ -29,6 +29,8 @@ export class StatsWorker implements XxlWorker {
 
   public min: number;
   public max: number;
+  private total = 0;
+  private count = 0;
 
   constructor(private state: XxlFlowUnitState) {
     this.initialize();
@@ -38,7 +40,6 @@ export class StatsWorker implements XxlWorker {
   }
 
   getStream(id: string): Observable<any> {
-    console.log(id);
     return this.subjects[id].asObservable();
   }
 
@@ -59,6 +60,9 @@ export class StatsWorker implements XxlWorker {
       const oldMin = this.min;
       const oldMax = this.max;
 
+      this.total += val;
+      this.count++;
+
       if (this.max === undefined) {
         this.min = val;
         this.max = val;
@@ -75,5 +79,9 @@ export class StatsWorker implements XxlWorker {
         this.subjects.max.next(this.max);
       }
     });
+  }
+
+  get avg(): number {
+    return this.total / this.count;
   }
 }

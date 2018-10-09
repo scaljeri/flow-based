@@ -49,4 +49,8 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   get max(): string {
     return this.worker.max === undefined ? null : this.worker.max.toFixed(4);
   }
+
+  get avg(): string {
+    return this.worker.avg.toFixed(4);
+  }
 }
