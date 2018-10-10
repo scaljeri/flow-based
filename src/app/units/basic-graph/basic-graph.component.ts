@@ -1,8 +1,8 @@
 import { ChangeDetectorRef, Component, ElementRef, HostBinding, Inject, Input, OnInit, ViewChild } from '@angular/core';
-import { GoogleCharts } from 'google-charts';
 import { XXL_FLOW_UNIT_STATE, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
 import { BasicGraphWorker } from '../../workers/basic-graph';
+import { GoogleCharts } from 'google-charts';
 
 @Component({
   selector: 'fb-basic-graph',

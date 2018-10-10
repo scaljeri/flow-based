@@ -1,9 +1,10 @@
-import { Component, Host, HostBinding, OnInit } from '@angular/core';
+import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { StatsWorker } from '../../workers/stats';
 import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
+import { GoogleCharts } from 'google-charts';
 
 @Component({
   selector: 'fb-stats',
@@ -13,6 +14,15 @@ import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
 export class StatsComponent implements XxlFlowUnit, OnInit {
   public worker: StatsWorker;
   private state: XxlFlowUnitState;
+  data: number[][] = [];
+  private graphPlaceHolder: ElementRef;
+  private chart;
+
+  @ViewChild('distribution')
+  set graph(element: ElementRef) {
+    this.graphPlaceHolder = element;
+    this.chart = null;
+  }
 
   @HostBinding('class.is-active') isActive = false;
 
@@ -22,8 +32,30 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
     this.state = service.state;
   }
 
+  distribution(data): void {
+    if (this.isActive) {
+      const dataTable = new GoogleCharts.api.visualization.DataTable();
+      dataTable.addColumn('number', 'Value');
+      dataTable.addColumn('number', 'Count');
+      data.forEach((v, i) => {
+        dataTable.addRows([[i, v]]);
+      });
+
+      const view = new GoogleCharts.api.visualization.DataView(dataTable);
+      if (!this.chart) {
+        this.chart = new GoogleCharts.api.visualization.LineChart(this.graphPlaceHolder.nativeElement);
+      }
+      this.chart.draw(view);
+    }
+  }
+
   ngOnInit(): void {
     this.worker = this.flowService.getWorker(this.state.id) as StatsWorker;
+    this.worker.updated$.subscribe(data => {
+      if (this.graphPlaceHolder) {
+        this.distribution(data);
+      }
+    });
   }
 
   getSockets(): XxlSocket[] {

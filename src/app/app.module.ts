@@ -28,6 +28,8 @@ import { BASIC_GRAPH_CONFIG, BasicGraphWorker } from './workers/basic-graph';
 import { AddSocketComponent } from './units/default-flow/add-socket/add-socket.component';
 import { StatsComponent } from './units/stats/stats.component';
 import { STATS_CONFIG, StatsWorker } from './workers/stats';
+import { MERGE_STREAMS_CONFIG, MergeStreamsWorker } from './workers/merge-streams';
+import { MergeStreamsComponent } from './units/merge-streams/merge-streams.component';
 
 @NgModule({
   declarations: [
@@ -41,7 +43,8 @@ import { STATS_CONFIG, StatsWorker } from './workers/stats';
     DefaultFrontComponent,
     ComponentSelectionComponent,
     BasicGraphComponent,
-    StatsComponent
+    StatsComponent,
+    MergeStreamsComponent
   ],
   imports: [
     BrowserModule,
@@ -79,10 +82,16 @@ import { STATS_CONFIG, StatsWorker } from './workers/stats';
           worker: StatsWorker
         },
         'basic-graph': {
-          title: 'Baisc Graph',
+          title: 'Basic Graph',
           component: BasicGraphComponent,
           config: BASIC_GRAPH_CONFIG,
           worker: BasicGraphWorker
+        },
+        'merge-streams': {
+          title: 'Merge streams',
+          component: MergeStreamsComponent,
+          config: MERGE_STREAMS_CONFIG,
+          worker: MergeStreamsWorker
         },
         'console': {component: ConsoleComponent, config: CONSOLE_CONFIG, title: 'Log', worker: ConsoleWorker},
         // 'default': { component: DefaultFlowComponent },
@@ -97,6 +106,7 @@ import { STATS_CONFIG, StatsWorker } from './workers/stats';
     RandomNumbersComponent,
     ConsoleComponent,
     DefaultFlowComponent,
+    MergeStreamsComponent,
     StatsComponent
   ],
   bootstrap: [AppComponent]

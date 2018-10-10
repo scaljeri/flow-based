@@ -31,6 +31,10 @@ export class StatsWorker implements XxlWorker {
   public max: number;
   private total = 0;
   private count = 0;
+  private distriubution = [];
+
+  private updatedSubject = new Subject<any>();
+  public updated$ = this.updatedSubject.asObservable();
 
   constructor(private state: XxlFlowUnitState) {
     this.initialize();
@@ -62,6 +66,7 @@ export class StatsWorker implements XxlWorker {
 
       this.total += val;
       this.count++;
+      this.distriubution[val] = (this.distriubution[val] || 0) + 1 ;
 
       if (this.max === undefined) {
         this.min = val;
@@ -78,6 +83,8 @@ export class StatsWorker implements XxlWorker {
       if (oldMax !== this.max) {
         this.subjects.max.next(this.max);
       }
+
+      this.updatedSubject.next(this.distriubution);
     });
   }
 
