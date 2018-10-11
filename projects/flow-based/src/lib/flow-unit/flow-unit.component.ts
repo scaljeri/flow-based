@@ -38,10 +38,10 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   @ViewChildren(SocketDirective) socketsRefs: QueryList<SocketDirective>;
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
-  @HostBinding('class.not-active')
-  get isNotActive(): boolean {
-    return !this.active;
-  }
+  // @HostBinding('class.not-active')
+  // get isNotActive(): boolean {
+  //   return !this.active;
+  // }
 
   newSocketType: XxlSocketType;
   wrapper: UnitWrapper;
@@ -109,26 +109,9 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   onSocketClick(socket: XxlSocket, event: PointerEvent): void {
     event.stopImmediatePropagation();
 
-    if (this.active && this.isFlow()) {
-      socket = Object.assign({}, socket, {type: socket.type === 'out' ? 'in' : 'out'});
+    if (!this.active || this.isFlow()) {
+      this.flowService.socketClicked(socket, this.state.id);
     }
-
-    this.flowService.socketClicked(socket, this.state.id);
-  }
-
-  createSocket(socket: XxlSocket): void {
-    this.sockets = [socket, ...this.state.sockets];
-
-    this.newSocketType = null;
-    this.viewRef.detectChanges();
-  }
-
-  newSocketIn(): void {
-    this.newSocketType = XxlSocketBuilderService.SOCKET_IN;
-  }
-
-  newSocketOut(): void {
-    this.newSocketType = XxlSocketBuilderService.SOCKET_OUT;
   }
 
   isFlow(): boolean {
