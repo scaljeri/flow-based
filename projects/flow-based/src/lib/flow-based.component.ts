@@ -73,6 +73,11 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   ngAfterContentInit(): void {
+    // TODO: Fix inside FLowUnit
+    setTimeout(() => {
+      Object.keys(this.flowService.units).forEach(key => this.flowService.units[key].update());
+      this.reset();
+    }, 100);
   }
 
   ngOnDestroy(): void {
