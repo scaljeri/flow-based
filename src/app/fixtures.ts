@@ -8,7 +8,7 @@ export const nested =
       {
         "type": "random-numbers",
         "title": "Random number generator",
-        "id": "1539165656590",
+        "id": "1539201935853",
         "config": {
           "sockets": [
             {
@@ -31,10 +31,190 @@ export const nested =
           }
         ],
         "position": {
-          "x": 318.89453125,
-          "y": 326.8515625
+          "x": 69.4453125,
+          "y": 157.97265625
         }
       },
+      {
+        "type": "random-numbers",
+        "title": "Random number generator",
+        "id": "1539202193897",
+        "config": {
+          "sockets": [
+            {
+              "type": "out",
+              "id": "rnc-a"
+            }
+          ],
+          "min": 0,
+          "max": 100,
+          "start": 0,
+          "end": 100,
+          "intervalMax": 10000,
+          "intervalMin": 100,
+          "interval": 100
+        },
+        "sockets": [
+          {
+            "type": "out",
+            "id": "rnc-a"
+          }
+        ],
+        "position": {
+          "x": 67.0390625,
+          "y": 390.5703125
+        }
+      },
+      {
+        "type": "stats",
+        "title": "Statistics",
+        "id": "1539201942728",
+        "config": {
+          "sockets": [
+            {
+              "type": "in",
+              "id": "s-a"
+            },
+            {
+              "type": "out",
+              "id": "min",
+              "name": "Min value"
+            },
+            {
+              "type": "out",
+              "id": "max",
+              "name": "Max value"
+            }
+          ]
+        },
+        "sockets": [
+          {
+            "type": "in",
+            "id": "s-a"
+          },
+          {
+            "type": "out",
+            "id": "min",
+            "name": "Min value"
+          },
+          {
+            "type": "out",
+            "id": "max",
+            "name": "Max value"
+          }
+        ],
+        "position": {
+          "x": 673.1171875,
+          "y": 310.484375
+        }
+      },
+      {
+        "type": "console",
+        "title": "Log",
+        "id": "1539201948320",
+        "config": {
+          "sockets": [
+            {
+              "type": "in",
+              "id": "csl-a"
+            },
+            {
+              "type": "out",
+              "id": "csl-b"
+            }
+          ]
+        },
+        "sockets": [
+          {
+            "type": "in",
+            "id": "csl-a"
+          },
+          {
+            "type": "out",
+            "id": "csl-b"
+          }
+        ],
+        "position": {
+          "x": 474.625,
+          "y": 311.98046875
+        }
+      },
+      {
+        "type": "merge-streams",
+        "title": "Merge streams",
+        "id": "1539202203718",
+        "config": {
+          "sockets": [
+            {
+              "type": "in",
+              "id": "ms-a"
+            },
+            {
+              "type": "in",
+              "id": "ms-b"
+            },
+            {
+              "type": "out",
+              "id": "ms-c",
+              "name": "Min value"
+            }
+          ]
+        },
+        "sockets": [
+          {
+            "type": "in",
+            "id": "ms-a"
+          },
+          {
+            "type": "in",
+            "id": "ms-b"
+          },
+          {
+            "type": "out",
+            "id": "ms-c",
+            "name": "Min value"
+          }
+        ],
+        "position": {
+          "x": 270.125,
+          "y": 291.82421875
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": "1539201948320",
+        "out": "csl-b",
+        "to": "1539201942728",
+        "in": "s-a",
+        "id": "1539201954731"
+      },
+      {
+        "from": "1539201935853",
+        "out": "rnc-a",
+        "to": "1539202203718",
+        "in": "ms-a",
+        "id": "1539202207433"
+      },
+      {
+        "from": "1539202193897",
+        "out": "rnc-a",
+        "to": "1539202203718",
+        "in": "ms-b",
+        "id": "1539202209774"
+      },
+      {
+        "from": "1539202203718",
+        "out": "ms-c",
+        "to": "1539201948320",
+        "in": "csl-a",
+        "id": "1539202212239"
+      }
+    ]
+  };
+
+export const nice =  {
+    "children": [
       {
         "type": "console",
         "title": "Log",
@@ -92,8 +272,68 @@ export const nested =
           }
         ],
         "position": {
-          "x": 198.203125,
+          "x": 197.9453125,
           "y": 662.47265625
+        }
+      },
+      {
+        "type": "random-numbers",
+        "title": "Random number generator",
+        "id": "1539178365933",
+        "config": {
+          "sockets": [
+            {
+              "type": "out",
+              "id": "rnc-a"
+            }
+          ],
+          "min": 0,
+          "max": 100,
+          "start": 0,
+          "end": 100,
+          "intervalMax": 10000,
+          "intervalMin": 100,
+          "interval": 100
+        },
+        "sockets": [
+          {
+            "type": "out",
+            "id": "rnc-a"
+          }
+        ],
+        "position": {
+          "x": 203.265625,
+          "y": 377.734375
+        }
+      },
+      {
+        "type": "random-numbers",
+        "title": "Random number generator",
+        "id": "1539165656590",
+        "config": {
+          "sockets": [
+            {
+              "type": "out",
+              "id": "rnc-a"
+            }
+          ],
+          "min": 0,
+          "max": 100,
+          "start": 0,
+          "end": 100,
+          "intervalMax": 10000,
+          "intervalMin": 100,
+          "interval": 100
+        },
+        "sockets": [
+          {
+            "type": "out",
+            "id": "rnc-a"
+          }
+        ],
+        "position": {
+          "x": 339.12109375,
+          "y": 235.11328125
         }
       },
       {
@@ -135,51 +375,8 @@ export const nested =
           }
         ],
         "position": {
-          "x": 714.93359375,
-          "y": 345.01953125
-        }
-      },
-      {
-        "type": "stats",
-        "title": "Statistics",
-        "id": "1539176649714",
-        "config": {
-          "sockets": [
-            {
-              "type": "in",
-              "id": "s-a"
-            },
-            {
-              "type": "out",
-              "id": "min",
-              "name": "Min value"
-            },
-            {
-              "type": "out",
-              "id": "max",
-              "name": "Max value"
-            }
-          ]
-        },
-        "sockets": [
-          {
-            "type": "in",
-            "id": "s-a"
-          },
-          {
-            "type": "out",
-            "id": "min",
-            "name": "Min value"
-          },
-          {
-            "type": "out",
-            "id": "max",
-            "name": "Max value"
-          }
-        ],
-        "position": {
-          "x": 845.31640625,
-          "y": 515.83203125
+          "x": 846.765625,
+          "y": 168.28125
         }
       },
       {
@@ -209,8 +406,39 @@ export const nested =
           }
         ],
         "position": {
-          "x": 583.7265625,
-          "y": 782.1328125
+          "x": 532.81640625,
+          "y": 749.1953125
+        }
+      },
+      {
+        "type": "console",
+        "title": "Log",
+        "id": "1539178515756",
+        "config": {
+          "sockets": [
+            {
+              "type": "in",
+              "id": "csl-a"
+            },
+            {
+              "type": "out",
+              "id": "csl-b"
+            }
+          ]
+        },
+        "sockets": [
+          {
+            "type": "in",
+            "id": "csl-a"
+          },
+          {
+            "type": "out",
+            "id": "csl-b"
+          }
+        ],
+        "position": {
+          "x": 365.33984375,
+          "y": 489.4140625
         }
       },
       {
@@ -250,44 +478,57 @@ export const nested =
           }
         ],
         "position": {
-          "x": 525.390625,
-          "y": 489.359375
+          "x": 589.92578125,
+          "y": 459.9765625
         }
       },
       {
-        "type": "random-numbers",
-        "title": "Random number generator",
-        "id": "1539178365933",
+        "type": "stats",
+        "title": "Statistics",
+        "id": "1539198055167",
         "config": {
           "sockets": [
             {
+              "type": "in",
+              "id": "s-a"
+            },
+            {
               "type": "out",
-              "id": "rnc-a"
+              "id": "min",
+              "name": "Min value"
+            },
+            {
+              "type": "out",
+              "id": "max",
+              "name": "Max value"
             }
-          ],
-          "min": 0,
-          "max": 100,
-          "start": 0,
-          "end": 100,
-          "intervalMax": 10000,
-          "intervalMin": 100,
-          "interval": 100
+          ]
         },
         "sockets": [
           {
+            "type": "in",
+            "id": "s-a"
+          },
+          {
             "type": "out",
-            "id": "rnc-a"
+            "id": "min",
+            "name": "Min value"
+          },
+          {
+            "type": "out",
+            "id": "max",
+            "name": "Max value"
           }
         ],
         "position": {
-          "x": 203.265625,
-          "y": 377.734375
+          "x": 902.6484375,
+          "y": 469.140625
         }
       },
       {
         "type": "console",
         "title": "Log",
-        "id": "1539178515756",
+        "id": "1539198086286",
         "config": {
           "sockets": [
             {
@@ -311,8 +552,8 @@ export const nested =
           }
         ],
         "position": {
-          "x": 294.25390625,
-          "y": 504.50390625
+          "x": 755.10546875,
+          "y": 469.96484375
         }
       }
     ],
@@ -330,13 +571,6 @@ export const nested =
         "to": "1539176554829",
         "in": "ms-a",
         "id": "1539176560015"
-      },
-      {
-        "from": "1539176554829",
-        "out": "ms-c",
-        "to": "1539176649714",
-        "in": "s-a",
-        "id": "1539176653582"
       },
       {
         "from": "1539176577473",
@@ -372,10 +606,23 @@ export const nested =
         "to": "1539178515756",
         "in": "csl-a",
         "id": "1539178519698"
+      },
+      {
+        "from": "1539176554829",
+        "out": "ms-c",
+        "to": "1539198086286",
+        "in": "csl-a",
+        "id": "1539198092526"
+      },
+      {
+        "from": "1539198086286",
+        "out": "csl-b",
+        "to": "1539198055167",
+        "in": "s-a",
+        "id": "1539198096650"
       }
     ]
-  };
-
+  }
 export const nestedDemo =
   {
     "id": "main",

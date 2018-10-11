@@ -51,7 +51,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
               private cdr: ChangeDetectorRef,
               private flowService: XxlFlowBasedService,
               private unitService: XxlFlowUnitService,
-              // @Inject(XXL_FLOW_UNIT_SERVICE) private unitService: XxlFlowUnitService,
               private movable: MovableDirective) {
   }
 

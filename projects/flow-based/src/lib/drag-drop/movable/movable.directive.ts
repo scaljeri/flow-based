@@ -10,17 +10,20 @@ export class MovableDirective extends DraggableDirective {
   @Input() position: XxlPosition;
   @Output() positionChange = new EventEmitter<XxlPosition>();
 
+  private parentWidth;
+  private parentHeight;
+
   @HostBinding('class.is-moving') isMoving = false;
 
   // @HostBinding('style.transform') get transform(): SafeStyle {
   //   return this.sanitzier.bypassSecurityTrustStyle(`translateX(${this.position.x}px) translateY(${this.position.y}px)`);
   // }
 
-  @HostBinding('style.top.px') get top(): number {
+  @HostBinding('style.top.%') get top(): number {
     return this.position ? this.position.y : 0;
   }
 
-  @HostBinding('style.left.px') get left(): number {
+  @HostBinding('style.left.%') get left(): number {
     return this.position ? this.position.x : 0;
   }
 
@@ -31,9 +34,14 @@ export class MovableDirective extends DraggableDirective {
   }
 
   @HostListener('dragStart', ['$event']) onDragStart(event: PointerEvent) {
+    const { height, width } = this.element.nativeElement.parentElement.getBoundingClientRect();
+
+    this.parentHeight = height;
+    this.parentWidth = width;
+
     this.startPosition = {
-      x: event.clientX - this.left,
-      y: event.clientY - this.top
+      x: (event.clientX  / width * 100 - this.left),
+      y: (event.clientY  / height * 100 - this.top)
     };
   }
 
@@ -41,8 +49,8 @@ export class MovableDirective extends DraggableDirective {
     this.isMoving = true;
 
     this.position = {
-      x: event.clientX - this.startPosition.x,
-      y: event.clientY - this.startPosition.y
+      x: event.clientX / this.parentWidth * 100 - this.startPosition.x,
+      y: event.clientY / this.parentHeight * 100 - this.startPosition.y
     };
 
     this.positionChange.emit(this.position);

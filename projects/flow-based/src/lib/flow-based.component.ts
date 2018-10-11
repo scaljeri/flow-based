@@ -171,7 +171,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   }
 
   close(event): void {
-    console.log('blur');
     this.activeFlowIndex = null;
     // event.stopPropagation();
   }
@@ -196,5 +195,11 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   writeValue(state: XxlFlow): void {
     // this.flow = state;
     // this.createInjector();
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.flowService.recalculateConnections();
+    this.reset();
   }
 }

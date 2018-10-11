@@ -33,13 +33,28 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   }
 
   distribution(data): void {
+    // let count = 0,
+    //   total = 0,
+    //   mean = 0;
+    //
+    // data.values.forEach((val, i) => {
+    //   count += val;
+    //   total += val * i;
+    // });
+    //
+    // mean = Math.round(total / count);
+
     if (this.isActive) {
       const dataTable = new GoogleCharts.api.visualization.DataTable();
       dataTable.addColumn('number', 'Value');
       dataTable.addColumn('number', 'Count');
-      data.forEach((v, i) => {
-        dataTable.addRows([[i, v]]);
-      });
+      dataTable.addColumn('number', 'Gauss');
+      // const max = data.values[mean];
+      let xAxis = data.distribution.start;
+
+      for (let i = 0; i <= data.distribution.end - data.distribution.start; i++) {
+        dataTable.addRows([[xAxis++, data.values[xAxis], data.distribution.values[i]]]);
+      }
 
       const view = new GoogleCharts.api.visualization.DataView(dataTable);
       if (!this.chart) {

@@ -69,6 +69,12 @@ export class XxlFlowBasedService {
     }
   }
 
+  recalculateConnections(): void {
+    Object.keys(this.units).forEach(key => {
+      this.units[key].update();
+    });
+  }
+
   add(flowType: string): XxlFlowUnitState {
     const state = {
       type: flowType,

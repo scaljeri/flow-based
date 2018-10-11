@@ -15,7 +15,9 @@ Angular library for building workflows + demo
   
 TODO: Fix circular dependency issues
     
-![Example](fbp.jpg)
+![Example](images/fbp.jpg)
+
+![Example](images/gauss.jpg)
 
 ## Resources
 
@@ -24,6 +26,7 @@ TODO: Fix circular dependency issues
    * Nice article: https://colab.coop/blog/how-to-start-flowing-with-flow-based-programming/
    * Bezier demo: https://stackblitz.com/edit/angular-bezier-curves
    * Audio: http://webaudiodemos.appspot.com/
+   * Gauss/charts: https://stackblitz.com/edit/google-charts?file=app%2Fgraph%2Fgraph.component.ts
 
 ## POCs
 

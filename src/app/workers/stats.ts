@@ -1,5 +1,6 @@
 import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
+import { calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
 export const STATS_CONFIG = {
   sockets: [
@@ -31,7 +32,8 @@ export class StatsWorker implements XxlWorker {
   public max: number;
   private total = 0;
   private count = 0;
-  private distriubution = [];
+  private values = [];
+  private distribution = [];
 
   private updatedSubject = new Subject<any>();
   public updated$ = this.updatedSubject.asObservable();
@@ -66,7 +68,7 @@ export class StatsWorker implements XxlWorker {
 
       this.total += val;
       this.count++;
-      this.distriubution[val] = (this.distriubution[val] || 0) + 1 ;
+      this.values[val] = (this.values[val] || 0) + 1;
 
       if (this.max === undefined) {
         this.min = val;
@@ -84,7 +86,21 @@ export class StatsWorker implements XxlWorker {
         this.subjects.max.next(this.max);
       }
 
-      this.updatedSubject.next(this.distriubution);
+
+      this.distribution = [];
+      const mean = calcMean(this.values);
+      const sd = calcStandardDeviation(mean, this.values);
+      if (this.values[mean]) {
+        this.distribution = getGaussian(-50, 250, mean, sd, this.values[mean]);
+      }
+
+      this.updatedSubject.next({
+        values: this.values, distribution: {
+          start: -50,
+          end: 250,
+          values: this.distribution
+        }
+      });
     });
   }
 
