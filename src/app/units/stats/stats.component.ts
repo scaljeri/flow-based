@@ -80,7 +80,6 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   }
 
   onClose(): void {
-    debugger;
     this.service.closeSelf();
   }
 
