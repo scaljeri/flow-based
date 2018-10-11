@@ -30,14 +30,6 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
 
     this.subscription = this.worker.getStream().subscribe(log => {
       this.count++;
-
-      if (!this.history) {
-        this.history = [];
-      } else {
-        this.history.unshift(this.value);
-        this.history = this.history.slice(0, 33);
-      }
-
       this.value = this.worker.currentValue;
     });
   }

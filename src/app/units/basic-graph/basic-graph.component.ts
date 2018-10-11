@@ -25,30 +25,29 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
               private flowService: XxlFlowBasedService,
               @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {
     GoogleCharts.load(() => {
-      this.dataTable = new GoogleCharts.api.visualization.DataTable();
-      this.dataTable.addColumn('number', 'Count');
-      this.dataTable.addColumn('number', 'Values');
-      this.dataTable.addRows([[0, 0]]);
-
-      this.view = new GoogleCharts.api.visualization.DataView(this.dataTable);
       this.chart = new GoogleCharts.api.visualization.LineChart(this.graph.nativeElement);
-      this.chart.draw(this.view);
     });
   }
 
   ngOnInit() {
     this.worker = this.flowService.getWorker(this.state.id) as BasicGraphWorker;
 
-    this.worker.getStream().subscribe(val => this.update(val));
+    this.worker.getStream().subscribe(val => this.update(this.worker.values));
   }
 
   getSockets(): XxlSocket[] {
     return this.worker.getSockets();
   }
 
-  update(value: number): void {
-    this.count += 1;
-    this.dataTable.addRow([this.count, value]);
+  update(values: number[]): void {
+    this.dataTable = new GoogleCharts.api.visualization.DataTable();
+    this.dataTable.addColumn('number', 'Count');
+    this.dataTable.addColumn('number', 'Values');
+    values.forEach((value, index) => {
+      this.dataTable.addRow([index, value]);
+    });
+
+    this.view = new GoogleCharts.api.visualization.DataView(this.dataTable);
 
     if (this.view) {
       const options = {
@@ -63,48 +62,10 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
     }
   }
 
-  drawChart(): void {
-    // if (this.isReady) {
-    //   const data = GoogleCharts.api.visualization.arrayToDataTable([
-    //     ['Time', 'Value'],
-    //     [0, 0]
-    //   ]);
-    //
-    //   const options = {
-    //     chartArea: {width: '100%', height: '100%'},
-    //     forceIFrame: 'false',
-    //     is3D: 'true',
-    //     pieSliceText: 'value',
-    //     sliceVisibilityThreshold: 1 / 20, // Only > 5% will be shown.
-    //     titlePosition: 'none'
-    //   };
-    //
-    //   this.chart = new GoogleCharts.api.visualization.LineChart(this.graph.nativeElement);
-    //   this.chart.draw(data, options);
-    // }
-  }
-
   setActive(state): void {
     this.isActive = state;
     // setTimeout(() => {
     //   this.drawChart();
     // });
   }
-
-  addValue(value: number): void {
-
-  }
-  //
-  // setState(state: XxlFlowUnitState): void {
-  //   this.state = state;
-  //
-  //   this.worker = this.flowService.getWorker(state.id) as ConsoleWorker;
-  //   this.worker.register(() => {
-  //     this.worker.logs$.subscribe(log => {
-  //       this.log = log.toFixed(3);
-  //       this.update(parseFloat(this.log));
-  //       console.log('received: ' + parseFloat(this.log));
-  //     });
-  //   });
-  // }
 }

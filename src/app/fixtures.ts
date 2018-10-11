@@ -179,6 +179,37 @@ export const basic =
           "x": 29.405110677083332,
           "y": 34.91676298008535
         }
+      },
+      {
+        "type": "basic-graph",
+        "title": "Basic Graph",
+        "id": "1539267000349",
+        "config": {
+          "sockets": [
+            {
+              "type": "in",
+              "id": "bg-a"
+            },
+            {
+              "type": "out",
+              "id": "bg-b"
+            }
+          ]
+        },
+        "sockets": [
+          {
+            "type": "in",
+            "id": "bg-a"
+          },
+          {
+            "type": "out",
+            "id": "bg-b"
+          }
+        ],
+        "position": {
+          "x": 54.44607204861112,
+          "y": 43.44383445945947
+        }
       }
     ],
     "connections": [
@@ -209,6 +240,13 @@ export const basic =
         "to": "1539263443183",
         "in": "ms-b",
         "id": "1539263450306"
+      },
+      {
+        "from": "1539256276787",
+        "out": "csl-b",
+        "to": "1539267000349",
+        "in": "bg-a",
+        "id": "1539267006231"
       }
     ]
   }

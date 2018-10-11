@@ -17,6 +17,7 @@ export class ConsoleWorker implements XxlWorker {
   private subscriptions: { [id: string]: Subscription } = {};
   private subject = new Subject<any>();
 
+  public history = [];
   public currentValue: any;
 
   constructor(private state?: XxlFlowUnitState) {
@@ -40,6 +41,10 @@ export class ConsoleWorker implements XxlWorker {
 
     this.subscriptions[key] = stream.subscribe(val => {
       this.currentValue = Number.isInteger(val) ? val : parseFloat(val.toFixed(2));
+
+      this.history.unshift(Number.isInteger(val) ? val : parseFloat(val.toFixed(2)));
+      this.history = this.history.slice(0, 33);
+
       this.subject.next(val);
     });
   }
