@@ -24,7 +24,9 @@
     padding: 8px;
 
     .values {
+      display: flex;
       flex: 1;
+      flex-direction: column;
       height: 300px;
 
       mat-card-content {

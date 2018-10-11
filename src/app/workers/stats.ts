@@ -1,6 +1,6 @@
 import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
-import { calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
+import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
 export const STATS_CONFIG = {
   sockets: [
@@ -68,6 +68,10 @@ export class StatsWorker implements XxlWorker {
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(val => {
+      if (this.columnWidth === 0) {
+        return ;
+      }
+
       const oldMin = this.min;
       const oldMax = this.max;
 
@@ -97,10 +101,11 @@ export class StatsWorker implements XxlWorker {
 
       // this.distribution = [];
       const mean = calcMean(this.values);
+      const averageMax = calcMax(this.values, mean);
       const sd = calcStandardDeviation(mean, this.values);
       let gauss;
-      if (this.values[mean]) { // TODO: Maximum required
-         gauss = getGaussian(this.min + this.columnWidth / 2, this.max, this.columnWidth, mean, sd, this.values[mean]);
+      if (averageMax) { // TODO: Maximum required
+         gauss = getGaussian(mean, sd, averageMax, this.values.length);
       }
 
 
@@ -123,5 +128,6 @@ export class StatsWorker implements XxlWorker {
 
   set columnWidth(width: number) {
     this.state.config.columnWidth = width;
+    this.reset();
   }
 }

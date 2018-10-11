@@ -84,7 +84,7 @@ export const basic =
               "name": "Max value"
             }
           ],
-          "columnWidth": 1
+          "columnWidth": 10
         },
         "sockets": [
           {
