@@ -15,7 +15,6 @@ export interface Boundaries {
 export class MovableAreaDirective implements AfterContentInit {
   @ContentChildren(MovableDirective) movables: QueryList<MovableDirective>;
 
-
   private boundaries: Boundaries;
   private subscriptions: Subscription[] = [];
 
@@ -42,10 +41,10 @@ export class MovableAreaDirective implements AfterContentInit {
     const movablePos = movable.position || { x: 0, y: 0};
 
     this.boundaries = {
-      minX: areaRect.left - movableRect.left + movablePos.x,
-      maxX: areaRect.right - movableRect.right + movablePos.x,
-      minY: areaRect.top - movableRect.top + movablePos.y,
-      maxY: areaRect.bottom - movableRect.bottom + movablePos.y
+      minX: (areaRect.left - movableRect.left) / areaRect.width * 100 + movablePos.x,
+      maxX: (areaRect.right - movableRect.right) / areaRect.width * 100 + movablePos.x,
+      minY: (areaRect.top - movableRect.top) / areaRect.height * 100 + movablePos.y,
+      maxY: (areaRect.bottom - movableRect.bottom) / areaRect.height * 100 + movablePos.y
     };
   }
 
