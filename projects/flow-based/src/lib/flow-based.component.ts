@@ -1,5 +1,4 @@
 import {
-  AfterContentInit, AfterViewInit,
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
@@ -22,7 +21,7 @@ import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
   // changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
-export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, AfterContentInit, OnDestroy, ControlValueAccessor {
+export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, ControlValueAccessor {
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
@@ -54,10 +53,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   ngOnChanges(obj: SimpleChanges): void {
   }
 
-  ngAfterViewInit(): void {
-    this.reset();
-  }
-
   reset(): void {
     setTimeout(() => {
       this.repaint();
@@ -70,14 +65,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
 
   repaint(): void {
     this.flow.connections = [...this.flow.connections];
-  }
-
-  ngAfterContentInit(): void {
-    // TODO: Fix inside FLowUnit
-    setTimeout(() => {
-      Object.keys(this.flowService.units).forEach(key => this.flowService.units[key].update());
-      this.reset();
-    }, 100);
   }
 
   ngOnDestroy(): void {
@@ -205,5 +192,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, AfterViewInit, Aft
   onResize(): void {
     this.flowService.recalculateConnections();
     this.reset();
+  }
+
+  setDisabledState(isDisabled: boolean): void {
   }
 }

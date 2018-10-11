@@ -10,13 +10,16 @@ import {
   SimpleChanges, ViewChild, ViewChildren,
 } from '@angular/core';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
-import { XxlSocketBuilderService } from '../socket-builder.service';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDirective } from '../socket/socket.directive';
 import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
+
+declare global {
+  interface Window { ResizeObserver: any; }
+}
 
 @Component({
   selector: 'xxl-flow-unit',
@@ -37,6 +40,8 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   @Output() updated = new EventEmitter<void>();
   @ViewChildren(SocketDirective) socketsRefs: QueryList<SocketDirective>;
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
+
+  private observer;
 
   // @HostBinding('class.not-active')
   // get isNotActive(): boolean {
@@ -68,6 +73,12 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
       this.flowService.updateConnection();
       this.wrapper.update();
     });
+
+    this.observer = new window.ResizeObserver(() => {
+      this.wrapper.update();
+      this.flowService.updateConnection();
+    });
+    this.observer.observe(this.element.nativeElement);
   }
 
   ngAfterViewInit(): void {
