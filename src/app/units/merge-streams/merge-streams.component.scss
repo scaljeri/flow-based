@@ -1,0 +1,10 @@
+@import '../../../../projects/flow-based/src/lib/utils/utils';
+
+footer {
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: space-between;
+  transform: translateX(-50%);
+  width: 300px;
+  @include xxl-position(absolute, 0 0 8px 50%);
+}

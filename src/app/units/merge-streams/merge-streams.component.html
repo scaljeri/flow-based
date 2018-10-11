@@ -1,1 +1,11 @@
 <fb-default-front [title]="title"></fb-default-front>
+
+<section *ngIf="isActive">
+  <footer>
+    <button mat-button color="warn" (click)="onDelete()">
+      <mat-icon>delete_forever</mat-icon>
+    </button>
+
+    <button mat-button (click)="onClose()">Close</button>
+  </footer>
+</section>
