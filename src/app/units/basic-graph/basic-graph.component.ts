@@ -1,8 +1,8 @@
-import { ChangeDetectorRef, Component, ElementRef, HostBinding, Inject, Input, OnInit, ViewChild } from '@angular/core';
-import { XXL_FLOW_UNIT_STATE, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
-import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
+import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, Inject, Input, OnInit, ViewChild } from '@angular/core';
+import { XxlFlowUnit, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
+import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 
 @Component({
   selector: 'fb-basic-graph',
@@ -13,24 +13,19 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   @HostBinding('class.is-active') isActive = false;
   @ViewChild('graph') graph: ElementRef;
   chart;
-  log: any;
-  worker: BasicGraphWorker;
-  data: number[] = [];
   dataTable;
-  count = 0;
   view;
+  worker: BasicGraphWorker;
 
-
-  constructor(private cdr: ChangeDetectorRef,
-              private flowService: XxlFlowBasedService,
-              @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {
-    GoogleCharts.load(() => {
-      this.chart = new GoogleCharts.api.visualization.LineChart(this.graph.nativeElement);
-    });
+  constructor(@Host() private service: XxlFlowUnitService) {
   }
 
   ngOnInit() {
-    this.worker = this.flowService.getWorker(this.state.id) as BasicGraphWorker;
+    GoogleCharts.load(() => {
+      this.chart = new GoogleCharts.api.visualization.LineChart(this.graph.nativeElement);
+    });
+
+    this.worker = this.service.worker as BasicGraphWorker;
 
     this.worker.getStream().subscribe(val => this.update(this.worker.values));
   }
@@ -67,5 +62,15 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
     // setTimeout(() => {
     //   this.drawChart();
     // });
+  }
+
+
+  onDelete(): void {
+    this.service.deleteSelf();
+
+  }
+
+  onClose(): void {
+    this.service.closeSelf();
   }
 }

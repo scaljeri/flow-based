@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlFlowUnitState, XxlSocket } from 'flow-based';
+import { XxlFlowUnitState, XxlSocket, XxlWorker } from 'flow-based';
 import { XxlSocketBuilderService } from '../socket-builder.service';
 
 @Injectable({
@@ -25,16 +25,12 @@ export class XxlFlowUnitService {
     this.state.sockets = [socket, ...this.state.sockets];
   }
 
+  get worker(): XxlWorker {
+    return this.flowService.getWorker(this.state.id);
+  }
+
   deleteSocket(socket: XxlSocket): void {
 
-  }
-
-  delete(): void {
-    this.flowService.delete(this.state);
-  }
-
-  close(): void {
-    this.flowService.close(this.state);
   }
 
   removeSocket(socket: XxlSocket): void {
@@ -47,5 +43,13 @@ export class XxlFlowUnitService {
 
   removeBlur(): void {
     this.flowService.removeBlurForUnit();
+  }
+
+  deleteSelf(): void {
+    this.flowService.delete(this.state);
+  }
+
+  closeSelf(): void {
+    this.flowService.close(this.state);
   }
 }

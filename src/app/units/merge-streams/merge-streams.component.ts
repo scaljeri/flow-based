@@ -16,12 +16,11 @@ export class MergeStreamsComponent implements OnInit {
   isActive = false;
 
   constructor(private fb: FormBuilder,
-              private flowService: XxlFlowBasedService,
               @Host() private service: XxlFlowUnitService) {
     this.state = service.state;
   }
   ngOnInit() {
-    this.worker = this.flowService.getWorker(this.state.id) as MergeStreamsWorker;
+    this.worker = this.service.worker as MergeStreamsWorker;
   }
 
   getSockets(): XxlSocket[] {
@@ -34,11 +33,11 @@ export class MergeStreamsComponent implements OnInit {
   }
 
   onDelete(): void {
-    this.service.delete();
+    this.service.deleteSelf();
   }
 
   onClose(): void {
-    this.service.close();
+    this.service.closeSelf();
   }
 
   get title(): string {

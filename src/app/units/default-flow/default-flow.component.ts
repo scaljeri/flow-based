@@ -15,7 +15,7 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
   @HostBinding('class.is-active') active = false;
 
   constructor(public dialog: MatDialog,
-              @Host() private flowService: XxlFlowUnitService) {
+              @Host() private service: XxlFlowUnitService) {
   }
 
   ngOnInit() {
@@ -34,12 +34,12 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
   }
 
   onDelete(): void {
-    this.flowService.delete();
+    this.service.deleteSelf();
 
   }
 
   onClose(): void {
-    this.flowService.close();
+    this.service.closeSelf();
   }
 
   openDialog(socket: Partial<XxlSocket>): void {
@@ -49,16 +49,16 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
       data: socket
     });
 
-    this.flowService.requireBlur(() => dialogRef.close());
+    this.service.requireBlur(() => dialogRef.close());
 
     dialogRef.afterClosed().subscribe((result: DialogAction) => {
-      this.flowService.removeBlur();
+      this.service.removeBlur();
 
       if (result) {
         if (result.action === 'delete') {
-          this.flowService.deleteSocket(result.socket);
+          this.service.deleteSocket(result.socket);
         } else {
-          this.flowService.addSocket(result.socket);
+          this.service.addSocket(result.socket);
         }
       }
     });

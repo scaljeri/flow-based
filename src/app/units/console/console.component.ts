@@ -1,8 +1,9 @@
-import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, Host, Inject, OnDestroy, OnInit } from '@angular/core';
 import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
 import { XXL_FLOW_UNIT_STATE, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { ConsoleWorker } from '../../workers/console';
 import { Subscription } from 'rxjs';
+import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 
 @Component({
   selector: 'fb-console',
@@ -19,11 +20,10 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   values: any[];
   count = 0;
 
-  constructor(private flowService: XxlFlowBasedService,
-              @Inject(XXL_FLOW_UNIT_STATE) private state: XxlFlowUnitState) {}
+  constructor(@Host() private service: XxlFlowUnitService) {}
 
   ngOnInit(): void {
-    this.worker = this.flowService.getWorker(this.state.id) as ConsoleWorker;
+    this.worker = this.service.worker as ConsoleWorker;
     if (this.worker.currentValue !== undefined) {
       this.value = this.worker.currentValue.toFixed(2);
     }
@@ -47,10 +47,10 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   }
 
   onDelete(): void {
-    this.flowService.delete(this.state);
+    this.service.deleteSelf();
   }
 
   onClose(): void {
-    this.flowService.close(this.state);
+    this.service.closeSelf();
   }
 }

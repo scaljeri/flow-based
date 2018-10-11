@@ -1,15 +1,14 @@
 import { TestBed, inject } from '@angular/core/testing';
-
-import { FlowBasedService } from './flow-based.service';
+import { XxlFlowBasedService } from './flow-based.service';
 
 describe('FlowBasedService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [FlowBasedService]
+      providers: [XxlFlowBasedService]
     });
   });
 
-  it('should be created', inject([FlowBasedService], (service: FlowBasedService) => {
+  it('should be created', inject([XxlFlowBasedService], (service: XxlFlowBasedService) => {
     expect(service).toBeTruthy();
   }));
 });

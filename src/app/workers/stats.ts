@@ -64,6 +64,8 @@ export class StatsWorker implements XxlWorker {
 
   reset(): void {
     this.max = null;
+    this.total = 0;
+    this.count = 0;
   }
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
@@ -99,7 +101,6 @@ export class StatsWorker implements XxlWorker {
 
       this.values[index] = (this.values[index] || 0) + 1;
 
-      // this.distribution = [];
       const mean = calcMean(this.values);
       const averageMax = calcMax(this.values, mean);
       const sd = calcStandardDeviation(mean, this.values);
@@ -119,7 +120,7 @@ export class StatsWorker implements XxlWorker {
   }
 
   get avg(): number {
-    return this.total / this.count;
+    return this.count === 0 ? 0 : this.total / this.count;
   }
 
   get columnWidth(): number {

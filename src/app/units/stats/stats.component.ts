@@ -27,7 +27,6 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   @HostBinding('class.is-active') isActive = false;
 
   constructor(private fb: FormBuilder,
-              private flowService: XxlFlowBasedService,
               @Host() private service: XxlFlowUnitService) {
     this.state = service.state;
   }
@@ -55,7 +54,8 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   }
 
   ngOnInit(): void {
-    this.worker = this.flowService.getWorker(this.state.id) as StatsWorker;
+    this.worker = this.service.worker as StatsWorker;
+
     this.worker.updated$.subscribe(data => {
       if (this.graphPlaceHolder) {
         this.distribution(data);
@@ -67,20 +67,21 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
     return this.worker.getSockets();
   }
 
-  onReset(): void {
-    this.worker.reset();
-  }
-
   setActive(isActive: boolean): void {
     this.isActive = isActive;
   }
 
+  onReset(): void {
+    this.worker.reset();
+  }
+
   onDelete(): void {
-    this.flowService.delete(this.state);
+    this.service.deleteSelf();
   }
 
   onClose(): void {
-    this.flowService.close(this.state);
+    debugger;
+    this.service.closeSelf();
   }
 
   get min(): string {
