@@ -1,5 +1,5 @@
 import { Directive, ElementRef, Input } from '@angular/core';
-import { XxlSocket } from 'flow-based';
+import { XxlSocket } from '../flow-based';
 
 @Directive({
   selector: '[xxlSocket]',

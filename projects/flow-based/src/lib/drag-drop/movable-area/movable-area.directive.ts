@@ -1,6 +1,6 @@
 import {AfterContentInit, ContentChildren, Directive, ElementRef, OnInit, QueryList} from '@angular/core';
-import {MovableDirective} from '../movable/movable.directive';
 import {Subscription} from 'rxjs';
+import {MovableDirective} from '../movable/movable.directive';
 
 export interface Boundaries {
   minX: number;

@@ -1,7 +1,7 @@
 import { Directive, ElementRef, EventEmitter, HostBinding, HostListener, Input, Output } from '@angular/core';
-import { DomSanitizer, SafeStyle } from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 import { DraggableDirective } from '../draggable/draggable.directive';
-import { XxlPosition } from 'flow-based';
+import { XxlPosition } from '../../flow-based';
 
 @Directive({
   selector: '[xxlMovable]'

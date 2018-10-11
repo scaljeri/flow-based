@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlFlowUnitState, XxlSocket, XxlWorker } from 'flow-based';
+import { XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
 import { XxlSocketBuilderService } from '../socket-builder.service';
 
 @Injectable({

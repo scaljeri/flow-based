@@ -9,7 +9,7 @@ import {
   OnInit,
   Output
 } from '@angular/core';
-import { XxlConnection, XxlFlowUnitState, XxlPosition } from 'flow-based';
+import { XxlConnection, XxlFlowUnitState, XxlPosition } from '../flow-based';
 import { Observable } from 'rxjs';
 import { XxlFlowBasedService } from '../flow-based.service';
 import * as bezier from './bezier';
