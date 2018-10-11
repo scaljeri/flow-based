@@ -38,7 +38,7 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
         this.history = this.history.slice(0, 33);
       }
 
-      this.value = log.toFixed(2);
+      this.value = this.worker.currentValue;
     });
   }
 

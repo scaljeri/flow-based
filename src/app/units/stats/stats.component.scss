@@ -25,7 +25,7 @@
 
     .values {
       flex: 1;
-      height: 250px;
+      height: 300px;
 
       mat-card-content {
         display: flex;
@@ -40,8 +40,18 @@
 
     .distribution {
       flex: 2;
-      height: 200px;
+      height: 300px;
       margin-left: 8px;
+
+      .column-width {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+
+        mat-slider {
+          margin: 0 8px;
+        }
+      }
     }
   }
 

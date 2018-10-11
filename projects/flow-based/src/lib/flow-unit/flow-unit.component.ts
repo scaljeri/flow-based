@@ -2,8 +2,8 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component, ElementRef,
-  EventEmitter, forwardRef,
-  HostBinding, Inject,
+  EventEmitter,
+  HostBinding,
   Input,
   OnChanges, OnDestroy,
   OnInit, Output, QueryList,
@@ -14,7 +14,7 @@ import { XxlSocketBuilderService } from '../socket-builder.service';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDirective } from '../socket/socket.directive';
-import { XXL_FLOW_UNIT_SERVICE, XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
+import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
 

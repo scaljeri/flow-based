@@ -1,9 +1,8 @@
 import {
-  AfterContentInit, AfterViewInit, ChangeDetectorRef,
+  AfterContentInit, AfterViewInit,
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
-  Inject,
   Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';

@@ -1,7 +1,7 @@
-import { AfterContentInit, Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
-import { nested, nestedDemo, nice } from './fixtures';
+import * as data from './fixtures';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { ComponentPortal } from '@angular/cdk/portal';
@@ -25,7 +25,7 @@ export class AppComponent implements OnInit {
 
   activeOverlay: OverlayRef;
   showJson = false;
-  flow: XxlFlow = {} as XxlFlow;
+  flow: XxlFlow = data.basic as XxlFlow;
 
   @ViewChild('bg') bgImage: ElementRef;
 

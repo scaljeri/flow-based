@@ -4,31 +4,58 @@
 
 <section *ngIf="isActive" class="config">
   <mat-toolbar color="primary">
-    <span>Configurationx</span>
+    <span>Configuration</span>
   </mat-toolbar>
 
-  <form [formGroup]="configForm">
-    <label>
-      <span>Start</span>
-      <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
-                  [thumbLabel]="true"
-                  formControlName="startValue"></mat-slider>
-    </label>
+  <div class="card-wrapper">
+    <mat-card class="form">
+      <mat-card-content>
+        <form [formGroup]="configForm">
+          <label>
+            <span>Start</span>
+            <div>
+              <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
+                          [thumbLabel]="true"
+                          formControlName="startValue"></mat-slider>
+              <span>{{configForm.controls.startValue.value}}</span>
+            </div>
+          </label>
 
-    <label>
-      <span>End</span>
-      <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
-                  [thumbLabel]="true"
-                  formControlName="endValue"></mat-slider>
-    </label>
+          <label>
+            <span>End</span>
+            <div>
+              <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
+                          [thumbLabel]="true"
+                          formControlName="endValue"></mat-slider>
+              <span>{{configForm.controls.endValue.value}}</span>
+            </div>
+          </label>
 
-    <label>
-      <span>Interval</span>
-      <mat-slider [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"
-                  [thumbLabel]="true"
-                  formControlName="intervalValue"></mat-slider>
-    </label>
-  </form>
+          <label>
+            <span>Interval</span>
+            <div>
+              <mat-slider [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"
+                          [thumbLabel]="true"
+                          formControlName="intervalValue"></mat-slider>
+              <span>{{configForm.controls.intervalValue.value}}</span>
+            </div>
+          </label>
+
+          <label class="horizontal">
+            <span class="large">Integers only</span>
+            <mat-checkbox formControlName="integersOnlyValue"></mat-checkbox>
+          </label>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="output">
+      <mat-card-title>Current value</mat-card-title>
+      <mat-card-content>
+        {{currentValue}}
+      </mat-card-content>
+    </mat-card>
+  </div>
 
   <footer>
     <button mat-button color="warn" (click)="delete()">

@@ -13,7 +13,7 @@ import { DefaultFrontComponent } from './components/default-front/default-front.
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
   MAT_DIALOG_DEFAULT_OPTIONS,
-  MatButtonModule, MatCardModule, MatDialog, MatDialogModule,
+  MatButtonModule, MatCardModule, MatCheckboxModule, MatDialogModule,
   MatInputModule, MatListModule, MatSliderModule, MatToolbarModule
 } from '@angular/material';
 import {MatIconModule} from '@angular/material/icon';
@@ -58,6 +58,7 @@ import { MergeStreamsComponent } from './units/merge-streams/merge-streams.compo
     FlowBasedModule,
     MatButtonModule,
     MatCardModule,
+    MatCheckboxModule,
     MatIconModule,
     MatListModule,
     OverlayModule

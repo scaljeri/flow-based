@@ -39,7 +39,7 @@ export class ConsoleWorker implements XxlWorker {
     this.stream = stream;
 
     this.subscriptions[key] = stream.subscribe(val => {
-      this.currentValue = val;
+      this.currentValue = Number.isInteger(val) ? val : parseFloat(val.toFixed(2));
       this.subject.next(val);
     });
   }

@@ -24,7 +24,7 @@ export interface XxlFlowUnit {
 // Describes the class doing the actual work
 export interface XxlWorker {
   getSockets(): XxlSocket[];
-  getStream?(id: string): Observable<any>;
+  getStream?(id?: string): Observable<any>;
   setStream?(stream: Observable<any>, connection?: XxlConnection): void;
   removeStream?(connection?: XxlConnection): void;
   destroy(): void;

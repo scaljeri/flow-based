@@ -31,6 +31,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   configForm: FormGroup;
   isActive = false;
   state: XxlFlowUnitState;
+  currentValue: number;
 
   constructor(private fb: FormBuilder,
               private flowService: XxlFlowBasedService,
@@ -44,7 +45,8 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
     this.configForm = this.fb.group({
       startValue: [this.worker.start],
       endValue: [this.worker.end],
-      intervalValue: [this.worker.interval]
+      intervalValue: [this.worker.interval],
+      integersOnlyValue: [this.worker.integer]
     });
 
 
@@ -57,7 +59,12 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
         this.worker.start = form.startValue;
         this.worker.end = form.endValue;
         this.worker.interval = form.intervalValue;
+        this.worker.integer = form.integersOnlyValue;
       });
+    });
+
+    this.worker.getStream().subscribe(value => {
+      this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
     });
   }
 

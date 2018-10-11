@@ -33,34 +33,24 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   }
 
   distribution(data): void {
-    // let count = 0,
-    //   total = 0,
-    //   mean = 0;
-    //
-    // data.values.forEach((val, i) => {
-    //   count += val;
-    //   total += val * i;
-    // });
-    //
-    // mean = Math.round(total / count);
-
     if (this.isActive) {
       const dataTable = new GoogleCharts.api.visualization.DataTable();
       dataTable.addColumn('number', 'Value');
       dataTable.addColumn('number', 'Count');
       dataTable.addColumn('number', 'Gauss');
-      // const max = data.values[mean];
-      let xAxis = data.distribution.start;
 
-      for (let i = 0; i <= data.distribution.end - data.distribution.start; i++) {
-        dataTable.addRows([[xAxis++, data.values[xAxis], data.distribution.values[i]]]);
+      const width = this.worker.columnWidth;
+      let count = 0;
+
+      while ((count - 1) * width < data.end) {
+        dataTable.addRow([data.start + count++ * width + width / 2, data.values[count], data.gauss ? data.gauss[count] : null]);
       }
 
       const view = new GoogleCharts.api.visualization.DataView(dataTable);
       if (!this.chart) {
-        this.chart = new GoogleCharts.api.visualization.LineChart(this.graphPlaceHolder.nativeElement);
+        this.chart = new GoogleCharts.api.visualization.ColumnChart(this.graphPlaceHolder.nativeElement);
       }
-      this.chart.draw(view);
+      this.chart.draw(view, {legend: 'top', series: {1: {type: 'line'}}});
     }
   }
 
@@ -77,6 +67,10 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
     return this.worker.getSockets();
   }
 
+  onReset(): void {
+    this.worker.reset();
+  }
+
   setActive(isActive: boolean): void {
     this.isActive = isActive;
   }
@@ -90,11 +84,11 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   }
 
   get min(): string {
-    return this.worker.min === undefined ? null : this.worker.min.toFixed(4);
+    return this.worker.min === null ? null : this.worker.min.toFixed(4);
   }
 
   get max(): string {
-    return this.worker.max === undefined ? null : this.worker.max.toFixed(4);
+    return this.worker.max === null ? null : this.worker.max.toFixed(4);
   }
 
   get avg(): string {

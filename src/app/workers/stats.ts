@@ -19,6 +19,7 @@ export const STATS_CONFIG = {
       name: 'Max value',
     }
   ],
+  columnWidth: 1
 };
 
 export class StatsWorker implements XxlWorker {
@@ -28,8 +29,8 @@ export class StatsWorker implements XxlWorker {
   };
   private subscriptions: Subscription[] = [];
 
-  public min: number;
-  public max: number;
+  public min: number =  null;
+  public max: number = null;
   private total = 0;
   private count = 0;
   private values = [];
@@ -61,6 +62,10 @@ export class StatsWorker implements XxlWorker {
     delete this.subscriptions[connection.id];
   }
 
+  reset(): void {
+    this.max = null;
+  }
+
   setStream(stream: Observable<any>, connection: XxlConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(val => {
       const oldMin = this.min;
@@ -68,9 +73,9 @@ export class StatsWorker implements XxlWorker {
 
       this.total += val;
       this.count++;
-      this.values[val] = (this.values[val] || 0) + 1;
 
-      if (this.max === undefined) {
+      if (this.max === null) {
+        this.values = [];
         this.min = val;
         this.max = val;
       } else {
@@ -86,25 +91,37 @@ export class StatsWorker implements XxlWorker {
         this.subjects.max.next(this.max);
       }
 
+      const index = Math.round(val / this.columnWidth);
 
-      this.distribution = [];
+      this.values[index] = (this.values[index] || 0) + 1;
+
+      // this.distribution = [];
       const mean = calcMean(this.values);
       const sd = calcStandardDeviation(mean, this.values);
-      if (this.values[mean]) {
-        this.distribution = getGaussian(-50, 250, mean, sd, this.values[mean]);
+      let gauss;
+      if (this.values[mean]) { // TODO: Maximum required
+         gauss = getGaussian(this.min + this.columnWidth / 2, this.max, this.columnWidth, mean, sd, this.values[mean]);
       }
 
+
       this.updatedSubject.next({
-        values: this.values, distribution: {
-          start: -50,
-          end: 250,
-          values: this.distribution
-        }
+        values: this.values,
+        gauss,
+        start: this.min,
+        end: this.max,
       });
     });
   }
 
   get avg(): number {
     return this.total / this.count;
+  }
+
+  get columnWidth(): number {
+    return this.state.config.columnWidth;
+  }
+
+  set columnWidth(width: number) {
+    this.state.config.columnWidth = width;
   }
 }

@@ -22,12 +22,20 @@
         <span>Average value</span>
         <span class="value">{{avg}}</span>
       </mat-card-content>
+
+      <button mat-stroked-button (click)="onReset()">Reset</button>
     </mat-card>
+
     <mat-card class="distribution">
       <mat-card-title>Distribution</mat-card-title>
       <mat-card-content>
-        <div #distribution></div>
-      </mat-card-content>
+      <div #distribution></div>
+        <div class="column-width">
+          <span>Column width: </span>
+          <mat-slider min="0" max="10" step=".1" [(ngModel)]="worker.columnWidth"></mat-slider>
+          <span>{{worker.columnWidth}}</span>
+        </div>
+    </mat-card-content>
     </mat-card>
   </div>
 

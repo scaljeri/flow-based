@@ -14,7 +14,8 @@ export const RANDOM_NUMBER_CONFIG = {
   end: 1,
   intervalMax: 10000,
   intervalMin: 100,
-  interval: 1000
+  interval: 1000,
+  integer: true
 };
 
 export class RandomNumbersWorker implements XxlWorker {
@@ -29,7 +30,7 @@ export class RandomNumbersWorker implements XxlWorker {
     clearInterval(this.interval);
   }
 
-  getStream(id: string): Observable<any> {
+  getStream(): Observable<any> {
     return this.subject.asObservable();
   }
 
@@ -41,9 +42,9 @@ export class RandomNumbersWorker implements XxlWorker {
     clearInterval(this.intervalId);
 
     this.intervalId = setInterval(() => {
-      const random = Math.round(Math.random() * (this.end - this.start) + this.start);
+      const random = Math.random() * (this.end - this.start) + this.start;
 
-      this.subject.next(random);
+      this.subject.next(this.integer ? Math.round(random) : random);
     }, this.state.config.interval);
 
   }
@@ -91,5 +92,13 @@ export class RandomNumbersWorker implements XxlWorker {
 
   get intervalMax(): number {
     return this.state.config.intervalMax;
+  }
+
+  get integer(): boolean {
+    return this.state.config.integers;
+  }
+
+  set integer(val: boolean) {
+    this.state.config.integers = val;
   }
 }
