@@ -1,10 +1,12 @@
 @import '../../../../projects/flow-based/src/lib/utils/utils';
 
 :host {
+  align-items: center;
   color: #fff;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  width: 70px;
 
 }
 
