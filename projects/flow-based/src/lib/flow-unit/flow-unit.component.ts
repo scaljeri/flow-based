@@ -13,12 +13,14 @@ import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDirective } from '../socket/socket.directive';
-import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket, XxlSocketType } from '../flow-based';
+import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
 
 declare global {
-  interface Window { ResizeObserver: any; }
+  interface Window {
+    ResizeObserver: any;
+  }
 }
 
 @Component({
@@ -43,19 +45,13 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
   private observer;
 
-  // @HostBinding('class.not-active')
-  // get isNotActive(): boolean {
-  //   return !this.active;
-  // }
-
-  newSocketType: XxlSocketType;
   wrapper: UnitWrapper;
 
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
               private cdr: ChangeDetectorRef,
               private flowService: XxlFlowBasedService,
-              private unitService: XxlFlowUnitService,
+              public unitService: XxlFlowUnitService,
               private movable: MovableDirective) {
   }
 
@@ -85,7 +81,10 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     this.updateWrapper();
 
     this.socketsRefs.changes.subscribe(() => {
-      this.updateWrapper();
+      setTimeout(() => {
+        debugger;
+        this.updateWrapper();
+      });
     });
 
     this.cdr.detectChanges();
@@ -105,8 +104,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
         this.updated.next();
       });
     }
-
-    this.newSocketType = null;
   }
 
   get sockets(): XxlSocket[] {
@@ -122,7 +119,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
     if (!this.active || this.isFlow()) {
       if (this.active && this.isFlow()) {
-        socket = Object.assign({}, socket, { type: socket.type === 'in' ? 'out' : 'in'});
+        socket = Object.assign({}, socket, {type: socket.type === 'in' ? 'out' : 'in'});
       }
 
       this.flowService.socketClicked(socket, this.state.id);
@@ -133,11 +130,13 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     return !!(this.state as XxlFlow).children;
   }
 
-  private updateWrapper(): void {
+  public updateWrapper(): void {
     this.wrapper.reset();
 
     this.socketsRefs.forEach((socket: SocketDirective) => {
       this.wrapper.addSocket(socket.id, socket.element.nativeElement);
     });
+
+    this.flowService.updateConnection();
   }
 }

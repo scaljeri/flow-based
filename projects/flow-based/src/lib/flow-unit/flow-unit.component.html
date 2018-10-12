@@ -1,10 +1,10 @@
-<!--<xxl-add-socket [type]="newSocketType"-->
-                <!--(create)="createSocket($event)" (cancel)="newSocketType = null"></xxl-add-socket>-->
-
 <section class="component">
   <ng-container *ngIf="isFlow() && active">
     <xxl-flow-based #flow [flow]="state" [active]="active" [root]="false"></xxl-flow-based>
   </ng-container>
+
+  <xxl-connection-lines *ngIf="unitService.connections.length"
+                        [connections]="unitService.connections"></xxl-connection-lines>
 
   <ng-container *xxlDynamicComponent="state"></ng-container>
 
@@ -18,12 +18,12 @@
   <section class="sockets sockets-out">
     <ng-container *ngIf="isFlow() && active">
     </ng-container>
-    <span *ngFor="let socket of sockets | socketOut" [xxlSocket]="socket" (pointerdown)="onSocketClick(socket, $event)"
+    <span *ngFor="let socket of sockets | socketOut"
+          [xxlSocket]="socket"
           [attr.data-socket-id]="socket.id"
-          class="socket"></span>
+          (pointerdown)="onSocketClick(socket, $event)" class="socket"></span>
   </section>
 
   <input *ngIf="active" class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title">
   <span class="title" *ngIf="!active">{{state.title}}</span>
 </section>
-

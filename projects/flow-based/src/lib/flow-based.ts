@@ -58,10 +58,10 @@ export interface XxlFlow extends Partial<XxlFlowUnitState> {
 }
 
 export interface XxlConnection {
-  from: string;
-  out: string;   // from
-  to: string;
-  in:  string;   // to
+  from: string | HTMLElement;
+  out?: string;   // from
+  to: string | HTMLElement;
+  in?:  string;   // to
   id: string;
 }
 

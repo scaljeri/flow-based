@@ -65,39 +65,78 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       return;
     }
 
-    const from = this.flowService.units[connection.from];
-    const to = this.flowService.units[connection.to];
+    if (typeof connection.from === 'object') {
+      return this.dFromElements(connection);
+    } else {
 
-    const start = from.getSocketPosition(connection.out);
-    const end = to.getSocketPosition(connection.in) || start;
+      const from = this.flowService.units[connection.from as string];
+      const to = this.flowService.units[connection.to as string];
 
-    if (!start || !start.x || !end || !end.x) {
-      return;
+      const start = from.getSocketPosition(connection.out);
+      const end = to.getSocketPosition(connection.in) || start;
+
+      if (!start || !start.x || !end || !end.x) {
+        return;
+      }
+
+      const x1 = start.x - this.rect.left;
+      const y1 = start.y - this.rect.top;
+      const x2 = end.x - this.rect.left;
+      const y2 = end.y - this.rect.top;
+
+      cx1 = Math.round(x1 + Math.abs(x1 - x2) / 2);
+      cx2 = Math.round(x2 - Math.abs(x1 - x2) / 2);
+      cy1 = y1;
+      cy2 = y2;
+
+      if (x2 < x1) {
+        cy1 = y1 + (y2 - y1) / 2;
+        cy2 = y2 - (y2 - y1) / 2;
+      }
+
+      this.controlPoints[connection.id] = [
+        {x: x1, y: y1},
+        {x: cx1, y: cy1},
+        {x: cx2, y: cy2},
+        {x: x2, y: y2},
+      ];
+
+      return `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
+    }
+  }
+
+  dFromElements(connection: XxlConnection): string {
+    const fromRect = (connection.from as HTMLElement).getBoundingClientRect(),
+      toRect = (connection.to as HTMLElement).getBoundingClientRect();
+
+    const x1 = fromRect.left - this.rect.left  + fromRect.width / 2;
+    const y1 = fromRect.top - this.rect.top + fromRect.height / 2;
+
+    const x2 = toRect.left - this.rect.left + toRect.width / 2;
+    const y2 = toRect.top - this.rect.top + toRect.height / 2;
+
+    return this.computeD(connection.id, x1, y1, x2, y2);
+  }
+
+  private computeD(id: string, fromX: number, fromY: number, toX: number, toY: number): string {
+    const cx1 = Math.round(fromX + Math.abs(fromX - toX) / 2),
+      cx2 = Math.round(toX - Math.abs(fromX - toX) / 2);
+    let cy1 = fromY,
+      cy2 = toY;
+
+    if (toX < fromX) {
+      cy1 = fromY + (toY - fromY) / 2;
+      cy2 = toY - (toY - fromY) / 2;
     }
 
-    const x1 = start.x - this.rect.left;
-    const y1 = start.y - this.rect.top;
-    const x2 = end.x - this.rect.left;
-    const y2 = end.y - this.rect.top;
-
-    cx1 = Math.round(x1 + Math.abs(x1 - x2) / 2);
-    cx2 = Math.round(x2 - Math.abs(x1 - x2) / 2);
-    cy1 = y1;
-    cy2 = y2;
-
-    if (x2 < x1) {
-      cy1 = y1 + (y2 - y1) / 2;
-      cy2 = y2 - (y2 - y1) / 2;
-    }
-
-    this.controlPoints[connection.id] = [
-      {x: x1, y: y1},
+    this.controlPoints[id] = [
+      {x: fromX, y: fromY},
       {x: cx1, y: cy1},
       {x: cx2, y: cy2},
-      {x: x2, y: y2},
+      {x: toX, y: toY},
     ];
 
-    return `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
+    return `M ${fromX} ${fromY} C ${cx1} ${cy1} ${cx2} ${cy2} ${toX} ${toY}`;
   }
 
   arrow(connection: XxlConnection): string {

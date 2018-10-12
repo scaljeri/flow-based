@@ -1,8 +1,9 @@
-import { Component, Host, HostBinding, Inject, Input, OnInit } from '@angular/core';
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'projects/flow-based/src/lib/flow-based';
+import { Component, Host, HostBinding, Input, OnInit } from '@angular/core';
+import { XxlFlowUnit, XxlSocket } from 'projects/flow-based/src/lib/flow-based';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { MatDialog } from '@angular/material';
 import { AddSocketComponent, DialogAction } from './add-socket/add-socket.component';
+import { EditSocketComponent } from './edit-socket/edit-socket.component';
 
 @Component({
   selector: 'fb-default-flow',
@@ -11,6 +12,7 @@ import { AddSocketComponent, DialogAction } from './add-socket/add-socket.compon
 })
 export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
   @Input() title: string;
+  private worker: any;
 
   @HostBinding('class.is-active') active = false;
 
@@ -19,6 +21,7 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
   }
 
   ngOnInit() {
+    this.worker = this.service.worker;
   }
 
   getSockets(): XxlSocket[] {
@@ -55,11 +58,36 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
       this.service.removeBlur();
 
       if (result) {
-        if (result.action === 'delete') {
-          this.service.deleteSocket(result.socket);
-        } else {
-          this.service.addSocket(result.socket);
-        }
+        this.service.addSocket(result.socket);
+      }
+    });
+  }
+
+  editDialog(type: 'in' | 'out'): void {
+    const sockets = this.worker.getSockets().filter(socket => socket.type === type);
+
+    const dialogRef = this.dialog.open(EditSocketComponent, {
+      width: '400px',
+      data: {
+        wrapper: this.service.flowService.units[this.service.state.id],
+        sockets: sockets,
+        service: this.service
+      }
+    });
+
+    this.service.requireBlur(() => dialogRef.close());
+
+    dialogRef.afterClosed().subscribe((updates: XxlSocket[]) => {
+      this.service.removeBlur();
+
+      if (updates) {
+        sockets.filter(socket => {
+          if (!updates.some(update => update.id === socket.id)) {
+            this.service.removeSocket(socket);
+          }
+
+          this.worker.state.sockets = [...updates, ...this.worker.getSockets().filter(item => item.type !== type)];
+        });
       }
     });
   }

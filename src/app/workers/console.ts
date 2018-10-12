@@ -36,10 +36,9 @@ export class ConsoleWorker implements XxlWorker {
   }
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
-    const key = connection.from + connection.out;
     this.stream = stream;
 
-    this.subscriptions[key] = stream.subscribe(val => {
+    this.subscriptions[connection.id] = stream.subscribe(val => {
       this.currentValue = Number.isInteger(val) ? val : parseFloat(val.toFixed(2));
 
       this.history.unshift(Number.isInteger(val) ? val : parseFloat(val.toFixed(2)));
@@ -50,10 +49,8 @@ export class ConsoleWorker implements XxlWorker {
   }
 
   removeStream(connection: XxlConnection): void {
-    const key = connection.from + connection.out;
+    this.subscriptions[connection.id].unsubscribe();
 
-    this.subscriptions[key].unsubscribe();
-
-    delete this.subscriptions[key];
+    delete this.subscriptions[connection.id];
   }
 }

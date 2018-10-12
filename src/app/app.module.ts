@@ -30,6 +30,7 @@ import { StatsComponent } from './units/stats/stats.component';
 import { STATS_CONFIG, StatsWorker } from './workers/stats';
 import { MERGE_STREAMS_CONFIG, MergeStreamsWorker } from './workers/merge-streams';
 import { MergeStreamsComponent } from './units/merge-streams/merge-streams.component';
+import { EditSocketComponent } from './units/default-flow/edit-socket/edit-socket.component';
 
 @NgModule({
   declarations: [
@@ -44,7 +45,8 @@ import { MergeStreamsComponent } from './units/merge-streams/merge-streams.compo
     ComponentSelectionComponent,
     BasicGraphComponent,
     StatsComponent,
-    MergeStreamsComponent
+    MergeStreamsComponent,
+    EditSocketComponent
   ],
   imports: [
     BrowserModule,
@@ -102,6 +104,7 @@ import { MergeStreamsComponent } from './units/merge-streams/merge-streams.compo
   ],
   entryComponents: [
     AddSocketComponent,
+    EditSocketComponent,
     ComponentSelectionComponent,
     BasicGraphComponent,
     RandomNumbersComponent,

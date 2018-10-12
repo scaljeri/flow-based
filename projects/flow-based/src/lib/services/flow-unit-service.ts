@@ -1,15 +1,14 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
+import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
 import { XxlSocketBuilderService } from '../socket-builder.service';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable()
 export class XxlFlowUnitService {
+  public connections: XxlConnection[] = [];
   public state: XxlFlowUnitState;
 
-  constructor(private flowService: XxlFlowBasedService) {
+  constructor(public flowService: XxlFlowBasedService) {
   }
 
   setState(state: XxlFlowUnitState): void {
@@ -23,18 +22,21 @@ export class XxlFlowUnitService {
     }
 
     this.state.sockets = [socket, ...this.state.sockets];
+    setTimeout(() => {
+      this.flowService.update
+    })
   }
 
   get worker(): XxlWorker {
     return this.flowService.getWorker(this.state.id);
   }
 
-  deleteSocket(socket: XxlSocket): void {
-
-  }
-
   removeSocket(socket: XxlSocket): void {
-    // TODO
+    (this.state as XxlFlow).connections.forEach(conn => {
+      if (conn.in === socket.id || conn.out === socket.id) {
+        this.flowService.removeConnection(conn);
+      }
+    });
   }
 
   requireBlur(cb: () => void): void {
@@ -51,5 +53,31 @@ export class XxlFlowUnitService {
 
   closeSelf(): void {
     this.flowService.close(this.state);
+  }
+
+  addConnection(from: HTMLElement, to: HTMLElement): string {
+    const id = Math.random().toString();
+
+    const conn = {
+      id,
+      from: from,
+      to: to
+    };
+
+    this.connections = [...this.connections, conn];
+
+    return id;
+  }
+
+  updateConnections(): void {
+    this.connections = [...this.connections];
+  }
+
+  removeConnection(id: string): void {
+    this.connections = this.connections.filter(conn => conn.id !== id);
+  }
+
+  removeConnections(): void {
+    this.connections = [];
   }
 }

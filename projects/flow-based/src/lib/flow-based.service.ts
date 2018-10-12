@@ -17,9 +17,9 @@ import { FlowWorker } from './utils/flow-worker';
 })
 export class XxlFlowBasedService {
   private flowStack: FlowBasedComponent[] = [];
-  public units: { [key: string]: UnitWrapper } = {};
   private unitBlur: () => void;
   private workers = {};
+  public units: { [key: string]: UnitWrapper } = {};
 
   constructor(@Inject(XXL_FLOW_TYPES) private flowTypes: XxlFlowType) {
   }
@@ -41,10 +41,10 @@ export class XxlFlowBasedService {
   }
 
   setupConnection(conn: XxlConnection): void {
-    if (this.workers[conn.to] && this.workers[conn.from]) {
-      const stream = this.workers[conn.from].getStream(conn.out);
+    if (this.workers[conn.to as string] && this.workers[conn.from as string]) {
+      const stream = this.workers[conn.from as string].getStream(conn.out);
 
-      this.workers[conn.to].setStream(stream, conn);
+      this.workers[conn.to as string].setStream(stream, conn);
     }
   }
 
@@ -93,8 +93,8 @@ export class XxlFlowBasedService {
   }
 
   removeConnection(connection: XxlConnection): void {
-    if (this.workers[connection.to] && this.workers[connection.from]) {
-      this.workers[connection.to].removeStream(connection);
+    if (this.workers[connection.to as string] && this.workers[connection.from as string]) {
+      this.workers[connection.to as string].removeStream(connection);
     }
 
     this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn !== connection);
@@ -158,7 +158,7 @@ export class XxlFlowBasedService {
 
   delete(state: XxlFlow | XxlFlowUnitState, parentState?: XxlFlow): void {
     let flow = parentState || this.currentFlow.flow,
-        index = flow.children.indexOf(state);
+      index = flow.children.indexOf(state);
 
     if (!parentState) {
       this.blur();
@@ -174,7 +174,7 @@ export class XxlFlowBasedService {
       if (conn.to === state.id) {
         this.workers[state.id].removeStream(conn);
       } else if (conn.from === state.id) {
-        this.workers[conn.to].removeStream(conn);
+        this.workers[conn.to as string].removeStream(conn);
       } else {
         out.push(conn);
       }

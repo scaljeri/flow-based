@@ -13,7 +13,8 @@
   }
 }
 
-.add-socket {
+.add-socket,
+.edit-socket {
   @include xxl-position(absolute, 8px 0 0 0);
 }
 
@@ -23,6 +24,14 @@
 
 .socket-in {
   left: 8px;
+}
+
+.edit-socket.socket-in {
+  left: 76px;
+}
+
+.edit-socket.socket-out {
+  right: 76px;
 }
 
 footer {

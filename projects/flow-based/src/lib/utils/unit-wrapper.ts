@@ -1,7 +1,7 @@
 import { XxlFlowUnitState, XxlPosition } from 'projects/flow-based/src/lib/flow-based';
 
 export class UnitWrapper {
-  private sockets = {};
+  public sockets = {};
 
   constructor(private state: XxlFlowUnitState) {
   }

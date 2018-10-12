@@ -69,6 +69,7 @@ export class StatsWorker implements XxlWorker {
   }
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
+    // TODO: Refactor
     this.subscriptions[connection.id] = stream.subscribe(val => {
       if (this.columnWidth === 0) {
         return ;

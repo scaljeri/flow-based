@@ -121,16 +121,14 @@ input.title {
 }
 
 xxl-flow-based {
-  // @include xxl-position(absolute, 0px 0px 0px 0px);
   height: 100%;
   width: 100%;
 }
 
-//
-//.add-socket-form {
-//  background-color: rgba(0, 0, 0, 0.5);
-//  @include xxl-position(absolute, 0px 0px 0px 0px);
-//}
+xxl-connection-lines {
+  background-color: rgba(0, 0, 0, 0.8);
+  @include xxl-position(absolute, 0px 0px 0px 0px);
+}
 
 .component {
   border-radius: 8px;

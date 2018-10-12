@@ -2,7 +2,7 @@ import {
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
-  Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild,
+  Input, OnChanges, OnDestroy, OnInit, Optional, Output, SimpleChanges, ViewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
@@ -12,6 +12,7 @@ import {
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
+import { XxlFlowUnitService } from './services/flow-unit-service';
 
 @Component({
   selector: 'xxl-flow-based',

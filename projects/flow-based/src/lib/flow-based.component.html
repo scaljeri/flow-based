@@ -2,8 +2,7 @@
   <xxl-connection-lines
     [connections]="flow.connections"
     (lineClick)="removeConnection($event)"></xxl-connection-lines>
-
-  <!--<button *ngIf="active && !root" (click)="close($event)" class="close"></button>-->
+  <!--<xxl-connection-lines *ngIf="flowService.dummyConnections.length" [connections]="flowService.dummyConnections"></xxl-connection-lines>-->
 
   <ng-container *ngFor="let state of flow.children; index as i">
     <xxl-flow-unit
