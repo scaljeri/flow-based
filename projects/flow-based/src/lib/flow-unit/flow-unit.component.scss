@@ -136,6 +136,7 @@ xxl-flow-based {
   border-radius: 8px;
   display: inline-flex;
   justify-content: center;
+  overflow: hidden;
   padding: 1px;
   @include xxl-size(100%);
 }
