@@ -10,8 +10,12 @@
 
   &.is-active,
   .chart {
-    @include xxl-size(100%);
+    @include xxl-size(calc(100% - 8px));
   }
+}
+
+.chart {
+  margin: 4px;
 }
 
 footer {

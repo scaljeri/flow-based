@@ -4,6 +4,11 @@ import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 
+const GRAPH_OPTIONS = {
+  legend: 'bottom',
+  title: 'Data',
+  curveType: 'function',
+};
 @Component({
   selector: 'fb-basic-graph',
   templateUrl: './basic-graph.component.html',
@@ -16,6 +21,8 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   dataTable;
   view;
   worker: BasicGraphWorker;
+  startIndex = 0;
+
 
   constructor(@Host() private service: XxlFlowUnitService) {
   }
@@ -34,34 +41,32 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
     return this.worker.getSockets();
   }
 
-  update(values: number[]): void {
-    this.dataTable = new GoogleCharts.api.visualization.DataTable();
-    this.dataTable.addColumn('number', 'Count');
-    this.dataTable.addColumn('number', 'Values');
-    values.forEach((value, index) => {
-      this.dataTable.addRow([index, value]);
-    });
+  update(values?: number[]): void {
+    if (values) {
+      if (this.dataTable && values.length === this.dataTable.getNumberOfRows()) {
+        this.startIndex++;
+      }
+      this.dataTable = new GoogleCharts.api.visualization.DataTable();
+      this.dataTable.addColumn('number', 'Count');
+      this.dataTable.addColumn('number', 'Values');
+      values.forEach((value, index) => {
+        this.dataTable.addRow([index + this.startIndex, value]);
+      });
 
-    this.view = new GoogleCharts.api.visualization.DataView(this.dataTable);
+
+      this.view = new GoogleCharts.api.visualization.DataView(this.dataTable);
+    }
 
     if (this.view) {
-      const options = {
-            chartArea: {width: '100%', height: '100%'},
-            forceIFrame: 'false',
-            is3D: 'true',
-            pieSliceText: 'value',
-            sliceVisibilityThreshold: 1 / 20, // Only > 5% will be shown.
-            titlePosition: 'none'
-          };
-      this.chart.draw(this.dataTable, options);
+      this.chart.draw(this.dataTable, GRAPH_OPTIONS);
     }
   }
 
   setActive(state): void {
     this.isActive = state;
-    // setTimeout(() => {
-    //   this.drawChart();
-    // });
+    setTimeout(() => {
+      this.update();
+    });
   }
 
 
