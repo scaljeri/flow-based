@@ -131,6 +131,10 @@ xxl-connection-lines {
   z-index: 2;
   @include xxl-position(absolute, 0px 0px 0px 0px);
 
+  &.tmp-lines {
+    z-index: 3;
+  }
+
   &.is-dark {
     background-color: rgba(0, 0, 0, 0.8);
   }
