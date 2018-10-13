@@ -1,10 +1,29 @@
 @import '../../../../projects/flow-based/src/lib/utils/utils';
 
+:host {
+  display: block;
+  @include xxl-size(100%);
+}
 footer {
   background-color: rgba(255, 255, 255, 0.8);
   display: flex;
   justify-content: space-between;
   transform: translateX(-50%);
   width: 300px;
+  z-index: 20;
   @include xxl-position(absolute, 0 0 8px 50%);
+}
+
+.main {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+}
+
+.test {
+  background-color: #fff;
+  position: relative;
+  z-index: 10;
+  @include xxl-size(50px);
 }

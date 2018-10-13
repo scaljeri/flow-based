@@ -1,6 +1,7 @@
-<fb-default-front [title]="title"></fb-default-front>
+<fb-default-front *ngIf="!isActive" [title]="title"></fb-default-front>
 
-<section *ngIf="isActive">
+<section *ngIf="isActive" class="main">
+  <div #test class="test"></div>
   <footer>
     <button mat-button color="warn" (click)="onDelete()">
       <mat-icon>delete_forever</mat-icon>

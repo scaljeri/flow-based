@@ -81,12 +81,16 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     this.updateWrapper();
 
     this.socketsRefs.changes.subscribe(() => {
-      setTimeout(() => {
-        this.updateWrapper();
-      });
+      this.updateWrapper();
     });
 
     this.cdr.detectChanges();
+
+    if (this.ref.instance['ready']) {
+      setTimeout(() => {
+        this.ref.instance['ready']();
+      });
+    }
   }
 
   ngOnDestroy(): void {

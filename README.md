@@ -32,3 +32,7 @@ TODO: Fix circular dependency issues
 
   * https://stackblitz.com/edit/flow-based-programming
   * https://stackblitz.com/edit/angular-bezier-curves
+
+### TODO
+  * Refactor sockets setup
+  * Put all z-indices in a $variable

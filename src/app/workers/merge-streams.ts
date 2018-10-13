@@ -22,7 +22,6 @@ export const MERGE_STREAMS_CONFIG = {
 export class MergeStreamsWorker implements XxlWorker {
   private subscription: Subscription;
   private subject = new ReplaySubject<number>(1);
-  private refId = null;
 
   private streams$: { [s: string]: Observable<number> } = {};
 
@@ -38,7 +37,7 @@ export class MergeStreamsWorker implements XxlWorker {
   }
 
   getSockets(): XxlSocket[] {
-    return this.state.config.sockets;
+    return this.state.sockets || this.state.config.sockets;
   }
 
   removeStream(connection: XxlConnection): void { /* not used */

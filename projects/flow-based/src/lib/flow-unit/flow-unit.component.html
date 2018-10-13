@@ -1,10 +1,11 @@
 <section class="component">
   <ng-container *ngIf="isFlow() && active">
-    <xxl-flow-based #flow [flow]="state" [active]="active" [root]="false"></xxl-flow-based>
+    <xxl-flow-based [flow]="state" [active]="active" [root]="false"></xxl-flow-based>
   </ng-container>
 
-  <xxl-connection-lines class="tmp-lines" *ngIf="unitService.connections.length"
-                        [connections]="unitService.connections"></xxl-connection-lines>
+  <xxl-connection-lines *ngIf="unitService.connections.length"
+                        [connections]="unitService.connections"
+                        [class.is-wide]="isFlow()" class="tmp-lines" ></xxl-connection-lines>
 
   <ng-container *xxlDynamicComponent="state"></ng-container>
 

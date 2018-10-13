@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
 import { XxlSocketBuilderService } from '../socket-builder.service';
+import { UnitWrapper } from '../utils/unit-wrapper';
 
 @Injectable()
 export class XxlFlowUnitService {
@@ -22,9 +23,10 @@ export class XxlFlowUnitService {
     }
 
     this.state.sockets = [socket, ...this.state.sockets];
-    setTimeout(() => {
-      this.flowService.update
-    })
+  }
+
+  get wrapper(): UnitWrapper {
+    return this.flowService.units[this.state.id];
   }
 
   get worker(): XxlWorker {

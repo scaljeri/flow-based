@@ -118,10 +118,7 @@ $socket-size: 16px;
 input.title {
   padding: 8px;
   width: 400px;
-}
-
-.tmp-lines {
-  z-index: 2;
+  z-index: 3;
 }
 
 xxl-flow-based {
@@ -130,7 +127,8 @@ xxl-flow-based {
 }
 
 xxl-connection-lines {
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: transparent;
+  z-index: 2;
   @include xxl-position(absolute, 0px 0px 0px 0px);
 }
 
