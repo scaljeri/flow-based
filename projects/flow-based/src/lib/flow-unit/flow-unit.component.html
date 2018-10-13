@@ -3,7 +3,7 @@
     <xxl-flow-based #flow [flow]="state" [active]="active" [root]="false"></xxl-flow-based>
   </ng-container>
 
-  <xxl-connection-lines *ngIf="unitService.connections.length"
+  <xxl-connection-lines class="tmp-lines" *ngIf="unitService.connections.length"
                         [connections]="unitService.connections"></xxl-connection-lines>
 
   <ng-container *xxlDynamicComponent="state"></ng-container>

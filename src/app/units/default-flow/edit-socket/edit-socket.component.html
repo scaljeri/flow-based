@@ -1,0 +1,16 @@
+<mat-list>
+  <mat-list-item *ngFor="let socket of sockets;let i = index">
+    <button #delete mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id" class="delete">
+      <mat-icon>delete_forever</mat-icon>
+    </button>
+      <mat-form-field>
+        <input matInput placeholder="Socket name" [(ngModel)]="socket.name">
+      </mat-form-field>
+    <mat-divider></mat-divider>
+  </mat-list-item>
+</mat-list>
+
+<footer>
+  <button type="button" (click)="onCancel()" mat-button color="warn">Cancel</button>
+  <button type="button" mat-button (click)="onApply()">Apply</button>
+</footer>

@@ -82,7 +82,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
     this.socketsRefs.changes.subscribe(() => {
       setTimeout(() => {
-        debugger;
         this.updateWrapper();
       });
     });
