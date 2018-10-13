@@ -130,6 +130,10 @@ xxl-connection-lines {
   background-color: transparent;
   z-index: 2;
   @include xxl-position(absolute, 0px 0px 0px 0px);
+
+  &.is-dark {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
 }
 
 .component {
