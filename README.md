@@ -10,7 +10,7 @@ Angular library for building workflows + demo
     
 ### Deploy to gh-pages
 
-  $>  ng build --prod --base-href "https://scaljeri.github.io/flow-based/"
+  $>  ng build --prod --base-href "https://scaljeri.github.io/flow-based/" --output-path="dist/"
   $>  ngh
   
 TODO: Fix circular dependency issues
