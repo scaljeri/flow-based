@@ -33,10 +33,30 @@ export class XxlFlowUnitService {
     return this.flowService.getWorker(this.state.id);
   }
 
-  removeSocket(socket: XxlSocket): void {
-    (this.state as XxlFlow).connections.forEach(conn => {
+  socketRemoved(socket: XxlSocket, flow?: XxlFlow): void {
+    flow = flow || this.flowService.currentFlow.flow;
+
+    flow.connections.forEach(conn => {
+      if (conn.in === socket.id || conn.out === socket.id) {
+        this.flowService.removeConnection(conn, flow);
+      }
+    });
+
+    if (flow === this.flowService.currentFlow.flow) {
+      this.socketRemoved(socket, this.flowService.parentFlow.flow);
+    }
+  }
+
+  removeSocket(socket: XxlSocket, connections?: XxlConnection[]): void {
+    (connections || (this.state as XxlFlow).connections).forEach(conn => {
       if (conn.in === socket.id || conn.out === socket.id) {
         this.flowService.removeConnection(conn);
+      }
+
+      if (!connections && this.flowService.parentFlow) {
+        // TODO: Hack
+        debugger;
+        // this.removeSocket(socket, this.flowService.flowStack[1].flow.connections);
       }
     });
   }

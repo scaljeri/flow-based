@@ -83,7 +83,7 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
       if (updates) {
         sockets.filter(socket => {
           if (!updates.some(update => update.id === socket.id)) {
-            this.service.removeSocket(socket);
+            this.service.socketRemoved(socket);
           }
 
           this.worker.state.sockets = [...updates, ...this.worker.getSockets().filter(item => item.type !== type)];

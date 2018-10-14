@@ -28,6 +28,10 @@ export class XxlFlowBasedService {
     return this.flowStack[0];
   }
 
+  get parentFlow(): FlowBasedComponent {
+    return this.flowStack[1];
+  }
+
   initialize(flow: XxlFlow): void {
     if (!flow.children) {
       flow.children = [];
@@ -92,12 +96,14 @@ export class XxlFlowBasedService {
     return state;
   }
 
-  removeConnection(connection: XxlConnection): void {
+  removeConnection(connection: XxlConnection, flow?: XxlFlow): void {
+    flow = flow || this.currentFlow.flow;
+
     if (this.workers[connection.to as string] && this.workers[connection.from as string]) {
       this.workers[connection.to as string].removeStream(connection);
     }
 
-    this.currentFlow.flow.connections = this.currentFlow.flow.connections.filter(conn => conn !== connection);
+    flow.connections = flow.connections.filter(conn => conn !== connection);
   }
 
   // Unit stuff
