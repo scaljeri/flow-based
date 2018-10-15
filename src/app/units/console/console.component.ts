@@ -18,7 +18,6 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   subscription: Subscription;
   value: any;
   values: any[];
-  count = 0;
 
   constructor(@Host() private service: XxlFlowUnitService) {}
 
@@ -29,7 +28,6 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
     }
 
     this.subscription = this.worker.getStream().subscribe(log => {
-      this.count++;
       this.value = this.worker.currentValue;
     });
   }
@@ -52,5 +50,9 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
 
   onClose(): void {
     this.service.closeSelf();
+  }
+
+  get count(): number {
+    return this.worker.count;
   }
 }
