@@ -45,21 +45,30 @@ export class XxlFlowUnitService {
     if (flow === this.flowService.currentFlow.flow) {
       this.socketRemoved(socket, this.flowService.parentFlow.flow);
     }
-  }
 
-  removeSocket(socket: XxlSocket, connections?: XxlConnection[]): void {
-    (connections || (this.state as XxlFlow).connections).forEach(conn => {
-      if (conn.in === socket.id || conn.out === socket.id) {
-        this.flowService.removeConnection(conn);
-      }
+    setTimeout(() => {
+      flow.connections.forEach((conn: XxlConnection) => {
+        this.flowService.units[conn.from as string].update();
+        this.flowService.units[conn.to as string].update();
+      });
 
-      if (!connections && this.flowService.parentFlow) {
-        // TODO: Hack
-        debugger;
-        // this.removeSocket(socket, this.flowService.flowStack[1].flow.connections);
-      }
+      flow.connections = [...flow.connections];
     });
   }
+
+  // removeSocket(socket: XxlSocket, connections?: XxlConnection[]): void {
+  //   (connections || (this.state as XxlFlow).connections).forEach(conn => {
+  //     if (conn.in === socket.id || conn.out === socket.id) {
+  //       this.flowService.removeConnection(conn);
+  //     }
+  //
+  //     if (!connections && this.flowService.parentFlow) {
+  //       // TODO: Hack
+  //       debugger;
+  //       // this.removeSocket(socket, this.flowService.flowStack[1].flow.connections);
+  //     }
+  //   });
+  // }
 
   requireBlur(cb: () => void): void {
     this.flowService.blurForUnit(cb);

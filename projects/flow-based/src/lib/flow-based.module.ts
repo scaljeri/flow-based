@@ -32,7 +32,7 @@ import { SocketDirective } from './socket/socket.directive';
     SocketInPipe,
     SocketOutPipe,
     SocketDirective],
-  exports: [FlowBasedComponent],
+  exports: [FlowBasedComponent, SocketInPipe],
   providers: [
     FlowBasedManagerService,
     {

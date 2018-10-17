@@ -4,6 +4,7 @@
   display: block;
   @include xxl-size(100%);
 }
+
 footer {
   background-color: rgba(255, 255, 255, 0.8);
   display: flex;
@@ -21,9 +22,30 @@ footer {
   justify-content: center;
 }
 
-.test {
+mat-card {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.socket {
   background-color: #fff;
+  flex: 1;
+  margin: 16px;
   position: relative;
   z-index: 10;
-  @include xxl-size(50px);
+}
+
+.inputs {
+  width: 150px;
+}
+
+.output {
+  display: flex;
+  margin-left: 100px;
+  @include xxl-size(200px, 150px);
+
+  mat-card-content {
+    font-size: 30px;
+  }
 }

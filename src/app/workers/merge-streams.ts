@@ -1,5 +1,6 @@
 import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, ReplaySubject, Subscription, zip } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export const MERGE_STREAMS_CONFIG = {
   sockets: [
@@ -23,7 +24,9 @@ export class MergeStreamsWorker implements XxlWorker {
   private subscription: Subscription;
   private subject = new ReplaySubject<number>(1);
 
-  private streams$: { [s: string]: Observable<number> } = {};
+  private streams$: { [s: string]: Observable<{ value: number, connection: XxlConnection }> } = {};
+  public streamValues: { [key: string]: number[] } = {};
+  public outputValue: number;
 
   constructor(private state: XxlFlowUnitState) {
   }
@@ -42,6 +45,7 @@ export class MergeStreamsWorker implements XxlWorker {
 
   removeStream(connection: XxlConnection): void { /* not used */
     delete this.streams$[connection.id];
+
     this.createStream();
   }
 
@@ -62,13 +66,24 @@ export class MergeStreamsWorker implements XxlWorker {
     }
 
     this.subscription = zip(...streams$)
-      .subscribe((values: number[]) => {
-        this.subject.next(values.reduce((a, b) => a + b, 0));
+      .subscribe((values: {value: number, connection: XxlConnection}[]) => {
+        this.outputValue = values.reduce((a, b) => a + b.value, 0);
+        this.subject.next(this.outputValue);
+
+        this.streamValues = values.reduce((out, v) => {
+          if (!out[v.connection.in]) {
+            out[v.connection.in] = [];
+          }
+
+          out[v.connection.in].push(v.value);
+
+          return out;
+        }, {});
       });
   }
 
   setStream(stream: Observable<number>, connection: XxlConnection): void {
-    this.streams$[connection.id] = stream;
+    this.streams$[connection.id] = stream.pipe(map(v => ({value: v, connection})));
     this.createStream();
   }
 

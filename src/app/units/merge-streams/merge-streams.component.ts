@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, Host, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Host, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
@@ -14,12 +14,14 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
   worker: MergeStreamsWorker;
   isActive = false;
 
-  @ViewChild('test') test: ElementRef;
+  @ViewChild('output', {read: ElementRef}) output: ElementRef;
+  @ViewChildren('inputs', {read: ElementRef}) inputs: QueryList<ElementRef>;
 
   constructor(private fb: FormBuilder,
               @Host() private service: XxlFlowUnitService) {
     this.state = service.state;
   }
+
   ngOnInit() {
     this.worker = this.service.worker as MergeStreamsWorker;
   }
@@ -38,9 +40,16 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
 
     if (state) {
       setTimeout(() => {
-        const socket = this.worker.getSockets()[0];
-        const el = this.service.wrapper.sockets[socket.id];
-        this.service.addConnection(el.element, this.test.nativeElement);
+        this.inputs.forEach((s, i) => {
+          const socketId = s.nativeElement.dataset.socketId;
+          const el = this.service.wrapper.sockets[socketId];
+
+          this.service.addConnection(el.element, this.inputs.toArray()[i].nativeElement);
+          this.service.addConnection(this.inputs.toArray()[i].nativeElement, this.output.nativeElement);
+        });
+
+        const outSocket = this.worker.getSockets().filter(s => s.type === 'out')[0];
+        this.service.addConnection(this.output.nativeElement, this.service.wrapper.sockets[outSocket.id].element);
       });
     } else {
       this.service.removeConnections();

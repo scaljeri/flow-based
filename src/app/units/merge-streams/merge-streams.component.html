@@ -1,7 +1,21 @@
 <fb-default-front *ngIf="!isActive" [title]="title"></fb-default-front>
 
 <section *ngIf="isActive" class="main">
-  <div #test class="test"></div>
+  <section class="inputs">
+    <ng-container *ngFor="let socket of getSockets() | socketIn" class="socket">
+      <mat-card #inputs *ngFor="let value of worker.streamValues[socket.id]"
+                [attr.data-socket-id]="socket.id" class="socket">
+        <mat-card-content>{{value.toFixed(3)}}</mat-card-content>
+      </mat-card>
+    </ng-container>
+  </section>
+
+  <div #output class="output">
+    <mat-card #socketOut class="socket">
+      <mat-card-content>{{worker.outputValue.toFixed(3)}}</mat-card-content>
+    </mat-card>
+  </div>
+
   <footer>
     <button mat-button color="warn" (click)="onDelete()">
       <mat-icon>delete_forever</mat-icon>

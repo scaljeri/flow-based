@@ -1,4 +1,4 @@
-<article *ngIf="active" xxlMovableArea #dragArea [ngClass]="'active-socket-' + activeSocket">
+<article *ngIf="active" xxlMovableArea #dragArea>
   <xxl-connection-lines
     [connections]="flow.connections"
     (lineClick)="removeConnection($event)"></xxl-connection-lines>

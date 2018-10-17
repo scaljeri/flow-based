@@ -4,7 +4,7 @@
 $border-width: 3px;
 $border-color: darkray;
 $border-width: 3px;
-$socket-size: 16px;
+$socket-size: 14px;
 
 :host {
   --inner-border-color: var(--block-border-color, #868686);
@@ -16,6 +16,8 @@ $socket-size: 16px;
   border-radius: 12px;
   border-style: solid;
   border-width: $border-width;
+  box-sizing: border-box;
+
   display: flex;
   justify-content: center;
   min-height: 50px;
@@ -27,14 +29,16 @@ $socket-size: 16px;
   .sockets-in {
     .socket {
       background-color: var(--socket-in-disabled, #fff);
-      border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
+      border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
+      // border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
     }
   }
 
   .sockets-out {
     .socket {
       background-color: var(--socket-out-disabled, #fff);
-      border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
+      border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
+      // border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
     }
   }
 
@@ -73,23 +77,6 @@ $socket-size: 16px;
     top: 0 !important;
     transform: translate(0, 0);
     z-index: $xxl-flow-unit-active;
-
-    .sockets-in {
-      .socket {
-        border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
-      }
-    }
-
-    .sockets-out {
-      .socket {
-        border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
-      }
-
-      .add-socket {
-        left: auto;
-        right: 30px;
-      }
-    }
   }
 }
 
@@ -178,11 +165,11 @@ xxl-connection-lines {
 }
 
 .sockets-in {
-  left: calc(#{-$border-width} / 2 - var(--socket-size) / 2);
+  left: calc(-4px - var(--socket-size) / 2);
 }
 
 .sockets-out {
-  right: calc(#{-$border-width} / 2 - var(--socket-size) / 2);
+  right: calc(2px - var(--socket-size) / 2);
 }
 
 .socket {
@@ -191,7 +178,7 @@ xxl-connection-lines {
   border-radius: 50%;
   cursor: pointer;
   display: block;
-  height: var(--socket-size);
+  flex: 0 0 var(--socket-size);
   transform: rotate(45deg);
   width: var(--socket-size);
 }
