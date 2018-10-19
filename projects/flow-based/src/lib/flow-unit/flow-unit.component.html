@@ -12,6 +12,7 @@
   <section class="sockets sockets-in">
     <xxl-socket *ngFor="let socket of sockets | socketIn"
           [state]="socket"
+          [parentId]="id"
           [attr.data-socket-id]="socket.id"
           (clicked)="onSocketClick($event)" class="socket"></xxl-socket>
   </section>
@@ -21,6 +22,7 @@
     </ng-container>
     <xxl-socket *ngFor="let socket of sockets | socketOut"
           [state]="socket"
+          [parentId]="id"
           (clicked)="onSocketClick($event)" class="socket"></xxl-socket>
   </section>
 

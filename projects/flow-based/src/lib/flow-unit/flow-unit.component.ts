@@ -128,4 +128,8 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   isFlow(): boolean {
     return !!(this.state as XxlFlow).children;
   }
+
+  get id(): number {
+    return this.state.id;
+  }
 }

@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
-import { XxlPosition, XxlSocket } from 'flow-based';
+import { XxlPosition, XxlSocket, XxlSocketEvent } from 'flow-based';
 import { SocketComponent } from '../socket/socket.component';
 import { FlowBasedConnectionService } from './flow-based-connection.service';
+import { ReplaySubject } from 'rxjs';
+import { XxlFlowBasedService } from '../flow-based.service';
 
 interface SocketDetails {
   comp: SocketComponent;
@@ -12,16 +14,27 @@ interface SocketDetails {
 export class FlowBasedSocketService {
   private sockets: { [key: string]: SocketDetails } = {};
   private activeSocketId: string;
+  private subject = new ReplaySubject<XxlSocketEvent>(1);
+  public activeSocket$ = this.subject.asObservable();
 
-  constructor(private connectionService: FlowBasedConnectionService) {
+  constructor(private connectionService: FlowBasedConnectionService,
+              private flowService: XxlFlowBasedService) {
   }
 
   getSocketPosition(socketId: number): XxlPosition {
     return this.sockets[socketId].position;
   }
 
-  onClick(socketId: number): void {
-    // TODO
+  onClicked(event?: XxlSocketEvent): void {
+    if (event) {
+      this.flowService.socketClicked(event);
+    }
+
+    this.subject.next(event);
+  }
+
+  blur(): void {
+    this.subject.next(null);
   }
 
   updatePosition(sockets: XxlSocket[]): void {
@@ -32,7 +45,7 @@ export class FlowBasedSocketService {
   }
 
   add(comp: SocketComponent): void {
-    this.sockets[comp.id] = { comp, position: this.determinePosition(comp) };
+    this.sockets[comp.id] = {comp, position: this.determinePosition(comp)};
   }
 
   private determinePosition(comp: SocketComponent): XxlPosition {
@@ -48,10 +61,6 @@ export class FlowBasedSocketService {
 
   setActiveSocket(socket: XxlSocket): void {
     // this.sockets[socket.id]
-  }
-
-  activate(socketId: string): void {
-    this.activeSocketId = socketId;
   }
 
   deactivate(): void {

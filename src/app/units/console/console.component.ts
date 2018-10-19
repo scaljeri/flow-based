@@ -44,7 +44,7 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   getSockets(): XxlSocket[] {
     return [
       {
-        type: 'in'
+        type: 'in',
       },
       {
         type: 'out'

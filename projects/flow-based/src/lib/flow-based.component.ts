@@ -44,6 +44,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, Control
     private element: ElementRef,
     public flowService: XxlFlowBasedService,
     @Self() private connectionService: FlowBasedConnectionService,
+    @Self() private socketService: FlowBasedSocketService,
     @Optional() @SkipSelf() private parentConnectionService: FlowBasedConnectionService) {
   }
 
@@ -60,6 +61,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, Control
 
     this.activeSocketFrom = null;
     this.activeSocketTo = null;
+
+    this.socketService.onClicked();
   }
 
   ngOnInit() {

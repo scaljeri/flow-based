@@ -78,6 +78,7 @@ export interface XxlSocket {
 
 export interface XxlSocketEvent extends XxlSocket {
   socket: XxlSocket;
+  parentId: number;
   event: PointerEvent;
 }
 
