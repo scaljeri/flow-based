@@ -10,19 +10,18 @@
   <ng-container *xxlDynamicComponent="state"></ng-container>
 
   <section class="sockets sockets-in">
-    <span *ngFor="let socket of sockets | socketIn"
-          [xxlSocket]="socket"
+    <xxl-socket *ngFor="let socket of sockets | socketIn"
+          [state]="socket"
           [attr.data-socket-id]="socket.id"
-          (pointerdown)="onSocketClick(socket, $event)" class="socket"></span>
+          (clicked)="onSocketClick($event)" class="socket"></xxl-socket>
   </section>
 
   <section class="sockets sockets-out">
     <ng-container *ngIf="isFlow() && active">
     </ng-container>
-    <span *ngFor="let socket of sockets | socketOut"
-          [xxlSocket]="socket"
-          [attr.data-socket-id]="socket.id"
-          (pointerdown)="onSocketClick(socket, $event)" class="socket"></span>
+    <xxl-socket *ngFor="let socket of sockets | socketOut"
+          [state]="socket"
+          (clicked)="onSocketClick($event)" class="socket"></xxl-socket>
   </section>
 
   <input *ngIf="active" class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title">

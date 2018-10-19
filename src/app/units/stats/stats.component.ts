@@ -64,7 +64,21 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   }
 
   getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
+    return [
+      {
+        type: 'in',
+        format: 'number'
+      },
+      {
+        type: 'out',
+        name: 'Min value',
+        format: 'number'
+      },
+      {
+        type: 'out',
+        name: 'Max value',
+        format: 'number'
+      }];
   }
 
   setActive(isActive: boolean): void {

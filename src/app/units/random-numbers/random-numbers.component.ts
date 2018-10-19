@@ -1,6 +1,7 @@
 import { Component, Host, OnDestroy, OnInit } from '@angular/core';
 
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket
+import {
+  XxlFlowUnit, XxlFlowUnitState, XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
@@ -64,7 +65,11 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   }
 
   getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
+    return [
+      {
+        type: 'out'
+      }
+    ];
   }
 
   delete(): void {

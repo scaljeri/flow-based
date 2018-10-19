@@ -1,0 +1,29 @@
+@import '../utils/utils';
+@import '../utils/variables';
+
+$border-width: 3px;
+$border-color: darkray;
+$border-width: 3px;
+$socket-size: 14px;
+
+:host {
+  background-clip: content-box;
+  background-color: var(--socket-in-disabled, #fff);
+  border: $border-width solid;
+  border-radius: 50%;
+  cursor: pointer;
+  display: block;
+  flex: 0 0 var(--socket-size);
+  transform: rotate(45deg);
+  width: var(--socket-size);
+
+  &.socket-in {
+    border-color: var(--inner-border-color) var(--inner-border-color) transparent transparent;
+    left: calc(-4px - var(--socket-size) / 2);
+  }
+
+  &.socket-out {
+    border-color: transparent transparent var(--inner-border-color) var(--inner-border-color);
+    right: calc(2px - var(--socket-size) / 2);
+  }
+}

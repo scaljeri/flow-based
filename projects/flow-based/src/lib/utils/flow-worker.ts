@@ -2,8 +2,8 @@ import { Observable, Subject, Subscription } from 'rxjs';
 import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
 
 export class FlowWorker implements XxlWorker {
-  private subjects: { [key: string]: Subject<any> } = {};
-  private subscriptions: { [key: string]: Subscription } = {};
+  private subjects: { [key: number]: Subject<any> } = {};
+  private subscriptions: { [key: number]: Subscription } = {};
 
   constructor(private state: XxlFlow) {
   }
@@ -23,11 +23,11 @@ export class FlowWorker implements XxlWorker {
     return this.state.sockets;
   }
 
-  getStream(socketId: string): Observable<any> {
+  getStream(socketId: number): Observable<any> {
     return this.getSubject(socketId).asObservable();
   }
 
-  getSubject(socketId: string): Subject<any> {
+  getSubject(socketId: number): Subject<any> {
     if (!this.subjects[socketId]) {
       this.subjects[socketId] = new Subject<any>();
     }

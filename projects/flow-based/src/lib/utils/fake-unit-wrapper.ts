@@ -10,14 +10,14 @@ export class FakeUnitWrapper extends UnitWrapper {
 
   public isActive = false;
 
-  constructor(private element: ElementRef, private id: string) {
+  constructor(private element: ElementRef, private id: number) {
     super(null);
 
     this.callback = this.trackPointer.bind(this);
   }
 
-  get unitId(): string {
-    return this.id + '-fake';
+  get unitId(): number {
+    return this.id + 9999999999;
   }
 
   getSocketPosition(socketId: string): XxlPosition {

@@ -1,10 +1,8 @@
 import { AfterViewInit, Component, ElementRef, Host, HostBinding, Inject, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
-import { XxlConnection, XxlSocket } from 'flow-based';
+import { XxlSocket } from 'flow-based';
 import { UnitWrapper } from '../../../../../projects/flow-based/src/lib/utils/unit-wrapper';
-import { XxlFlowBasedService } from '../../../../../projects/flow-based/src/lib/flow-based.service';
-import { DialogAction } from '../add-socket/add-socket.component';
 import { XxlFlowUnitService } from '../../../../../projects/flow-based/src/lib/services/flow-unit-service';
 
 export interface EditSocket {
@@ -21,7 +19,7 @@ export interface EditSocket {
 export class EditSocketComponent implements OnInit, AfterViewInit {
   @ViewChildren('delete', {read: ElementRef}) refs: QueryList<ElementRef>;
   public sockets: XxlSocket[];
-  private connections: { [key: string]: string } = {};
+  private connections: { [key: number]: number } = {};
 
   @HostBinding('class.align-delete-right')
   get getAlignment(): boolean {

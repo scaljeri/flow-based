@@ -23,8 +23,7 @@ export interface XxlFlowUnit {
 
 // Describes the class doing the actual work
 export interface XxlWorker {
-  getSockets(): XxlSocket[];
-  getStream?(id?: string): Observable<any>;
+  getStream?(id?: number): Observable<any>;
   setStream?(stream: Observable<any>, connection?: XxlConnection): void;
   removeStream?(connection?: XxlConnection): void;
   destroy(): void;
@@ -45,7 +44,7 @@ export interface XxlPosition {
 
 export interface XxlFlowUnitState {
   type: string;
-  id?: string;
+  id?: number;
   config?: any;
   title?: string;
   position?: XxlPosition;
@@ -58,31 +57,32 @@ export interface XxlFlow extends Partial<XxlFlowUnitState> {
 }
 
 export interface XxlConnection {
-  from: string | HTMLElement;
-  out?: string;   // from
-  to: string | HTMLElement;
-  in?:  string;   // to
-  id: string;
+  from: number | HTMLElement;
+  out?: number;   // from
+  to: number | HTMLElement;
+  in?:  number;   // to
+  id: number;
 }
 
 
 export type XxlSocketType = 'in' | 'out';
 
 export interface XxlSocket {
-  name?: string;
-  description?: string,
-  id: string;
-  position: number;
   type: XxlSocketType;
+  id?: number;
+  name?: string;
+  format?: any;
+  position?: number;
+  description?: string,
 }
 
 export interface XxlSocketEvent extends XxlSocket {
   socket: XxlSocket;
-  element: HTMLElement;
+  event: PointerEvent;
 }
 
 export interface XxlWorkerService {
-  create(id: string, type: string): XxlWorker;
+  create(id: number, type: string): XxlWorker;
 }
 
 export class XxlDriver {

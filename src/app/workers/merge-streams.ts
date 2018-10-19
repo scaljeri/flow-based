@@ -35,7 +35,7 @@ export class MergeStreamsWorker implements XxlWorker {
     this.subscription.unsubscribe();
   }
 
-  getStream(id: string): Observable<number> {
+  getStream(id: number): Observable<number> {
     return this.subject.asObservable();
   }
 

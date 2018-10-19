@@ -1,8 +1,10 @@
 <article *ngIf="active" xxlMovableArea #dragArea>
   <xxl-connection-lines
     [connections]="flow.connections"
+    [pointerMoved]="pointerMove"
+    [from]="activeSocketFrom"
+    [to]="activeSocketTo"
     (lineClick)="removeConnection($event)"></xxl-connection-lines>
-  <!--<xxl-connection-lines *ngIf="flowService.dummyConnections.length" [connections]="flowService.dummyConnections"></xxl-connection-lines>-->
 
   <ng-container *ngFor="let state of flow.children; index as i">
     <xxl-flow-unit

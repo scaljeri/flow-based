@@ -5,6 +5,11 @@
       [attr.d]="d(connection)"
       class="connection"
       stroke-linecap="round"></path>
-      <path class="arrow" d="M0 10 L 10 0 L0 -10z" [attr.transform]="arrow(connection)"></path>
+    <path class="arrow" d="M0 10 L 10 0 L0 -10z" [attr.transform]="arrow(connection)"></path>
   </ng-container>
+
+  <path *ngIf="from || to"
+        [attr.d]="pointerPath()"
+        class="connection"
+        stroke-linecap="round"></path>
 </svg>

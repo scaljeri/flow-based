@@ -19,7 +19,8 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   value: any;
   values: any[];
 
-  constructor(@Host() private service: XxlFlowUnitService) {}
+  constructor(@Host() private service: XxlFlowUnitService) {
+  }
 
   ngOnInit(): void {
     this.worker = this.service.worker as ConsoleWorker;
@@ -41,7 +42,13 @@ export class ConsoleComponent implements XxlFlowUnit, OnInit, OnDestroy {
   }
 
   getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
+    return [
+      {
+        type: 'in'
+      },
+      {
+        type: 'out'
+      }];
   }
 
   onDelete(): void {

@@ -2,12 +2,6 @@ import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../
 import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_CONFIG = {
-  sockets: [
-    {
-      type: 'out',
-      id: 'rnc-a'
-    }
-  ],
   min: 0,
   max: 100,
   start: 0,
@@ -32,10 +26,6 @@ export class RandomNumbersWorker implements XxlWorker {
 
   getStream(): Observable<any> {
     return this.subject.asObservable();
-  }
-
-  getSockets(): XxlSocket[] {
-    return this.state.config.sockets;
   }
 
   initialize(): void {

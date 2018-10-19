@@ -13,7 +13,7 @@ import { DynamicComponentDirective } from './dynamic-component.directive';
 import { ConnectionLinesComponent } from './connection-lines/connection-lines.component';
 import { SocketInPipe } from './pipes/socket-in.pipe';
 import { SocketOutPipe } from './pipes/socket-out.pipe';
-import { SocketDirective } from './socket/socket.directive';
+import { SocketComponent } from './socket/socket.component';
 
 @NgModule({
   imports: [
@@ -31,7 +31,7 @@ import { SocketDirective } from './socket/socket.directive';
     ConnectionLinesComponent,
     SocketInPipe,
     SocketOutPipe,
-    SocketDirective],
+    SocketComponent],
   exports: [FlowBasedComponent, SocketInPipe],
   providers: [
     FlowBasedManagerService,

@@ -3,22 +3,6 @@ import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
 export const STATS_CONFIG = {
-  sockets: [
-    {
-      type: 'in',
-      id: 's-a',
-    },
-    {
-      type: 'out',
-      id: 'min',
-      name: 'Min value',
-    },
-    {
-      type: 'out',
-      id: 'max',
-      name: 'Max value',
-    }
-  ],
   columnWidth: 1
 };
 
@@ -29,7 +13,7 @@ export class StatsWorker implements XxlWorker {
   };
   private subscriptions: Subscription[] = [];
 
-  public min: number =  null;
+  public min: number = null;
   public max: number = null;
   private total = 0;
   private count = 0;
@@ -46,13 +30,13 @@ export class StatsWorker implements XxlWorker {
   destroy(): void {
   }
 
-  getStream(id: string): Observable<any> {
+  getStream(id: number): Observable<any> {
     return this.subjects[id].asObservable();
   }
 
-  getSockets(): XxlSocket[] {
-    return this.state.config.sockets;
-  }
+  // getSockets(): XxlSocket[] {
+  //   return this.state.config.sockets;
+  // }
 
   initialize(): void {
   }
@@ -72,7 +56,7 @@ export class StatsWorker implements XxlWorker {
     // TODO: Refactor
     this.subscriptions[connection.id] = stream.subscribe(val => {
       if (this.columnWidth === 0) {
-        return ;
+        return;
       }
 
       const oldMin = this.min;
@@ -107,7 +91,7 @@ export class StatsWorker implements XxlWorker {
       const sd = calcStandardDeviation(mean, this.values);
       let gauss;
       if (averageMax) { // TODO: Maximum required
-         gauss = getGaussian(mean, sd, averageMax, this.values.length);
+        gauss = getGaussian(mean, sd, averageMax, this.values.length);
       }
 
 

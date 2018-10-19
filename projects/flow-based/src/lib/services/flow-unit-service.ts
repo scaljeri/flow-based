@@ -34,26 +34,26 @@ export class XxlFlowUnitService {
   }
 
   socketRemoved(socket: XxlSocket, flow?: XxlFlow): void {
-    flow = flow || this.flowService.currentFlow.flow;
-
-    flow.connections.forEach(conn => {
-      if (conn.in === socket.id || conn.out === socket.id) {
-        this.flowService.removeConnection(conn, flow);
-      }
-    });
-
-    if (flow === this.flowService.currentFlow.flow) {
-      this.socketRemoved(socket, this.flowService.parentFlow.flow);
-    }
-
-    setTimeout(() => {
-      flow.connections.forEach((conn: XxlConnection) => {
-        this.flowService.units[conn.from as string].update();
-        this.flowService.units[conn.to as string].update();
-      });
-
-      flow.connections = [...flow.connections];
-    });
+    // flow = flow || this.flowService.currentFlow.flow;
+    //
+    // flow.connections.forEach(conn => {
+    //   if (conn.in === socket.id || conn.out === socket.id) {
+    //     this.flowService.removeConnection(conn, flow);
+    //   }
+    // });
+    //
+    // if (flow === this.flowService.currentFlow.flow) {
+    //   this.socketRemoved(socket, this.flowService.parentFlow.flow);
+    // }
+    //
+    // setTimeout(() => {
+    //   flow.connections.forEach((conn: XxlConnection) => {
+    //     this.flowService.units[conn.from as string].update();
+    //     this.flowService.units[conn.to as string].update();
+    //   });
+    //
+    //   flow.connections = [...flow.connections];
+    // });
   }
 
   // removeSocket(socket: XxlSocket, connections?: XxlConnection[]): void {
@@ -86,8 +86,8 @@ export class XxlFlowUnitService {
     this.flowService.close(this.state);
   }
 
-  addConnection(from: HTMLElement, to: HTMLElement): string {
-    const id = Math.random().toString();
+  addConnection(from: HTMLElement, to: HTMLElement): number {
+    const id = this.flowService.getUniqueId();
 
     const conn = {
       id,
@@ -104,7 +104,7 @@ export class XxlFlowUnitService {
     this.connections = [...this.connections];
   }
 
-  removeConnection(id: string): void {
+  removeConnection(id: number): void {
     this.connections = this.connections.filter(conn => conn.id !== id);
   }
 

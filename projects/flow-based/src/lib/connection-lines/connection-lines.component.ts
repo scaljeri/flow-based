@@ -3,7 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
+  EventEmitter, HostListener,
   Input,
   OnChanges,
   OnInit,
@@ -11,8 +11,8 @@ import {
 } from '@angular/core';
 import { XxlConnection, XxlFlowUnitState, XxlPosition } from '../flow-based';
 import { Observable } from 'rxjs';
-import { XxlFlowBasedService } from '../flow-based.service';
 import * as bezier from './bezier';
+import { FlowBasedSocketService } from '../services/flow-based-socket.service';
 
 @Component({
   selector: 'xxl-connection-lines',
@@ -22,25 +22,35 @@ import * as bezier from './bezier';
 })
 export class ConnectionLinesComponent implements OnInit, OnChanges {
   @Input() connections: XxlConnection[];
-  @Input() updates: Observable<string>;
+  @Input() from: number;
+  @Input() to: number;
+
+  @Input() set pointerMoved(event: PointerEvent) {
+    if (event) {
+      this.pointer = {x: event.pageX, y: event.pageY};
+    } else {
+      this.pointer = null;
+    }
+  }
+
   @Output() lineClick = new EventEmitter<XxlConnection>();
 
-  controlPoints: XxlPosition[];
-
+  pointer: XxlPosition;
+  controlPoints: { [key: number]: XxlPosition[] } = {};
   lines: string[] = [];
   private rect;
 
   constructor(private element: ElementRef,
               private viewRef: ChangeDetectorRef,
-              private flowService: XxlFlowBasedService) {
+              private socketService: FlowBasedSocketService) {
   }
 
   ngOnInit() {
-    // this.flowService.movement.subscribe(fromTo => {
+    // this.socketService.movement.subscribe(fromTo => {
     // });
 
     // this.updates.subscribe((unitId: string) => {
-    //   console.log('update it', this.flowService.units[unitId]);
+    //   console.log('update it', this.socketService.units[unitId]);
     //
     // });
   }
@@ -50,18 +60,31 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     this.controlPoints = [];
   }
 
-  update(state: XxlFlowUnitState) {
-
-  }
-
   onClick(connection: XxlConnection): void {
     this.lineClick.next(connection);
+  }
+
+  pointerPath(): string {
+    const start = this.socketService.getSocketPosition(this.from || this.to);
+    let output = '';
+
+    if (this.from) {
+      output = this.computeD(0,
+        start.x - this.rect.left, start.y - this.rect.top,
+        this.pointer.x - this.rect.left, this.pointer.y - this.rect.top);
+    } else if (this.to) {
+      output = this.computeD(0,
+        this.pointer.x - this.rect.left, this.pointer.y - this.rect.top,
+        start.x - this.rect.left, start.y - this.rect.top);
+    }
+
+    return output;
   }
 
   d(connection: XxlConnection): string {
     let cx1, cx2, cy1, cy2;
 
-    if (!this.flowService) {
+    if (!this.socketService) {
       return;
     }
 
@@ -69,11 +92,8 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       return this.dFromElements(connection);
     } else {
 
-      const from = this.flowService.units[connection.from as string];
-      const to = this.flowService.units[connection.to as string];
-
-      const start = from.getSocketPosition(connection.out);
-      const end = to.getSocketPosition(connection.in) || start;
+      const start = this.socketService.getSocketPosition(connection.out);
+      const end = this.socketService.getSocketPosition(connection.in) || start;
 
       if (!start || !start.x || !end || !end.x) {
         return;
@@ -109,7 +129,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     const fromRect = (connection.from as HTMLElement).getBoundingClientRect(),
       toRect = (connection.to as HTMLElement).getBoundingClientRect();
 
-    const x1 = fromRect.left - this.rect.left  + fromRect.width / 2;
+    const x1 = fromRect.left - this.rect.left + fromRect.width / 2;
     const y1 = fromRect.top - this.rect.top + fromRect.height / 2;
 
     const x2 = toRect.left - this.rect.left + toRect.width / 2;
@@ -118,7 +138,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     return this.computeD(connection.id, x1, y1, x2, y2);
   }
 
-  private computeD(id: string, fromX: number, fromY: number, toX: number, toY: number): string {
+  private computeD(id: number, fromX: number, fromY: number, toX: number, toY: number): string {
     const cx1 = Math.round(fromX + Math.abs(fromX - toX) / 2),
       cx2 = Math.round(toX - Math.abs(fromX - toX) / 2);
     let cy1 = fromY,

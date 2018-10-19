@@ -9,6 +9,7 @@ const GRAPH_OPTIONS = {
   title: 'Data',
   curveType: 'function',
 };
+
 @Component({
   selector: 'fb-basic-graph',
   templateUrl: './basic-graph.component.html',
@@ -38,7 +39,13 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   }
 
   getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
+    return [
+      {
+        type: 'in',
+      },
+      {
+        type: 'out',
+      }];
   }
 
   update(values?: number[]): void {
