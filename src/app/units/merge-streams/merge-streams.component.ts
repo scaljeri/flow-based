@@ -2,14 +2,14 @@ import { AfterViewInit, Component, ElementRef, Host, OnInit, QueryList, ViewChil
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
-import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 
 @Component({
   selector: 'fb-merge-streams',
   templateUrl: './merge-streams.component.html',
   styleUrls: ['./merge-streams.component.scss']
 })
-export class MergeStreamsComponent implements OnInit, AfterViewInit {
+export class MergeStreamsComponent implements XxlFlowUnit, OnInit, AfterViewInit {
   state: XxlFlowUnitState;
   worker: MergeStreamsWorker;
   isActive = false;
@@ -29,11 +29,6 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
   ready(): void {
 
   }
-
-  getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
-  }
-
 
   setActive(state: boolean): void {
     this.isActive = state;
@@ -69,5 +64,31 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+  }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getSockets(): XxlSocket[] {
+    return [
+      {
+        type: 'in',
+        format: 'number'
+      },
+      {
+        type: 'in',
+        format: 'number'
+      },
+      {
+        type: 'out',
+        format: 'number'
+      }];
   }
 }

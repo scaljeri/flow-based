@@ -71,13 +71,13 @@ export class AppComponent implements OnInit {
 
   @HostListener('document:keydown.escape', ['$event'])
   escape(event): void {
-   if (this.activeOverlay) {
-     this.activeOverlay.dispose();
+    if (this.activeOverlay) {
+      this.activeOverlay.dispose();
 
-     this.activeOverlay = null;
-   } else {
-     this.xxlService.blur();
-   }
+      this.activeOverlay = null;
+    } else {
+      this.xxlService.blur();
+    }
   }
 
   //

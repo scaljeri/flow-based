@@ -1,21 +1,21 @@
 <article *ngIf="active" xxlMovableArea #dragArea>
   <xxl-connection-lines
-    [connections]="flow.connections"
+    [connections]="state.connections"
     [pointerMoved]="pointerMove"
     [from]="activeSocketFrom"
     [to]="activeSocketTo"
     (lineClick)="removeConnection($event)"></xxl-connection-lines>
 
-  <ng-container *ngFor="let state of flow.children; index as i">
-    <xxl-flow-unit
+  <ng-container *ngFor="let child of state.children; index as i">
+    <xxl-flow-unit #node
                class="block"
                xxlMovable
-               [(position)]="state.position"
+               [(position)]="child.position"
                (updated)="reset()"
-               (dragStart)="onDragStart($event, state)"
-               (dragEnd)="onDragEnd($event, state)"
+               (dragStart)="onDragStart($event, child)"
+               (dragEnd)="onDragEnd($event, child)"
                [active]="activeFlowIndex === i"
-               [state]="state"
+               [state]="child"
                (noDrag)="entryClicked(i)">
     </xxl-flow-unit>
   </ng-container>

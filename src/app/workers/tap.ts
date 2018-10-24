@@ -1,9 +1,9 @@
 import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
-export const CONSOLE_CONFIG = {};
+export const TAP_CONFIG = {};
 
-export class ConsoleWorker implements XxlWorker {
+export class TapWorker implements XxlWorker {
   private stream: Observable<any>;
   private subscriptions: { [id: string]: Subscription } = {};
   private subject = new Subject<any>();

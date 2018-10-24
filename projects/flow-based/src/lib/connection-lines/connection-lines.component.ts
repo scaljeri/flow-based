@@ -9,10 +9,9 @@ import {
   OnInit,
   Output
 } from '@angular/core';
-import { XxlConnection, XxlFlowUnitState, XxlPosition } from '../flow-based';
-import { Observable } from 'rxjs';
+import { XxlConnection, XxlPosition } from '../flow-based';
 import * as bezier from './bezier';
-import { FlowBasedSocketService } from '../services/flow-based-socket.service';
+import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
 
 @Component({
   selector: 'xxl-connection-lines',
@@ -42,7 +41,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   constructor(private element: ElementRef,
               private viewRef: ChangeDetectorRef,
-              private socketService: FlowBasedSocketService) {
+              private connService: FlowBasedConnectionService) {
   }
 
   ngOnInit() {
@@ -58,21 +57,27 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   ngOnChanges(): void {
     this.rect = this.element.nativeElement.getBoundingClientRect();
     this.controlPoints = [];
+    console.log('l update');
+
+    if (!this.to && !this.from) {
+      this.pointer = null;
+    }
   }
 
-  onClick(connection: XxlConnection): void {
+  onClick(event: PointerEvent, connection: XxlConnection): void {
+    event.stopPropagation();
     this.lineClick.next(connection);
   }
 
   pointerPath(): string {
-    const start = this.socketService.getSocketPosition(this.from || this.to);
+    const start = this.connService.getSocketPosition(this.from || this.to);
     let output = '';
 
-    if (this.from) {
+    if (this.from && this.pointer) {
       output = this.computeD(0,
         start.x - this.rect.left, start.y - this.rect.top,
         this.pointer.x - this.rect.left, this.pointer.y - this.rect.top);
-    } else if (this.to) {
+    } else if (this.to && this.pointer) {
       output = this.computeD(0,
         this.pointer.x - this.rect.left, this.pointer.y - this.rect.top,
         start.x - this.rect.left, start.y - this.rect.top);
@@ -84,7 +89,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   d(connection: XxlConnection): string {
     let cx1, cx2, cy1, cy2;
 
-    if (!this.socketService) {
+    if (!this.connService) {
       return;
     }
 
@@ -92,8 +97,8 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       return this.dFromElements(connection);
     } else {
 
-      const start = this.socketService.getSocketPosition(connection.out);
-      const end = this.socketService.getSocketPosition(connection.in) || start;
+      const start = this.connService.getSocketPosition(connection.out);
+      const end = this.connService.getSocketPosition(connection.in) || start;
 
       if (!start || !start.x || !end || !end.x) {
         return;

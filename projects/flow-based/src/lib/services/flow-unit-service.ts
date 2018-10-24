@@ -1,21 +1,42 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
+import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlSocketEvent, XxlWorker } from '../flow-based';
 import { XxlSocketBuilderService } from '../socket-builder.service';
 import { UnitWrapper } from '../utils/unit-wrapper';
+import { FlowBasedConnectionService } from './flow-based-connection.service';
+import { Subject } from 'rxjs';
 
 @Injectable()
 export class XxlFlowUnitService {
   public connections: XxlConnection[] = [];
   public state: XxlFlowUnitState;
+  private calibrateSub = new Subject<void>();
+  public calibrate$ = this.calibrateSub.asObservable();
 
-  constructor(public flowService: XxlFlowBasedService) {
+  constructor(public flowService: XxlFlowBasedService,
+              private connService: FlowBasedConnectionService) {
+  }
+
+  onSocketClick(event: XxlSocketEvent): void {
+    this.connService.onSocketClick(event);
   }
 
   setState(state: XxlFlowUnitState): void {
     this.state = state;
-
   }
+
+  get id(): number {
+    return this.state.id;
+  }
+
+  rebuild(): void {
+    this.connService.rebuild();
+  }
+
+  calibrate(): void {
+    this.calibrateSub.next();
+  }
+
 
   addSocket(socket: XxlSocket): void {
     if (!socket.id) {
@@ -23,6 +44,10 @@ export class XxlFlowUnitService {
     }
 
     this.state.sockets = [socket, ...this.state.sockets];
+  }
+
+  getSockets(): XxlSocket[] {
+    return this.state.sockets;
   }
 
   get wrapper(): UnitWrapper {
@@ -95,7 +120,7 @@ export class XxlFlowUnitService {
       to: to
     };
 
-    this.connections = [...this.connections, conn];
+    // this.connections = [...this.connections, conn];
 
     return id;
   }

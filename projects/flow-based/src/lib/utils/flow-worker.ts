@@ -10,7 +10,7 @@ export class FlowWorker implements XxlWorker {
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(val => {
-      this.getSubject(connection.in).next(val);
+      this.getSubject(connection.to as number).next(val);
     });
   }
 

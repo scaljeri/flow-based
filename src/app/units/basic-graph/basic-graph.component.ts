@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, Inject, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
 import { XxlFlowUnit, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
@@ -42,9 +42,11 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
     return [
       {
         type: 'in',
+        format: 'number'
       },
       {
         type: 'out',
+        format: 'number'
       }];
   }
 
@@ -84,5 +86,15 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
 
   onClose(): void {
     this.service.closeSelf();
+  }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 }

@@ -91,4 +91,14 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
       }
     });
   }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
 }

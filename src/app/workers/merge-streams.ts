@@ -3,21 +3,6 @@ import { Observable, ReplaySubject, Subscription, zip } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 export const MERGE_STREAMS_CONFIG = {
-  sockets: [
-    {
-      type: 'in',
-      id: 'ms-a',
-    },
-    {
-      type: 'in',
-      id: 'ms-b',
-    },
-    {
-      type: 'out',
-      id: 'ms-c',
-      name: 'Min value',
-    }
-  ],
 };
 
 export class MergeStreamsWorker implements XxlWorker {
@@ -71,11 +56,11 @@ export class MergeStreamsWorker implements XxlWorker {
         this.subject.next(this.outputValue);
 
         this.streamValues = values.reduce((out, v) => {
-          if (!out[v.connection.in]) {
-            out[v.connection.in] = [];
+          if (!out[v.connection.to as number]) {
+            out[v.connection.to as number] = [];
           }
 
-          out[v.connection.in].push(v.value);
+          out[v.connection.to as number].push(v.value);
 
           return out;
         }, {});
@@ -88,6 +73,6 @@ export class MergeStreamsWorker implements XxlWorker {
   }
 
   get title(): string {
-    return this.state.config.title;
+    return this.state.title;
   }
 }

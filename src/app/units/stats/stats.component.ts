@@ -1,9 +1,8 @@
 import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { StatsWorker } from '../../workers/stats';
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
+import { XxlConnection, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
 import { GoogleCharts } from 'google-charts';
 
 @Component({
@@ -67,7 +66,7 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
     return [
       {
         type: 'in',
-        format: 'number'
+        format: 'numberx'
       },
       {
         type: 'out',
@@ -107,5 +106,15 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
 
   get avg(): string {
     return this.worker.avg.toFixed(4);
+  }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 }

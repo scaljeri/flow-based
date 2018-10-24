@@ -1,50 +1,52 @@
 import {
+  AfterViewInit,
+  ChangeDetectionStrategy, ChangeDetectorRef,
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
-  Input, OnChanges, OnDestroy, OnInit, Optional, Output, Self, SimpleChanges, SkipSelf, ViewChild,
+  Input, OnChanges, OnDestroy, OnInit, Optional, Output, QueryList, Self, SimpleChanges, SkipSelf, ViewChild, ViewChildren,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   XxlFlow,
   XxlPosition,
-  XxlFlowUnitState, XxlConnection, XxlSocketEvent
+  XxlFlowUnitState, XxlConnection, XxlSocketEvent, XxlSocket
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
 import { FlowBasedConnectionService } from './services/flow-based-connection.service';
-import { FlowBasedSocketService } from './services/flow-based-socket.service';
+import { FlowUnitComponent } from './flow-unit/flow-unit.component';
 
 @Component({
   selector: 'xxl-flow-based',
   templateUrl: './flow-based.component.html',
   styleUrls: ['./flow-based.component.scss'],
-  viewProviders: [FlowBasedConnectionService, FlowBasedSocketService],
-  // changeDetection: ChangeDetectionStrategy.OnPush,
+  viewProviders: [FlowBasedConnectionService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
-export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, ControlValueAccessor {
+export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterViewInit, ControlValueAccessor {
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
-  @Input() flow: XxlFlow;
+  @Input() state: XxlFlow;
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
+  @ViewChildren('node') nodes: QueryList<FlowUnitComponent>;
 
   wrapper: FakeUnitWrapper;
   onChange: (state: any) => void;
   activeFlowIndex: number = null;
-  activeSocket: 'in' | 'out';
   pointerMove: PointerEvent;
   activeSocketFrom: number;
   activeSocketTo: number;
 
   constructor(
     private element: ElementRef,
+    private cdr: ChangeDetectorRef,
     public flowService: XxlFlowBasedService,
     @Self() private connectionService: FlowBasedConnectionService,
-    @Self() private socketService: FlowBasedSocketService,
     @Optional() @SkipSelf() private parentConnectionService: FlowBasedConnectionService) {
   }
 
@@ -59,58 +61,71 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, Control
   onClick(event): void {
     event.stopPropagation();
 
-    this.activeSocketFrom = null;
-    this.activeSocketTo = null;
-
-    this.socketService.onClicked();
+    this.connectionService.clear();
   }
 
   ngOnInit() {
+    this.flowService.setState(this.state);
+    this.connectionService.setState(this.state);
+
     if (this.root) {
-      this.flowService.initialize(this.flow);
-      this.connectionService.state = this.flow;
-    } else {
-      // this.parentConnectionService['id'] = 999999;
+      this.flowService.initialize();
     }
 
+
     this.flowService.activate(this);
-    // this.wrapper = new FakeUnitWrapper(this.element, this.flow.id);
-    // this.flowService.register(this.wrapper);
+
+    this.connectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
+      if (event) {
+        if (event.socket.type === 'out') {
+          this.activeSocketFrom = event.socket.id;
+        } else {
+          this.activeSocketTo = event.socket.id;
+        }
+      } else {
+        this.activeSocketTo = null;
+        this.activeSocketFrom = null;
+      }
+    });
   }
 
   ngOnChanges(obj: SimpleChanges): void {
   }
 
   reset(): void {
-    setTimeout(() => {
-      this.repaint();
-    });
+    // setTimeout(() => {
+    //   this.repaint();
+    // });
   }
 
   get id(): number {
-    return this.flow.id;
+    return this.state.id;
   }
 
   repaint(): void {
-    this.flow.connections = [...this.flow.connections];
+    this.state.connections = [...this.state.connections];
   }
 
   ngOnDestroy(): void {
-    this.wrapper.deactivate();
+    if (this.root) {
+      this.flowService.destroy();
+    }
+    // this.wrapper.deactivate();
   }
 
   onDragStart(event: PointerEvent, state: XxlFlowUnitState): void {
-    // const index = this.flow.children.indexOf(state);
+    // const index = this.state.children.indexOf(state);
   }
 
   onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
     if (this.activeFlowIndex === null) {
-      this.flow.children = [...this.flow.children.filter(child => child !== state), state];
+      this.state.children = [...this.state.children.filter(child => child !== state), state];
     }
   }
 
   add(unit: XxlFlowUnitState): void {
-    this.flow.children.push(unit);
+    this.state.children.push(unit);
+    this.cdr.markForCheck();
   }
 
   activityChanged(isActive): void {
@@ -118,70 +133,35 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, Control
   }
 
   blur(): void {
-    // if (this.activeFlowIndex !== null) {
-    //   this.activeFlowIndex = null;
-    // } else if (this.wrapper.isActive) {
-    //   this.wrapper.deactivate();
-    //   this.flow.connections = this.flow.connections.filter(conn => conn.to !== this.wrapper.unitId && conn.from !== this.wrapper.unitId);
-    // } else if (!this.root) {
-    //   this.wrapper.deactivate();
-    //   this.flowService.deactivate();
-    //   this.flowService.blur();
-    // }
-    //
-    // this.activeSocket = null;
-    // this.reset();
+    if (this.activeFlowIndex !== null) {
+      this.activeFlowIndex = null;
+    } else if (!this.root) {
+      this.flowService.deactivate();
+    }
+
+    this.cdr.markForCheck();
   }
 
   entryClicked(index: number): void {
     this.activeFlowIndex = index;
-    this.reset();
+    // this.reset();
   }
 
-  removeConnection(conn: XxlConnection): void {
-    if (this.wrapper.isActive) {
-      this.wrapper.deactivate();
-      this.activeSocket = null;
-    }
-
-    this.flowService.removeConnection(conn);
+  removeConnection(connection: XxlConnection): void {
+    this.connectionService.remove(connection);
   }
 
-  onSocketClick(event: XxlSocketEvent): void {
-    if (event.socket.type === 'out') {
-      this.activeSocketFrom = event.socket.id;
-    } else {
-      this.activeSocketTo = event.socket.id;
-    }
-
-    this.pointerMove = event.event;
-    // if (this.wrapper.isActive) {
-    //   const conn = this.flow.connections.slice(-1)[0];
-    //   this.flowService.removeConnection(conn);
+  onSocketClick(event: XxlSocketEvent = {} as XxlSocketEvent): void {
+    // this.activeSocketTo = null;
+    // this.activeSocketFrom = null;
+    // this.pointerMove = event.event;
     //
-    //   if (conn.in === this.flow.id + '-fake') {
-    //     conn.to = unitId;
-    //     conn.in = socket.id;
+    // if (event) {
+    //   if (event.socket.type === 'out') {
+    //     this.activeSocketFrom = event.socket.id;
     //   } else {
-    //     conn.from = unitId;
-    //     conn.out = socket.id;
+    //     this.activeSocketTo = event.socket.id;
     //   }
-    //
-    //   this.activeSocket = null;
-    //   this.wrapper.deactivate();
-    //
-    //   this.flowService.createConnection(conn);
-    // } else {
-    //   const conn = this.flowService.createConnection({
-    //     from: socket.type === 'out' ? unitId : this.wrapper.unitId,
-    //     out: socket.type === 'out' ? socket.id : this.wrapper.unitId,
-    //     to: socket.type === 'out' ? this.wrapper.unitId : unitId,
-    //     in: socket.type === 'out' ? this.wrapper.unitId : socket.id
-    //   });
-    //
-    //   this.activeSocket = socket.type;
-    //   // TODO: remove callback hack
-    //   this.wrapper.activate(() => this.flowService.updateConnection(conn));
     // }
   }
 
@@ -191,7 +171,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, Control
 
   close(event): void {
     this.activeFlowIndex = null;
-    // event.stopPropagation();
   }
 
   centerPosition(): XxlPosition {
@@ -212,16 +191,26 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, Control
   }
 
   writeValue(state: XxlFlow): void {
-    // this.flow = state;
+    // this.state = state;
     // this.createInjector();
   }
 
   @HostListener('window:resize')
   onResize(): void {
-    this.flowService.recalculateConnections();
-    this.reset();
+    this.nodes.forEach(node => {
+      node.reCalculatePositions();
+    });
   }
 
   setDisabledState(isDisabled: boolean): void {
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.nodes.forEach(node => {
+        node.reCalculatePositions();
+      });
+      this.cdr.markForCheck();
+    });
   }
 }

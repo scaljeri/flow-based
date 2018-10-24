@@ -1,4 +1,4 @@
-import { Component, Host, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
 
 import {
   XxlFlowUnit, XxlFlowUnitState, XxlSocket
@@ -20,6 +20,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   currentValue: number;
 
   constructor(private fb: FormBuilder,
+              private cdr: ChangeDetectorRef,
               @Host() private service: XxlFlowUnitService) {
     this.state = service.state;
   }
@@ -50,6 +51,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
 
     this.worker.getStream().subscribe(value => {
       this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
+      this.cdr.markForCheck();
     });
   }
 
@@ -67,7 +69,8 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   getSockets(): XxlSocket[] {
     return [
       {
-        type: 'out'
+        type: 'out',
+        format: 'number'
       }
     ];
   }
@@ -79,4 +82,15 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   close(): void {
     this.service.closeSelf();
   }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
 }

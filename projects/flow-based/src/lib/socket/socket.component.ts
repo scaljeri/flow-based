@@ -9,8 +9,9 @@ import {
   Input, OnDestroy, Output
 } from '@angular/core';
 import { XxlSocket, XxlSocketEvent } from '../flow-based';
-import { FlowBasedSocketService } from '../services/flow-based-socket.service';
 import { Subscription } from 'rxjs';
+import { XxlFlowUnitService } from '../services/flow-unit-service';
+import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
 
 @Component({
   selector: 'xxl-socket',
@@ -20,7 +21,7 @@ import { Subscription } from 'rxjs';
 })
 export class SocketComponent implements OnDestroy, AfterViewInit {
   @Input() state: XxlSocket;
-  @Input() parentId: number;
+  @Input() parent: number;
   @Output() clicked = new EventEmitter<XxlSocketEvent>();
   private subscription: Subscription;
 
@@ -38,24 +39,24 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   }
 
   constructor(public element: ElementRef,
-              private service: FlowBasedSocketService) {
+              private nodeService: XxlFlowUnitService,
+              private connService: FlowBasedConnectionService) {
   }
 
   ngAfterViewInit(): void {
-    this.service.add(this);
+    this.connService.addSocket(this);
 
-    this.subscription = this.service.activeSocket$.subscribe((event?: XxlSocketEvent) => {
+    this.subscription = this.connService.activeSocket$.subscribe((event?: XxlSocketEvent) => {
       this.active = false;
       this.isAccepting = null;
 
       if (event) {
-        debugger;
         if (event.socket === this.state) {
           this.active = true;
-        } else if (event.socket.type === this.state.type || event.parentId === this.parentId) {
+        } else if (event.socket.type === this.state.type || event.parentId === this.nodeService.id) {
           this.isAccepting = false;
         } else {
-          this.isAccepting = isIdenticalFormat(this.state.format, event.socket.format);
+          this.isAccepting = !this.state.format || !event.socket.format || this.state.format ===  event.socket.format;
         }
       }
     });
@@ -69,12 +70,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   onPointerDown(event: PointerEvent): void {
     event.stopPropagation();
 
-    this.service.onClicked({event, socket: this.state, parentId: this.parentId} as XxlSocketEvent);
-    //
-    // this.clicked.emit({
-    //   event,
-    //   socket: this.state
-    // } as XxlSocketEvent);
+    this.nodeService.onSocketClick({event, socket: this.state, parentId: this.nodeService.id} as XxlSocketEvent);
   }
 
   activate(): SocketComponent {
@@ -89,18 +85,5 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
 
   get id(): number {
     return this.state.id;
-  }
-}
-
-function isIdenticalFormat(a, b): boolean {
-  if (typeof a !== 'object') {
-    return a === b;
-  } else {
-    const keys = Object.keys(a);
-    for (let k = 0; k < keys.length; k++) {
-      if (a[keys[k]] !== b[keys[k]]) {
-        return false;
-      }
-    }
   }
 }

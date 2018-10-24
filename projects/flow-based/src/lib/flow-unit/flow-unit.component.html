@@ -1,6 +1,6 @@
 <section class="component">
   <ng-container *ngIf="isFlow() && active">
-    <xxl-flow-based [flow]="state" [active]="active" [root]="false"></xxl-flow-based>
+    <xxl-flow-based [state]="state" [active]="active" [root]="false"></xxl-flow-based>
   </ng-container>
 
   <xxl-connection-lines *ngIf="unitService.connections.length"
@@ -12,9 +12,9 @@
   <section class="sockets sockets-in">
     <xxl-socket *ngFor="let socket of sockets | socketIn"
           [state]="socket"
-          [parentId]="id"
+          [parent]="id"
           [attr.data-socket-id]="socket.id"
-          (clicked)="onSocketClick($event)" class="socket"></xxl-socket>
+          class="socket"></xxl-socket>
   </section>
 
   <section class="sockets sockets-out">
@@ -22,8 +22,8 @@
     </ng-container>
     <xxl-socket *ngFor="let socket of sockets | socketOut"
           [state]="socket"
-          [parentId]="id"
-          (clicked)="onSocketClick($event)" class="socket"></xxl-socket>
+          [parent]="id"
+          class="socket"></xxl-socket>
   </section>
 
   <input *ngIf="active" class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title">

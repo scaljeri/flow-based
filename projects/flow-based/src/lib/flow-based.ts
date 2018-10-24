@@ -5,6 +5,7 @@ export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
 export const XXL_FLOW_UNIT_STATE = new InjectionToken<XxlTypes>('xxl-flow-unit-state');
 export const XXL_FLOW_UNIT_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
 export const XXL_STATE = new InjectionToken<XxlTypes>('xxl-state');
+
 // export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
 
 export interface XxlFlowType {
@@ -13,19 +14,27 @@ export interface XxlFlowType {
   isFlow?: boolean;
   title?: string;
   type: string;
+  worker: XxlWorker;
 }
 
 export interface XxlFlowUnit {
   getSockets(): XxlSocket[];
-  socketClicked?(XxlSocket): void;
+
   setActive(boolean): void;
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket, sockets: XxlSocket[]): void;
+
+  reset?(sockets: XxlSocket[]): void;
 }
 
 // Describes the class doing the actual work
 export interface XxlWorker {
   getStream?(id?: number): Observable<any>;
+
   setStream?(stream: Observable<any>, connection?: XxlConnection): void;
+
   removeStream?(connection?: XxlConnection): void;
+
   destroy(): void;
 }
 
@@ -58,12 +67,16 @@ export interface XxlFlow extends Partial<XxlFlowUnitState> {
 
 export interface XxlConnection {
   from: number | HTMLElement;
-  out?: number;   // from
   to: number | HTMLElement;
-  in?:  number;   // to
+  in: number;
+  out: number;
   id: number;
 }
 
+export interface ConnectionDetails {
+  connection: XxlConnection;
+  sockets: { [key: number]: XxlSocket };
+}
 
 export type XxlSocketType = 'in' | 'out';
 
@@ -71,7 +84,7 @@ export interface XxlSocket {
   type: XxlSocketType;
   id?: number;
   name?: string;
-  format?: any;
+  format?: string;
   position?: number;
   description?: string,
 }
@@ -80,6 +93,12 @@ export interface XxlSocketEvent extends XxlSocket {
   socket: XxlSocket;
   parentId: number;
   event: PointerEvent;
+}
+
+export interface SocketDetails {
+  socket: XxlSocket;
+  element: HTMLElement;
+  parentId: number;
 }
 
 export interface XxlWorkerService {
@@ -92,7 +111,7 @@ export class XxlDriver {
   private connections = [] as XxlConnection[];
   private running = false;
 
-  delete(index: number):  void {
+  delete(index: number): void {
 
   }
 
@@ -113,7 +132,7 @@ export class XxlDriver {
     this.running = true;
 
     // this.flowEntries.forEach((entry: XxlFlowUnit) => {
-      // this.workers.push(entry.factory.create(entry.config).start());
+    // this.workers.push(entry.factory.create(entry.config).start());
     // });
 
     // Loop through connections
