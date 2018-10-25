@@ -40,7 +40,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
   @Output() updated = new EventEmitter<void>();
-  @ViewChildren(SocketComponent) socketsRefs: QueryList<SocketComponent>;
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
 
   private observer;
@@ -102,6 +101,8 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
       }, []);
     }
 
+    this.cdr.detectChanges();
+
     if (this.ref.instance.reset) {
       this.connectionService.reset$.subscribe(() => this.ref.instance.reset(this.state.sockets));
     }
@@ -122,7 +123,12 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     const {active} = changes;
 
     if (this.ref.instance) {
+      debugger;
       this.ref.instance.setActive(active.currentValue);
+      setTimeout(() => {
+        this.connectionService.updatePositionSockets(this.sockets);
+        this.cdr.detectChanges();
+      });
     }
     //
     // if (this.ref && active && active.currentValue !== active.previousValue && this.ref.instance) {

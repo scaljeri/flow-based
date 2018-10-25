@@ -143,8 +143,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   entryClicked(index: number): void {
+    console.log('a');
     this.activeFlowIndex = index;
-    // this.reset();
+    this.cdr.detectChanges();
   }
 
   removeConnection(connection: XxlConnection): void {

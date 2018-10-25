@@ -57,7 +57,6 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   ngOnChanges(): void {
     this.rect = this.element.nativeElement.getBoundingClientRect();
     this.controlPoints = [];
-    console.log('l update');
 
     if (!this.to && !this.from) {
       this.pointer = null;

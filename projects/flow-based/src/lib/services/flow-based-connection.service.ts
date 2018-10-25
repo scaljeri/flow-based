@@ -1,13 +1,8 @@
 import { Injectable } from '@angular/core';
-import { ConnectionDetails, XxlConnection, XxlFlow, XxlPosition, XxlSocket, XxlSocketEvent } from 'flow-based';
+import { ConnectionDetails, SocketDetails, XxlConnection, XxlFlow, XxlPosition, XxlSocket, XxlSocketEvent } from 'flow-based';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { Subject } from 'rxjs';
 import { SocketComponent } from '../socket/socket.component';
-
-interface SocketDetails {
-  comp: SocketComponent;
-  position: XxlPosition;
-}
 
 
 @Injectable()
@@ -71,6 +66,7 @@ export class FlowBasedConnectionService {
 
     if (this.connection.from && this.connection.to) {
       this.connection.id = this.service.getUniqueId();
+      this.service.flow.connect(this.connection);
 
       this.connectionDetails.connection = this.connection;
       this.newSubject.next(this.connectionDetails);
@@ -94,9 +90,18 @@ export class FlowBasedConnectionService {
     this.activeSocketSubject.next(null);
   }
 
+  getSocket(id: number): XxlSocket {
+    return this.sockets[id].comp.state;
+  }
+
+  getSocketDetails(id: number): SocketDetails {
+    return this.sockets[id];
+  }
+
   addSocket(socket: SocketComponent): void {
     this.sockets[socket.state.id] = {
       comp: socket,
+      parentId: socket.parent,
       position: this.determinePosition(socket)
     };
   }
@@ -118,10 +123,6 @@ export class FlowBasedConnectionService {
     if (this.state) {
       this.state.connections = [...this.state.connections];
     }
-  }
-
-  getSocket(id: number): XxlSocket {
-    return this.sockets[id].comp.state;
   }
 
   getSocketPosition(socketId: number): XxlPosition {

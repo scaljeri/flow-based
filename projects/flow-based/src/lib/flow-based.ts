@@ -1,5 +1,6 @@
 import { InjectionToken, Type } from '@angular/core';
 import { Observable } from 'rxjs';
+import { SocketComponent } from './socket/socket.component';
 
 export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
 export const XXL_FLOW_UNIT_STATE = new InjectionToken<XxlTypes>('xxl-flow-unit-state');
@@ -68,14 +69,9 @@ export interface XxlFlow extends Partial<XxlFlowUnitState> {
 export interface XxlConnection {
   from: number | HTMLElement;
   to: number | HTMLElement;
-  in: number;
-  out: number;
+  in?: number;
+  out?: number;
   id: number;
-}
-
-export interface ConnectionDetails {
-  connection: XxlConnection;
-  sockets: { [key: number]: XxlSocket };
 }
 
 export type XxlSocketType = 'in' | 'out';
@@ -96,9 +92,14 @@ export interface XxlSocketEvent extends XxlSocket {
 }
 
 export interface SocketDetails {
-  socket: XxlSocket;
-  element: HTMLElement;
+  comp: SocketComponent;
+  position?: XxlPosition;
   parentId: number;
+}
+
+export interface ConnectionDetails {
+  connection: XxlConnection;
+  sockets: { [key: number]: XxlSocket};
 }
 
 export interface XxlWorkerService {

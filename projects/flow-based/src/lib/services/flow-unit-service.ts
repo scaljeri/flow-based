@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlSocketEvent, XxlWorker } from '../flow-based';
+import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlSocketEvent, XxlWorker } from '../flow-based';
 import { XxlSocketBuilderService } from '../socket-builder.service';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { FlowBasedConnectionService } from './flow-based-connection.service';
@@ -120,7 +120,7 @@ export class XxlFlowUnitService {
       to: to
     };
 
-    // this.connections = [...this.connections, conn];
+    this.connections = [...this.connections, conn];
 
     return id;
   }
@@ -135,5 +135,9 @@ export class XxlFlowUnitService {
 
   removeConnections(): void {
     this.connections = [];
+  }
+
+  getSocket(socketId: number): SocketDetails {
+    return this.connService.getSocketDetails(socketId);
   }
 }
