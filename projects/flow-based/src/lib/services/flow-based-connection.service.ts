@@ -146,6 +146,7 @@ export class FlowBasedConnectionService {
 
     this.resetSubject.next();
     this.initConnections();
+    this.service.flow.remove(connection);
   }
 
   getConnections(type: string, id: number): XxlConnection[] {

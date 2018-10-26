@@ -33,7 +33,6 @@ export class RandomNumbersWorker implements XxlWorker {
 
     this.intervalId = setInterval(() => {
       const random = Math.random() * (this.end - this.start) + this.start;
-      console.log(random);
 
       this.subject.next(this.integer ? Math.round(random) : random);
     }, this.config.interval);

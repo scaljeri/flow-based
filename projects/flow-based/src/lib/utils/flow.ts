@@ -30,6 +30,10 @@ export class Flow {
     this.workers[connection.to as number].setStream(out$, connection);
   }
 
+  remove(connection: XxlConnection): void {
+    this.workers[connection.to as number].removeStream(connection);
+  }
+
   destroy(): void {
     Object.keys(this.workers).forEach(k => this.workers[k].destroy());
   }
