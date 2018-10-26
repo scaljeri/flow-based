@@ -23,7 +23,7 @@ export class XxlFlowBasedService {
   private unitBlur: () => void;
   private workers = {};
   public units: { [key: string]: UnitWrapper } = {};
-  private flow: Flow;
+  public flow: Flow;
   private state: XxlFlow;
 
   constructor(@Inject(XXL_FLOW_TYPES) private flowTypes: XxlFlowType) {

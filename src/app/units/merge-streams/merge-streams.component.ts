@@ -34,11 +34,7 @@ export class MergeStreamsComponent implements XxlFlowUnit, OnInit, AfterViewInit
     });
 
     this.worker.getValues().subscribe(values => {
-      this.streamValues = values.reduce((o, v) => {
-        o[v.connection.in] = v.value;
-        return o;
-      }, {});
-
+      this.streamValues = values;
       this.cdr.detectChanges();
     });
   }

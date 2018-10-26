@@ -123,7 +123,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     const {active} = changes;
 
     if (this.ref.instance) {
-      debugger;
       this.ref.instance.setActive(active.currentValue);
       setTimeout(() => {
         this.connectionService.updatePositionSockets(this.sockets);

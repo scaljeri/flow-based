@@ -3,8 +3,8 @@
 <section *ngIf="isActive" class="main">
   <section class="inputs">
     <ng-container *ngFor="let socket of state.sockets | socketIn" class="socket">
-      <mat-card  #inputs [attr.data-socket-id]="socket.id" class="socket">
-        <mat-card-content>{{streamValues[socket.id].toFixed(3)}}</mat-card-content>
+      <mat-card  #inputs *ngFor="let val of streamValues[socket.id]" [attr.data-socket-id]="socket.id" class="socket">
+        <mat-card-content>{{val.toFixed(3)}}</mat-card-content>
       </mat-card>
     </ng-container>
   </section>

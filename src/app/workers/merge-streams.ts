@@ -60,17 +60,27 @@ export class MergeStreamsWorker implements XxlWorker {
       .subscribe((values: { value: number, connection: XxlConnection }[]) => {
         this.outputValue = values.reduce((a, b) => a + b.value, 0);
         this.subject.next(this.outputValue);
-        this.valuesSubject.next(values);
 
-        this.streamValues = values.reduce((out, v) => {
-          if (!out[v.connection.to as number]) {
-            out[v.connection.to as number] = [];
-          }
+        const vals = values.reduce((o, v) => {
+          const id = v.connection.in;
+         if (!o[id])  {
+           o[id] = [];
+         }
 
-          out[v.connection.to as number].push(v.value);
-
-          return out;
+         o[id].push(v.value);
+         return o;
         }, {});
+        this.valuesSubject.next(vals);
+
+        // this.streamValues = values.reduce((out, v) => {
+        //   if (!out[v.connection.to as number]) {
+        //     out[v.connection.to as number] = [];
+        //   }
+        //
+        //   out[v.connection.to as number].push(v.value);
+        //
+        //   return out;
+        // }, {});
       });
   }
 
