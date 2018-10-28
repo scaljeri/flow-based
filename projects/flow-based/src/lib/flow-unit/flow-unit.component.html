@@ -1,6 +1,6 @@
 <section class="component">
   <ng-container *ngIf="isFlow() && active">
-    <xxl-flow-based [state]="state" [active]="active" [root]="false"></xxl-flow-based>
+    <xxl-flow-based #flow [state]="state" [active]="active" [root]="false"></xxl-flow-based>
   </ng-container>
 
   <xxl-connection-lines *ngIf="unitService.connections.length"
@@ -12,6 +12,8 @@
   <section class="sockets sockets-in">
     <xxl-socket *ngFor="let socket of sockets | socketIn"
           [state]="socket"
+          [scope]="getScope()"
+          [invert]="isInverted()"
           [parent]="id"
           [attr.data-socket-id]="socket.id"
           class="socket"></xxl-socket>
@@ -22,6 +24,8 @@
     </ng-container>
     <xxl-socket *ngFor="let socket of sockets | socketOut"
           [state]="socket"
+          [scope]="getScope()"
+          [invert]="isInverted()"
           [parent]="id"
           class="socket"></xxl-socket>
   </section>

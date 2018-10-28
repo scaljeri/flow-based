@@ -12,6 +12,7 @@ import { XxlSocket, XxlSocketEvent } from '../flow-based';
 import { Subscription } from 'rxjs';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
 import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
+import { filter, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'xxl-socket',
@@ -21,6 +22,8 @@ import { FlowBasedConnectionService } from '../services/flow-based-connection.se
 })
 export class SocketComponent implements OnDestroy, AfterViewInit {
   @Input() state: XxlSocket;
+  @Input() scope: number;
+  @Input() invert: boolean;
   @Input() parent: number;
   @Output() clicked = new EventEmitter<XxlSocketEvent>();
   private subscription: Subscription;
@@ -35,7 +38,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
 
   @HostBinding('class')
   get socketClass(): string {
-    return 'socket-' + (this.state ? this.state.type : '');
+    return 'socket-' + (this.state ? this.getType() : '');
   }
 
   constructor(public element: ElementRef,
@@ -46,22 +49,27 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   ngAfterViewInit(): void {
     this.connService.addSocket(this);
 
-    this.subscription = this.connService.activeSocket$.subscribe((event?: XxlSocketEvent) => {
+    this.subscription = this.connService.activeSocket$.pipe(
+      filter((event?: XxlSocketEvent) => !event || event.scope === this.scope)
+    ).subscribe((event?: XxlSocketEvent) => {
       this.active = false;
       this.isAccepting = null;
 
       if (event) {
-        if (event.socket === this.state) {
+        if (event.socket.id === this.state.id) {
           this.active = true;
-        } else if (event.socket.type === this.state.type || event.parentId === this.nodeService.id) {
+        } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
           this.isAccepting = false;
         } else {
-          this.isAccepting = !this.state.format || !event.socket.format || this.state.format ===  event.socket.format;
+          this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
         }
       }
     });
   }
 
+  getType(): string {
+    return this.invert ? (this.state.type === 'in' ? 'out' : 'in') : this.state.type;
+  }
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
   }
@@ -70,7 +78,12 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   onPointerDown(event: PointerEvent): void {
     event.stopPropagation();
 
-    this.nodeService.onSocketClick({event, socket: this.state, parentId: this.nodeService.id} as XxlSocketEvent);
+    this.nodeService.onSocketClick({
+      event,
+      socket: Object.assign({}, this.state, {type: this.getType()}),
+      scope: this.scope,
+      parentId: this.nodeService.id
+    } as XxlSocketEvent);
   }
 
   activate(): SocketComponent {

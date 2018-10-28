@@ -6,16 +6,16 @@ import {
   HostBinding,
   Input,
   OnChanges, OnDestroy,
-  OnInit, Output, QueryList,
-  SimpleChanges, ViewChild, ViewChildren,
+  OnInit, Output,
+  SimpleChanges, ViewChild,
 } from '@angular/core';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { SocketComponent } from '../socket/socket.component';
-import { XxlFlow, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../flow-based';
+import { XxlFlow, FbNode, XxlFlowUnitState, XxlSocket } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
 import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
+import { FlowBasedComponent } from 'flow-based';
 
 declare global {
   interface Window {
@@ -37,10 +37,12 @@ declare global {
 export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() @HostBinding('class.is-active') active = false;
   @Input() state: XxlFlowUnitState;
+  @Input() scope: number;
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
   @Output() updated = new EventEmitter<void>();
-  @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<XxlFlowUnit>;
+  @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<FbNode>;
+  @ViewChild('flow') flow: FlowBasedComponent;
 
   private observer;
 
@@ -88,8 +90,20 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
         return;
       }
 
-      this.ref.instance.connected(localSocket, remoteSocket, this.state.sockets);
+      if (this.isFlow()) {
+        // this.flow.initConnections();
+      } else {
+        // this.ref.instance.connected(localSocket, remoteSocket, this.state.sockets);
+      }
     });
+  }
+
+  getScope(): number {
+    return this.active ? this.state.id : this.scope;
+  }
+
+  isInverted(): boolean {
+    return this.active && this.isFlow();
   }
 
   ngAfterViewInit(): void {
@@ -103,9 +117,9 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
     this.cdr.detectChanges();
 
-    if (this.ref.instance.reset) {
-      this.connectionService.reset$.subscribe(() => this.ref.instance.reset(this.state.sockets));
-    }
+    // if (this.ref.instance.reset) {
+    //   this.connectionService.reset$.subscribe(() => this.ref.instance.reset(this.state.sockets));
+    // }
 
     // TODO
     // if (this.ref.instance['ready']) {

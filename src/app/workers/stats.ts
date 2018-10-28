@@ -1,4 +1,4 @@
-import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
@@ -6,7 +6,7 @@ export const STATS_CONFIG = {
   columnWidth: 1
 };
 
-export class StatsWorker implements XxlWorker {
+export class StatsWorker implements FbNodeWorker {
   private subjects = {
     max: new Subject<any>(),
     min: new Subject<any>()
@@ -115,5 +115,9 @@ export class StatsWorker implements XxlWorker {
   set columnWidth(width: number) {
     this.state.config.columnWidth = width;
     this.reset();
+  }
+
+  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+
   }
 }

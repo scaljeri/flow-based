@@ -1,5 +1,5 @@
 import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
-import { XxlFlowUnit, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
@@ -15,7 +15,7 @@ const GRAPH_OPTIONS = {
   templateUrl: './basic-graph.component.html',
   styleUrls: ['./basic-graph.component.scss']
 })
-export class BasicGraphComponent implements XxlFlowUnit, OnInit {
+export class BasicGraphComponent implements FbNode, OnInit {
   @HostBinding('class.is-active') isActive = false;
   @ViewChild('graph') graph: ElementRef;
   chart;

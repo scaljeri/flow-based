@@ -2,34 +2,41 @@ import { InjectionToken, Type } from '@angular/core';
 import { Observable } from 'rxjs';
 import { SocketComponent } from './socket/socket.component';
 
-export const XXL_FLOW_TYPES = new InjectionToken<XxlTypes>('xxl-flow-types');
-export const XXL_FLOW_UNIT_STATE = new InjectionToken<XxlTypes>('xxl-flow-unit-state');
-export const XXL_FLOW_UNIT_SERVICE = new InjectionToken<XxlTypes>('xxl-flow-service');
-export const XXL_STATE = new InjectionToken<XxlTypes>('xxl-state');
+export const XXL_FLOW_TYPES = new InjectionToken<FbNodeTypes>('xxl-flow-types');
+export const XXL_FLOW_UNIT_STATE = new InjectionToken<FbNodeTypes>('xxl-flow-unit-state');
+export const FB_NODE_HELPERS = new InjectionToken<FbNodeTypes>('fb-node-helpers');
+export const XXL_STATE = new InjectionToken<FbNodeTypes>('xxl-state');
 
-// export const XXL_WORKERS = new InjectionToken<XxlTypes>('xxl-worker-service');
+// export const XXL_WORKERS = new InjectionToken<FbNodeTypes>('xxl-worker-service');
 
-export interface XxlFlowType {
-  component: any;
+
+export interface FbKeyValues<T> {
+  [key: number]: T;
+}
+
+export interface FbNodeType {
+  component: Type<any>;
   config?: any;
   isFlow?: boolean;
   title?: string;
   type: string;
-  worker: XxlWorker;
+  worker: FbNodeWorker;
 }
 
-export interface XxlFlowUnit {
+export type FbNodeTypes = FbKeyValues<FbNodeType>;
+
+export interface FbNode {
   getSockets(): XxlSocket[];
-
   setActive(boolean): void;
+}
 
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket, sockets: XxlSocket[]): void;
-
-  reset?(sockets: XxlSocket[]): void;
+export interface FbNodeHelpers {
+  resetSockets(node: FbNodeState): void;
+  connect(outSocket: XxlSocket, inSocket: XxlSocket, fromNode: XxlFlowUnitState, toNode: XxlFlowUnitState): boolean;
 }
 
 // Describes the class doing the actual work
-export interface XxlWorker {
+export interface FbNodeWorker {
   getStream?(id?: number): Observable<any>;
 
   setStream?(stream: Observable<any>, connection?: XxlConnection): void;
@@ -39,12 +46,9 @@ export interface XxlWorker {
   destroy(): void;
 }
 
+
 export interface XxlFlowUnitOptions {
   isFlow?: boolean;
-}
-
-export interface XxlTypes {
-  [key: string]: { title: string, component: Type<any>, isFlow: boolean, config: any };
 }
 
 export interface XxlPosition {
@@ -63,7 +67,18 @@ export interface XxlFlowUnitState {
 
 export interface XxlFlow extends Partial<XxlFlowUnitState> {
   connections: XxlConnection[];
-  children: (XxlFlowUnitState | XxlFlow)[];
+  children: FbNodeState[];
+}
+
+export interface FbNodeState {
+  type: string;
+  id?: number;
+  config?: any;
+  title?: string;
+  position?: XxlPosition;
+  sockets?: XxlSocket[];
+  connections?: XxlConnection[];
+  children?: FbNodeState[];
 }
 
 export interface XxlConnection {
@@ -88,6 +103,7 @@ export interface XxlSocket {
 export interface XxlSocketEvent extends XxlSocket {
   socket: XxlSocket;
   parentId: number;
+  scope: number;
   event: PointerEvent;
 }
 
@@ -95,6 +111,7 @@ export interface SocketDetails {
   comp: SocketComponent;
   position?: XxlPosition;
   parentId: number;
+  scope: number;
 }
 
 export interface ConnectionDetails {
@@ -103,12 +120,12 @@ export interface ConnectionDetails {
 }
 
 export interface XxlWorkerService {
-  create(id: number, type: string): XxlWorker;
+  create(id: number, type: string): FbNodeWorker;
 }
 
 export class XxlDriver {
   private flow: XxlFlow[];
-  private workers: XxlWorker[];
+  private workers: FbNodeWorker[];
   private connections = [] as XxlConnection[];
   private running = false;
 
@@ -132,7 +149,7 @@ export class XxlDriver {
     // this.blocks = [];
     this.running = true;
 
-    // this.flowEntries.forEach((entry: XxlFlowUnit) => {
+    // this.flowEntries.forEach((entry: FbNode) => {
     // this.workers.push(entry.factory.create(entry.config).start());
     // });
 
@@ -142,16 +159,16 @@ export class XxlDriver {
   stop(): void {
     this.running = false;
 
-    // this.workers.forEach((block: XxlWorker) => block.stop());
+    // this.workers.forEach((block: FbNodeWorker) => block.stop());
   }
 }
 
 export abstract class FlowBasedServiceHelper {
   private flowHandlers;
 
-  abstract createWorker(type: string): XxlWorker;
+  abstract createWorker(type: string): FbNodeWorker;
 
-  addFlowHandler(callback: (type: string, worker: XxlWorker) => void): void {
+  addFlowHandler(callback: (type: string, worker: FbNodeWorker) => void): void {
     this.flowHandlers.unshift(callback);
   }
 

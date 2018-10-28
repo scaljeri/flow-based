@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
-import { XxlFlowUnit, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { Subscription } from 'rxjs';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { TapWorker } from '../../workers/tap';
@@ -9,7 +9,7 @@ import { TapWorker } from '../../workers/tap';
   templateUrl: './tap.component.html',
   styleUrls: ['./tap.component.scss']
 })
-export class TapComponent implements XxlFlowUnit, OnInit, OnDestroy {
+export class TapComponent implements FbNode, OnInit, OnDestroy {
   private worker: TapWorker;
   public sockets: XxlSocket[] = [];
   public history;

@@ -2,7 +2,7 @@ import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@an
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { StatsWorker } from '../../workers/stats';
-import { XxlConnection, XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
+import { XxlConnection, FbNode, XxlFlowUnitState, XxlSocket } from 'flow-based';
 import { GoogleCharts } from 'google-charts';
 
 @Component({
@@ -10,7 +10,7 @@ import { GoogleCharts } from 'google-charts';
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.scss']
 })
-export class StatsComponent implements XxlFlowUnit, OnInit {
+export class StatsComponent implements FbNode, OnInit {
   public worker: StatsWorker;
   private state: XxlFlowUnitState;
   data: number[][] = [];

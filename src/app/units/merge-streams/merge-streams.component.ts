@@ -2,14 +2,14 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, OnInit, 
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { FbNode, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 
 @Component({
   selector: 'fb-merge-streams',
   templateUrl: './merge-streams.component.html',
   styleUrls: ['./merge-streams.component.scss']
 })
-export class MergeStreamsComponent implements XxlFlowUnit, OnInit, AfterViewInit {
+export class MergeStreamsComponent implements FbNode, OnInit, AfterViewInit {
   state: XxlFlowUnitState;
   worker: MergeStreamsWorker;
   isActive = false;

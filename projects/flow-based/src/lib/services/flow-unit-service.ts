@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlSocketEvent, XxlWorker } from '../flow-based';
-import { XxlSocketBuilderService } from '../socket-builder.service';
+import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlSocketEvent, FbNodeWorker } from '../flow-based';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { FlowBasedConnectionService } from './flow-based-connection.service';
 import { Subject } from 'rxjs';
@@ -40,7 +39,7 @@ export class XxlFlowUnitService {
 
   addSocket(socket: XxlSocket): void {
     if (!socket.id) {
-      socket = Object.assign(XxlSocketBuilderService.create(socket.type), socket);
+      socket = Object.assign({id: this.flowService.getUniqueId()}, socket);
     }
 
     this.state.sockets = [socket, ...this.state.sockets];
@@ -54,7 +53,7 @@ export class XxlFlowUnitService {
     return this.flowService.units[this.state.id];
   }
 
-  get worker(): XxlWorker {
+  get worker(): FbNodeWorker {
     return this.flowService.getWorker(this.state.id);
   }
 

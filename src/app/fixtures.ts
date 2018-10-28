@@ -1,11 +1,11 @@
 export const basic =
   {
-    "id": 1540404926715,
+    "id": 1540554017332,
     "children": [
       {
         "type": "random-numbers",
         "title": "Random number generator",
-        "id": 1540404926716,
+        "id": 1540554236759,
         "config": {
           "min": 0,
           "max": 100,
@@ -13,7 +13,7 @@ export const basic =
           "end": 100,
           "intervalMax": 10000,
           "intervalMin": 100,
-          "interval": 1000,
+          "interval": 5400,
           "integer": true,
           "integers": true
         },
@@ -21,207 +21,162 @@ export const basic =
           {
             "type": "out",
             "format": "number",
-            "id": 1540404926717
+            "id": 1540554236760
           }
         ],
         "position": {
-          "x": 9.142252604166668,
-          "y": 22.892260717846458
+          "x": 18.190714518229164,
+          "y": 11.657737169126793
         }
       },
       {
-        "type": "random-numbers",
-        "title": "Random number generator",
-        "id": 1540404926718,
-        "config": {
-          "min": 0,
-          "max": 100,
-          "start": 0,
-          "end": 100,
-          "intervalMax": 10000,
-          "intervalMin": 100,
-          "interval": 1000,
-          "integer": true,
-          "integers": true
-        },
-        "sockets": [
-          {
-            "type": "out",
-            "format": "number",
-            "id": 1540404926719
-          }
-        ],
-        "position": {
-          "x": 9.055582682291666,
-          "y": 45.97924975074776
-        }
-      },
-      {
-        "type": "console",
+        "type": "tap",
         "title": "Tap",
-        "id": 1540498125681,
+        "id": 1540554236761,
         "config": {},
         "sockets": [
           {
             "type": "in",
-            "id": 1540498125682,
-            "format": "number"
+            "id": 1540554236762,
+            "format": null
           },
           {
             "type": "out",
-            "id": 1540498125683,
-            "format": "number"
+            "id": 1540554236763,
+            "format": null
           }
         ],
         "position": {
-          "x": 57.29553222656251,
-          "y": 28.392556704885344
+          "x": 45.275065104166664,
+          "y": 14.179726445663011
         }
       },
       {
-        "type": "merge-streams",
-        "title": "Merge streams",
-        "id": 1540404926720,
-        "config": {},
-        "sockets": [
-          {
-            "type": "in",
-            "format": "number",
-            "id": 1540404926721
-          },
-          {
-            "type": "in",
-            "format": "number",
-            "id": 1540404926722
-          },
-          {
-            "type": "out",
-            "format": "number",
-            "id": 1540404926723
-          }
-        ],
-        "position": {
-          "x": 41.881306966145836,
-          "y": 28.89573467098704
-        }
-      },
-      {
-        "type": "console",
-        "title": "Tap",
-        "id": 1540405117631,
-        "config": {},
-        "sockets": [
-          {
-            "type": "in",
-            "id": 1540405117632,
-            "format": "number"
-          },
-          {
-            "type": "out",
-            "id": 1540405117633,
-            "format": "number"
-          }
-        ],
-        "position": {
-          "x": 48.243611653645836,
-          "y": 8.22766076769691
-        }
-      },
-      {
-        "type": "random-numbers",
-        "title": "Random number generator",
-        "id": 1540499357323,
+        "type": "stats",
+        "title": "Statistics",
+        "id": 1540742912781,
         "config": {
-          "min": 0,
-          "max": 100,
-          "start": 0,
-          "end": 1,
-          "intervalMax": 10000,
-          "intervalMin": 100,
-          "interval": 1000,
-          "integer": true
+          "columnWidth": 1
         },
         "sockets": [
           {
+            "type": "in",
+            "format": "numberx",
+            "id": 1540742912782
+          },
+          {
             "type": "out",
+            "name": "Min value",
             "format": "number",
-            "id": 1540499357324
+            "id": 1540742912783
+          },
+          {
+            "type": "out",
+            "name": "Max value",
+            "format": "number",
+            "id": 1540742912784
           }
         ],
         "position": {
-          "x": 10.236612955729168,
-          "y": 3.7625405034895305
+          "x": 66.75577799479167,
+          "y": 24.694666001994015
         }
       },
       {
-        "type": "random-numbers",
-        "title": "Random number generator",
-        "id": 1540499357326,
-        "config": {
-          "min": 0,
-          "max": 100,
-          "start": 0,
-          "end": 1,
-          "intervalMax": 10000,
-          "intervalMin": 100,
-          "interval": 1000,
-          "integer": true
-        },
+        "type": "flow",
+        "title": "Composite Unit",
+        "id": 1540554017333,
+        "config": {},
+        "children": [
+          {
+            "type": "stats",
+            "title": "Statistics",
+            "id": 1540578394670,
+            "config": {
+              "columnWidth": 1
+            },
+            "sockets": [
+              {
+                "type": "in",
+                "format": "numberx",
+                "id": 1540578394671
+              },
+              {
+                "type": "out",
+                "name": "Min value",
+                "format": "number",
+                "id": 1540578394672
+              },
+              {
+                "type": "out",
+                "name": "Max value",
+                "format": "number",
+                "id": 1540578394673
+              }
+            ],
+            "position": {
+              "x": 60.57542703919491,
+              "y": 26.10289228723405
+            }
+          },
+          {
+            "type": "tap",
+            "title": "Tap",
+            "id": 1540557099928,
+            "config": {},
+            "sockets": [
+              {
+                "type": "in",
+                "id": 1540557099929
+              },
+              {
+                "type": "out",
+                "id": 1540557099930
+              }
+            ],
+            "position": {
+              "x": 46.67182534427966,
+              "y": 43.58964231547018
+            }
+          }
+        ],
+        "connections": [
+          {
+            "from": 1540557099928,
+            "out": 1540557099930,
+            "to": 1540554017333,
+            "in": 1540572399316,
+            "id": 1540742912787
+          },
+          {
+            "to": 1540557099928,
+            "in": 1540557099929,
+            "from": 1540554017333,
+            "out": 1540554512369,
+            "id": 1540742912786
+          }
+        ],
         "sockets": [
           {
+            "id": 1540572399316,
             "type": "out",
-            "format": "number",
-            "id": 1540499357327
+            "name": "out",
+            "description": null,
+            "color": null
+          },
+          {
+            "id": 1540554512369,
+            "type": "in",
+            "name": "in",
+            "description": null,
+            "color": null
           }
         ],
         "position": {
-          "x": 7.917073567708334,
-          "y": 64.4130109670987
+          "x": 38.295084635416664,
+          "y": 32.18196971585243
         }
       }
     ],
-    "connections": [
-      {
-        "from": 1540404926716,
-        "out": 1540404926717,
-        "to": 1540405117631,
-        "in": 1540405117632,
-        "id": 1540405177804
-      },
-      {
-        "from": 1540404926716,
-        "out": 1540404926717,
-        "to": 1540404926720,
-        "in": 1540404926721,
-        "id": 1540405177805
-      },
-      {
-        "from": 1540404926718,
-        "out": 1540404926719,
-        "to": 1540404926720,
-        "in": 1540404926722,
-        "id": 1540405177806
-      },
-      {
-        "from": 1540404926720,
-        "out": 1540404926723,
-        "to": 1540498125681,
-        "in": 1540498125682,
-        "id": 1540498125684
-      },
-      {
-        "from": 1540499357323,
-        "out": 1540499357324,
-        "to": 1540404926720,
-        "in": 1540404926721,
-        "id": 1540499357325
-      },
-      {
-        "from": 1540499357326,
-        "out": 1540499357327,
-        "to": 1540404926720,
-        "in": 1540404926721,
-        "id": 1540499357328
-      }
-    ]
+    "connections": []
   }

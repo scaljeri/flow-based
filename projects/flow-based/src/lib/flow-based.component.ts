@@ -10,7 +10,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   XxlFlow,
   XxlPosition,
-  XxlFlowUnitState, XxlConnection, XxlSocketEvent, XxlSocket
+  XxlFlowUnitState, XxlConnection, XxlSocketEvent, XxlSocket, SocketDetails
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
@@ -35,7 +35,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @ViewChild('dragArea') area: ElementRef;
   @ViewChildren('node') nodes: QueryList<FlowUnitComponent>;
 
-  wrapper: FakeUnitWrapper;
   onChange: (state: any) => void;
   activeFlowIndex: number = null;
   pointerMove: PointerEvent;
@@ -62,6 +61,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     event.stopPropagation();
 
     this.connectionService.clear();
+    if (this.parentConnectionService) {
+      this.parentConnectionService.clear();
+    }
   }
 
   ngOnInit() {
@@ -72,21 +74,43 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
       this.flowService.initialize();
     }
 
-
     this.flowService.activate(this);
 
+    if (!this.root) {
+      this.parentConnectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
+        this.socketClickedFromParent(event);
+      });
+    }
+
     this.connectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
-      if (event) {
-        if (event.socket.type === 'out') {
-          this.activeSocketFrom = event.socket.id;
-        } else {
-          this.activeSocketTo = event.socket.id;
-        }
-      } else {
-        this.activeSocketTo = null;
-        this.activeSocketFrom = null;
-      }
+      if (this.activeFlowIndex === null) {
+        this.socketClicked(event);
+      } // else if (this.flowService.currentFlow !== this) {
+      //   this.flowService.currentFlow.socketClicked(event);
+      // }
     });
+  }
+
+  socketClickedFromParent(event: XxlSocketEvent): void {
+    if (event) {
+      this.connectionService.onSocketClick(event);
+    } else {
+      this.connectionService.clear();
+    }
+  }
+
+  // Path tp mouse
+  socketClicked(event?: XxlSocketEvent) {
+    if (event) {
+      if (event.socket.type === 'out') {
+        this.activeSocketFrom = event.socket.id;
+      } else {
+        this.activeSocketTo = event.socket.id;
+      }
+    } else {
+      this.activeSocketTo = null;
+      this.activeSocketFrom = null;
+    }
   }
 
   ngOnChanges(obj: SimpleChanges): void {
@@ -139,13 +163,35 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
       this.flowService.deactivate();
     }
 
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.connectionService.updatePositionSockets();
+
+      this.cdr.detectChanges();
+    });
+  }
+
+  childBlurred(): void {
+    this.activeFlowIndex = null;
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.connectionService.updatePositionSockets();
+
+      this.cdr.detectChanges();
+    });
   }
 
   entryClicked(index: number): void {
-    console.log('a');
     this.activeFlowIndex = index;
     this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.connectionService.updatePositionSockets();
+
+      this.cdr.detectChanges();
+    });
   }
 
   removeConnection(connection: XxlConnection): void {
@@ -213,5 +259,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
       });
       this.cdr.markForCheck();
     });
+  }
+
+  initConnections(): void {
+    this.connectionService.initConnections();
   }
 }

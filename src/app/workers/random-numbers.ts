@@ -1,4 +1,4 @@
-import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_CONFIG = {
@@ -12,7 +12,7 @@ export const RANDOM_NUMBER_CONFIG = {
   integer: true
 };
 
-export class RandomNumbersWorker implements XxlWorker {
+export class RandomNumbersWorker implements FbNodeWorker {
   private intervalId: number;
   private subject = new Subject<any>();
 
@@ -90,5 +90,9 @@ export class RandomNumbersWorker implements XxlWorker {
 
   set integer(val: boolean) {
     this.config.integers = val;
+  }
+
+  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+
   }
 }

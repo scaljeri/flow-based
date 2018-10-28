@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
 
 import {
-  XxlFlowUnit, XxlFlowUnitState, XxlSocket
+  FbNode, XxlFlowUnitState, XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
@@ -12,7 +12,7 @@ import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/serv
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss']
 })
-export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
+export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
   worker: RandomNumbersWorker;
   configForm: FormGroup;
   isActive = false;

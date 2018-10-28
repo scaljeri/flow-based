@@ -1,10 +1,10 @@
-import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, ReplaySubject, Subject, Subscription, zip } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 export const MERGE_STREAMS_CONFIG = {};
 
-export class MergeStreamsWorker implements XxlWorker {
+export class MergeStreamsWorker implements FbNodeWorker {
   private subscription: Subscription;
   private subject = new ReplaySubject<number>(1);
 
@@ -91,5 +91,9 @@ export class MergeStreamsWorker implements XxlWorker {
 
   get title(): string {
     return this.state.title;
+  }
+
+  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+
   }
 }

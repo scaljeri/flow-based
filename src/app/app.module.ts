@@ -8,7 +8,7 @@ import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { TapComponent } from './units/tap/tap.component';
 import { DefaultFlowComponent } from './units/default-flow/default-flow.component';
 import { FlowComponent } from './flow/flow.component';
-import { FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
+import { FB_NODE_HELPERS, FlowBasedModule, XXL_FLOW_TYPES } from 'flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
@@ -16,7 +16,7 @@ import {
   MatButtonModule, MatCardModule, MatCheckboxModule, MatDialogModule,
   MatInputModule, MatListModule, MatSliderModule, MatToolbarModule
 } from '@angular/material';
-import {MatIconModule} from '@angular/material/icon';
+import { MatIconModule } from '@angular/material/icon';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
@@ -31,6 +31,8 @@ import { MERGE_STREAMS_CONFIG, MergeStreamsWorker } from './workers/merge-stream
 import { MergeStreamsComponent } from './units/merge-streams/merge-streams.component';
 import { EditSocketComponent } from './units/default-flow/edit-socket/edit-socket.component';
 import { TAP_CONFIG, TapWorker } from './workers/tap';
+import { FB_CONFIG } from './fb-config';
+import { NODE_HELPERS } from './node-helpers';
 
 @NgModule({
   declarations: [
@@ -71,35 +73,10 @@ import { TAP_CONFIG, TapWorker } from './workers/tap';
     {provide: OverlayContainer, useClass: FullscreenOverlayContainer},
     {
       provide: XXL_FLOW_TYPES,
-      useValue: {
-        'random-numbers': {
-          title: 'Random number generator',
-          component: RandomNumbersComponent,
-          config: RANDOM_NUMBER_CONFIG,
-          worker: RandomNumbersWorker
-        },
-        'stats': {
-          title: 'Statistics',
-          component: StatsComponent,
-          config: STATS_CONFIG,
-          worker: StatsWorker
-        },
-        'basic-graph': {
-          title: 'Basic Graph',
-          component: BasicGraphComponent,
-          config: BASIC_GRAPH_CONFIG,
-          worker: BasicGraphWorker
-        },
-        'merge-streams': {
-          title: 'Merge streams',
-          component: MergeStreamsComponent,
-          config: MERGE_STREAMS_CONFIG,
-          worker: MergeStreamsWorker
-        },
-        'console': {component: TapComponent, config: TAP_CONFIG, title: 'Tap', worker: TapWorker},
-        // 'default': { component: DefaultFlowComponent },
-        'flow': {component: DefaultFlowComponent, title: 'Composite Unit', isFlow: true}
-      }
+      useValue: FB_CONFIG
+    }, {
+      provide: FB_NODE_HELPERS,
+      useValue: NODE_HELPERS
     }
   ],
   entryComponents: [

@@ -15,7 +15,6 @@ export class FlowBasedConnectionService {
   public resetSubject = new Subject<void>();
   public reset$ = this.resetSubject.asObservable();
   private connection: XxlConnection = {} as XxlConnection;
-  private sockets: { [key: number]: SocketDetails } = {};
   private connectionDetails: ConnectionDetails;
 
   private activeSocketSubject = new Subject<XxlSocket>();
@@ -41,8 +40,8 @@ export class FlowBasedConnectionService {
       this.newSubject.next({
         connection: c,
         sockets: {
-          [c.in]: this.getSocket(c.in),
-          [c.out]: this.getSocket(c.out),
+          [c.in]: this.getSocketState(c.in),
+          [c.out]: this.getSocketState(c.out),
         }
       });
     });
@@ -66,12 +65,14 @@ export class FlowBasedConnectionService {
 
     if (this.connection.from && this.connection.to) {
       this.connection.id = this.service.getUniqueId();
-      this.service.flow.connect(this.connection);
+      // this.service.flow.connect(this.connection);
 
       this.connectionDetails.connection = this.connection;
-      this.newSubject.next(this.connectionDetails);
+      // this.newSubject.next(this.connectionDetails);
 
-      this.state.connections = [...this.state.connections, this.connection];
+      // this.state.connections = [...this.state.connections, this.connection];
+      this.service.addConnection(this.state, this.connection);
+
       this.clear();
       this.resetSubject.next();
       this.initConnections();
@@ -90,31 +91,46 @@ export class FlowBasedConnectionService {
     this.activeSocketSubject.next(null);
   }
 
-  getSocket(id: number): XxlSocket {
-    return this.sockets[id].comp.state;
+  getSocket(id: number): SocketDetails {
+    return this.service.getSocket(id);
+  }
+
+  getSocketState(id: number): XxlSocket {
+    return this.service.getSocket(id).comp.state;
   }
 
   getSocketDetails(id: number): SocketDetails {
-    return this.sockets[id];
+    return this.service.getSocket(id);
+  }
+
+  getSockets(scope?: number): SocketDetails[] {
+    return this.service.getSockets(scope || this.state.id);
   }
 
   addSocket(socket: SocketComponent): void {
-    this.sockets[socket.state.id] = {
+    this.service.addSocket(socket.state.id, {
       comp: socket,
       parentId: socket.parent,
-      position: this.determinePosition(socket)
-    };
+      position: this.determinePosition(socket),
+      scope: this.state.id
+    });
   }
 
   removeSocket(socketId: number): void {
-    delete this.sockets[socketId];
+    // delete this.servicesockets[socketId];
   }
 
-  updatePositionSockets(sockets: XxlSocket[]): void {
-    sockets.forEach(socket => {
-      const details = this.sockets[socket.id];
-      details.position = this.determinePosition(details.comp);
-    });
+  updatePositionSockets(sockets?: XxlSocket[]): void {
+    if (sockets) {
+      sockets.forEach(socket => {
+        const details = this.service.getSocket(socket.id);
+        details.position = this.determinePosition(details.comp);
+      });
+    } else {
+      this.service.getSockets(this.state.id).forEach((sd: SocketDetails) => {
+        sd.position = this.determinePosition(sd.comp);
+      });
+    }
 
     this.update();
   }
@@ -126,7 +142,7 @@ export class FlowBasedConnectionService {
   }
 
   getSocketPosition(socketId: number): XxlPosition {
-    return this.sockets[socketId].position;
+    return this.service.getSocket(socketId).position;
   }
 
   private determinePosition(comp: SocketComponent): XxlPosition {
