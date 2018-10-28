@@ -13,7 +13,7 @@ export const basic =
           "end": 100,
           "intervalMax": 10000,
           "intervalMin": 100,
-          "interval": 5400,
+          "interval": 100,
           "integer": true,
           "integers": true
         },
@@ -25,7 +25,7 @@ export const basic =
           }
         ],
         "position": {
-          "x": 18.190714518229164,
+          "x": 18.177286783854164,
           "y": 11.657737169126793
         }
       },
@@ -127,11 +127,13 @@ export const basic =
             "sockets": [
               {
                 "type": "in",
-                "id": 1540557099929
+                "id": 1540557099929,
+                "format": "number"
               },
               {
                 "type": "out",
-                "id": 1540557099930
+                "id": 1540557099930,
+                "format": "number"
               }
             ],
             "position": {
@@ -162,14 +164,16 @@ export const basic =
             "type": "out",
             "name": "out",
             "description": null,
-            "color": null
+            "color": null,
+            "format": "number"
           },
           {
             "id": 1540554512369,
             "type": "in",
             "name": "in",
             "description": null,
-            "color": null
+            "color": null,
+            "format": "number"
           }
         ],
         "position": {
@@ -178,5 +182,13 @@ export const basic =
         }
       }
     ],
-    "connections": []
+    "connections": [
+      {
+        "from": 1540554236759,
+        "out": 1540554236760,
+        "to": 1540554017333,
+        "in": 1540554512369,
+        "id": 1540757236725
+      }
+    ]
   }

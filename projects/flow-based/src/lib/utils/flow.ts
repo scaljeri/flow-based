@@ -37,7 +37,6 @@ export class Flow {
     flow.connections.forEach(c => this.connections[c.id] = c);
     this.createVirtualFlow(flow.children, flow.id);
 
-    debugger;
     let count = 0;
     while (this.connectNodes() && ++count < 100) {
     }
@@ -45,61 +44,58 @@ export class Flow {
       console.warn('Connecting all nodes failed');
     }
 
+    Object.keys(this.connections).forEach(key => {
+      this.connectworkers(this.connections[key]);
+    });
+
     return this;
   }
-
-  createWorker(type: string, state: XxlFlowUnitState): FbNodeWorker {
-    const {worker} = this.flowTypes[type];
-
-    if (worker) {
-      this.workers[state.id] = new worker(state.config);
-    } else if (this.flowTypes[type].isFlow) {
-      this.workers[state.id] = new FlowWorker(state as XxlFlow);
-    }
-
-    return this.workers[state.id];
-  }
-
 
   getWorker(id: number): FbNodeWorker {
     return this.workers[id];
   }
 
-  addConnection(state: XxlFlow, connection: XxlConnection): void {
-    const from = this.getNode(connection.from as number),
-      to = this.getNode(connection.to as number);
-
-    const socketsDidChange = this.connect(connection);
-
+  addConnection(state: FbNodeState, connection: XxlConnection): void {
     state.connections = [connection, ...state.connections];
     this.connections[connection.id] = connection;
+    this.connectworkers(connection);
 
-    if (socketsDidChange) {
-      // Reset all sockets
-      Object.keys(this.nodes).forEach(key => {
-        this.helpers.resetSockets(this.nodes[key].state);
-      });
+    if (this.connect(connection)) {
+      this.rebuildNodeConnections();
+    }
+  }
 
-      let count = 0;
-      while (this.connectNodes() && ++count < 100) {
+  private rebuildNodeConnections(): void {
+    Object.keys(this.nodes).forEach(key => {
+      const node = this.nodes[key].state;
+
+      if (node.children) {
+        node.sockets.forEach(s => s.format = null);
+      } else {
+        this.helpers.resetSockets(node);
       }
-      if (count === 0) {
-        console.warn('Connecting all nodes failed');
-      }
+    });
 
-
-      // Loop through everything
+    let count = 0;
+    while (this.connectNodes() && ++count < 100) {
     }
 
+    if (count === 0) {
+      console.warn('Connecting all nodes failed');
+    }
+  }
+
+  removeConnection(connection: XxlConnection, state: FbNodeState): void {
+    this.workers[connection.to as number].removeStream(connection);
+    delete this.connections[connection.id];
+    this.state.connections = this.state.connections.filter(c => c.id !== connection.id);
+    this.rebuildNodeConnections();
   }
 
   addNode(type): void {
     // TODO
   }
 
-  remove(connection: XxlConnection): void {
-    this.workers[connection.to as number].removeStream(connection);
-  }
 
   destroy(): void {
     Object.keys(this.workers).forEach(k => this.workers[k].destroy());
@@ -120,25 +116,16 @@ export class Flow {
     // TODO: Remove connections
   }
 
-  removeConnection(connection: XxlConnection): void {
-    // TODO: Remove connection -> reset sockets etc
-  }
-
   private createVirtualFlow(nodes: FbNodeState[], parentId: number) {
     nodes.forEach(node => {
       this.nodes[node.id] = {state: node, parentId};
       node.sockets.forEach(s => this.sockets[s.id] = node.id);
 
-      const flow = node as XxlFlow;
-      if (flow.children) {
-        this.workers[node.id] = new FlowWorker(flow);
-        flow.connections.forEach(c => this.connections[c.id] = c);
+      this.createWorker(node);
+      if (node.children) {
+        node.connections.forEach(c => this.connections[c.id] = c);
 
-        this.createVirtualFlow(flow.children, node.id);
-      } else {
-        const {worker} = this.flowTypes[node.type];
-
-        this.workers[node.id] = new worker(node.config);
+        this.createVirtualFlow(node.children, node.id);
       }
     });
   }
@@ -174,5 +161,22 @@ export class Flow {
     const isChanged = this.helpers.connect(outSocket, inSocket, from.state, to.state);
 
     return isChanged;
+  }
+
+  private createWorker(state: FbNodeState): void {
+    const {worker} = this.flowTypes[state.type];
+
+    if (worker) {
+      this.workers[state.id] = new worker(state.config);
+    } else if (this.flowTypes[state.type].isFlow) {
+      this.workers[state.id] = new FlowWorker(state);
+    }
+  }
+
+  private connectworkers(connection: XxlConnection): void {
+    const fromWorker = this.getWorker(connection.from as number);
+    const toWorker = this.getWorker(connection.to as number);
+
+    toWorker.setStream(fromWorker.getStream(connection.out), connection);
   }
 }

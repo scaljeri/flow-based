@@ -10,7 +10,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   XxlFlow,
   XxlPosition,
-  XxlFlowUnitState, XxlConnection, XxlSocketEvent, XxlSocket, SocketDetails
+  XxlFlowUnitState, XxlConnection, XxlSocketEvent, XxlSocket, SocketDetails, FbNodeState, FbNode
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
@@ -29,7 +29,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
-  @Input() state: XxlFlow;
+  @Input() state: FbNodeState;
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
@@ -212,7 +212,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     // }
   }
 
-  isFlow(child: XxlFlow): boolean {
+  isFlow(child: FbNodeState): boolean {
     return !!child.children;
   }
 

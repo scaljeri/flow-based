@@ -49,7 +49,7 @@ export class XxlFlowBasedService {
       }, []);
   }
 
-  addConnection(state: XxlFlow, connection: XxlConnection): void {
+  addConnection(state: FbNodeState, connection: XxlConnection): void {
     this.flow.addConnection(state, connection);
   }
 
@@ -92,7 +92,7 @@ export class XxlFlowBasedService {
       ...(this.flowTypes[flowType].isFlow ? {children: [], connections: []} : {})
     };
 
-    this.flow.createWorker(flowType, state);
+    // this.flow.createWorker(state);
 
     this.currentFlow.add(state);
 
@@ -151,7 +151,7 @@ export class XxlFlowBasedService {
   //   return this.workers[unitId].getSockets() || [];
   // }
 
-  delete(state: XxlFlow | XxlFlowUnitState, parentState?: XxlFlow): void {
+  delete(state: FbNodeState, parentState?: XxlFlow): void {
     let flow = parentState || this.currentFlow.state,
       index = flow.children.indexOf(state);
 
@@ -190,8 +190,8 @@ export class XxlFlowBasedService {
   }
 
   // Create workers and the connections between them
-  private initializeFlow(flow: XxlFlow): void {
-    flow.children.forEach((child: XxlFlow) => {
+  private initializeFlow(flow: FbNodeState): void {
+    flow.children.forEach(child => {
       const {worker} = this.flowTypes[child.type];
 
       if (child.children) {

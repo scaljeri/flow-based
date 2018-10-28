@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ConnectionDetails, SocketDetails, XxlConnection, XxlFlow, XxlPosition, XxlSocket, XxlSocketEvent } from 'flow-based';
+import { ConnectionDetails, FbNodeState, SocketDetails, XxlConnection, XxlFlow, XxlPosition, XxlSocket, XxlSocketEvent } from 'flow-based';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { Subject } from 'rxjs';
 import { SocketComponent } from '../socket/socket.component';
@@ -7,7 +7,7 @@ import { SocketComponent } from '../socket/socket.component';
 
 @Injectable()
 export class FlowBasedConnectionService {
-  public state: XxlFlow;
+  public state: FbNodeState;
   private newSubject = new Subject<ConnectionDetails>();
   private rmSubject = new Subject<ConnectionDetails>();
   public new$ = this.newSubject.asObservable();
@@ -25,11 +25,11 @@ export class FlowBasedConnectionService {
     this.clear();
   }
 
-  setState(state: XxlFlow): void {
+  setState(state: FbNodeState): void {
     this.state = state;
   }
 
-  initialize(state: XxlFlow): void {
+  initialize(state: FbNodeState): void {
     this.state = state;
 
     this.initConnections();
@@ -162,7 +162,7 @@ export class FlowBasedConnectionService {
 
     this.resetSubject.next();
     this.initConnections();
-    this.service.flow.remove(connection);
+    this.service.flow.removeConnection(connection, this.state);
   }
 
   getConnections(type: string, id: number): XxlConnection[] {

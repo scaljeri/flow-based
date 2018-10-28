@@ -1,15 +1,16 @@
 import { Observable, Subject, Subscription } from 'rxjs';
-import { FbKeyValues, XxlConnection, XxlFlow, XxlSocket, FbNodeWorker } from '../flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker, FbNodeState } from '../flow-based';
 
 export class FlowWorker implements FbNodeWorker {
   private subjects: { [key: number]: Subject<any> } = {};
   private subscriptions: { [key: number]: Subscription } = {};
 
-  constructor(private state: XxlFlow) {
+  constructor(private state: FbNodeState) {
   }
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
     const id = connection.to === this.state.id ? connection.in : connection.out;
+    // const id = connection.id;
 
     this.subscriptions[id] = stream.subscribe(val => {
       this.getSubject(id).next(val);
@@ -38,8 +39,10 @@ export class FlowWorker implements FbNodeWorker {
   }
 
   removeStream(connection: XxlConnection): void {
-    if (this.subscriptions[connection.id]) {
-      this.subscriptions[connection.id].unsubscribe();
+    const id = connection.to === this.state.id ? connection.in : connection.out;
+
+    if (this.subscriptions[id]) { // TODO: Is if needed
+      this.subscriptions[id].unsubscribe();
     }
   }
 
