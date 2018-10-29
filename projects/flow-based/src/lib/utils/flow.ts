@@ -80,7 +80,7 @@ export class Flow {
     while (this.connectNodes() && ++count < 100) {
     }
 
-    if (count === 0) {
+    if (count === 100) {
       console.warn('Connecting all nodes failed');
     }
   }
@@ -88,12 +88,14 @@ export class Flow {
   removeConnection(connection: XxlConnection, state: FbNodeState): void {
     this.workers[connection.to as number].removeStream(connection);
     delete this.connections[connection.id];
-    this.state.connections = this.state.connections.filter(c => c.id !== connection.id);
+    state.connections = state.connections.filter(c => c.id !== connection.id);
     this.rebuildNodeConnections();
   }
 
-  addNode(type): void {
-    // TODO
+  addNode(nodeState: FbNodeState, flowState: FbNodeState): void {
+    this.createWorker(nodeState);
+    flowState.children = [nodeState, ...flowState.children];
+    this.nodes[nodeState.id] = {state: nodeState, parentId: flowState.id};
   }
 
 
@@ -107,6 +109,11 @@ export class Flow {
 
   getSocket(id: number): XxlSocket {
     return this.getNode(this.sockets[id]).state.sockets.filter(s => s.id === id)[0];
+  }
+
+  addSocket(id: number, nodeId: number): void {
+    console.log('addsocket id: ' + id + ' nodeOd=' + nodeId);
+    this.sockets[id] = nodeId;
   }
 
   removeNode(id: number): void {

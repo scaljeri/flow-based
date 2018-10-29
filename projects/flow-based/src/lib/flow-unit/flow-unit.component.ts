@@ -11,11 +11,12 @@ import {
 } from '@angular/core';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlFlow, FbNode, XxlFlowUnitState, XxlSocket } from '../flow-based';
+import { XxlFlow, FbNode, XxlFlowUnitState, XxlSocket, FbNodeState } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
 import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
 import { FlowBasedComponent } from 'flow-based';
+import { SocketService } from '../socket.service';
 
 declare global {
   interface Window {
@@ -36,7 +37,7 @@ declare global {
 })
 export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() @HostBinding('class.is-active') active = false;
-  @Input() state: XxlFlowUnitState;
+  @Input() state: FbNodeState;
   @Input() scope: number;
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
@@ -52,6 +53,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
               private connectionService: FlowBasedConnectionService,
               private flowService: XxlFlowBasedService,
               public unitService: XxlFlowUnitService,
+              public socketService: SocketService,
               private movable: MovableDirective) {
   }
 
@@ -63,7 +65,8 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     this.unitService.setState(this.state);
 
     this.movable.positionChange.subscribe(() => {
-      this.connectionService.updatePositionSockets(this.state.sockets);
+      this.socketService.clearPosition(this.id);
+      this.flowService.nodeMoved();
     });
 
     this.unitService.calibrate$.subscribe(() => {
@@ -77,25 +80,25 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     });
     this.observer.observe(this.element.nativeElement);
 
-    this.connectionService.new$.subscribe(cd => {
-      let localSocket, remoteSocket;
-
-      if (cd.connection.from === this.id) {
-        localSocket = cd.sockets[cd.connection.out];
-        remoteSocket = cd.sockets[cd.connection.in];
-      } else if (cd.connection.to === this.id) {
-        localSocket = cd.sockets[cd.connection.in];
-        remoteSocket = cd.sockets[cd.connection.out];
-      } else {
-        return;
-      }
-
-      if (this.isFlow()) {
-        // this.flow.initConnections();
-      } else {
-        // this.ref.instance.connected(localSocket, remoteSocket, this.state.sockets);
-      }
-    });
+    // this.connectionService.new$.subscribe(cd => {
+    //   let localSocket, remoteSocket;
+    //
+    //   if (cd.connection.from === this.id) {
+    //     localSocket = cd.sockets[cd.connection.out];
+    //     remoteSocket = cd.sockets[cd.connection.in];
+    //   } else if (cd.connection.to === this.id) {
+    //     localSocket = cd.sockets[cd.connection.in];
+    //     remoteSocket = cd.sockets[cd.connection.out];
+    //   } else {
+    //     return;
+    //   }
+    //
+    //   if (this.isFlow()) {
+    //     // this.flow.initConnections();
+    //   } else {
+    //     // this.ref.instance.connected(localSocket, remoteSocket, this.state.sockets);
+    //   }
+    // });
   }
 
   getScope(): number {
@@ -138,19 +141,11 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
     if (this.ref.instance) {
       this.ref.instance.setActive(active.currentValue);
+      this.socketService.clearPosition(this.id);
       setTimeout(() => {
-        this.connectionService.updatePositionSockets(this.sockets);
-        this.cdr.detectChanges();
+        // this.cdr.detectChanges();
       });
     }
-    //
-    // if (this.ref && active && active.currentValue !== active.previousValue && this.ref.instance) {
-    //   this.ref.instance.setActive(active.currentValue);
-    //   setTimeout(() => {
-    //     this.wrapper.update();
-    //     this.updated.next();
-    //   });
-    // }
   }
 
   get sockets(): XxlSocket[] {
@@ -162,7 +157,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   isFlow(): boolean {
-    return !!(this.state as XxlFlow).children;
+    return !!this.state.children;
   }
 
   get id(): number {

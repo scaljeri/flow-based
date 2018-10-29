@@ -8,11 +8,13 @@ import {
   HostListener,
   Input, OnDestroy, Output
 } from '@angular/core';
-import { XxlSocket, XxlSocketEvent } from '../flow-based';
+import { ConnectionDetails, SocketDetails, XxlPosition, XxlSocket, XxlSocketEvent } from '../flow-based';
 import { Subscription } from 'rxjs';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
 import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
 import { filter, tap } from 'rxjs/operators';
+import { XxlFlowBasedService } from '../flow-based.service';
+import { SocketService } from '../socket.service';
 
 @Component({
   selector: 'xxl-socket',
@@ -27,6 +29,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   @Input() parent: number;
   @Output() clicked = new EventEmitter<XxlSocketEvent>();
   private subscription: Subscription;
+  private _position: XxlPosition;
 
   @HostBinding('class.is-active') active = false;
   @HostBinding('class.is-accepting') isAccepting: boolean;
@@ -41,30 +44,69 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
     return 'socket-' + (this.state ? this.getType() : '');
   }
 
-  constructor(public element: ElementRef,
+  get position(): XxlPosition {
+    if (!this._position) {
+      const rect = this.element.nativeElement.getBoundingClientRect();
+
+      this._position = {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+    }
+
+    return this._position;
+  }
+
+  constructor(private element: ElementRef,
               private nodeService: XxlFlowUnitService,
-              private connService: FlowBasedConnectionService) {
+              private service: SocketService) {
+  }
+
+  reset(): void {
+    this._position = null;
   }
 
   ngAfterViewInit(): void {
-    this.connService.addSocket(this);
+    /*
+     comp: SocketComponent;
+  position?: XxlPosition;
+  parentId: number;
+  scope: number;
+     */
+    this.service.addSocket(this.id, {
+      comp: this,
+      parentId: this.parent,
+      scope: this.scope
+    });
 
-    this.subscription = this.connService.activeSocket$.pipe(
-      filter((event?: XxlSocketEvent) => !event || event.scope === this.scope)
-    ).subscribe((event?: XxlSocketEvent) => {
+    this.subscription = this.service.socketClicked$.subscribe((event: XxlSocketEvent) => {
       this.active = false;
       this.isAccepting = null;
 
-      if (event) {
-        if (event.socket.id === this.state.id) {
-          this.active = true;
-        } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
-          this.isAccepting = false;
-        } else {
-          this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
+        if (event) {
+          if (event.socket.id === this.state.id) {
+            this.active = true;
+          } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
+            this.isAccepting = false;
+          } else {
+            this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
+          }
         }
-      }
     });
+
+    // this.subscription = this.connService.activeSocket$.pipe(
+    //   filter((event?: XxlSocketEvent) => !event || event.scope === this.scope)
+    // ).subscribe((event?: XxlSocketEvent) => {
+    //   this.active = false;
+    //   this.isAccepting = null;
+    //
+    //   if (event) {
+    //     if (event.socket.id === this.state.id) {
+    //       this.active = true;
+    //     } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
+    //       this.isAccepting = false;
+    //     } else {
+    //       this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
+    //     }
+    //   }
+    // });
   }
 
   getType(): string {
@@ -78,7 +120,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   onPointerDown(event: PointerEvent): void {
     event.stopPropagation();
 
-    this.nodeService.onSocketClick({
+    this.service.onSocketClick({
       event,
       socket: Object.assign({}, this.state, {type: this.getType()}),
       scope: this.scope,

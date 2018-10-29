@@ -109,7 +109,6 @@ export interface XxlSocketEvent extends XxlSocket {
 
 export interface SocketDetails {
   comp: SocketComponent;
-  position?: XxlPosition;
   parentId: number;
   scope: number;
 }

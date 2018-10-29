@@ -12,6 +12,7 @@ import {
 import { XxlConnection, XxlPosition } from '../flow-based';
 import * as bezier from './bezier';
 import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
+import { SocketService } from '../socket.service';
 
 @Component({
   selector: 'xxl-connection-lines',
@@ -41,6 +42,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   constructor(private element: ElementRef,
               private viewRef: ChangeDetectorRef,
+              private socketService: SocketService,
               private connService: FlowBasedConnectionService) {
   }
 
@@ -69,7 +71,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   }
 
   pointerPath(): string {
-    const start = this.connService.getSocketPosition(this.from || this.to);
+    const start = this.socketService.getSocket(this.from || this.to).comp.position;
     let output = '';
 
     if (this.from && this.pointer) {
@@ -96,8 +98,8 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       return this.dFromElements(connection);
     } else {
 
-      const start = this.connService.getSocketPosition(connection.out);
-      const end = this.connService.getSocketPosition(connection.in) || start;
+      const start = this.socketService.getSocket(connection.out).comp.position;
+      const end = (this.socketService.getSocket(connection.in) || {comp: {position: start}} as any).comp.position;
 
       if (!start || !start.x || !end || !end.x) {
         return;

@@ -7,12 +7,13 @@ import {
   FbNodeType,
   XxlFlowUnitState,
   XxlSocket, XxlSocketEvent,
-  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState
+  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState, ConnectionDetails
 } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 import { UnitWrapper } from './utils/unit-wrapper';
 import { FlowWorker } from './utils/flow-worker';
 import { Flow } from './utils/flow';
+import { Subject } from 'rxjs';
 
 let uniqueId = Date.now();
 
@@ -32,6 +33,10 @@ export class XxlFlowBasedService {
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
   }
 
+  nodeMoved(): void {
+    this.currentFlow.rerender();
+  }
+
   addSocket(id: number, socket: SocketDetails): void {
     this.sockets[id] = socket;
   }
@@ -49,8 +54,8 @@ export class XxlFlowBasedService {
       }, []);
   }
 
-  addConnection(state: FbNodeState, connection: XxlConnection): void {
-    this.flow.addConnection(state, connection);
+  addConnection(connection: XxlConnection): void {
+    this.flow.addConnection(this.currentFlow.state, connection);
   }
 
   setState(state: FbNodeState): void {
@@ -94,7 +99,8 @@ export class XxlFlowBasedService {
 
     // this.flow.createWorker(state);
 
-    this.currentFlow.add(state);
+    // this.currentFlow.add(state);
+    this.flow.addNode(state, this.currentFlow.state);
 
     return state;
   }
@@ -139,9 +145,9 @@ export class XxlFlowBasedService {
     this.blur();
   }
 
-  socketClicked(event: XxlSocketEvent): void {
-    this.currentFlow.onSocketClick(event);
-  }
+  // socketClicked(event: XxlSocketEvent): void {
+  //   this.currentFlow.onSocketClick(event);
+  // }
 
   // getWorker(unitId): FbNodeWorker {
   //   return this.workers[unitId];
