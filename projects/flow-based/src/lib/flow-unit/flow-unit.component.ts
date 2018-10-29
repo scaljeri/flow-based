@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlFlow, FbNode, XxlFlowUnitState, XxlSocket, FbNodeState } from '../flow-based';
+import { FbNode, XxlSocket, FbNodeState } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
 import { FlowBasedComponent } from 'flow-based';
@@ -28,7 +28,7 @@ declare global {
   selector: 'xxl-flow-unit',
   templateUrl: './flow-unit.component.html',
   styleUrls: ['./flow-unit.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  // changeDetection: ChangeDetectionStrategy.OnPush,
   // viewProviders: [FlowUnitService]
   providers: [XxlFlowUnitService]
   // viewProviders: [{
@@ -64,6 +64,12 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
       this.socketService.clearPosition(this.id);
       this.flowService.nodeMoved();
     });
+
+    // this.socketService.socketClicked$.subscribe((e) => {
+    //   if (!e) {
+    //     this.cdr.detectChanges();
+    //   }
+    // });
 
     this.observer = new window.ResizeObserver(() => {
       // TODO

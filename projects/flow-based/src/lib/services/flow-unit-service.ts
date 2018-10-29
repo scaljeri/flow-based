@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlSocketEvent, FbNodeWorker } from '../flow-based';
+import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { UnitWrapper } from '../utils/unit-wrapper';
 import { Subject } from 'rxjs';
 import { SocketService } from '../socket.service';
@@ -28,9 +28,8 @@ export class XxlFlowUnitService {
   }
 
   calibrate(): void {
-    // this.calibrateSub.next();
+    this.flowService.socketAdded();
   }
-
 
   addSocket(socket: XxlSocket): void {
     if (!socket.id) {
@@ -46,7 +45,6 @@ export class XxlFlowUnitService {
   getSocket(id: number): SocketDetails {
     return this.socketService.getSocket(id);
   }
-
 
   getSockets(): XxlSocket[] {
     return this.state.sockets;

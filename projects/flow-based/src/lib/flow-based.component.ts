@@ -15,6 +15,7 @@ import {
 import { XxlFlowBasedService } from './flow-based.service';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';
 import { SocketService } from './socket.service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'xxl-flow-based',
@@ -73,7 +74,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
     this.flowService.activate(this);
 
-    this.socketService.socketClicked$.subscribe((event: XxlSocketEvent) => {
+    this.socketService.socketClicked$.pipe(
+      filter(e => !e || e.scope === this.id)
+    ).subscribe((event: XxlSocketEvent) => {
       if (event) {
         if (event.socket.type === 'out') {
           this.activeSocketFrom = event.socket.id;
@@ -152,17 +155,15 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   blur(): void {
-    if (this.activeFlowIndex !== null) {
+    if (this.activeSocketFrom || this.activeSocketTo) {
+      this.socketService.clear();
+    } else if (this.activeFlowIndex !== null) {
       this.activeFlowIndex = null;
     } else if (!this.root) {
       this.flowService.deactivate();
     }
 
     this.cdr.detectChanges();
-
-    setTimeout(() => {
-      this.cdr.detectChanges();
-    });
   }
 
   childBlurred(): void {

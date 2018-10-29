@@ -1,4 +1,4 @@
-import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { StatsWorker } from '../../workers/stats';
@@ -26,6 +26,7 @@ export class StatsComponent implements FbNode, OnInit {
   @HostBinding('class.is-active') isActive = false;
 
   constructor(private fb: FormBuilder,
+              private cdr: ChangeDetectorRef,
               @Host() private service: XxlFlowUnitService) {
     this.state = service.state;
   }
@@ -59,6 +60,8 @@ export class StatsComponent implements FbNode, OnInit {
       if (this.graphPlaceHolder) {
         this.distribution(data);
       }
+
+      this.cdr.detectChanges();
     });
   }
 
@@ -66,7 +69,7 @@ export class StatsComponent implements FbNode, OnInit {
     return [
       {
         type: 'in',
-        format: 'numberx'
+        format: 'number'
       },
       {
         type: 'out',

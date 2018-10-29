@@ -23,7 +23,7 @@ export class StatsWorker implements FbNodeWorker {
   private updatedSubject = new Subject<any>();
   public updated$ = this.updatedSubject.asObservable();
 
-  constructor(private state: XxlFlowUnitState) {
+  constructor(private config: any) {
     this.initialize();
   }
 
@@ -109,11 +109,11 @@ export class StatsWorker implements FbNodeWorker {
   }
 
   get columnWidth(): number {
-    return this.state.config.columnWidth;
+    return this.config.columnWidth;
   }
 
   set columnWidth(width: number) {
-    this.state.config.columnWidth = width;
+    this.config.columnWidth = width;
     this.reset();
   }
 

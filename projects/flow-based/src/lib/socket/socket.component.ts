@@ -1,6 +1,6 @@
 import {
   AfterViewInit,
-  ChangeDetectionStrategy,
+  ChangeDetectionStrategy, ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
@@ -52,6 +52,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   }
 
   constructor(public element: ElementRef,
+              private cdr: ChangeDetectorRef,
               private nodeService: XxlFlowUnitService,
               private service: SocketService) {
   }
@@ -61,12 +62,6 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    /*
-     comp: SocketComponent;
-  position?: XxlPosition;
-  parentId: number;
-  scope: number;
-     */
     this.service.addSocket(this.id, {
       comp: this,
       parentId: this.parent,
@@ -77,38 +72,22 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
       this.active = false;
       this.isAccepting = null;
 
-        if (event) {
-          if (event.socket.id === this.state.id) {
-            this.active = true;
-          } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
-            this.isAccepting = false;
-          } else {
-            this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
-          }
+      if (event && this.scope === event.scope) {
+        if (event.socket.id === this.state.id) {
+          this.active = true;
+        } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
+          this.isAccepting = false;
+        } else {
+          this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
         }
+      }
     });
-
-    // this.subscription = this.connService.activeSocket$.pipe(
-    //   filter((event?: XxlSocketEvent) => !event || event.scope === this.scope)
-    // ).subscribe((event?: XxlSocketEvent) => {
-    //   this.active = false;
-    //   this.isAccepting = null;
-    //
-    //   if (event) {
-    //     if (event.socket.id === this.state.id) {
-    //       this.active = true;
-    //     } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
-    //       this.isAccepting = false;
-    //     } else {
-    //       this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
-    //     }
-    //   }
-    // });
   }
 
   getType(): string {
     return this.invert ? (this.state.type === 'in' ? 'out' : 'in') : this.state.type;
   }
+
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
   }
