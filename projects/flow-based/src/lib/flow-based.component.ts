@@ -13,8 +13,6 @@ import {
   XxlFlowUnitState, XxlConnection, XxlSocketEvent, XxlSocket, SocketDetails, FbNodeState, FbNode
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
-import { FakeUnitWrapper } from './utils/fake-unit-wrapper';
-import { FlowBasedConnectionService } from './services/flow-based-connection.service';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';
 import { SocketService } from './socket.service';
 
@@ -22,7 +20,6 @@ import { SocketService } from './socket.service';
   selector: 'xxl-flow-based',
   templateUrl: './flow-based.component.html',
   styleUrls: ['./flow-based.component.scss'],
-  viewProviders: [FlowBasedConnectionService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
 })
@@ -46,9 +43,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     private element: ElementRef,
     private cdr: ChangeDetectorRef,
     public flowService: XxlFlowBasedService,
-    public socketService: SocketService,
-    @Self() private connectionService: FlowBasedConnectionService,
-    @Optional() @SkipSelf() private parentConnectionService: FlowBasedConnectionService) {
+    public socketService: SocketService) {
   }
 
   @HostListener('pointermove', ['$event'])
@@ -63,9 +58,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     event.stopPropagation();
 
     this.socketService.clear();
-    // if (this.parentConnectionService) {
-    //   this.parentConnectionService.clear();
-    // }
   }
 
   rerender(): void {
@@ -74,7 +66,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   ngOnInit() {
     this.flowService.setState(this.state);
-    this.connectionService.setState(this.state);
 
     if (this.root) {
       this.flowService.initialize();
@@ -82,17 +73,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
     this.flowService.activate(this);
 
-    if (!this.root) {
-      this.parentConnectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
-        this.socketClickedFromParent(event);
-      });
-      //
-      // this.parentConnectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
-      //   this.socketClickedFromParent(event);
-      // });
-    }
-
-    this.socketService.socketClicked$.subscribe((event: XxlSocketEvent) =>  {
+    this.socketService.socketClicked$.subscribe((event: XxlSocketEvent) => {
       if (event) {
         if (event.socket.type === 'out') {
           this.activeSocketFrom = event.socket.id;
@@ -105,27 +86,27 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
       }
     });
 
-    this.connectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
-      if (this.activeFlowIndex === null) {
-        this.socketClicked(event);
-      } // else if (this.flowService.currentFlow !== this) {
-      //   this.flowService.currentFlow.socketClicked(event);
-      // }
-    });
+    // this.connectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
+    //   if (this.activeFlowIndex === null) {
+    //     this.socketClicked(event);
+    //   } // else if (this.flowService.currentFlow !== this) {
+    //   //   this.flowService.currentFlow.socketClicked(event);
+    //   // }
+    // });
   }
 
-  socketClickedFromParent(event: XxlSocketEvent): void {
-    if (event) {
-      this.connectionService.onSocketClick(event);
-    } else {
-      this.connectionService.clear();
-    }
-  }
-
-  // Path tp mouse
-  socketClicked(event?: XxlSocketEvent) {
-
-  }
+  // socketClickedFromParent(event: XxlSocketEvent): void {
+  //   if (event) {
+  //     this.connectionService.onSocketClick(event);
+  //   } else {
+  //     this.connectionService.clear();
+  //   }
+  // }
+  //
+  // // Path tp mouse
+  // socketClicked(event?: XxlSocketEvent) {
+  //
+  // }
 
   ngOnChanges(obj: SimpleChanges): void {
   }
@@ -180,8 +161,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     this.cdr.detectChanges();
 
     setTimeout(() => {
-      this.connectionService.updatePositionSockets();
-
       this.cdr.detectChanges();
     });
   }
@@ -190,22 +169,12 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     this.activeFlowIndex = null;
     this.cdr.detectChanges();
 
-    setTimeout(() => {
-      this.connectionService.updatePositionSockets();
-
-      this.cdr.detectChanges();
-    });
+    this.updateConnections();
   }
 
   entryClicked(index: number): void {
     this.activeFlowIndex = index;
-    this.cdr.detectChanges();
-
-    setTimeout(() => {
-      this.connectionService.updatePositionSockets();
-
-      this.cdr.detectChanges();
-    });
+    this.updateConnections();
   }
 
   removeConnection(connection: XxlConnection): void {
@@ -213,18 +182,12 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     // this.cdr.detectChanges();
   }
 
-  onSocketClick(event: XxlSocketEvent = {} as XxlSocketEvent): void {
-    // this.activeSocketTo = null;
-    // this.activeSocketFrom = null;
-    // this.pointerMove = event.event;
-    //
-    // if (event) {
-    //   if (event.socket.type === 'out') {
-    //     this.activeSocketFrom = event.socket.id;
-    //   } else {
-    //     this.activeSocketTo = event.socket.id;
-    //   }
-    // }
+  updateConnections(): void {
+    setTimeout(() => { // TODO: Fix timeout-ception
+      this.state.connections = [...this.state.connections];
+      this.socketService.clearPosition();
+      this.cdr.detectChanges();
+    });
   }
 
   isFlow(child: FbNodeState): boolean {
@@ -260,7 +223,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @HostListener('window:resize')
   onResize(): void {
     this.nodes.forEach(node => {
-      node.reCalculatePositions();
+      this.socketService.clearPosition();
+      this.updateConnections();
     });
   }
 
@@ -277,6 +241,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   initConnections(): void {
-    this.connectionService.initConnections();
+    // this.connectionService.initConnections();
   }
 }

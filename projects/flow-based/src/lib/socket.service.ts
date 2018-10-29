@@ -55,9 +55,9 @@ export class SocketService {
     this.socketClicked.next(null);
   }
 
-  clearPosition(id: number): void {
+  clearPosition(id?: number): void {
     Object.keys(this.sockets).map(k => this.sockets[k])
-      .filter((s: SocketDetails) => s.parentId === id)
+      .filter((s: SocketDetails) => !id || s.parentId === id)
       .forEach(s => s.comp.reset());
   }
 }

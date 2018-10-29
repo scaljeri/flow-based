@@ -112,7 +112,6 @@ export class Flow {
   }
 
   addSocket(id: number, nodeId: number): void {
-    console.log('addsocket id: ' + id + ' nodeOd=' + nodeId);
     this.sockets[id] = nodeId;
   }
 

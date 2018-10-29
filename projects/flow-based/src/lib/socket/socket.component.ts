@@ -8,12 +8,9 @@ import {
   HostListener,
   Input, OnDestroy, Output
 } from '@angular/core';
-import { ConnectionDetails, SocketDetails, XxlPosition, XxlSocket, XxlSocketEvent } from '../flow-based';
+import { XxlPosition, XxlSocket, XxlSocketEvent } from '../flow-based';
 import { Subscription } from 'rxjs';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
-import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
-import { filter, tap } from 'rxjs/operators';
-import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketService } from '../socket.service';
 
 @Component({
@@ -54,7 +51,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
     return this._position;
   }
 
-  constructor(private element: ElementRef,
+  constructor(public element: ElementRef,
               private nodeService: XxlFlowUnitService,
               private service: SocketService) {
   }

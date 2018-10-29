@@ -33,11 +33,16 @@ export class XxlFlowBasedService {
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
   }
 
+  socketAdded(): void {
+    this.currentFlow.updateConnections();
+  }
+
   nodeMoved(): void {
     this.currentFlow.rerender();
   }
 
   addSocket(id: number, socket: SocketDetails): void {
+    alert('x');
     this.sockets[id] = socket;
   }
 

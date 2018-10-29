@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { XxlConnection, XxlPosition } from '../flow-based';
 import * as bezier from './bezier';
-import { FlowBasedConnectionService } from '../services/flow-based-connection.service';
 import { SocketService } from '../socket.service';
 
 @Component({
@@ -42,8 +41,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   constructor(private element: ElementRef,
               private viewRef: ChangeDetectorRef,
-              private socketService: SocketService,
-              private connService: FlowBasedConnectionService) {
+              private socketService: SocketService) {
   }
 
   ngOnInit() {
@@ -89,10 +87,6 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   d(connection: XxlConnection): string {
     let cx1, cx2, cy1, cy2;
-
-    if (!this.connService) {
-      return;
-    }
 
     if (typeof connection.from === 'object') {
       return this.dFromElements(connection);
