@@ -1,9 +1,8 @@
-import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { XxlFlowBasedService } from '../../../../projects/flow-based/src/lib/flow-based.service';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { StatsWorker } from '../../workers/stats';
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket } from 'flow-based';
+import { XxlConnection, FbNode, XxlFlowUnitState, XxlSocket } from 'flow-based';
 import { GoogleCharts } from 'google-charts';
 
 @Component({
@@ -11,7 +10,7 @@ import { GoogleCharts } from 'google-charts';
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.scss']
 })
-export class StatsComponent implements XxlFlowUnit, OnInit {
+export class StatsComponent implements FbNode, OnInit {
   public worker: StatsWorker;
   private state: XxlFlowUnitState;
   data: number[][] = [];
@@ -27,6 +26,7 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
   @HostBinding('class.is-active') isActive = false;
 
   constructor(private fb: FormBuilder,
+              private cdr: ChangeDetectorRef,
               @Host() private service: XxlFlowUnitService) {
     this.state = service.state;
   }
@@ -60,11 +60,27 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
       if (this.graphPlaceHolder) {
         this.distribution(data);
       }
+
+      this.cdr.detectChanges();
     });
   }
 
   getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
+    return [
+      {
+        type: 'in',
+        format: 'number'
+      },
+      {
+        type: 'out',
+        name: 'Min value',
+        format: 'number'
+      },
+      {
+        type: 'out',
+        name: 'Max value',
+        format: 'number'
+      }];
   }
 
   setActive(isActive: boolean): void {
@@ -93,5 +109,15 @@ export class StatsComponent implements XxlFlowUnit, OnInit {
 
   get avg(): string {
     return this.worker.avg.toFixed(4);
+  }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 }

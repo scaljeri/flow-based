@@ -6,7 +6,7 @@ export class UnitWrapper {
   constructor(private state: XxlFlowUnitState) {
   }
 
-  get unitId(): string {
+  get unitId(): number {
     return this.state.id;
   }
 

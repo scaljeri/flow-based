@@ -1,41 +1,32 @@
-import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
-import { Observable, ReplaySubject, Subscription, zip } from 'rxjs';
+import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { Observable, ReplaySubject, Subject, Subscription, zip } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-export const MERGE_STREAMS_CONFIG = {
-  sockets: [
-    {
-      type: 'in',
-      id: 'ms-a',
-    },
-    {
-      type: 'in',
-      id: 'ms-b',
-    },
-    {
-      type: 'out',
-      id: 'ms-c',
-      name: 'Min value',
-    }
-  ],
-};
+export const MERGE_STREAMS_CONFIG = {};
 
-export class MergeStreamsWorker implements XxlWorker {
+export class MergeStreamsWorker implements FbNodeWorker {
   private subscription: Subscription;
   private subject = new ReplaySubject<number>(1);
 
   private streams$: { [s: string]: Observable<{ value: number, connection: XxlConnection }> } = {};
   public streamValues: { [key: string]: number[] } = {};
   public outputValue: number;
+  private valuesSubject = new Subject<any>();
 
   constructor(private state: XxlFlowUnitState) {
   }
 
   destroy(): void {
-    this.subscription.unsubscribe();
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
   }
 
-  getStream(id: string): Observable<number> {
+  getValues(): Observable<any> {
+    return this.valuesSubject.asObservable();
+  }
+
+  getStream(): Observable<number> {
     return this.subject.asObservable();
   }
 
@@ -66,19 +57,30 @@ export class MergeStreamsWorker implements XxlWorker {
     }
 
     this.subscription = zip(...streams$)
-      .subscribe((values: {value: number, connection: XxlConnection}[]) => {
+      .subscribe((values: { value: number, connection: XxlConnection }[]) => {
         this.outputValue = values.reduce((a, b) => a + b.value, 0);
         this.subject.next(this.outputValue);
 
-        this.streamValues = values.reduce((out, v) => {
-          if (!out[v.connection.in]) {
-            out[v.connection.in] = [];
-          }
+        const vals = values.reduce((o, v) => {
+          const id = v.connection.in;
+         if (!o[id])  {
+           o[id] = [];
+         }
 
-          out[v.connection.in].push(v.value);
-
-          return out;
+         o[id].push(v.value);
+         return o;
         }, {});
+        this.valuesSubject.next(vals);
+
+        // this.streamValues = values.reduce((out, v) => {
+        //   if (!out[v.connection.to as number]) {
+        //     out[v.connection.to as number] = [];
+        //   }
+        //
+        //   out[v.connection.to as number].push(v.value);
+        //
+        //   return out;
+        // }, {});
       });
   }
 
@@ -88,6 +90,10 @@ export class MergeStreamsWorker implements XxlWorker {
   }
 
   get title(): string {
-    return this.state.config.title;
+    return this.state.title;
+  }
+
+  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+
   }
 }

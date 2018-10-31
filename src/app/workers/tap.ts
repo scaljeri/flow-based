@@ -1,18 +1,9 @@
-import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
-export const CONSOLE_CONFIG = {
-  sockets: [{
-    type: 'in',
-    id: 'csl-a'
-  },
-    {
-      type: 'out',
-      id: 'csl-b'
-    }]
-};
+export const TAP_CONFIG = {};
 
-export class ConsoleWorker implements XxlWorker {
+export class TapWorker implements FbNodeWorker {
   private stream: Observable<any>;
   private subscriptions: { [id: string]: Subscription } = {};
   private subject = new Subject<any>();
@@ -26,10 +17,6 @@ export class ConsoleWorker implements XxlWorker {
 
   destroy(): void {
     Object.keys(this.subscriptions).forEach(key => this.subscriptions[key].unsubscribe());
-  }
-
-  getSockets(): XxlSocket[] {
-    return this.state.config.sockets;
   }
 
   getStream(): Observable<any> {
@@ -54,5 +41,9 @@ export class ConsoleWorker implements XxlWorker {
     this.subscriptions[connection.id].unsubscribe();
 
     delete this.subscriptions[connection.id];
+  }
+
+  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+
   }
 }

@@ -1,59 +1,84 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
-import { XxlSocketBuilderService } from '../socket-builder.service';
+import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { UnitWrapper } from '../utils/unit-wrapper';
+import { Subject } from 'rxjs';
+import { SocketService } from '../socket.service';
 
 @Injectable()
 export class XxlFlowUnitService {
   public connections: XxlConnection[] = [];
   public state: XxlFlowUnitState;
+  private calibrateSub = new Subject<void>();
+  public calibrate$ = this.calibrateSub.asObservable();
 
-  constructor(public flowService: XxlFlowBasedService) {
+  constructor(public flowService: XxlFlowBasedService,
+              private socketService: SocketService) {
   }
 
   setState(state: XxlFlowUnitState): void {
     this.state = state;
+  }
 
+  get id(): number {
+    return this.state.id;
+  }
+
+  rebuild(): void {
+  }
+
+  calibrate(): void {
+    this.flowService.socketAdded();
   }
 
   addSocket(socket: XxlSocket): void {
     if (!socket.id) {
-      socket = Object.assign(XxlSocketBuilderService.create(socket.type), socket);
+      socket = Object.assign({id: this.flowService.getUniqueId()}, socket);
     }
-
     this.state.sockets = [socket, ...this.state.sockets];
+    this.flowService.flow.addSocket(socket.id, this.id);
+    setTimeout(() => {
+      this.flowService.currentFlow.updateConnections();
+    });
+  }
+
+  getSocket(id: number): SocketDetails {
+    return this.socketService.getSocket(id);
+  }
+
+  getSockets(): XxlSocket[] {
+    return this.state.sockets;
   }
 
   get wrapper(): UnitWrapper {
     return this.flowService.units[this.state.id];
   }
 
-  get worker(): XxlWorker {
+  get worker(): FbNodeWorker {
     return this.flowService.getWorker(this.state.id);
   }
 
   socketRemoved(socket: XxlSocket, flow?: XxlFlow): void {
-    flow = flow || this.flowService.currentFlow.flow;
-
-    flow.connections.forEach(conn => {
-      if (conn.in === socket.id || conn.out === socket.id) {
-        this.flowService.removeConnection(conn, flow);
-      }
-    });
-
-    if (flow === this.flowService.currentFlow.flow) {
-      this.socketRemoved(socket, this.flowService.parentFlow.flow);
-    }
-
-    setTimeout(() => {
-      flow.connections.forEach((conn: XxlConnection) => {
-        this.flowService.units[conn.from as string].update();
-        this.flowService.units[conn.to as string].update();
-      });
-
-      flow.connections = [...flow.connections];
-    });
+    // flow = flow || this.flowService.currentFlow.flow;
+    //
+    // flow.connections.forEach(conn => {
+    //   if (conn.in === socket.id || conn.out === socket.id) {
+    //     this.flowService.removeConnection(conn, flow);
+    //   }
+    // });
+    //
+    // if (flow === this.flowService.currentFlow.flow) {
+    //   this.socketRemoved(socket, this.flowService.parentFlow.flow);
+    // }
+    //
+    // setTimeout(() => {
+    //   flow.connections.forEach((conn: XxlConnection) => {
+    //     this.flowService.units[conn.from as string].update();
+    //     this.flowService.units[conn.to as string].update();
+    //   });
+    //
+    //   flow.connections = [...flow.connections];
+    // });
   }
 
   // removeSocket(socket: XxlSocket, connections?: XxlConnection[]): void {
@@ -69,6 +94,10 @@ export class XxlFlowUnitService {
   //     }
   //   });
   // }
+
+  refresh(): void {
+    this.updateConnections();
+  }
 
   requireBlur(cb: () => void): void {
     this.flowService.blurForUnit(cb);
@@ -86,8 +115,8 @@ export class XxlFlowUnitService {
     this.flowService.close(this.state);
   }
 
-  addConnection(from: HTMLElement, to: HTMLElement): string {
-    const id = Math.random().toString();
+  addConnection(from: HTMLElement, to: HTMLElement): number {
+    const id = this.flowService.getUniqueId();
 
     const conn = {
       id,
@@ -104,7 +133,7 @@ export class XxlFlowUnitService {
     this.connections = [...this.connections];
   }
 
-  removeConnection(id: string): void {
+  removeConnection(id: number): void {
     this.connections = this.connections.filter(conn => conn.id !== id);
   }
 

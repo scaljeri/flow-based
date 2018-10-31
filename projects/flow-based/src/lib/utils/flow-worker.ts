@@ -1,16 +1,19 @@
 import { Observable, Subject, Subscription } from 'rxjs';
-import { XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, XxlWorker } from '../flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker, FbNodeState } from '../flow-based';
 
-export class FlowWorker implements XxlWorker {
-  private subjects: { [key: string]: Subject<any> } = {};
-  private subscriptions: { [key: string]: Subscription } = {};
+export class FlowWorker implements FbNodeWorker {
+  private subjects: { [key: number]: Subject<any> } = {};
+  private subscriptions: { [key: number]: Subscription } = {};
 
-  constructor(private state: XxlFlow) {
+  constructor(private state: FbNodeState) {
   }
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
-    this.subscriptions[connection.id] = stream.subscribe(val => {
-      this.getSubject(connection.in).next(val);
+    const id = connection.to === this.state.id ? connection.in : connection.out;
+    // const id = connection.id;
+
+    this.subscriptions[id] = stream.subscribe(val => {
+      this.getSubject(id).next(val);
     });
   }
 
@@ -23,11 +26,11 @@ export class FlowWorker implements XxlWorker {
     return this.state.sockets;
   }
 
-  getStream(socketId: string): Observable<any> {
+  getStream(socketId: number): Observable<any> {
     return this.getSubject(socketId).asObservable();
   }
 
-  getSubject(socketId: string): Subject<any> {
+  getSubject(socketId: number): Subject<any> {
     if (!this.subjects[socketId]) {
       this.subjects[socketId] = new Subject<any>();
     }
@@ -36,8 +39,23 @@ export class FlowWorker implements XxlWorker {
   }
 
   removeStream(connection: XxlConnection): void {
-    if (this.subscriptions[connection.id]) {
-      this.subscriptions[connection.id].unsubscribe();
+    const id = connection.to === this.state.id ? connection.in : connection.out;
+
+    if (this.subscriptions[id]) { // TODO: Is if needed
+      this.subscriptions[id].unsubscribe();
     }
+  }
+
+  /*
+  A Socket always has one format
+  Update socket type based on remote socket.
+   */
+  connected(conn: XxlConnection, localSocket: XxlSocket, remoteSocket: XxlSocket, sockets: FbKeyValues<XxlSocket>): boolean {
+    if (remoteSocket.format && remoteSocket.format !== localSocket.format) {
+      localSocket.format = remoteSocket.format;
+      return true;
+    }
+
+    return false;
   }
 }

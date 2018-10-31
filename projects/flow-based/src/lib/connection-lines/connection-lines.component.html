@@ -1,10 +1,15 @@
 <svg #svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
   <ng-container *ngFor="let connection of connections">
     <path
-      (pointerdown)="onClick(connection)"
+      (pointerdown)="onClick($event, connection)"
       [attr.d]="d(connection)"
       class="connection"
       stroke-linecap="round"></path>
-      <path class="arrow" d="M0 10 L 10 0 L0 -10z" [attr.transform]="arrow(connection)"></path>
+    <path class="arrow" d="M0 10 L 10 0 L0 -10z" [attr.transform]="arrow(connection)"></path>
   </ng-container>
+
+  <path *ngIf="from || to"
+        [attr.d]="pointerPath()"
+        class="connection"
+        stroke-linecap="round"></path>
 </svg>

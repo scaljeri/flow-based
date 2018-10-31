@@ -27,6 +27,7 @@ TODO: Fix circular dependency issues
    * Bezier demo: https://stackblitz.com/edit/angular-bezier-curves
    * Audio: http://webaudiodemos.appspot.com/
    * Gauss/charts: https://stackblitz.com/edit/google-charts?file=app%2Fgraph%2Fgraph.component.ts
+   * Node red: https://flows.nodered.org/node/node-red-dashboard
 
 ## POCs
 

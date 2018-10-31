@@ -13,7 +13,7 @@ export class XxlSocketBuilderService {
   static create(type: XxlSocketType): XxlSocket {
     return {
       type,
-      id: '' + Date.now()
+      id: Date.now()
     } as XxlSocket;
   }
 }

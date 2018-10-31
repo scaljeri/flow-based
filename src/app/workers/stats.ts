@@ -1,35 +1,19 @@
-import { XxlConnection, XxlFlowUnitState, XxlSocket, XxlWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
 export const STATS_CONFIG = {
-  sockets: [
-    {
-      type: 'in',
-      id: 's-a',
-    },
-    {
-      type: 'out',
-      id: 'min',
-      name: 'Min value',
-    },
-    {
-      type: 'out',
-      id: 'max',
-      name: 'Max value',
-    }
-  ],
   columnWidth: 1
 };
 
-export class StatsWorker implements XxlWorker {
+export class StatsWorker implements FbNodeWorker {
   private subjects = {
     max: new Subject<any>(),
     min: new Subject<any>()
   };
   private subscriptions: Subscription[] = [];
 
-  public min: number =  null;
+  public min: number = null;
   public max: number = null;
   private total = 0;
   private count = 0;
@@ -39,20 +23,20 @@ export class StatsWorker implements XxlWorker {
   private updatedSubject = new Subject<any>();
   public updated$ = this.updatedSubject.asObservable();
 
-  constructor(private state: XxlFlowUnitState) {
+  constructor(private config: any) {
     this.initialize();
   }
 
   destroy(): void {
   }
 
-  getStream(id: string): Observable<any> {
+  getStream(id: number): Observable<any> {
     return this.subjects[id].asObservable();
   }
 
-  getSockets(): XxlSocket[] {
-    return this.state.config.sockets;
-  }
+  // getSockets(): XxlSocket[] {
+  //   return this.state.config.sockets;
+  // }
 
   initialize(): void {
   }
@@ -72,7 +56,7 @@ export class StatsWorker implements XxlWorker {
     // TODO: Refactor
     this.subscriptions[connection.id] = stream.subscribe(val => {
       if (this.columnWidth === 0) {
-        return ;
+        return;
       }
 
       const oldMin = this.min;
@@ -107,7 +91,7 @@ export class StatsWorker implements XxlWorker {
       const sd = calcStandardDeviation(mean, this.values);
       let gauss;
       if (averageMax) { // TODO: Maximum required
-         gauss = getGaussian(mean, sd, averageMax, this.values.length);
+        gauss = getGaussian(mean, sd, averageMax, this.values.length);
       }
 
 
@@ -125,11 +109,15 @@ export class StatsWorker implements XxlWorker {
   }
 
   get columnWidth(): number {
-    return this.state.config.columnWidth;
+    return this.config.columnWidth;
   }
 
   set columnWidth(width: number) {
-    this.state.config.columnWidth = width;
+    this.config.columnWidth = width;
     this.reset();
+  }
+
+  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+
   }
 }

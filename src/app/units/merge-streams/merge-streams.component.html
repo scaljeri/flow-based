@@ -2,17 +2,16 @@
 
 <section *ngIf="isActive" class="main">
   <section class="inputs">
-    <ng-container *ngFor="let socket of getSockets() | socketIn" class="socket">
-      <mat-card #inputs *ngFor="let value of worker.streamValues[socket.id]"
-                [attr.data-socket-id]="socket.id" class="socket">
-        <mat-card-content>{{value.toFixed(3)}}</mat-card-content>
+    <ng-container *ngFor="let socket of state.sockets | socketIn" class="socket">
+      <mat-card  #inputs *ngFor="let val of streamValues[socket.id]" [attr.data-socket-id]="socket.id" class="socket">
+        <mat-card-content>{{val.toFixed(3)}}</mat-card-content>
       </mat-card>
     </ng-container>
   </section>
 
   <div #output class="output">
     <mat-card #socketOut class="socket">
-      <mat-card-content>{{worker.outputValue.toFixed(3)}}</mat-card-content>
+      <mat-card-content>{{value}}</mat-card-content>
     </mat-card>
   </div>
 

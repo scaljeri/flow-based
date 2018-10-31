@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ConsoleComponent } from './console.component';
+import { TapComponent } from './tap.component';
 
 describe('ConsoleComponent', () => {
-  let component: ConsoleComponent;
-  let fixture: ComponentFixture<ConsoleComponent>;
+  let component: TapComponent;
+  let fixture: ComponentFixture<TapComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ ConsoleComponent ]
+      declarations: [ TapComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(ConsoleComponent);
+    fixture = TestBed.createComponent(TapComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

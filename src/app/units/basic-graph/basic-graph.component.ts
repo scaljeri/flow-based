@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, Inject, Input, OnInit, ViewChild } from '@angular/core';
-import { XxlFlowUnit, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
+import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
@@ -9,12 +9,13 @@ const GRAPH_OPTIONS = {
   title: 'Data',
   curveType: 'function',
 };
+
 @Component({
   selector: 'fb-basic-graph',
   templateUrl: './basic-graph.component.html',
   styleUrls: ['./basic-graph.component.scss']
 })
-export class BasicGraphComponent implements XxlFlowUnit, OnInit {
+export class BasicGraphComponent implements FbNode, OnInit {
   @HostBinding('class.is-active') isActive = false;
   @ViewChild('graph') graph: ElementRef;
   chart;
@@ -38,7 +39,15 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
   }
 
   getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
+    return [
+      {
+        type: 'in',
+        format: 'number'
+      },
+      {
+        type: 'out',
+        format: 'number'
+      }];
   }
 
   update(values?: number[]): void {
@@ -77,5 +86,15 @@ export class BasicGraphComponent implements XxlFlowUnit, OnInit {
 
   onClose(): void {
     this.service.closeSelf();
+  }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 }

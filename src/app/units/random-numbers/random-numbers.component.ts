@@ -1,6 +1,7 @@
-import { Component, Host, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
 
-import { XxlFlowUnit, XxlFlowUnitState, XxlSocket
+import {
+  FbNode, XxlFlowUnitState, XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
@@ -11,7 +12,7 @@ import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/serv
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss']
 })
-export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
+export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
   worker: RandomNumbersWorker;
   configForm: FormGroup;
   isActive = false;
@@ -19,6 +20,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   currentValue: number;
 
   constructor(private fb: FormBuilder,
+              private cdr: ChangeDetectorRef,
               @Host() private service: XxlFlowUnitService) {
     this.state = service.state;
   }
@@ -49,6 +51,7 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
 
     this.worker.getStream().subscribe(value => {
       this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
+      this.cdr.markForCheck();
     });
   }
 
@@ -64,7 +67,12 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   }
 
   getSockets(): XxlSocket[] {
-    return this.worker.getSockets();
+    return [
+      {
+        type: 'out',
+        format: 'number'
+      }
+    ];
   }
 
   delete(): void {
@@ -74,4 +82,15 @@ export class RandomNumbersComponent implements XxlFlowUnit, OnInit, OnDestroy {
   close(): void {
     this.service.closeSelf();
   }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
 }

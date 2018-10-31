@@ -1,5 +1,5 @@
 import { Component, Host, HostBinding, Input, OnInit } from '@angular/core';
-import { XxlFlowUnit, XxlSocket } from 'projects/flow-based/src/lib/flow-based';
+import { FbNode, XxlSocket } from 'projects/flow-based/src/lib/flow-based';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { MatDialog } from '@angular/material';
 import { AddSocketComponent, DialogAction } from './add-socket/add-socket.component';
@@ -10,7 +10,7 @@ import { EditSocketComponent } from './edit-socket/edit-socket.component';
   templateUrl: './default-flow.component.html',
   styleUrls: ['./default-flow.component.scss']
 })
-export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
+export class DefaultFlowComponent implements FbNode, OnInit {
   @Input() title: string;
   private worker: any;
 
@@ -90,5 +90,15 @@ export class DefaultFlowComponent implements XxlFlowUnit, OnInit {
         });
       }
     });
+  }
+
+  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  }
+
+  getFormat(socket: XxlSocket): string {
+    return '';
+  }
+
+  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 }
