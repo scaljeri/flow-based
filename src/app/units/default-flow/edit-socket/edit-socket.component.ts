@@ -6,7 +6,6 @@ import { UnitWrapper } from '../../../../../projects/flow-based/src/lib/utils/un
 import { XxlFlowUnitService } from '../../../../../projects/flow-based/src/lib/services/flow-unit-service';
 
 export interface EditSocket {
-  wrapper: UnitWrapper;
   service: XxlFlowUnitService;
   sockets: XxlSocket[];
 }
@@ -43,18 +42,18 @@ export class EditSocketComponent implements OnInit, AfterViewInit {
         const el = ref.nativeElement,
           id = `edit-${i}`;
 
+        const socketEl = this.data.service.getSocket(el.dataset.socketId).comp.element.nativeElement;
         if (socketType === 'in') {
-          this.connections[id] = this.data.service.addConnection(this.data.wrapper.sockets[el.dataset.socketId].element, el);
+          this.connections[id] = this.data.service.addConnection(socketEl, el);
         } else {
-          this.connections[id] = this.data.service.addConnection(el, this.data.wrapper.sockets[el.dataset.socketId].element);
+          this.connections[id] = this.data.service.addConnection(el, socketEl);
         }
       });
 
       let count = 0;
       const intervalId = setInterval(() => {
         count++;
-        this.data.wrapper.update();
-        this.data.service.updateConnections();
+        this.data.service.refresh();
 
         if (count === 20) {
           clearInterval(intervalId);

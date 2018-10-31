@@ -95,6 +95,10 @@ export class XxlFlowUnitService {
   //   });
   // }
 
+  refresh(): void {
+    this.updateConnections();
+  }
+
   requireBlur(cb: () => void): void {
     this.flowService.blurForUnit(cb);
   }
