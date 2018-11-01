@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnInit, Vi
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { StatsWorker } from '../../workers/stats';
-import { XxlConnection, FbNode, XxlFlowUnitState, XxlSocket } from 'flow-based';
+import { FbNode, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { GoogleCharts } from 'google-charts';
 
 @Component({

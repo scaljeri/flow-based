@@ -4,13 +4,13 @@ import {
   Component,
   ElementRef, EventEmitter,
   forwardRef, HostBinding, HostListener,
-  Input, OnChanges, OnDestroy, OnInit, Optional, Output, QueryList, Self, SimpleChanges, SkipSelf, ViewChild, ViewChildren,
+  Input, OnChanges, OnDestroy, OnInit, Output, QueryList, SimpleChanges, ViewChild, ViewChildren,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   XxlFlow,
   XxlPosition,
-  XxlFlowUnitState, XxlConnection, XxlSocketEvent, XxlSocket, SocketDetails, FbNodeState, FbNode
+  XxlFlowUnitState, XxlConnection, XxlSocketEvent, FbNodeState
 } from './flow-based';
 import { XxlFlowBasedService } from './flow-based.service';
 import { FlowUnitComponent } from './flow-unit/flow-unit.component';

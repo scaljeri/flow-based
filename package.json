@@ -1,5 +1,5 @@
 {
-  "name": "flow-based-demo",
+  "name": "@scaljeri/flow-based-demo",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",

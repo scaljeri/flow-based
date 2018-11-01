@@ -1,5 +1,5 @@
 import { UnitWrapper } from './unit-wrapper';
-import { XxlPosition } from 'flow-based';
+import { XxlPosition } from '../flow-based';
 import { ElementRef } from '@angular/core';
 
 export class FakeUnitWrapper extends UnitWrapper {

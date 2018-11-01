@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { XxlFlow } from 'flow-based';
+import { XxlFlow } from '../../../projects/flow-based/src/lib/flow-based';
 
 @Component({
   selector: 'fb-flow',

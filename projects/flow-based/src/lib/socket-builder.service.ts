@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { XxlSocket, XxlSocketType } from 'flow-based';
+import { XxlSocket, XxlSocketType } from './flow-based';
 
 @Injectable({
   providedIn: 'root'

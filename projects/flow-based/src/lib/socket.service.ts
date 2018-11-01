@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from './flow-based.service';
-import { ConnectionDetails, FbKeyValues, SocketDetails, XxlConnection, XxlSocketEvent } from 'flow-based';
+import { ConnectionDetails, FbKeyValues, SocketDetails, XxlConnection, XxlSocketEvent } from './flow-based';
 import { Subject } from 'rxjs';
 
 

@@ -1,6 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { XxlSocketBuilderService } from '../socket-builder.service';
-import { XxlSocket } from 'flow-based';
+import { XxlSocket } from '../flow-based';
 
 @Pipe({
   name: 'socketIn'

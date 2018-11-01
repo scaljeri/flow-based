@@ -1,8 +1,7 @@
-import { AfterViewInit, Component, ElementRef, Host, HostBinding, Inject, OnInit, QueryList, ViewChildren } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostBinding, Inject, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
-import { XxlSocket } from 'flow-based';
-import { UnitWrapper } from '../../../../../projects/flow-based/src/lib/utils/unit-wrapper';
+import { XxlSocket } from '../../../../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowUnitService } from '../../../../../projects/flow-based/src/lib/services/flow-unit-service';
 
 export interface EditSocket {

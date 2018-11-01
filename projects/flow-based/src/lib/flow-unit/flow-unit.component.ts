@@ -1,5 +1,5 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy,
+  AfterViewInit,
   ChangeDetectorRef,
   Component, ElementRef,
   EventEmitter,
@@ -14,9 +14,9 @@ import { XxlFlowBasedService } from '../flow-based.service';
 import { FbNode, XxlSocket, FbNodeState } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { XxlFlowUnitService } from '../services/flow-unit-service';
-import { FlowBasedComponent } from 'flow-based';
 import { SocketService } from '../socket.service';
 import { SocketComponent } from '../socket/socket.component';
+import { FlowBasedComponent } from '../flow-based.component';
 
 declare global {
   interface Window {

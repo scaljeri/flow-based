@@ -1,4 +1,4 @@
-import { XxlPosition, XxlSocket, XxlSocketType } from 'flow-based';
+import { XxlPosition, XxlSocket, XxlSocketType } from '../flow-based';
 
 export class Socket {
   private _element: HTMLElement;
@@ -34,6 +34,6 @@ export class Socket {
 
 
   get definition() {
-    return this.socket.definition;
+    return ''; // TODO: this.socket.definition;
   }
 }
