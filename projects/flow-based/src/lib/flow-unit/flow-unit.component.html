@@ -9,7 +9,7 @@
 
   <ng-container *xxlDynamicComponent="state"></ng-container>
 
-  <section class="sockets sockets-in">
+  <section class="sockets sockets-in" [class.is-disabled]="active && !isFlow()">
     <xxl-socket *ngFor="let socket of sockets | socketIn"
           [state]="socket"
           [scope]="getScope()"
@@ -19,7 +19,7 @@
           class="socket"></xxl-socket>
   </section>
 
-  <section class="sockets sockets-out">
+  <section class="sockets sockets-out" [class.is-disabled]="active && !isFlow()">
     <ng-container *ngIf="isFlow() && active">
     </ng-container>
     <xxl-socket *ngFor="let socket of sockets | socketOut"

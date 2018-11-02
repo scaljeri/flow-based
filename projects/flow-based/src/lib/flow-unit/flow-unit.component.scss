@@ -162,6 +162,10 @@ xxl-connection-lines {
   top: 6px;
   width: var(--socket-size);
   z-index: 3;
+
+  &.is-disabled {
+    pointer-events: none;
+  }
 }
 
 .sockets-in {

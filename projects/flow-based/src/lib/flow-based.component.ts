@@ -28,7 +28,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
-  @Input() state: FbNodeState = {} as FbNodeState;
+  @Input() state: FbNodeState;
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
@@ -66,6 +66,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   ngOnInit() {
+    if (!this.state) {
+      this.state = {};
+    }
+
     this.flowService.setState(this.state);
 
     if (this.root) {
