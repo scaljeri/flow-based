@@ -13,11 +13,11 @@ export class StatsWorker implements FbNodeWorker {
   };
   private subscriptions: Subscription[] = [];
 
-  public min: number = null;
-  public max: number = null;
+  public min: number | null = null;
+  public max: number | null = null;
   private total = 0;
   private count = 0;
-  private values = [];
+  private values: any = [];
   private distribution = [];
 
   private updatedSubject = new Subject<any>();
@@ -70,8 +70,8 @@ export class StatsWorker implements FbNodeWorker {
         this.min = val;
         this.max = val;
       } else {
-        this.min = Math.min(val, this.min);
-        this.max = Math.max(val, this.max);
+        this.min = Math.min(val, this.min!);
+        this.max = Math.max(val, this.max!);
       }
 
       if (oldMin !== this.min) {

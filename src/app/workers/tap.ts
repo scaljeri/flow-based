@@ -8,7 +8,7 @@ export class TapWorker implements FbNodeWorker {
   private subscriptions: { [id: string]: Subscription } = {};
   private subject = new Subject<any>();
 
-  public history = [];
+  public history: number[] = [];
   public currentValue: any;
   public count = 0;
 
@@ -26,7 +26,7 @@ export class TapWorker implements FbNodeWorker {
   setStream(stream: Observable<any>, connection: XxlConnection): void {
     this.stream = stream;
 
-    this.subscriptions[connection.id] = stream.subscribe(val => {
+    this.subscriptions[connection.id] = stream.subscribe((val: number) => {
       this.currentValue = Number.isInteger(val) ? val : parseFloat(val.toFixed(2));
       this.count++;
 

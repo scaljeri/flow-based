@@ -1,10 +1,10 @@
 {
   "name": "@scaljeri/flow-based-demo",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build @scaljeri/flow-based",
     "test": "ng test",
     "e2e": "ng e2e",
     "lint": "npm-run-all lint:*",
@@ -14,7 +14,7 @@
     "lint_fix:ts": "ng lint --type-check=true",
     "ngh": "ng build --prod --base-href \"https://scaljeri.github.io/flow-based/\" --output-path=\"dist/\" && ngh"
   },
-  "private": true,
+  "private": false,
   "dependencies": {
     "@angular/animations": "^6.1.10",
     "@angular/cdk": "^6.4.7",

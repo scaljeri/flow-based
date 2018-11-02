@@ -37,11 +37,11 @@ export interface FbNodeHelpers {
 
 // Describes the class doing the actual work
 export interface FbNodeWorker {
-  getStream?(id?: number): Observable<any>;
+  getStream(id?: number): Observable<any>;
 
-  setStream?(stream: Observable<any>, connection?: XxlConnection): void;
+  setStream(stream: Observable<any>, connection?: XxlConnection): void;
 
-  removeStream?(connection?: XxlConnection): void;
+  removeStream(connection?: XxlConnection): void;
 
   destroy(): void;
 }

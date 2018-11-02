@@ -56,8 +56,8 @@ export class MergeStreamsComponent implements FbNode, OnInit, AfterViewInit {
           this.service.addConnection(this.inputs.toArray()[i].nativeElement, this.output.nativeElement);
         });
 
-        const outSocket = this.state.sockets.filter(s => s.type === 'out')[0];
-        this.service.addConnection(this.output.nativeElement, this.service.getSocket(outSocket.id).comp.element.nativeElement);
+        const outSocket = this.state.sockets!.filter(s => s.type === 'out')[0];
+        this.service.addConnection(this.output.nativeElement, this.service.getSocket(outSocket.id!).comp.element.nativeElement);
       });
     } else {
       this.service.removeConnections();
@@ -72,8 +72,8 @@ export class MergeStreamsComponent implements FbNode, OnInit, AfterViewInit {
     this.service.closeSelf();
   }
 
-  get title(): string {
-    return this.worker.title;
+  get title(): string | null | undefined {
+    return this.worker ? this.worker.title : null;
   }
 
   ngAfterViewInit(): void {

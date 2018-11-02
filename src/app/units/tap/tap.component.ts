@@ -63,7 +63,7 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
   }
 
   reset(sockets: XxlSocket[]): void {
-    sockets.forEach(s => s.format = null);
+    sockets.forEach(s => delete s.format);
   }
 
   onDelete(): void {

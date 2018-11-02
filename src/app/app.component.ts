@@ -23,7 +23,7 @@ export class AppComponent implements OnInit {
   // menuX: number;
   // menuY: number;
 
-  activeOverlay: OverlayRef;
+  activeOverlay: OverlayRef | null;
   showJson = false;
   flow: XxlFlow = data.basic as XxlFlow;
 
@@ -36,7 +36,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.selectionService.selection$.subscribe(type => {
-      this.activeOverlay.dispose();
+      this.activeOverlay!.dispose();
       this.xxlService.add(type);
     });
   }
@@ -60,7 +60,7 @@ export class AppComponent implements OnInit {
     this.activeOverlay.attach(portal);
 
     this.activeOverlay.backdropClick().subscribe((e: PointerEvent) => {
-      this.activeOverlay.dispose();
+      this.activeOverlay!.dispose();
       this.activeOverlay = null;
     });
   }

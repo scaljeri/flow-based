@@ -21,7 +21,7 @@ export function controlPoints(points: Point[], isAbsolute = true): Data {
   return {
     isAbsolute,
     points: isAbsolute ? points : absolute(points)
-  }
+  };
 }
 
 export function* range(start: number, step = .01, end = start): Iterator<number> {
@@ -36,24 +36,24 @@ export function* range(start: number, step = .01, end = start): Iterator<number>
   }
 }
 
-export function curve(impl: (u: number, cp: Point[]) => Point, range: Iterator<number>, controlPoints: Data): Curve {
-  const points = [];
-  let next, value;
-  let maxX, minX, maxY, minY;
-
-  while ((next = range.next()).done === false) {
-    value = impl(next.value, controlPoints.points);
-
-    maxX = maxX === undefined ? value.x : Math.max(maxX, value.x);
-    minX = minX === undefined ? value.x : Math.min(minX, value.x);
-    maxY = maxY === undefined ? value.y : Math.max(maxY, value.y);
-    minY = minY === undefined ? value.y : Math.min(minY, value.y);
-
-    points.push(value);
-  }
-
-  return { points, minX, maxX, minY, maxY } as Curve;
-}
+// export function curve(impl: (u: number, cp: Point[]) => Point, range: Iterator<number>, controlPoints: Data): Curve {
+//   const points: Curve = [];
+//   let next, value;
+//   let maxX, minX, maxY, minY;
+//
+//   while ((next = range.next()).done === false) {
+//     value = impl(next.value, controlPoints.points);
+//
+//     maxX = maxX === undefined ? value.x : Math.max(maxX, value.x);
+//     minX = minX === undefined ? value.x : Math.min(minX, value.x);
+//     maxY = maxY === undefined ? value.y : Math.max(maxY, value.y);
+//     minY = minY === undefined ? value.y : Math.min(minY, value.y);
+//
+//     points.push(value);
+//   }
+//
+//   return {points, minX, maxX, minY, maxY} as Curve;
+// }
 
 export function normal(u: number, cp: Point[]): Point {
   const n = cp.length - 1;
@@ -66,7 +66,7 @@ export function normal(u: number, cp: Point[]): Point {
     y += binC * bezierValue(n, u, i, p.y);
   });
 
-  return { x: round(x), y: round(y) } as Point;
+  return {x: round(x), y: round(y)} as Point;
 }
 
 export function gradient(point: Point): number {
@@ -87,7 +87,7 @@ export function derivative(u: number, cp: Point[]): Point {
     y += binC * bezierValue(n, u, i, QiY);
   }
 
-  return { x: round(x), y: round(y) } as Point;
+  return {x: round(x), y: round(y)} as Point;
 }
 
 export function svgPath(curve: Point[]): string {
@@ -115,14 +115,16 @@ export function svgCurve(cps: Data): string {
 }
 
 export function absolute(cps: Point[]): Point[] {
-  const output = [];
+  const output: Point[] = [];
+  const origin: Point = cps[0];
 
   for (let i = 1; i < cps.length; i++) {
-    output.push({
-      x: cps[i].x + cps[0].x,
-      y: cps[i].y + cps[0].y
-    })
+    const p = cps[i];
 
+    output.push({
+      x: p.x + origin.x,
+      y: p.y + origin.y
+    });
   }
 
   return output;

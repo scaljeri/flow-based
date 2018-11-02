@@ -10,10 +10,9 @@ export class FlowWorker implements FbNodeWorker {
 
   setStream(stream: Observable<any>, connection: XxlConnection): void {
     const id = connection.to === this.state.id ? connection.in : connection.out;
-    // const id = connection.id;
 
-    this.subscriptions[id] = stream.subscribe(val => {
-      this.getSubject(id).next(val);
+    this.subscriptions[id!] = stream.subscribe(val => {
+      this.getSubject(id!).next(val);
     });
   }
 
@@ -23,7 +22,7 @@ export class FlowWorker implements FbNodeWorker {
   }
 
   getSockets(): XxlSocket[] {
-    return this.state.sockets;
+    return this.state.sockets!;
   }
 
   getStream(socketId: number): Observable<any> {
@@ -41,8 +40,8 @@ export class FlowWorker implements FbNodeWorker {
   removeStream(connection: XxlConnection): void {
     const id = connection.to === this.state.id ? connection.in : connection.out;
 
-    if (this.subscriptions[id]) { // TODO: Is if needed
-      this.subscriptions[id].unsubscribe();
+    if (this.subscriptions[id!]) { // TODO: Is if needed
+      this.subscriptions[id!].unsubscribe();
     }
   }
 
@@ -50,12 +49,12 @@ export class FlowWorker implements FbNodeWorker {
   A Socket always has one format
   Update socket type based on remote socket.
    */
-  connected(conn: XxlConnection, localSocket: XxlSocket, remoteSocket: XxlSocket, sockets: FbKeyValues<XxlSocket>): boolean {
-    if (remoteSocket.format && remoteSocket.format !== localSocket.format) {
-      localSocket.format = remoteSocket.format;
-      return true;
-    }
-
-    return false;
-  }
+  // connected(conn: XxlConnection, localSocket: XxlSocket, remoteSocket: XxlSocket, sockets: FbKeyValues<XxlSocket>): boolean {
+  //   if (remoteSocket.format && remoteSocket.format !== localSocket.format) {
+  //     localSocket.format = remoteSocket.format;
+  //     return true;
+  //   }
+  //
+  //   return false;
+  // }
 }

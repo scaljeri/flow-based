@@ -26,10 +26,10 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   @Input() parent: number;
   @Output() clicked = new EventEmitter<XxlSocketEvent>();
   private subscription: Subscription;
-  private _position: XxlPosition;
+  private _position: XxlPosition | null;
 
   @HostBinding('class.is-active') active = false;
-  @HostBinding('class.is-accepting') isAccepting: boolean;
+  @HostBinding('class.is-accepting') isAccepting: boolean | null;
 
   @HostBinding('class.is-disabled')
   get isDisabled(): boolean {
@@ -115,6 +115,6 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   }
 
   get id(): number {
-    return this.state.id;
+    return this.state.id!;
   }
 }

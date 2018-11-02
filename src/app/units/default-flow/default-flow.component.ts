@@ -58,7 +58,7 @@ export class DefaultFlowComponent implements FbNode, OnInit {
       this.service.removeBlur();
 
       if (result) {
-        this.service.addSocket(result.socket);
+        this.service.addSocket(result.socket!);
       }
     });
   }
@@ -69,7 +69,6 @@ export class DefaultFlowComponent implements FbNode, OnInit {
     const dialogRef = this.dialog.open(EditSocketComponent, {
       width: '400px',
       data: {
-        wrapper: this.service.flowService.units[this.service.state.id],
         sockets: sockets,
         service: this.service
       }
@@ -92,13 +91,13 @@ export class DefaultFlowComponent implements FbNode, OnInit {
     });
   }
 
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  }
-
-  getFormat(socket: XxlSocket): string {
-    return '';
-  }
-
-  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  }
+  // connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  // }
+  //
+  // getFormat(socket: XxlSocket): string {
+  //   return '';
+  // }
+  //
+  // disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  // }
 }

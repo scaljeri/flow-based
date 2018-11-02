@@ -62,7 +62,7 @@ export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
     this.isActive = state;
   }
 
-  get title(): string {
+  get title(): string | undefined {
     return this.state.title;
   }
 

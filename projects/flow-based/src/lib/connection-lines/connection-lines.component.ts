@@ -3,7 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter, HostListener,
+  EventEmitter,
   Input,
   OnChanges,
   OnInit,
@@ -34,7 +34,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   @Output() lineClick = new EventEmitter<XxlConnection>();
 
-  pointer: XxlPosition;
+  pointer: XxlPosition | null;
   controlPoints: { [key: number]: XxlPosition[] } = {};
   lines: string[] = [];
   private rect;
@@ -92,11 +92,11 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       return this.dFromElements(connection);
     } else {
 
-      const start = this.socketService.getSocket(connection.out).comp.position;
-      const end = (this.socketService.getSocket(connection.in) || {comp: {position: start}} as any).comp.position;
+      const start = this.socketService.getSocket(connection.out!).comp.position;
+      const end = (this.socketService.getSocket(connection.in!) || {comp: {position: start}} as any).comp.position;
 
       if (!start || !start.x || !end || !end.x) {
-        return;
+        return '';
       }
 
       const x1 = start.x - this.rect.left;
@@ -163,7 +163,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     const points = this.controlPoints[connection.id];
 
     if (!points) {
-      return;
+      return '';
     }
 
     const {x, y} = bezier.normal(.5, points);

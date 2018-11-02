@@ -4,7 +4,7 @@ import { FbNodeState, XxlSocket } from '../../projects/flow-based/src/lib/flow-b
 export const NODE_HELPERS = {
   resetSockets(node: FbNodeState) {
     if (node.type === 'tap') {
-      node.sockets.forEach(s => s.format = null);
+      node.sockets!.forEach(s => delete s.format);
     }
   },
 
@@ -15,12 +15,12 @@ export const NODE_HELPERS = {
 
     if (fromNode.type === 'tap') {
       if (!outSocket.format && inSocket.format) {
-        fromNode.sockets.forEach(s => s.format = inSocket.format);
+        fromNode.sockets!.forEach(s => s.format = inSocket.format);
         didChange = true;
       }
     } else if (toNode.type === 'tap') {
       if (!inSocket.format && outSocket.format) {
-        toNode.sockets.forEach(s => s.format = outSocket.format);
+        toNode.sockets!.forEach(s => s.format = outSocket.format);
         didChange = true;
       } else {
         if (!outSocket.format && inSocket.format) {
@@ -31,8 +31,8 @@ export const NODE_HELPERS = {
           didChange = true;
         }
       }
-
-      return didChange;
     }
+
+    return didChange;
   }
 };

@@ -100,7 +100,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   getScope(): number {
-    return this.active ? this.state.id : this.scope;
+    return this.active ? this.id : this.scope;
   }
 
   isInverted(): boolean {
@@ -109,7 +109,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
   ngAfterViewInit(): void {
     if (!this.state.sockets) {
-      this.state.sockets = this.ref.instance.getSockets().reduce((out, socket) => {
+      this.state.sockets = this.ref.instance.getSockets().reduce((out: XxlSocket[], socket) => {
         out.push({...socket, id: this.flowService.getUniqueId()});
 
         return out;
@@ -131,7 +131,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   ngOnDestroy(): void {
-    this.flowService.unregister(this.state.id);
+    this.flowService.flow.removeNode(this.id);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -159,6 +159,6 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   get id(): number {
-    return this.state.id;
+    return this.state.id!;
   }
 }

@@ -27,10 +27,12 @@
               "src/styles.scss"
             ],
             "stylePreprocessorOptions": {
-              "includePaths": ["src/styles", "projects/flow-based/src/lib/"]
+              "includePaths": [
+                "src/styles",
+                "projects/flow-based/src/lib/"
+              ]
             },
-            "scripts": [
-            ]
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -122,7 +124,7 @@
         }
       }
     },
-    "flow-based": {
+    "@scaljeri/flow-based": {
       "root": "projects/flow-based",
       "sourceRoot": "projects/flow-based/src",
       "projectType": "library",

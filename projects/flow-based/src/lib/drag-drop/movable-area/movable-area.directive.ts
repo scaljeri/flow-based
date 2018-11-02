@@ -1,4 +1,4 @@
-import {AfterContentInit, ContentChildren, Directive, ElementRef, OnInit, QueryList} from '@angular/core';
+import {AfterContentInit, ContentChildren, Directive, ElementRef, QueryList} from '@angular/core';
 import {Subscription} from 'rxjs';
 import {MovableDirective} from '../movable/movable.directive';
 

@@ -33,9 +33,11 @@ export class Flow {
 
   initialize(flow: FbNodeState): Flow {
     this.state = flow;
+    const connections = flow.connections!,
+      children = flow.children!;
 
-    flow.connections.forEach(c => this.connections[c.id] = c);
-    this.createVirtualFlow(flow.children, flow.id);
+    connections.forEach(c => this.connections[c.id] = c);
+    this.createVirtualFlow(children, flow.id!);
 
     let count = 0;
     while (this.connectNodes() && ++count < 100) {
@@ -56,7 +58,7 @@ export class Flow {
   }
 
   addConnection(state: FbNodeState, connection: XxlConnection): void {
-    state.connections = [connection, ...state.connections];
+    state.connections = [connection, ...state.connections!];
     this.connections[connection.id] = connection;
     this.connectworkers(connection);
 
@@ -71,7 +73,7 @@ export class Flow {
 
       if (node.children) {
         node.sockets.forEach(s => s.format = null);
-      } else {
+      } else if (this.helpers) {
         this.helpers.resetSockets(node);
       }
     });
@@ -86,16 +88,20 @@ export class Flow {
   }
 
   removeConnection(connection: XxlConnection, state: FbNodeState): void {
-    this.workers[connection.to as number].removeStream(connection);
+    const worker = this.workers[connection.to as number];
+    if (worker && worker.removeStream) {
+      worker.removeStream(connection);
+    }
+
     delete this.connections[connection.id];
-    state.connections = state.connections.filter(c => c.id !== connection.id);
+    state.connections = state.connections!.filter(c => c.id !== connection.id);
     this.rebuildNodeConnections();
   }
 
   addNode(nodeState: FbNodeState, flowState: FbNodeState): void {
     this.createWorker(nodeState);
-    flowState.children = [nodeState, ...flowState.children];
-    this.nodes[nodeState.id] = {state: nodeState, parentId: flowState.id};
+    flowState.children = [nodeState, ...flowState.children!];
+    this.nodes[nodeState.id!] = {state: nodeState, parentId: flowState.id!};
   }
 
 
@@ -108,7 +114,9 @@ export class Flow {
   }
 
   getSocket(id: number): XxlSocket {
-    return this.getNode(this.sockets[id]).state.sockets.filter(s => s.id === id)[0];
+    const node = this.getNode(this.sockets[id]);
+
+    return node!.state.sockets!.filter(s => s.id === id)[0];
   }
 
   addSocket(id: number, nodeId: number): void {
@@ -124,14 +132,14 @@ export class Flow {
 
   private createVirtualFlow(nodes: FbNodeState[], parentId: number) {
     nodes.forEach(node => {
-      this.nodes[node.id] = {state: node, parentId};
-      node.sockets.forEach(s => this.sockets[s.id] = node.id);
+      this.nodes[node.id!] = {state: node, parentId};
+      node.sockets!.forEach(s => this.sockets[s.id!] = node.id!);
 
       this.createWorker(node);
-      if (node.children) {
+      if (node.connections) {
         node.connections.forEach(c => this.connections[c.id] = c);
 
-        this.createVirtualFlow(node.children, node.id);
+        this.createVirtualFlow(node.children!, node.id!);
       }
     });
   }
@@ -153,8 +161,8 @@ export class Flow {
   private connect(connection: XxlConnection): boolean {
     const from = this.getNode(connection.from as number),
       to = this.getNode(connection.to as number),
-      outSocket = this.getSocket(connection.out),
-      inSocket = this.getSocket(connection.in);
+      outSocket = this.getSocket(connection.out as number),
+      inSocket = this.getSocket(connection.in as number);
 
     if (from.state.children && !outSocket.format) {
       outSocket.format = inSocket.format;
@@ -164,18 +172,23 @@ export class Flow {
       inSocket.format = outSocket.format;
       return !!outSocket.format;
     }
-    const isChanged = this.helpers.connect(outSocket, inSocket, from.state, to.state);
+
+    let isChanged = false; // TODO: Is default false?
+    if (this.helpers) {
+      isChanged = this.helpers.connect(outSocket, inSocket, from.state, to.state);
+    }
 
     return isChanged;
   }
 
   private createWorker(state: FbNodeState): void {
-    const {worker} = this.flowTypes[state.type];
+    const {worker} = this.flowTypes[state.type],
+      id = state.id!;
 
     if (worker) {
-      this.workers[state.id] = new worker(state.config);
+      this.workers[id] = new worker(state.config);
     } else if (this.flowTypes[state.type].isFlow) {
-      this.workers[state.id] = new FlowWorker(state);
+      this.workers[id] = new FlowWorker(state);
     }
   }
 
@@ -183,6 +196,10 @@ export class Flow {
     const fromWorker = this.getWorker(connection.from as number);
     const toWorker = this.getWorker(connection.to as number);
 
-    toWorker.setStream(fromWorker.getStream(connection.out), connection);
+    if (toWorker && fromWorker) {
+      const stream = fromWorker.getStream(connection!.out!)!;
+
+      toWorker.setStream(stream, connection);
+    }
   }
 }

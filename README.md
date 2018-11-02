@@ -13,8 +13,11 @@ Angular library for building workflows + demo
   $>  ng build --prod --base-href "https://scaljeri.github.io/flow-based/" --output-path="dist/"
   $>  ngh
   
-TODO: Fix circular dependency issues
-    
+# Publish to npm
+
+   $> yarn build
+   $> cd dist/flow-based && npm publish --access=public
+  
 ![Example](images/fbp.jpg)
 
 ![Example](images/gauss.jpg)

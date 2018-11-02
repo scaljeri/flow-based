@@ -1,16 +1,12 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
-import { UnitWrapper } from '../utils/unit-wrapper';
-import { Subject } from 'rxjs';
 import { SocketService } from '../socket.service';
 
 @Injectable()
 export class XxlFlowUnitService {
   public connections: XxlConnection[] = [];
   public state: XxlFlowUnitState;
-  private calibrateSub = new Subject<void>();
-  public calibrate$ = this.calibrateSub.asObservable();
 
   constructor(public flowService: XxlFlowBasedService,
               private socketService: SocketService) {
@@ -21,7 +17,7 @@ export class XxlFlowUnitService {
   }
 
   get id(): number {
-    return this.state.id;
+    return this.state.id!;
   }
 
   rebuild(): void {
@@ -35,8 +31,10 @@ export class XxlFlowUnitService {
     if (!socket.id) {
       socket = Object.assign({id: this.flowService.getUniqueId()}, socket);
     }
-    this.state.sockets = [socket, ...this.state.sockets];
-    this.flowService.flow.addSocket(socket.id, this.id);
+
+    this.state.sockets = [socket, ...this.getSockets()];
+    this.flowService.flow.addSocket(socket.id!, this.id);
+
     setTimeout(() => {
       this.flowService.currentFlow.updateConnections();
     });
@@ -47,15 +45,11 @@ export class XxlFlowUnitService {
   }
 
   getSockets(): XxlSocket[] {
-    return this.state.sockets;
-  }
-
-  get wrapper(): UnitWrapper {
-    return this.flowService.units[this.state.id];
+    return this.state.sockets || [];
   }
 
   get worker(): FbNodeWorker {
-    return this.flowService.getWorker(this.state.id);
+    return this.flowService.getWorker(this.id);
   }
 
   socketRemoved(socket: XxlSocket, flow?: XxlFlow): void {

@@ -7,7 +7,7 @@ import { Subject } from 'rxjs';
 @Injectable({providedIn: 'root'})
 export class SocketService {
   private connectionDetails: ConnectionDetails;
-  private socketClicked = new Subject<XxlSocketEvent>();
+  private socketClicked = new Subject<XxlSocketEvent|null>();
   public socketClicked$ = this.socketClicked.asObservable();
   private connection: XxlConnection = {} as XxlConnection;
 
@@ -27,7 +27,7 @@ export class SocketService {
   }
 
   onSocketClick(event: XxlSocketEvent): void {
-    this.connectionDetails.sockets[event.socket.id] = event.socket;
+    this.connectionDetails.sockets[event.socket.id!] = event.socket;
 
     if (event.socket.type === 'in') {
       this.connection.to = event.parentId;

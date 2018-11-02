@@ -46,7 +46,7 @@ export class MergeStreamsWorker implements FbNodeWorker {
     }
 
     const ids = Object.keys(this.streams$);
-    const streams$ = ids.reduce((out, item) => {
+    const streams$ = ids.reduce((out: any, item) => {
       out.push(this.streams$[item]);
 
       return out;
@@ -61,8 +61,8 @@ export class MergeStreamsWorker implements FbNodeWorker {
         this.outputValue = values.reduce((a, b) => a + b.value, 0);
         this.subject.next(this.outputValue);
 
-        const vals = values.reduce((o, v) => {
-          const id = v.connection.in;
+        const vals = values.reduce((o: any, v) => {
+          const id = v.connection.in!;
          if (!o[id])  {
            o[id] = [];
          }
@@ -89,7 +89,7 @@ export class MergeStreamsWorker implements FbNodeWorker {
     this.createStream();
   }
 
-  get title(): string {
+  get title(): string | undefined | null {
     return this.state.title;
   }
 

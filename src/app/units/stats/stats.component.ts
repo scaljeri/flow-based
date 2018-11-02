@@ -99,11 +99,11 @@ export class StatsComponent implements FbNode, OnInit {
     this.service.closeSelf();
   }
 
-  get min(): string {
+  get min(): string | null {
     return this.worker.min === null ? null : this.worker.min.toFixed(4);
   }
 
-  get max(): string {
+  get max(): string | null {
     return this.worker.max === null ? null : this.worker.max.toFixed(4);
   }
 

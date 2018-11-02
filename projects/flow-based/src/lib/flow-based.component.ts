@@ -35,10 +35,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @ViewChildren('node') nodes: QueryList<FlowUnitComponent>;
 
   onChange: (state: any) => void;
-  activeFlowIndex: number = null;
+  activeFlowIndex: number|null = null;
   pointerMove: PointerEvent;
-  activeSocketFrom: number;
-  activeSocketTo: number;
+  activeSocketFrom: number | null;
+  activeSocketTo: number | null;
 
   constructor(
     private element: ElementRef,
@@ -62,7 +62,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   rerender(): void {
-    this.state.connections = [...this.state.connections];
+    this.state.connections = [...this.state.connections!];
   }
 
   ngOnInit() {
@@ -79,9 +79,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     ).subscribe((event: XxlSocketEvent) => {
       if (event) {
         if (event.socket.type === 'out') {
-          this.activeSocketFrom = event.socket.id;
+          this.activeSocketFrom = event.socket.id!;
         } else {
-          this.activeSocketTo = event.socket.id;
+          this.activeSocketTo = event.socket.id!;
         }
       } else {
         this.activeSocketTo = null;
@@ -121,11 +121,11 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   get id(): number {
-    return this.state.id;
+    return this.state.id!;
   }
 
   repaint(): void {
-    this.state.connections = [...this.state.connections];
+    this.state.connections = [...this.state.connections!];
   }
 
   ngOnDestroy(): void {
@@ -141,12 +141,12 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
     if (this.activeFlowIndex === null) {
-      this.state.children = [...this.state.children.filter(child => child !== state), state];
+      this.state.children = [...this.state.children!.filter(child => child !== state), state];
     }
   }
 
   add(unit: XxlFlowUnitState): void {
-    this.state.children.push(unit);
+    this.state.children!.push(unit);
     this.cdr.markForCheck();
   }
 
@@ -185,7 +185,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   updateConnections(): void {
     setTimeout(() => { // TODO: Fix timeout-ception
-      this.state.connections = [...this.state.connections];
+      this.state.connections = [...this.state.connections!];
       this.socketService.clearPosition();
       this.cdr.detectChanges();
     });

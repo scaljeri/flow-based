@@ -53,7 +53,7 @@ export function getGaussian(mean: number, sd: number, maxAmpl: number, length: n
   const frac = 1 / (mean * Math.sqrt(2 * Math.PI));
   const denominator = 2 * Math.pow(sd, 2);
 
-  let output = [];
+  let output: number[] = [];
   let max = 0;
   let index = 0;
 

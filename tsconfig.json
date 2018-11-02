@@ -8,6 +8,7 @@
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "strictNullChecks": true,
     "target": "es5",
     "typeRoots": [
       "node_modules/@types"
@@ -17,8 +18,8 @@
       "dom"
     ],
     "paths": {
-      "flow-based": [
-        "projects/flow-based/src/public_api"
+      "@scaljeri/flow-based": [
+        "projects/flow-based/"
       ]
     }
   }
