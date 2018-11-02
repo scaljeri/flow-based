@@ -28,14 +28,14 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type: string;
-  @Input() state: FbNodeState;
+  @Input() state: FbNodeState = {} as FbNodeState;
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
   @ViewChildren('node') nodes: QueryList<FlowUnitComponent>;
 
   onChange: (state: any) => void;
-  activeFlowIndex: number|null = null;
+  activeFlowIndex: number | null = null;
   pointerMove: PointerEvent;
   activeSocketFrom: number | null;
   activeSocketTo: number | null;

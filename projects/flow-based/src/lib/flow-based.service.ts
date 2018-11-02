@@ -60,6 +60,12 @@ export class XxlFlowBasedService {
   }
 
   setState(state: FbNodeState): void {
+    if (!state.children) {
+      state.id = this.getUniqueId();
+      state.children = [];
+      state.connections = [];
+    }
+
     this.state = state;
   }
 
@@ -76,12 +82,6 @@ export class XxlFlowBasedService {
   }
 
   initialize(): void {
-    if (!this.state.children) {
-      this.state.id = this.getUniqueId();
-      this.state.children = [];
-      this.state.connections = [];
-    }
-
     this.flow = new Flow(this.flowTypes, this.helpers).initialize(this.state);
   }
 
