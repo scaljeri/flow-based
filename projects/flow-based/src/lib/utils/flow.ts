@@ -98,6 +98,43 @@ export class Flow {
     this.rebuildNodeConnections();
   }
 
+  removeSocket(socket: XxlSocket): void {
+    const nodeId = this.sockets[socket.id!],
+      node = this.getNode(nodeId);
+
+    // Remove socket
+    node.state.sockets = node.state.sockets!.filter(s => s.id !== socket.id);
+
+    // Remove connection and stream and check parent connections to
+    if (node.state.connections) {
+      node.state.connections = node.state.connections.filter(c => {
+        if (c.out === socket.id) {
+          this.workers[c.to as number].removeStream(c);
+          return false;
+          this.workers[c.from as number].removeStream(c);
+        } else if (c.in === socket.id) {
+          return false;
+        }
+
+        return true;
+      });
+    } else if (node.parentId) {
+      const parentNode = this.getNode(node.state.id!);
+      parentNode.state.connections = parentNode.state.connections!.filter(c => {
+        if (c.out === socket.id) {
+          this.workers[c.to as number].removeStream(c);
+          return false;
+          this.workers[c.from as number].removeStream(c);
+        } else if (c.in === socket.id) {
+          return false;
+        }
+
+        return true;
+      });
+
+    }
+  }
+
   addNode(nodeState: FbNodeState, flowState: FbNodeState): void {
     this.createWorker(nodeState);
     flowState.children = [nodeState, ...flowState.children!];

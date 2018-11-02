@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
-import { SocketDetails, XxlConnection, XxlFlow, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
+import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { SocketService } from '../socket.service';
 
 @Injectable()
 export class XxlFlowUnitService {
-  public connections: XxlConnection[] = [];
+  public connections: XxlConnection[];
   public state: XxlFlowUnitState;
 
   constructor(public flowService: XxlFlowBasedService,
@@ -52,42 +52,11 @@ export class XxlFlowUnitService {
     return this.flowService.getWorker(this.id);
   }
 
-  socketRemoved(socket: XxlSocket, flow?: XxlFlow): void {
-    // flow = flow || this.flowService.currentFlow.flow;
-    //
-    // flow.connections.forEach(conn => {
-    //   if (conn.in === socket.id || conn.out === socket.id) {
-    //     this.flowService.removeConnection(conn, flow);
-    //   }
-    // });
-    //
-    // if (flow === this.flowService.currentFlow.flow) {
-    //   this.socketRemoved(socket, this.flowService.parentFlow.flow);
-    // }
-    //
-    // setTimeout(() => {
-    //   flow.connections.forEach((conn: XxlConnection) => {
-    //     this.flowService.units[conn.from as string].update();
-    //     this.flowService.units[conn.to as string].update();
-    //   });
-    //
-    //   flow.connections = [...flow.connections];
-    // });
-  }
+  socketRemoved(socket: XxlSocket): void {
+    this.flowService.flow.removeSocket(socket);
 
-  // removeSocket(socket: XxlSocket, connections?: XxlConnection[]): void {
-  //   (connections || (this.state as XxlFlow).connections).forEach(conn => {
-  //     if (conn.in === socket.id || conn.out === socket.id) {
-  //       this.flowService.removeConnection(conn);
-  //     }
-  //
-  //     if (!connections && this.flowService.parentFlow) {
-  //       // TODO: Hack
-  //       debugger;
-  //       // this.removeSocket(socket, this.flowService.flowStack[1].flow.connections);
-  //     }
-  //   });
-  // }
+    this.flowService.parentFlow.updateConnections();
+  }
 
   refresh(): void {
     this.updateConnections();
@@ -118,7 +87,7 @@ export class XxlFlowUnitService {
       to: to
     };
 
-    this.connections = [...this.connections, conn];
+    this.connections = [...(this.connections || []), conn];
 
     return id;
   }
@@ -128,10 +97,10 @@ export class XxlFlowUnitService {
   }
 
   removeConnection(id: number): void {
-    this.connections = this.connections.filter(conn => conn.id !== id);
+    this.connections = this.connections!.filter(conn => conn.id !== id);
   }
 
   removeConnections(): void {
-    this.connections = [];
+    delete this.connections;
   }
 }

@@ -85,7 +85,7 @@ export class DefaultFlowComponent implements FbNode, OnInit {
             this.service.socketRemoved(socket);
           }
 
-          this.worker.state.sockets = [...updates, ...this.worker.getSockets().filter(item => item.type !== type)];
+          // this.worker.state.sockets = [...updates, ...this.worker.getSockets().filter(item => item.type !== type)];
         });
       }
     });
