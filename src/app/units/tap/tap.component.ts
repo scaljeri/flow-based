@@ -20,6 +20,8 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
   value: any;
   values: any[];
 
+  lastClicked: number;
+
   constructor(private cdr: ChangeDetectorRef,
               @Host() private service: XxlFlowUnitService) {
     this.sockets = this.getSockets();
@@ -41,10 +43,13 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
     this.connectiWithWorker();
 
     this.service.nodeClicked$.subscribe((e) => {
-      const button = e.target.closest('button');
+      const button = (e.target as HTMLElement).closest('button');
 
       if (button && button.classList.contains('close')) {
         this.isActive = false;
+      } else if (this.isActive) {
+        this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
+        this.lastClicked = Date.now();
       } else {
         this.isActive = true;
       }
