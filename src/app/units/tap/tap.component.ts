@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Host, HostBinding, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { Subscription } from 'rxjs';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
@@ -14,19 +14,18 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
   public sockets: XxlSocket[] = [];
   public history;
 
-  isActive = false;
+  @HostBinding('class.is-active') isActive = false;
   subscription: Subscription;
+  activeSubscription: Subscription;
   value: any;
   values: any[];
 
-
-  constructor( private cdr: ChangeDetectorRef,
-               @Host() private service: XxlFlowUnitService) {
+  constructor(private cdr: ChangeDetectorRef,
+              @Host() private service: XxlFlowUnitService) {
     this.sockets = this.getSockets();
   }
 
-  ngOnInit(): void {
-    this.worker = this.service.worker as TapWorker;
+  private connectiWithWorker(): void {
     if (this.worker.currentValue !== undefined) {
       this.value = this.worker.currentValue.toFixed(2);
     }
@@ -37,8 +36,32 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
     });
   }
 
+  ngOnInit(): void {
+    this.worker = this.service.worker as TapWorker;
+    this.connectiWithWorker();
+
+    this.service.nodeClicked$.subscribe((e) => {
+      const button = e.target.closest('button');
+
+      if (button && button.classList.contains('close')) {
+        this.isActive = false;
+      } else {
+        this.isActive = true;
+      }
+    });
+  }
+
+  // @HostListener('pointerdown', ['$event'])
+  // onClick(event): void {
+  //   event.stopImmediatePropagation();
+  //
+  //   debugger;
+  //   this.isActive = true;
+  // }
+
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+    this.activeSubscription.unsubscribe();
   }
 
   setActive(isActive: boolean): void {
@@ -70,7 +93,10 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
     this.service.deleteSelf();
   }
 
-  onClose(): void {
-    this.service.closeSelf();
+  onClose(e): void {
+    e.stopPropagation();
+    // this.service.closeSelf();
+    this.isActive = false;
+    console.log('close');
   }
 }

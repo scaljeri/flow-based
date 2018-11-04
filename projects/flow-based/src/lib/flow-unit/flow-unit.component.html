@@ -1,15 +1,15 @@
 <section class="component">
-  <ng-container *ngIf="isFlow() && active">
-    <xxl-flow-based #flow [state]="state" [active]="active" [root]="false"></xxl-flow-based>
+  <ng-container *ngIf="isFlow() && isFullSize">
+    <xxl-flow-based #flow [state]="state" [active]="true" [root]="false"></xxl-flow-based>
   </ng-container>
 
-  <xxl-connection-lines *ngIf="!!unitService.connections"
+  <xxl-connection-lines *ngIf="!!service.connections"
                         [connections]="unitService.connections"
                         [class.is-dark]="isFlow()" class="tmp-lines" ></xxl-connection-lines>
 
   <ng-container *xxlDynamicComponent="state"></ng-container>
 
-  <section class="sockets sockets-in" [class.is-disabled]="active && !isFlow()">
+  <section class="sockets sockets-in" [class.is-disabled]="isMaxSize && !isFlow()">
     <xxl-socket *ngFor="let socket of sockets | socketIn"
           [state]="socket"
           [scope]="getScope()"
@@ -19,7 +19,7 @@
           class="socket"></xxl-socket>
   </section>
 
-  <section class="sockets sockets-out" [class.is-disabled]="active && !isFlow()">
+  <section class="sockets sockets-out" [class.is-disabled]="isMaxSize && !isFlow()">
     <ng-container *ngIf="isFlow() && active">
     </ng-container>
     <xxl-socket *ngFor="let socket of sockets | socketOut"

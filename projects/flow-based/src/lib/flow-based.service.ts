@@ -102,6 +102,7 @@ export class XxlFlowBasedService {
 
     // this.currentFlow.add(state);
     this.flow.addNode(state, this.currentFlow.state);
+    this.currentFlow.nodeAdded(state);
 
     return state;
   }

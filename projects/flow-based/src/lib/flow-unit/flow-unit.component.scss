@@ -42,7 +42,7 @@ $socket-size: 14px;
     }
   }
 
-  &:not(.is-active) {
+  &:not(.is-fullsize) {
     cursor: move;
     position: absolute;
 
@@ -69,7 +69,7 @@ $socket-size: 14px;
     }
   }
 
-  &.is-active {
+  &.is-fullsize {
     --socket-size: #{$socket-size * 3};
     height: 100%;
     left: 0 !important;

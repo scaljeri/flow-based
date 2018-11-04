@@ -25,7 +25,7 @@ export class AppComponent implements OnInit {
 
   activeOverlay: OverlayRef | null;
   showJson = false;
-  flow: XxlFlow = data.basic as XxlFlow;
+  flow: XxlFlow; // = data.basic as XxlFlow;
 
   @ViewChild('bg') bgImage: ElementRef;
 

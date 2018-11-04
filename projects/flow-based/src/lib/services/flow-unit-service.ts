@@ -2,14 +2,33 @@ import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { SocketService } from '../socket.service';
+import { Observable, Subject } from 'rxjs';
 
 @Injectable()
 export class XxlFlowUnitService {
   public connections: XxlConnection[];
   public state: XxlFlowUnitState;
+  private maxSize = false;
+
+  private nodeMax = new Subject<boolean>();
+  public nodeMax$ = this.nodeMax.asObservable();
+
+  private nodeClicked = new Subject<PointerEvent>();
+  public nodeClicked$ = this.nodeClicked.asObservable();
+
+  private nodeBlur = new Subject<void>();
+  public nodeBlur$ = this.nodeBlur.asObservable();
 
   constructor(public flowService: XxlFlowBasedService,
               private socketService: SocketService) {
+  }
+
+  nodeIsClicked(e: PointerEvent): void {
+    this.nodeClicked.next(e);
+  }
+
+  blurNode(): void {
+    this.nodeBlur.next();
   }
 
   setState(state: XxlFlowUnitState): void {
@@ -103,4 +122,20 @@ export class XxlFlowUnitService {
   removeConnections(): void {
     delete this.connections;
   }
+  //
+  // isMaxSize(): boolean {
+  //   return this.maxSize;
+  // }
+
+  // setMaxSize(state: boolean): void {
+  //   this.maxSize = state;
+  // }
+
+  // changeActivity(state: boolean): void {
+  //   this.activeSubject.next(state);
+  // }
+
+  // getActiveStream(): Observable<boolean> {
+  //   return this.active$;
+  // }
 }

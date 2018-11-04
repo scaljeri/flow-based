@@ -3,7 +3,7 @@ import {
   ChangeDetectorRef,
   Component, ElementRef,
   EventEmitter,
-  HostBinding,
+  HostBinding, HostListener,
   Input,
   OnChanges, OnDestroy,
   OnInit, Output, QueryList,
@@ -29,16 +29,16 @@ declare global {
   templateUrl: './flow-unit.component.html',
   styleUrls: ['./flow-unit.component.scss'],
   // changeDetection: ChangeDetectionStrategy.OnPush,
-  // viewProviders: [FlowUnitService]
+  // viewProviders: [Flowservice]
   providers: [XxlFlowUnitService]
   // viewProviders: [{
-  //   provide: XXL_FLOW_UNIT_SERVICE, useClass: XxlFlowUnitService
+  //   provide: XXL_FLOW_UNIT_SERVICE, useClass: XxlFlowservice
   // }]
 })
 export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewInit, OnDestroy {
-  @Input() @HostBinding('class.is-active') active = false;
   @Input() state: FbNodeState;
   @Input() scope: number;
+  @HostBinding('class.is-fullsize') isFullSize = false;
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
   @Output() updated = new EventEmitter<void>();
@@ -52,17 +52,21 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
               private element: ElementRef,
               private cdr: ChangeDetectorRef,
               private flowService: XxlFlowBasedService,
-              public unitService: XxlFlowUnitService,
+              public service: XxlFlowUnitService,
               public socketService: SocketService,
               private movable: MovableDirective) {
   }
 
   ngOnInit(): void {
-    this.unitService.setState(this.state);
+    this.service.setState(this.state);
 
     this.movable.positionChange.subscribe(() => {
       this.socketService.clearPosition(this.id);
       this.flowService.nodeMoved();
+    });
+
+    this.service.nodeMax$.subscribe((isFullSize: boolean) => {
+      this.isFullSize = isFullSize;
     });
 
     // this.socketService.socketClicked$.subscribe((e) => {
@@ -99,12 +103,17 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     // });
   }
 
+  @HostListener('noDrag', ['$event'])
+  onClick(e: PointerEvent): void {
+    this.service.nodeIsClicked(e);
+  }
+
   getScope(): number {
-    return this.active ? this.id : this.scope;
+    return this.isFullSize ? this.id : this.scope;
   }
 
   isInverted(): boolean {
-    return this.active && this.isFlow();
+    return this.isFullSize && this.isFlow();
   }
 
   ngAfterViewInit(): void {
@@ -138,7 +147,9 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
     const {active} = changes;
 
     if (this.ref.instance) {
-      this.ref.instance.setActive(active.currentValue);
+      // this.ref.instance.setActive(active.currentValue);
+      // this.service.changeActivity(active.currentValue);
+
       this.socketService.clearPosition(this.id);
       setTimeout(() => {
         // this.cdr.detectChanges();

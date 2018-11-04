@@ -67,7 +67,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   ngOnInit() {
     if (!this.state) {
-      this.state = {};
+      this.state = {} as FbNodeState;
     }
 
     this.flowService.setState(this.state);
@@ -92,28 +92,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
         this.activeSocketFrom = null;
       }
     });
-
-    // this.connectionService.activeSocket$.subscribe((event: XxlSocketEvent) => {
-    //   if (this.activeFlowIndex === null) {
-    //     this.socketClicked(event);
-    //   } // else if (this.flowService.currentFlow !== this) {
-    //   //   this.flowService.currentFlow.socketClicked(event);
-    //   // }
-    // });
   }
-
-  // socketClickedFromParent(event: XxlSocketEvent): void {
-  //   if (event) {
-  //     this.connectionService.onSocketClick(event);
-  //   } else {
-  //     this.connectionService.clear();
-  //   }
-  // }
-  //
-  // // Path tp mouse
-  // socketClicked(event?: XxlSocketEvent) {
-  //
-  // }
 
   ngOnChanges(obj: SimpleChanges): void {
   }
@@ -149,9 +128,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     }
   }
 
-  add(unit: XxlFlowUnitState): void {
-    this.state.children!.push(unit);
-    this.cdr.markForCheck();
+  nodeAdded(nodeState: XxlFlowUnitState): void {
+    this.cdr.detectChanges();
   }
 
   activityChanged(isActive): void {
@@ -195,9 +173,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     });
   }
 
-  isFlow(child: FbNodeState): boolean {
-    return !!child.children;
-  }
+  // isFlow(child: FbNodeState): boolean {
+  //   return !!child.children;
+  // }
 
   close(event): void {
     this.activeFlowIndex = null;

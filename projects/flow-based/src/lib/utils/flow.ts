@@ -137,7 +137,7 @@ export class Flow {
 
   addNode(nodeState: FbNodeState, flowState: FbNodeState): void {
     this.createWorker(nodeState);
-    flowState.children = [nodeState, ...flowState.children!];
+    flowState.children = [...flowState.children!, nodeState];
     this.nodes[nodeState.id!] = {state: nodeState, parentId: flowState.id!};
   }
 
