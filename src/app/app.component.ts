@@ -71,7 +71,9 @@ export class AppComponent implements OnInit {
 
   @HostListener('document:keydown.escape', ['$event'])
   escape(event): void {
-    if (this.activeOverlay) {
+    if (this.showJson) {
+      this.showJson = false;
+    } else if (this.activeOverlay) {
       this.activeOverlay.dispose();
 
       this.activeOverlay = null;

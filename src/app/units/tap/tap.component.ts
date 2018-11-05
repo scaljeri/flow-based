@@ -3,13 +3,14 @@ import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-
 import { Subscription } from 'rxjs';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { TapWorker } from '../../workers/tap';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'fb-tap',
   templateUrl: './tap.component.html',
   styleUrls: ['./tap.component.scss']
 })
-export class TapComponent implements FbNode, OnInit, OnDestroy {
+export class TapComponent implements OnInit, OnDestroy {
   private worker: TapWorker;
   public sockets: XxlSocket[] = [];
   public history;
@@ -42,12 +43,10 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
     this.worker = this.service.worker as TapWorker;
     this.connectiWithWorker();
 
-    this.service.nodeClicked$.subscribe((e) => {
-      const button = (e.target as HTMLElement).closest('button');
-
-      if (button && button.classList.contains('close')) {
-        this.isActive = false;
-      } else if (this.isActive) {
+    this.service.nodeClicked$.pipe(
+      filter(e => !(e.target as HTMLElement).closest('button'))
+    ).subscribe((e) => {
+      if (this.isActive) {
         this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
         this.lastClicked = Date.now();
       } else {
@@ -57,14 +56,6 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
 
     this.isActive = this.service.state.config.expanded;
   }
-
-  // @HostListener('pointerdown', ['$event'])
-  // onClick(event): void {
-  //   event.stopImmediatePropagation();
-  //
-  //   debugger;
-  //   this.isActive = true;
-  // }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
@@ -100,10 +91,7 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
     this.service.deleteSelf();
   }
 
-  onClose(e): void {
-    e.stopPropagation();
-    // this.service.closeSelf();
+  onClose(): void {
     this.isActive = false;
-    console.log('close');
   }
 }

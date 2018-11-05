@@ -140,7 +140,7 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   }
 
   ngOnDestroy(): void {
-    this.flowService.flow.removeNode(this.id);
+    // this.flowService.flow.removeNode(this.id);
   }
 
   ngOnChanges(changes: SimpleChanges): void {

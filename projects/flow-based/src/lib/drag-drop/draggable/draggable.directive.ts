@@ -18,7 +18,6 @@ export class DraggableDirective {
   private pointerMoveSubscription: Subscription;
 
   @HostListener('pointerdown', ['$event']) onPointerDown(event) {
-    console.log('draggable');
     event.stopPropagation();
 
     if (event.button !== 0) {
