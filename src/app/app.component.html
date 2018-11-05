@@ -11,9 +11,7 @@
 <main>
   <fb-flow *ngIf="!showJson" [flow]="flow"></fb-flow>
 
-  <article
-    *ngIf="showJson"
-    class="flow-as-json">
+  <article *ngIf="showJson" class="flow-as-json">
     <pre>{{flow | json}}</pre>
   </article>
 </main>

@@ -54,6 +54,8 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
         this.isActive = true;
       }
     });
+
+    this.isActive = this.service.state.config.expanded;
   }
 
   // @HostListener('pointerdown', ['$event'])
@@ -66,7 +68,7 @@ export class TapComponent implements FbNode, OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
-    this.activeSubscription.unsubscribe();
+    // this.activeSubscription.unsubscribe();
   }
 
   setActive(isActive: boolean): void {
