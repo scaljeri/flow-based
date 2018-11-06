@@ -1,23 +1,25 @@
 import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
 
 import {
-  FbNode, XxlFlowUnitState, XxlSocket
+  XxlFlowUnitState, XxlSocket
 } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss']
 })
-export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
+export class RandomNumbersComponent implements OnInit {
   worker: RandomNumbersWorker;
   configForm: FormGroup;
   isActive = false;
   state: XxlFlowUnitState;
   currentValue: number;
+  lastClicked: number;
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
@@ -53,13 +55,19 @@ export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
       this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
       this.cdr.markForCheck();
     });
-  }
 
-  ngOnDestroy(): void {
-  }
+    this.service.nodeClicked$.pipe(
+      filter(e => !(e.target as HTMLElement).closest('button'))
+    ).subscribe((e) => {
+      if (this.isActive) {
+        this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
+        this.lastClicked = Date.now();
+      } else {
+        this.isActive = true;
+      }
+    });
 
-  setActive(state: boolean): void {
-    this.isActive = state;
+    this.isActive = this.service.state.config.expanded;
   }
 
   get title(): string | undefined {
@@ -75,22 +83,11 @@ export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
     ];
   }
 
-  delete(): void {
+  onDelete(): void {
     this.service.deleteSelf();
   }
 
-  close(): void {
-    this.service.closeSelf();
+  onClose(): void {
+    this.isActive = false;
   }
-
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  }
-
-  getFormat(socket: XxlSocket): string {
-    return '';
-  }
-
-  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  }
-
 }

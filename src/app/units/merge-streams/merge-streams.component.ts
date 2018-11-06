@@ -2,20 +2,22 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, OnInit, 
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
-import { FbNode, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'fb-merge-streams',
   templateUrl: './merge-streams.component.html',
   styleUrls: ['./merge-streams.component.scss']
 })
-export class MergeStreamsComponent implements FbNode, OnInit, AfterViewInit {
+export class MergeStreamsComponent implements OnInit, AfterViewInit {
   state: XxlFlowUnitState;
   worker: MergeStreamsWorker;
   isActive = false;
   values;
   value;
   streamValues;
+  lastClicked;
 
   @ViewChild('output', {read: ElementRef}) output: ElementRef;
   @ViewChildren('inputs', {read: ElementRef}) inputs: QueryList<ElementRef>;
@@ -36,6 +38,23 @@ export class MergeStreamsComponent implements FbNode, OnInit, AfterViewInit {
     this.worker.getValues().subscribe(values => {
       this.streamValues = values;
       this.cdr.detectChanges();
+    });
+
+    this.service.nodeClicked$.pipe(
+      filter(e => !(e.target as HTMLElement).closest('button'))
+    ).subscribe((e) => {
+      if (this.isActive) {
+        this.isActive = Date.now() - (this.lastClicked || 0) > 300;
+        this.lastClicked = Date.now();
+      } else {
+        this.isActive = true;
+      }
+
+      this.service.setMaxState(this.isActive);
+
+     // setTimeout(() => {
+        this.setActive(this.isActive);
+    //  });
     });
   }
 
@@ -79,9 +98,6 @@ export class MergeStreamsComponent implements FbNode, OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.inputs.changes.subscribe(() => {
     });
-  }
-
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 
   getSockets(): XxlSocket[] {

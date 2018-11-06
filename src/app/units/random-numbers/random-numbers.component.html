@@ -16,7 +16,7 @@
             <div>
               <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
                           [thumbLabel]="true"
-                          formControlName="startValue"></mat-slider>
+                          formControlName="startValue" class="fb-drag-ignore"></mat-slider>
               <span>{{configForm.controls.startValue.value}}</span>
             </div>
           </label>
@@ -26,7 +26,7 @@
             <div>
               <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
                           [thumbLabel]="true"
-                          formControlName="endValue"></mat-slider>
+                          formControlName="endValue" class="fb-drag-ignore"></mat-slider>
               <span>{{configForm.controls.endValue.value}}</span>
             </div>
           </label>
@@ -36,7 +36,7 @@
             <div>
               <mat-slider [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"
                           [thumbLabel]="true"
-                          formControlName="intervalValue"></mat-slider>
+                          formControlName="intervalValue" class="fb-drag-ignore"></mat-slider>
               <span>{{configForm.controls.intervalValue.value}}</span>
             </div>
           </label>
@@ -58,10 +58,10 @@
   </div>
 
   <footer>
-    <button mat-button color="warn" (click)="delete()">
+    <button mat-button color="warn" (click)="onDelete()">
       <mat-icon>delete_forever</mat-icon>
     </button>
 
-    <button mat-button (click)="close()">Close</button>
+    <button mat-button (click)="onClose()">Close</button>
   </footer>
 </section>

@@ -2,13 +2,12 @@ import { Injectable } from '@angular/core';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { SocketService } from '../socket.service';
-import { Observable, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
 
 @Injectable()
 export class XxlFlowUnitService {
   public connections: XxlConnection[];
   public state: XxlFlowUnitState;
-  private maxSize = false;
 
   private nodeMax = new Subject<boolean>();
   public nodeMax$ = this.nodeMax.asObservable();
@@ -21,6 +20,10 @@ export class XxlFlowUnitService {
 
   constructor(public flowService: XxlFlowBasedService,
               private socketService: SocketService) {
+  }
+
+  setMaxState(state: boolean): void {
+    this.nodeMax.next(state);
   }
 
   nodeIsClicked(e: PointerEvent): void {

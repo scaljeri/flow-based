@@ -1,6 +1,5 @@
-import { ChangeDetectorRef, Component, Host, HostBinding, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
-import { Subscription } from 'rxjs';
+import { ChangeDetectorRef, Component, Host, HostBinding, OnInit } from '@angular/core';
+import { XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
 import { TapWorker } from '../../workers/tap';
 import { filter } from 'rxjs/operators';
@@ -10,14 +9,12 @@ import { filter } from 'rxjs/operators';
   templateUrl: './tap.component.html',
   styleUrls: ['./tap.component.scss']
 })
-export class TapComponent implements OnInit, OnDestroy {
+export class TapComponent implements OnInit {
   private worker: TapWorker;
   public sockets: XxlSocket[] = [];
   public history;
 
   @HostBinding('class.is-active') isActive = false;
-  subscription: Subscription;
-  activeSubscription: Subscription;
   value: any;
   values: any[];
 
@@ -28,20 +25,20 @@ export class TapComponent implements OnInit, OnDestroy {
     this.sockets = this.getSockets();
   }
 
-  private connectiWithWorker(): void {
+  private connectWithWorker(): void {
     if (this.worker.currentValue !== undefined) {
       this.value = this.worker.currentValue.toFixed(2);
     }
 
-    this.subscription = this.worker.getStream().subscribe(log => {
+    this.worker.getStream().subscribe(log => {
       this.value = this.worker.currentValue;
-      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     });
   }
 
   ngOnInit(): void {
     this.worker = this.service.worker as TapWorker;
-    this.connectiWithWorker();
+    this.connectWithWorker();
 
     this.service.nodeClicked$.pipe(
       filter(e => !(e.target as HTMLElement).closest('button'))
@@ -57,15 +54,6 @@ export class TapComponent implements OnInit, OnDestroy {
     this.isActive = this.service.state.config.expanded;
   }
 
-  ngOnDestroy(): void {
-    this.subscription.unsubscribe();
-    // this.activeSubscription.unsubscribe();
-  }
-
-  setActive(isActive: boolean): void {
-    this.isActive = isActive;
-  }
-
   getSockets(): XxlSocket[] {
     return [
       {
@@ -74,17 +62,6 @@ export class TapComponent implements OnInit, OnDestroy {
       {
         type: 'out'
       }];
-  }
-
-  connected(localSocket: XxlSocket, remoteSocket: XxlSocket, sockets: XxlSocket[]): void {
-    if (remoteSocket.format && remoteSocket.format !== localSocket.format) {
-      sockets.forEach(s => s.format = remoteSocket.format);
-      this.service.rebuild();
-    }
-  }
-
-  reset(sockets: XxlSocket[]): void {
-    sockets.forEach(s => delete s.format);
   }
 
   onDelete(): void {

@@ -115,6 +115,7 @@ xxl-flow-based {
 
 xxl-connection-lines {
   background-color: transparent;
+  pointer-events: none;
   z-index: 2;
   @include xxl-position(absolute, 0px 0px 0px 0px);
 

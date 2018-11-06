@@ -4,7 +4,7 @@
   </ng-container>
 
   <xxl-connection-lines *ngIf="!!service.connections"
-                        [connections]="unitService.connections"
+                        [connections]="service.connections"
                         [class.is-dark]="isFlow()" class="tmp-lines" ></xxl-connection-lines>
 
   <ng-container *xxlDynamicComponent="state"></ng-container>
