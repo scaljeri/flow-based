@@ -2,7 +2,7 @@ import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@an
 import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 
 const GRAPH_OPTIONS = {
   legend: 'bottom',
@@ -25,7 +25,7 @@ export class BasicGraphComponent implements FbNode, OnInit {
   startIndex = 0;
 
 
-  constructor(@Host() private service: XxlFlowUnitService) {
+  constructor(@Host() private service: NodeService) {
   }
 
   ngOnInit() {

@@ -24,7 +24,7 @@ $socket-size: 14px;
   min-width: 72px;
   padding: 4px;
   user-select: none;
-  z-index: 100;
+  z-index: $zindex-node;
 
   .sockets-in {
     .socket {
@@ -76,7 +76,7 @@ $socket-size: 14px;
     position: relative;
     top: 0 !important;
     transform: translate(0, 0);
-    z-index: $xxl-flow-unit-active;
+    z-index: $zindex-node-active;
   }
 }
 

@@ -3,27 +3,33 @@ import {
   SocketDetails,
   XXL_FLOW_TYPES,
   XxlConnection,
-  XxlFlow,
   FbNodeType,
   XxlFlowUnitState,
   FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState, XxlSocket
 } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
-import { FlowWorker } from './utils/flow-worker';
 import { Flow } from './utils/flow';
+import { Observable, Subject } from 'rxjs';
 
 let uniqueId = Date.now();
+
+export interface ExternalEvent {
+  type: string;
+  payload: any;
+  nodeId: number;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class XxlFlowBasedService {
   private flowStack: FlowBasedComponent[] = [];
-  private unitBlur: null | (() => void);
-  private workers = {};
   public flow: Flow;
   private state: FbNodeState;
   private sockets: FbKeyValues<SocketDetails> = {};
+
+  private externalEventSubject = new Subject<ExternalEvent>();
+  private nodeListeners: number[] = [];
 
   constructor(@Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
@@ -108,35 +114,29 @@ export class XxlFlowBasedService {
   }
 
   // Flow stuff
-  activate(flow: FlowBasedComponent): void {
+  activateFlow(flow: FlowBasedComponent): void {
     this.flowStack.unshift(flow);
   }
 
-  deactivate(): void {
-    this.flowStack.shift();
-    this.currentFlow.childBlurred();
+  triggerEvent(type, payload?: any): void {
+    this.externalEventSubject.next({type, payload, nodeId: (this.nodeListeners[type] || [])[0]});
   }
 
-  blur(): void {
-    if (this.unitBlur) {
-      this.unitBlur();
-      this.removeBlurForUnit();
-    } else {
-      this.currentFlow.blur();
+  subscribe(id: number, type?: string): Observable<ExternalEvent> {
+    if (!this.nodeListeners[type || '__default__']) {
+      this.nodeListeners[type || '__default__'] = [];
     }
+    this.nodeListeners[type || '__default__'].unshift(id);
+
+    return this.externalEventSubject.asObservable();
   }
 
-  blurForUnit(cb: () => void): void {
-    this.unitBlur = cb;
-
-  }
-
-  removeBlurForUnit(): void {
-    this.unitBlur = null;
+  unsubscribe(id, type?: string): void {
+    this.nodeListeners.splice(this.nodeListeners[type || '__default__'].indexOf(id), 1);
   }
 
   close(state: XxlFlowUnitState): void {
-    this.blur();
+    // this.blur();
   }
 
   // socketClicked(event: XxlSocketEvent): void {
@@ -189,23 +189,5 @@ export class XxlFlowBasedService {
 
   destroy(): void {
     this.flow.destroy();
-  }
-
-  // Create workers and the connections between them
-  private initializeFlow(flow: FbNodeState): void {
-    flow.children!.forEach(child => {
-      const {worker} = this.flowTypes[child.type];
-
-      if (child.children) {
-        this.workers[child.id!] = new FlowWorker(child);
-        this.initializeFlow(child);
-      } else if (worker) {
-        this.workers[child.id!] = new worker(child);
-      }
-    });
-
-    // flow.connections.forEach((conn: XxlConnection) => {
-    //   this.setupConnection(conn);
-    // });
   }
 }

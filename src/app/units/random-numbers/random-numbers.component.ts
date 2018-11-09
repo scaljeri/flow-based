@@ -5,7 +5,7 @@ import {
 } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { filter } from 'rxjs/operators';
 
 @Component({
@@ -23,7 +23,7 @@ export class RandomNumbersComponent implements OnInit {
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
-              @Host() private service: XxlFlowUnitService) {
+              @Host() private service: NodeService) {
     this.state = service.state;
   }
 

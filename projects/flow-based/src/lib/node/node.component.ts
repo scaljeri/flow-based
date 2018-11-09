@@ -13,10 +13,11 @@ import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { XxlFlowBasedService } from '../flow-based.service';
 import { FbNode, XxlSocket, FbNodeState } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
-import { XxlFlowUnitService } from '../services/flow-unit-service';
+import { NodeService } from './node-service';
 import { SocketService } from '../socket.service';
 import { SocketComponent } from '../socket/socket.component';
 import { FlowBasedComponent } from '../flow-based.component';
+import { Subscription } from 'rxjs';
 
 declare global {
   interface Window {
@@ -25,17 +26,17 @@ declare global {
 }
 
 @Component({
-  selector: 'xxl-flow-unit',
-  templateUrl: './flow-unit.component.html',
-  styleUrls: ['./flow-unit.component.scss'],
+  selector: 'fb-node',
+  templateUrl: './node.component.html',
+  styleUrls: ['./node.component.scss'],
   // changeDetection: ChangeDetectionStrategy.OnPush,
   // viewProviders: [Flowservice]
-  providers: [XxlFlowUnitService]
+  providers: [NodeService]
   // viewProviders: [{
   //   provide: XXL_FLOW_UNIT_SERVICE, useClass: XxlFlowservice
   // }]
 })
-export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewInit, OnDestroy {
+export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() state: FbNodeState;
   @Input() scope: number;
   @HostBinding('class.is-fullsize') isFullSize = false;
@@ -47,12 +48,13 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
   @ViewChildren(SocketComponent) sockRefs: QueryList<SocketComponent>;
 
   private observer;
+  private escSubscription: Subscription;
 
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
               private cdr: ChangeDetectorRef,
               private flowService: XxlFlowBasedService,
-              public service: XxlFlowUnitService,
+              public service: NodeService,
               public socketService: SocketService,
               private movable: MovableDirective) {
   }
@@ -67,6 +69,18 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
 
     this.service.nodeMax$.subscribe((isFullSize: boolean) => {
       this.isFullSize = isFullSize;
+
+      if (isFullSize) {
+        this.escSubscription = this.service.subscribe('blur')
+          .subscribe(() => {
+            this.service.setMaxSize(false);
+            this.escSubscription.unsubscribe();
+          });
+      } else {
+        setTimeout(() => {
+          this.cdr.detectChanges();
+        });
+      }
     });
 
     // this.socketService.socketClicked$.subscribe((e) => {
@@ -81,6 +95,28 @@ export class FlowUnitComponent implements OnInit, OnInit, OnChanges, AfterViewIn
       // this.flowService.updateConnection();
     });
     this.observer.observe(this.element.nativeElement);
+
+    if (this.isFlow()) {
+      // this.flowService.requireNodeBlur(() => {
+      //   debugger;
+      // });
+
+      this.service.nodeClicked$.subscribe(() => {
+        this.isFullSize = true;
+        // this.flowService.setNodeBlur(() => {
+        //   this.isFullSize = false;
+        //   this.flowService.removeNodeBlur();
+        // });
+      });
+    }
+
+    // this.service.nodeBlur$.subscribe(() => {
+    //   this.isFullSize = false;
+    //
+    //   setTimeout(() => {
+    //     this.cdr.detectChanges();
+    //   });
+    // });
 
     // this.connectionService.new$.subscribe(cd => {
     //   let localSocket, remoteSocket;

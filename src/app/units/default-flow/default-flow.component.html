@@ -1,6 +1,6 @@
-<img *ngIf="!active" src="./assets/config.svg">
+<img *ngIf="!isActive" src="./assets/config.svg">
 
-<ng-container *ngIf="active">
+<ng-container *ngIf="isActive">
   <button mat-fab class="add-socket socket-in" (click)="openDialog({type: 'in'})"><mat-icon>add</mat-icon></button>
   <button mat-fab class="edit-socket socket-in" (click)="editDialog('in')"><mat-icon>edit</mat-icon></button>
   <button mat-fab class="edit-socket socket-out" (click)="editDialog('out')"><mat-icon>edit</mat-icon></button>

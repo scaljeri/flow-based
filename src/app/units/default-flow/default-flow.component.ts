@@ -1,6 +1,6 @@
 import { Component, Host, HostBinding, Input, OnInit } from '@angular/core';
-import { FbNode, XxlSocket } from 'projects/flow-based/src/lib/flow-based';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { XxlSocket } from 'projects/flow-based/src/lib/flow-based';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { MatDialog } from '@angular/material';
 import { AddSocketComponent, DialogAction } from './add-socket/add-socket.component';
 import { EditSocketComponent } from './edit-socket/edit-socket.component';
@@ -10,26 +10,30 @@ import { EditSocketComponent } from './edit-socket/edit-socket.component';
   templateUrl: './default-flow.component.html',
   styleUrls: ['./default-flow.component.scss']
 })
-export class DefaultFlowComponent implements FbNode, OnInit {
+export class DefaultFlowComponent implements OnInit {
   @Input() title: string;
   private worker: any;
 
-  @HostBinding('class.is-active') active = false;
+  @HostBinding('class.is-active') isActive = false;
 
   constructor(public dialog: MatDialog,
-              @Host() private service: XxlFlowUnitService) {
+              @Host() private service: NodeService) {
   }
 
   ngOnInit() {
     this.worker = this.service.worker;
+
+    this.service.nodeClicked$.subscribe(() => {
+      this.isActive = true;
+    });
+    //
+    // this.service.nodeBlur$.subscribe(() => {
+    //   this.isActive = false;
+    // });
   }
 
   getSockets(): XxlSocket[] {
     return [];
-  }
-
-  setActive(isActive: boolean): void {
-    this.active = isActive;
   }
 
   socketClicked(socket: XxlSocket): void {
@@ -52,10 +56,11 @@ export class DefaultFlowComponent implements FbNode, OnInit {
       data: socket
     });
 
-    this.service.requireBlur(() => dialogRef.close());
+    // this.service.requireBlur(() => dialogRef.close());
+    // this.service.blockBlur();
 
     dialogRef.afterClosed().subscribe((result: DialogAction) => {
-      this.service.removeBlur();
+      // this.service.enableBlur();
 
       if (result) {
         this.service.addSocket(result.socket!);
@@ -74,10 +79,11 @@ export class DefaultFlowComponent implements FbNode, OnInit {
       }
     });
 
-    this.service.requireBlur(() => dialogRef.close());
+    // this.service.blockEscape();
+    // this.service.requireBlur(() => dialogRef.close());
 
     dialogRef.afterClosed().subscribe((updates: XxlSocket[]) => {
-      this.service.removeBlur();
+      // this.service.enableEscape();
 
       if (updates) {
         sockets.filter(socket => {

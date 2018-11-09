@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
-import { XxlFlowBasedService } from '../flow-based.service';
+import { ExternalEvent, XxlFlowBasedService } from '../flow-based.service';
 import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { SocketService } from '../socket.service';
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Injectable()
-export class XxlFlowUnitService {
+export class NodeService {
   public connections: XxlConnection[];
   public state: XxlFlowUnitState;
 
@@ -15,23 +16,26 @@ export class XxlFlowUnitService {
   private nodeClicked = new Subject<PointerEvent>();
   public nodeClicked$ = this.nodeClicked.asObservable();
 
-  private nodeBlur = new Subject<void>();
-  public nodeBlur$ = this.nodeBlur.asObservable();
-
   constructor(public flowService: XxlFlowBasedService,
               private socketService: SocketService) {
   }
 
-  setMaxState(state: boolean): void {
-    this.nodeMax.next(state);
+  subscribe(type?: string): Observable<ExternalEvent> {
+    return this.flowService.subscribe(this.id, type).pipe(
+      filter((data: ExternalEvent) => data.nodeId === this.id && (!type || type === data.type))
+    );
+  }
+
+  unsubscribe(type?: string): void {
+    this.flowService.unsubscribe(this.id, type);
+  }
+
+  setMaxSize(isMax: boolean): void {
+    this.nodeMax.next(isMax);
   }
 
   nodeIsClicked(e: PointerEvent): void {
     this.nodeClicked.next(e);
-  }
-
-  blurNode(): void {
-    this.nodeBlur.next();
   }
 
   setState(state: XxlFlowUnitState): void {
@@ -40,9 +44,6 @@ export class XxlFlowUnitService {
 
   get id(): number {
     return this.state.id!;
-  }
-
-  rebuild(): void {
   }
 
   calibrate(): void {
@@ -84,14 +85,6 @@ export class XxlFlowUnitService {
     this.updateConnections();
   }
 
-  requireBlur(cb: () => void): void {
-    this.flowService.blurForUnit(cb);
-  }
-
-  removeBlur(): void {
-    this.flowService.removeBlurForUnit();
-  }
-
   deleteSelf(): void {
     this.flowService.delete(this.state);
   }
@@ -125,20 +118,4 @@ export class XxlFlowUnitService {
   removeConnections(): void {
     delete this.connections;
   }
-  //
-  // isMaxSize(): boolean {
-  //   return this.maxSize;
-  // }
-
-  // setMaxSize(state: boolean): void {
-  //   this.maxSize = state;
-  // }
-
-  // changeActivity(state: boolean): void {
-  //   this.activeSubject.next(state);
-  // }
-
-  // getActiveStream(): Observable<boolean> {
-  //   return this.active$;
-  // }
 }

@@ -7,7 +7,7 @@
     (lineClick)="removeConnection($event)"></xxl-connection-lines>
 
   <ng-container *ngFor="let child of state.children; index as i">
-    <xxl-flow-unit #node
+    <fb-node #node
                class="block"
                xxlMovable
                [(position)]="child.position"
@@ -16,7 +16,8 @@
                (dragEnd)="onDragEnd($event, child)"
                [scope]="state.id"
                [state]="child"
-               (noDrag)="entryClicked(i)">
-    </xxl-flow-unit>
+               (noDrag)="entryClicked(i)"
+               [class.is-moving]="movingNode === child.id">
+    </fb-node>
   </ng-container>
 </article>

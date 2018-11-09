@@ -7,7 +7,7 @@
       "root": "",
       "sourceRoot": "src",
       "projectType": "application",
-      "prefix": "fb",
+      "prefix": "xxl",
       "schematics": {},
       "architect": {
         "build": {
@@ -128,7 +128,7 @@
       "root": "projects/flow-based",
       "sourceRoot": "projects/flow-based/src",
       "projectType": "library",
-      "prefix": "xxl",
+      "prefix": "fb",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-ng-packagr:build",

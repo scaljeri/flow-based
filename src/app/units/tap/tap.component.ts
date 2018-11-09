@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, Host, HostBinding, OnInit } from '@angular/core';
 import { XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { TapWorker } from '../../workers/tap';
 import { filter } from 'rxjs/operators';
 
@@ -21,7 +21,7 @@ export class TapComponent implements OnInit {
   lastClicked: number;
 
   constructor(private cdr: ChangeDetectorRef,
-              @Host() private service: XxlFlowUnitService) {
+              @Host() private service: NodeService) {
     this.sockets = this.getSockets();
   }
 

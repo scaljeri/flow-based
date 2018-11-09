@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { filter } from 'rxjs/operators';
 
@@ -24,12 +24,13 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
-              @Host() private service: XxlFlowUnitService) {
+              @Host() private service: NodeService) {
     this.state = service.state;
   }
 
   ngOnInit() {
     this.worker = this.service.worker as MergeStreamsWorker;
+
     this.worker.getStream().subscribe(value => {
       this.value = value.toFixed(3);
       this.cdr.detectChanges();
@@ -40,6 +41,16 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
       this.cdr.detectChanges();
     });
 
+    // Listen for maxSize events
+    this.service.nodeMax$.subscribe(isMax => {
+      this.isActive = isMax;
+
+      if (!this.service.connections) {
+        this.setActive(this.isActive);
+      }
+    });
+
+    // Listen for click events
     this.service.nodeClicked$.pipe(
       filter(e => !(e.target as HTMLElement).closest('button'))
     ).subscribe((e) => {
@@ -50,22 +61,18 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
         this.isActive = true;
       }
 
-      this.service.setMaxState(this.isActive);
-
-     // setTimeout(() => {
-        this.setActive(this.isActive);
-    //  });
+      this.service.setMaxSize(this.isActive);
     });
   }
 
   ready(): void {
-
+    // TODO
   }
 
   setActive(state: boolean): void {
-    this.isActive = state;
-
     if (state) {
+      this.service.removeConnections();
+
       setTimeout(() => {
         this.inputs.forEach((s, i) => {
           const socketId = s.nativeElement.dataset.socketId;
@@ -88,11 +95,8 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
   }
 
   onClose(): void {
-    this.service.closeSelf();
-  }
-
-  get title(): string | null | undefined {
-    return this.worker ? this.worker.title : null;
+    this.service.setMaxSize(false);
+    this.isActive = false;
   }
 
   ngAfterViewInit(): void {
@@ -114,5 +118,9 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
         type: 'out',
         format: 'number'
       }];
+  }
+
+  get title(): string | null | undefined {
+    return this.worker ? this.worker.title : null;
   }
 }

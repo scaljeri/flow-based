@@ -128,6 +128,42 @@ export const basic =
           "x": 81.16414388020833,
           "y": 18.74961054336989
         }
+      },
+      {
+        "type": "flow",
+        "title": "Composite Unit",
+        "id": 1541528834931,
+        "config": {},
+        "children": [
+          {
+            "type": "tap",
+            "title": "Tap",
+            "id": 1541529203900,
+            "config": {
+              "expanded": false
+            },
+            "sockets": [
+              {
+                "type": "in",
+                "id": 1541529203901
+              },
+              {
+                "type": "out",
+                "id": 1541529203902
+              }
+            ],
+            "position": {
+              "x": 31.70791754201681,
+              "y": 43.26655712841254
+            }
+          }
+        ],
+        "connections": [],
+        "sockets": [],
+        "position": {
+          "x": 17.479654947916664,
+          "y": 19.910191301096717
+        }
       }
     ],
     "connections": [

@@ -2,10 +2,10 @@ import { AfterViewInit, Component, ElementRef, HostBinding, Inject, OnInit, Quer
 import { FormBuilder } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { XxlSocket } from '../../../../../projects/flow-based/src/lib/flow-based';
-import { XxlFlowUnitService } from '../../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../../projects/flow-based/src/lib/node/node-service';
 
 export interface EditSocket {
-  service: XxlFlowUnitService;
+  service: NodeService;
   sockets: XxlSocket[];
 }
 

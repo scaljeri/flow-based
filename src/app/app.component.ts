@@ -78,7 +78,7 @@ export class AppComponent implements OnInit {
 
       this.activeOverlay = null;
     } else {
-      this.xxlService.blur();
+      this.xxlService.triggerEvent('blur');
     }
   }
 }

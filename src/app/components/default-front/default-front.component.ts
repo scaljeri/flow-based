@@ -1,5 +1,5 @@
 import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 
 @Component({
   selector: 'fb-default-front',
@@ -10,7 +10,7 @@ export class DefaultFrontComponent implements OnInit {
   @Input() title: string;
   @ViewChild('img') ref: ElementRef;
 
-  constructor(private fbService: XxlFlowUnitService) {}
+  constructor(private fbService: NodeService) {}
 
   ngOnInit(): void {
     this.ref.nativeElement.addEventListener('load', () => {
