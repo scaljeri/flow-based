@@ -16,19 +16,12 @@ export interface FbKeyValues<T> {
 
 export interface FbNodeType {
   component: Type<any>;
-  config?: any;
-  isFlow?: boolean;
-  title?: string;
+  settings?: { config: any, title: string, sockets: XxlSocket[], isFlow: boolean };
   type: string;
   worker: FbNodeWorker;
 }
 
 export type FbNodeTypes = FbKeyValues<FbNodeType>;
-
-export interface FbNode {
-  getSockets(): XxlSocket[];
-  setActive(boolean): void;
-}
 
 export interface FbNodeHelpers {
   resetSockets(node: FbNodeState): void;
@@ -100,7 +93,7 @@ export interface XxlSocket {
   description?: string,
 }
 
-export interface XxlSocketEvent extends XxlSocket {
+export interface XxlSocketEvent {
   socket: XxlSocket;
   parentId: number;
   scope: number;

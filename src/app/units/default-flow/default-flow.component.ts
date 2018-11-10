@@ -1,18 +1,20 @@
-import { Component, Host, HostBinding, Input, OnInit } from '@angular/core';
+import { Component, Host, HostBinding, Input, OnDestroy, OnInit } from '@angular/core';
 import { XxlSocket } from 'projects/flow-based/src/lib/flow-based';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { MatDialog } from '@angular/material';
 import { AddSocketComponent, DialogAction } from './add-socket/add-socket.component';
 import { EditSocketComponent } from './edit-socket/edit-socket.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'fb-default-flow',
   templateUrl: './default-flow.component.html',
   styleUrls: ['./default-flow.component.scss']
 })
-export class DefaultFlowComponent implements OnInit {
+export class DefaultFlowComponent implements OnInit, OnDestroy {
   @Input() title: string;
   private worker: any;
+  private subscriptions: Subscription[] = [];
 
   @HostBinding('class.is-active') isActive = false;
 
@@ -23,13 +25,18 @@ export class DefaultFlowComponent implements OnInit {
   ngOnInit() {
     this.worker = this.service.worker;
 
-    this.service.nodeClicked$.subscribe(() => {
+    this.subscriptions.push(this.service.nodeClicked$.subscribe(() => {
       this.isActive = true;
-    });
-    //
-    // this.service.nodeBlur$.subscribe(() => {
-    //   this.isActive = false;
-    // });
+    }));
+
+    this.subscriptions.push(this.service.subscribe('blur').subscribe(() => {
+      this.isActive = false;
+      this.service.unsubscribe('blur');
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(s => s.unsubscribe());
   }
 
   getSockets(): XxlSocket[] {

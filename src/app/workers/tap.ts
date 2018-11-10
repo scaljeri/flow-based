@@ -1,8 +1,17 @@
-import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
-export const TAP_CONFIG = {
-  expanded: false
+export const TAP_SETTINGS = {
+  title: 'Tap',
+  config: {expanded: false},
+  sockets: [
+    {
+      type: 'in',
+    },
+    {
+      type: 'out'
+    }
+  ]
 };
 
 export class TapWorker implements FbNodeWorker {
@@ -14,7 +23,7 @@ export class TapWorker implements FbNodeWorker {
   public currentValue: any;
   public count = 0;
 
-  constructor(private state?: XxlFlowUnitState) {
+  constructor() {
   }
 
   destroy(): void {

@@ -15,11 +15,6 @@ interface Node {
   parentId: number | null;
 }
 
-interface Socket {
-  state: XxlSocket;
-  nodeId: Number;
-}
-
 export class Flow {
   private workers: FbKeyValues<FbNodeWorker> = {};
   private state: FbNodeState;
@@ -143,6 +138,7 @@ export class Flow {
     this.createWorker(nodeState);
     flowState.children = [...flowState.children!, nodeState];
     this.nodes[nodeState.id!] = {state: nodeState, parentId: flowState.id!};
+    (nodeState.sockets || []).forEach(s => this.addSocket(s.id!, nodeState.id!));
   }
 
   removeNode(id: number): void {
@@ -180,7 +176,9 @@ export class Flow {
   private createVirtualFlow(nodes: FbNodeState[], parentId: number) {
     nodes.forEach(node => {
       this.nodes[node.id!] = {state: node, parentId};
-      node.sockets!.forEach(s => this.sockets[s.id!] = node.id!);
+      if (node.sockets) {
+        node.sockets.forEach(s => this.sockets[s.id!] = node.id!);
+      }
 
       this.createWorker(node);
       if (node.connections) {

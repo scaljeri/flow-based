@@ -10,8 +10,8 @@ import {
   SimpleChanges, ViewChild, ViewChildren,
 } from '@angular/core';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
-import { XxlFlowBasedService } from '../flow-based.service';
-import { FbNode, XxlSocket, FbNodeState } from '../flow-based';
+import { FlowBasedService } from '../flow-based.service';
+import { XxlSocket, FbNodeState } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { NodeService } from './node-service';
 import { SocketService } from '../socket.service';
@@ -43,17 +43,19 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
   @Output() updated = new EventEmitter<void>();
-  @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<FbNode>;
+  @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<any>;
   @ViewChild('flow') flow: FlowBasedComponent;
   @ViewChildren(SocketComponent) sockRefs: QueryList<SocketComponent>;
 
   private observer;
   private escSubscription: Subscription;
+  private fullSizeSubscription: Subscription | null;
+  private subs: Subscription[] = [];
 
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
               private cdr: ChangeDetectorRef,
-              private flowService: XxlFlowBasedService,
+              private flowService: FlowBasedService,
               public service: NodeService,
               public socketService: SocketService,
               private movable: MovableDirective) {
@@ -62,12 +64,12 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
   ngOnInit(): void {
     this.service.setState(this.state);
 
-    this.movable.positionChange.subscribe(() => {
+    this.subs.push(this.movable.positionChange.subscribe(() => {
       this.socketService.clearPosition(this.id);
-      this.flowService.nodeMoved();
-    });
+      this.flowService.nodeMoved(this.id);
+    }));
 
-    this.service.nodeMax$.subscribe((isFullSize: boolean) => {
+    this.subs.push(this.service.nodeMax$.subscribe((isFullSize: boolean) => {
       this.isFullSize = isFullSize;
 
       if (isFullSize) {
@@ -76,18 +78,13 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
             this.service.setMaxSize(false);
             this.escSubscription.unsubscribe();
           });
-      } else {
-        setTimeout(() => {
-          this.cdr.detectChanges();
-        });
-      }
-    });
 
-    // this.socketService.socketClicked$.subscribe((e) => {
-    //   if (!e) {
-    //     this.cdr.detectChanges();
-    //   }
-    // });
+        this.flowService.nodeMoved(this.id);
+      } else {
+        // this.socketService.clearPosition(this.id);
+        this.flowService.nodeMoved(this.id);
+      }
+    }));
 
     this.observer = new window.ResizeObserver(() => {
       // TODO
@@ -97,46 +94,25 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
     this.observer.observe(this.element.nativeElement);
 
     if (this.isFlow()) {
-      // this.flowService.requireNodeBlur(() => {
-      //   debugger;
-      // });
-
-      this.service.nodeClicked$.subscribe(() => {
+      this.subs.push(this.service.nodeClicked$.subscribe(() => {
         this.isFullSize = true;
-        // this.flowService.setNodeBlur(() => {
-        //   this.isFullSize = false;
-        //   this.flowService.removeNodeBlur();
-        // });
-      });
+
+        this.fullSizeSubscription = this.service.subscribe('blur').subscribe(() => {
+          this.isFullSize = false;
+          this.service.unsubscribe('blur'); // release blur
+          this.fullSizeSubscription!.unsubscribe();
+          this.fullSizeSubscription = null;
+
+          setTimeout(() => {
+            this.socketService.clearPosition();
+          });
+        });
+
+        setTimeout(() => {
+          this.service.refresh();
+        });
+      }));
     }
-
-    // this.service.nodeBlur$.subscribe(() => {
-    //   this.isFullSize = false;
-    //
-    //   setTimeout(() => {
-    //     this.cdr.detectChanges();
-    //   });
-    // });
-
-    // this.connectionService.new$.subscribe(cd => {
-    //   let localSocket, remoteSocket;
-    //
-    //   if (cd.connection.from === this.id) {
-    //     localSocket = cd.sockets[cd.connection.out];
-    //     remoteSocket = cd.sockets[cd.connection.in];
-    //   } else if (cd.connection.to === this.id) {
-    //     localSocket = cd.sockets[cd.connection.in];
-    //     remoteSocket = cd.sockets[cd.connection.out];
-    //   } else {
-    //     return;
-    //   }
-    //
-    //   if (this.isFlow()) {
-    //     // this.flow.initConnections();
-    //   } else {
-    //     // this.ref.instance.connected(localSocket, remoteSocket, this.state.sockets);
-    //   }
-    // });
   }
 
   @HostListener('noDrag', ['$event'])
@@ -153,18 +129,18 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
   }
 
   ngAfterViewInit(): void {
-    if (!this.state.sockets) {
-      this.state.sockets = this.ref.instance.getSockets().reduce((out: XxlSocket[], socket) => {
-        out.push({...socket, id: this.flowService.getUniqueId()});
+    // if (!this.state.sockets) {
+    //   this.state.sockets = this.ref.instance.getSockets().reduce((out: XxlSocket[], socket) => {
+    //     out.push({...socket, id: this.flowService.getUniqueId()});
+    //
+    //     return out;
+    //   }, []);
+    // }
 
-        return out;
-      }, []);
-    }
-
-    this.cdr.detectChanges();
+    // this.cdr.detectChanges();
 
     this.sockRefs.changes.subscribe(() => {
-      this.flowService.socketAdded();
+      this.service.calibrate();
     });
 
     // TODO
@@ -177,20 +153,25 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
 
   ngOnDestroy(): void {
     // this.flowService.flow.removeNode(this.id);
+    if (this.fullSizeSubscription) {
+      this.fullSizeSubscription.unsubscribe();
+    }
+
+    this.subs.forEach(s => s.unsubscribe());
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     const {active} = changes;
 
-    if (this.ref.instance) {
-      // this.ref.instance.setActive(active.currentValue);
-      // this.service.changeActivity(active.currentValue);
-
-      this.socketService.clearPosition(this.id);
-      setTimeout(() => {
-        // this.cdr.detectChanges();
-      });
-    }
+    // if (this.ref.instance) {
+    //   // this.ref.instance.setActive(active.currentValue);
+    //   // this.service.changeActivity(active.currentValue);
+    //
+    //   this.socketService.clearPosition(this.id);
+    //   setTimeout(() => {
+    //     // this.cdr.detectChanges();
+    //   });
+    // }
   }
 
   get sockets(): XxlSocket[] {

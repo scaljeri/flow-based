@@ -2,8 +2,24 @@ import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker }
 import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
-export const STATS_CONFIG = {
-  columnWidth: 1
+export const STATS_SETTINGS = {
+  title: 'Statistics',
+  config: { columnWidth: 1 },
+  sockets: [
+    {
+      type: 'in',
+      format: 'number'
+    },
+    {
+      type: 'out',
+      name: 'Min value',
+      format: 'number'
+    },
+    {
+      type: 'out',
+      name: 'Max value',
+      format: 'number'
+    }]
 };
 
 export class StatsWorker implements FbNodeWorker {

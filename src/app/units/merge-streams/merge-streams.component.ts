@@ -1,23 +1,36 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  Host,
+  OnDestroy,
+  OnInit,
+  QueryList,
+  ViewChild,
+  ViewChildren
+} from '@angular/core';
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'fb-merge-streams',
   templateUrl: './merge-streams.component.html',
   styleUrls: ['./merge-streams.component.scss']
 })
-export class MergeStreamsComponent implements OnInit, AfterViewInit {
+export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
   state: XxlFlowUnitState;
   worker: MergeStreamsWorker;
   isActive = false;
   values;
   value;
-  streamValues;
+  streamValues = {};
   lastClicked;
+  private subscriptions: Subscription[] = [];
 
   @ViewChild('output', {read: ElementRef}) output: ElementRef;
   @ViewChildren('inputs', {read: ElementRef}) inputs: QueryList<ElementRef>;
@@ -31,27 +44,38 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.worker = this.service.worker as MergeStreamsWorker;
 
-    this.worker.getStream().subscribe(value => {
+    this.subscriptions.push(this.worker.getStream().subscribe(value => {
       this.value = value.toFixed(3);
       this.cdr.detectChanges();
-    });
+    }));
 
-    this.worker.getValues().subscribe(values => {
+    this.subscriptions.push(this.worker.getValues().subscribe(values => {
+      if (this.isActive) {
+        if (Object.keys(this.streamValues).length === 0) {
+          this.streamValues = values;
+          this.setActive(true);
+        }
+      }
+
       this.streamValues = values;
+
       this.cdr.detectChanges();
-    });
+    }));
 
     // Listen for maxSize events
-    this.service.nodeMax$.subscribe(isMax => {
+    this.subscriptions.push(this.service.nodeMax$.subscribe(isMax => {
       this.isActive = isMax;
 
       if (!this.service.connections) {
         this.setActive(this.isActive);
+      } else if (!isMax) {
+        this.service.removeConnections();
+        this.service.calibrate();
       }
-    });
+    }));
 
     // Listen for click events
-    this.service.nodeClicked$.pipe(
+    this.subscriptions.push(this.service.nodeClicked$.pipe(
       filter(e => !(e.target as HTMLElement).closest('button'))
     ).subscribe((e) => {
       if (this.isActive) {
@@ -61,8 +85,13 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
         this.isActive = true;
       }
 
+      this.service.removeConnections();
       this.service.setMaxSize(this.isActive);
-    });
+    }));
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(s => s.unsubscribe());
   }
 
   ready(): void {
@@ -71,7 +100,6 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
 
   setActive(state: boolean): void {
     if (state) {
-      this.service.removeConnections();
 
       setTimeout(() => {
         this.inputs.forEach((s, i) => {
@@ -102,22 +130,6 @@ export class MergeStreamsComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.inputs.changes.subscribe(() => {
     });
-  }
-
-  getSockets(): XxlSocket[] {
-    return [
-      {
-        type: 'in',
-        format: 'number'
-      },
-      {
-        type: 'in',
-        format: 'number'
-      },
-      {
-        type: 'out',
-        format: 'number'
-      }];
   }
 
   get title(): string | null | undefined {

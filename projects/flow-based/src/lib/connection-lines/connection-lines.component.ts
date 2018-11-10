@@ -7,7 +7,7 @@ import {
   Input,
   OnChanges,
   OnInit,
-  Output
+  Output, SimpleChanges
 } from '@angular/core';
 import { XxlConnection, XxlPosition } from '../flow-based';
 import * as bezier from './bezier';
@@ -45,21 +45,17 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   }
 
   ngOnInit() {
-    // this.socketService.movement.subscribe(fromTo => {
-    // });
-
-    // this.updates.subscribe((unitId: string) => {
-    //   console.log('update it', this.socketService.units[unitId]);
-    //
-    // });
+    this.rect = this.element.nativeElement.getBoundingClientRect();
   }
 
-  ngOnChanges(): void {
-    this.rect = this.element.nativeElement.getBoundingClientRect();
-    this.controlPoints = [];
-
-    if (!this.to && !this.from) {
-      this.pointer = null;
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes.connection) {
+      this.rect = this.element.nativeElement.getBoundingClientRect();
+      this.controlPoints = [];
+    } else {
+      if (!this.to && !this.from) {
+        this.pointer = null;
+      }
     }
   }
 

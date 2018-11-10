@@ -1,6 +1,6 @@
 import {
   AfterViewInit,
-  ChangeDetectionStrategy, ChangeDetectorRef,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   EventEmitter,
@@ -52,12 +52,11 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   }
 
   constructor(public element: ElementRef,
-              private cdr: ChangeDetectorRef,
               private nodeService: NodeService,
               private service: SocketService) {
   }
 
-  reset(): void {
+  resetPosition(): void {
     this._position = null;
   }
 
@@ -100,18 +99,8 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
       event,
       socket: Object.assign({}, this.state, {type: this.getType()}),
       scope: this.scope,
-      parentId: this.nodeService.id
-    } as XxlSocketEvent);
-  }
+      parentId: this.nodeService.id});
 
-  activate(): SocketComponent {
-    this.active = true;
-
-    return this;
-  }
-
-  deactivate(): void {
-    this.active = false;
   }
 
   get id(): number {

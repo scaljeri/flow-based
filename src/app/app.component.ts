@@ -1,6 +1,6 @@
 import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
-import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
+import { FlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
 import * as data from './fixtures';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
@@ -30,14 +30,14 @@ export class AppComponent implements OnInit {
   @ViewChild('bg') bgImage: ElementRef;
 
   constructor(private selectionService: ComponentSelectionService,
-              private xxlService: XxlFlowBasedService,
+              private flowService: FlowBasedService,
               private overlay: Overlay) {
   }
 
   ngOnInit(): void {
     this.selectionService.selection$.subscribe(type => {
       this.activeOverlay!.dispose();
-      this.xxlService.add(type);
+      this.flowService.add(type);
     });
   }
 
@@ -65,6 +65,10 @@ export class AppComponent implements OnInit {
     });
   }
 
+  showJSON(): void {
+    this.showJson = !this.showJson;
+  }
+
   onUpdate(): void {
     console.log('updated');
   }
@@ -78,7 +82,7 @@ export class AppComponent implements OnInit {
 
       this.activeOverlay = null;
     } else {
-      this.xxlService.triggerEvent('blur');
+      this.flowService.triggerEvent('blur');
     }
   }
 }

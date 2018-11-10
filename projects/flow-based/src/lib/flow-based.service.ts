@@ -5,11 +5,13 @@ import {
   XxlConnection,
   FbNodeType,
   XxlFlowUnitState,
-  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState, XxlSocket
+  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState, XxlSocket, ConnectionDetails, XxlSocketEvent
 } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 import { Flow } from './utils/flow';
 import { Observable, Subject } from 'rxjs';
+import { SocketService } from './socket.service';
+import { deepClone } from './utils/deep-clone';
 
 let uniqueId = Date.now();
 
@@ -22,7 +24,7 @@ export interface ExternalEvent {
 @Injectable({
   providedIn: 'root'
 })
-export class XxlFlowBasedService {
+export class FlowBasedService {
   private flowStack: FlowBasedComponent[] = [];
   public flow: Flow;
   private state: FbNodeState;
@@ -31,37 +33,34 @@ export class XxlFlowBasedService {
   private externalEventSubject = new Subject<ExternalEvent>();
   private nodeListeners: number[] = [];
 
-  constructor(@Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
+  constructor(private socketService: SocketService,
+              @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
   }
 
-  socketAdded(): void {
-    this.currentFlow.updateConnections();
+  nodeMoved(id: number): void {
+    this.socketService.clearPosition(id);
+    this.currentFlow.repaintConnections();
   }
 
-  nodeMoved(): void {
-    this.currentFlow.rerender();
-  }
-
-  // addSocket(id: number, socket: SocketDetails): void {
-  //   alert('x');
-  //   this.sockets[id] = socket;
-  // }
+  // getSockets(scope?: number): SocketDetails[] {
+  //   return Object.keys(this.sockets).filter(k => !scope || this.sockets[k].scope === scope)
+  //     .reduce((o: SocketDetails[], k) => {
+  //       o.push(this.sockets![k]);
   //
-  // getSocket(id: number): SocketDetails {
-  //   return this.sockets[id];
+  //       return o;
+  //     }, []);
   // }
 
-  getSockets(scope?: number): SocketDetails[] {
-    return Object.keys(this.sockets).filter(k => !scope || this.sockets[k].scope === scope)
-      .reduce((o: SocketDetails[], k) => {
-        o.push(this.sockets![k]);
-
-        return o;
-      }, []);
+  nodeClicked(nodeState): void {
+    this.state.children = [...this.state.children!.filter(node => node.id !== nodeState.id), nodeState];
   }
 
   addConnection(connection: XxlConnection): void {
+    if (!connection.id) {
+      connection.id = this.getUniqueId();
+    }
+
     this.flow.addConnection(this.currentFlow.state, connection);
   }
 
@@ -88,6 +87,7 @@ export class XxlFlowBasedService {
   }
 
   initialize(): void {
+    this.socketService.reset();
     this.flow = new Flow(this.flowTypes, this.helpers).initialize(this.state);
   }
 
@@ -96,26 +96,40 @@ export class XxlFlowBasedService {
   }
 
   add(flowType: string): XxlFlowUnitState {
+    const {settings} = this.flowTypes[flowType];
+
     const state = {
       type: flowType,
-      title: this.flowTypes[flowType].title,
+      title: settings.title,
       id: this.getUniqueId(),
-      config: this.flowTypes[flowType].config || {},
-      ...(this.flowTypes[flowType].isFlow ? {children: [], connections: []} : {})
+      config: deepClone(settings.config),
+      sockets: this.prepareSockets(settings.sockets),
+      ...(settings.isFlow ? {children: [], connections: []} : {})
     };
 
-    // this.flow.createWorker(state);
-
-    // this.currentFlow.add(state);
     this.flow.addNode(state, this.currentFlow.state);
     this.currentFlow.nodeAdded(state);
 
     return state;
   }
 
+  prepareSockets(sockets: XxlSocket[]): XxlSocket[] {
+    return sockets.map(s => {
+      return Object.assign({id: this.getUniqueId()}, s);
+    });
+  }
+
   // Flow stuff
   activateFlow(flow: FlowBasedComponent): void {
     this.flowStack.unshift(flow);
+    if (this.parentFlow) {
+      this.parentFlow.repaint();
+    }
+  }
+
+  deactivateFlow(): void {
+    this.currentFlow.deactivate();
+    this.flowStack.shift();
   }
 
   triggerEvent(type, payload?: any): void {
@@ -132,7 +146,10 @@ export class XxlFlowBasedService {
   }
 
   unsubscribe(id, type?: string): void {
-    this.nodeListeners.splice(this.nodeListeners[type || '__default__'].indexOf(id), 1);
+    const listeners = this.nodeListeners[type || '__default__'];
+    if (listeners) {
+      listeners.splice(listeners.indexOf(id), 1);
+    }
   }
 
   close(state: XxlFlowUnitState): void {
@@ -152,7 +169,9 @@ export class XxlFlowBasedService {
   // }
 
   delete(state: FbNodeState): void {
+    debugger;
     this.flow.removeNode(state.id!);
+    this.currentFlow.updateChildren();
     //
     // let flow = parentState || this.currentFlow.state,
     //   index = flow.children!.indexOf(state);

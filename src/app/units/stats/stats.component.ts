@@ -1,8 +1,8 @@
-import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { StatsWorker } from '../../workers/stats';
-import { FbNode, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { GoogleCharts } from 'google-charts';
 
 @Component({
@@ -10,7 +10,7 @@ import { GoogleCharts } from 'google-charts';
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.scss']
 })
-export class StatsComponent implements FbNode, OnInit {
+export class StatsComponent implements OnInit, OnDestroy {
   public worker: StatsWorker;
   private state: XxlFlowUnitState;
   data: number[][] = [];
@@ -65,22 +65,8 @@ export class StatsComponent implements FbNode, OnInit {
     });
   }
 
-  getSockets(): XxlSocket[] {
-    return [
-      {
-        type: 'in',
-        format: 'number'
-      },
-      {
-        type: 'out',
-        name: 'Min value',
-        format: 'number'
-      },
-      {
-        type: 'out',
-        name: 'Max value',
-        format: 'number'
-      }];
+  ngOnDestroy(): void {
+    this.cdr.detach();
   }
 
   setActive(isActive: boolean): void {

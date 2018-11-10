@@ -2,7 +2,23 @@ import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker }
 import { Observable, ReplaySubject, Subject, Subscription, zip } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-export const MERGE_STREAMS_CONFIG = {};
+export const MERGE_STREAMS_SETTINGS = {
+  title: 'Merge streams',
+  sockets: [
+    {
+      type: 'in',
+      format: 'number'
+    },
+    {
+      type: 'in',
+      format: 'number'
+    },
+    {
+      type: 'out',
+      format: 'number'
+    }
+  ]
+};
 
 export class MergeStreamsWorker implements FbNodeWorker {
   private subscription: Subscription;
@@ -63,12 +79,12 @@ export class MergeStreamsWorker implements FbNodeWorker {
 
         const vals = values.reduce((o: any, v) => {
           const id = v.connection.in!;
-         if (!o[id])  {
-           o[id] = [];
-         }
+          if (!o[id]) {
+            o[id] = [];
+          }
 
-         o[id].push(v.value);
-         return o;
+          o[id].push(v.value);
+          return o;
         }, {});
         this.valuesSubject.next(vals);
 

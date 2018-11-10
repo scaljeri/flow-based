@@ -7,14 +7,16 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss']
 })
-export class RandomNumbersComponent implements OnInit {
+export class RandomNumbersComponent implements OnInit, OnDestroy {
   worker: RandomNumbersWorker;
+  private subscriptions: Subscription[] = [];
   configForm: FormGroup;
   isActive = false;
   state: XxlFlowUnitState;
@@ -38,7 +40,7 @@ export class RandomNumbersComponent implements OnInit {
     });
 
 
-    this.configForm.valueChanges.subscribe(form => {
+    this.subscriptions.push(this.configForm.valueChanges.subscribe(form => {
       if (form.startValue > this.configForm.controls.endValue.value) {
         this.configForm.controls.endValue.setValue(form.startValue, {onlySelf: true, emitEvent: true});
       }
@@ -49,14 +51,14 @@ export class RandomNumbersComponent implements OnInit {
         this.worker.interval = form.intervalValue;
         this.worker.integer = form.integersOnlyValue;
       });
-    });
+    }));
 
-    this.worker.getStream().subscribe(value => {
+    this.subscriptions.push(this.worker.getStream().subscribe(value => {
       this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
       this.cdr.markForCheck();
-    });
+    }));
 
-    this.service.nodeClicked$.pipe(
+    this.subscriptions.push(this.service.nodeClicked$.pipe(
       filter(e => !(e.target as HTMLElement).closest('button'))
     ).subscribe((e) => {
       if (this.isActive) {
@@ -65,22 +67,17 @@ export class RandomNumbersComponent implements OnInit {
       } else {
         this.isActive = true;
       }
-    });
+    }));
 
     this.isActive = this.service.state.config.expanded;
   }
 
-  get title(): string | undefined {
-    return this.state.title;
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(s => s.unsubscribe());
   }
 
-  getSockets(): XxlSocket[] {
-    return [
-      {
-        type: 'out',
-        format: 'number'
-      }
-    ];
+  get title(): string | undefined {
+    return this.state.title;
   }
 
   onDelete(): void {

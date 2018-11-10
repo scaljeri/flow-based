@@ -1,9 +1,13 @@
 import { Injectable } from '@angular/core';
-import { ExternalEvent, XxlFlowBasedService } from '../flow-based.service';
+import { ExternalEvent, FlowBasedService } from '../flow-based.service';
 import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { SocketService } from '../socket.service';
 import { Observable, Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
+
+/*
+Primary service for custom nodes to communicate with the framework
+ */
 
 @Injectable()
 export class NodeService {
@@ -16,7 +20,7 @@ export class NodeService {
   private nodeClicked = new Subject<PointerEvent>();
   public nodeClicked$ = this.nodeClicked.asObservable();
 
-  constructor(public flowService: XxlFlowBasedService,
+  constructor(public flowService: FlowBasedService,
               private socketService: SocketService) {
   }
 
@@ -36,6 +40,7 @@ export class NodeService {
 
   nodeIsClicked(e: PointerEvent): void {
     this.nodeClicked.next(e);
+    this.flowService.nodeClicked(this.state);
   }
 
   setState(state: XxlFlowUnitState): void {
@@ -47,7 +52,9 @@ export class NodeService {
   }
 
   calibrate(): void {
-    this.flowService.socketAdded();
+    setTimeout(() => {
+      this.flowService.nodeMoved(this.id);
+    });
   }
 
   addSocket(socket: XxlSocket): void {
@@ -59,7 +66,7 @@ export class NodeService {
     this.flowService.flow.addSocket(socket.id!, this.id);
 
     setTimeout(() => {
-      this.flowService.currentFlow.updateConnections();
+      this.flowService.nodeMoved(this.id);
     });
   }
 
@@ -78,7 +85,7 @@ export class NodeService {
   socketRemoved(socket: XxlSocket): void {
     this.flowService.flow.removeSocket(socket);
 
-    this.flowService.parentFlow.updateConnections();
+    this.flowService.nodeMoved(this.id);
   }
 
   refresh(): void {
@@ -108,7 +115,9 @@ export class NodeService {
   }
 
   updateConnections(): void {
-    this.connections = [...this.connections];
+    if (this.connections) {
+      this.connections = [...this.connections];
+    }
   }
 
   removeConnection(id: number): void {

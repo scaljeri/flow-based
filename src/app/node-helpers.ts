@@ -1,6 +1,6 @@
 import { FbNodeState, XxlSocket } from '../../projects/flow-based/src/lib/flow-based';
 
-// Only reset socket which do not have initially a format
+// Only resetPosition socket which do not have initially a format
 export const NODE_HELPERS = {
   resetSockets(node: FbNodeState) {
     if (node.type === 'tap') {
