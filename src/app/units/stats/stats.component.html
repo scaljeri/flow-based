@@ -50,7 +50,7 @@
         <div #distribution></div>
         <div class="column-width">
           <span>Column width: </span>
-          <mat-slider min="0" max="10" step=".1" [(ngModel)]="worker.columnWidth"></mat-slider>
+          <mat-slider class="fb-drag-ignore" min="0" max="10" step=".1" [(ngModel)]="worker.columnWidth"></mat-slider>
           <span>{{worker.columnWidth}}</span>
         </div>
       </mat-card-content>
