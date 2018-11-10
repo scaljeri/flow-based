@@ -12,7 +12,6 @@ import {
   XxlFlowUnitState, XxlConnection, XxlSocketEvent, FbNodeState
 } from './flow-based';
 import { FlowBasedService } from './flow-based.service';
-import { NodeComponent } from './node/node.component';
 import { SocketService } from './socket.service';
 import { filter } from 'rxjs/operators';
 import { NodeService } from './node/node-service';
@@ -33,7 +32,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
-  @ViewChildren('node') nodes: QueryList<NodeComponent>;
 
   private subscription: Subscription;
 

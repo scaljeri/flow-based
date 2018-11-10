@@ -16,7 +16,6 @@ import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { NodeService } from './node-service';
 import { SocketService } from '../socket.service';
 import { SocketComponent } from '../socket/socket.component';
-import { FlowBasedComponent } from '../flow-based.component';
 import { Subscription } from 'rxjs';
 
 declare global {
@@ -44,7 +43,6 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
   @Output() socketClick = new EventEmitter<XxlSocket>();
   @Output() updated = new EventEmitter<void>();
   @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<any>;
-  @ViewChild('flow') flow: FlowBasedComponent;
   @ViewChildren(SocketComponent) sockRefs: QueryList<SocketComponent>;
 
   private observer;
