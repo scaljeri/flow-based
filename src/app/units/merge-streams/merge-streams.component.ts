@@ -81,12 +81,12 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.isActive) {
         this.isActive = Date.now() - (this.lastClicked || 0) > 300;
         this.lastClicked = Date.now();
+        this.service.setMaxSize(this.isActive);
       } else {
-        this.isActive = true;
+        this.service.removeConnections();
+        this.service.setMaxSize(true);
       }
 
-      this.service.removeConnections();
-      this.service.setMaxSize(this.isActive);
     }));
   }
 

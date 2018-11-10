@@ -4,6 +4,7 @@ import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-s
 import { StatsWorker } from '../../workers/stats';
 import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { GoogleCharts } from 'google-charts';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'fb-stats',
@@ -16,6 +17,7 @@ export class StatsComponent implements OnInit, OnDestroy {
   data: number[][] = [];
   private graphPlaceHolder: ElementRef;
   private chart;
+  private lastClicked;
 
   @ViewChild('distribution')
   set graph(element: ElementRef) {
@@ -63,6 +65,20 @@ export class StatsComponent implements OnInit, OnDestroy {
 
       this.cdr.detectChanges();
     });
+
+    this.service.nodeClicked$.pipe(
+      filter(e => !(e.target as HTMLElement).closest('button'))
+    ).subscribe((e) => {
+      if (this.isActive) {
+        this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
+        this.lastClicked = Date.now();
+      } else {
+        this.isActive = true;
+      }
+
+      this.service.calibrate();
+    });
+
   }
 
   ngOnDestroy(): void {

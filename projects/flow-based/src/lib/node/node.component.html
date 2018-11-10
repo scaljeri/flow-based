@@ -30,6 +30,6 @@
           class="socket"></xxl-socket>
   </section>
 
-  <input *ngIf="active" class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title">
-  <span class="title" *ngIf="!active">{{state.title}}</span>
+  <input *ngIf="isFullSize" class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title">
+  <span class="title" *ngIf="!isFullSize">{{state.title}}</span>
 </section>
