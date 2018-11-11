@@ -43,17 +43,14 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
     return [];
   }
 
-  socketClicked(socket: XxlSocket): void {
-    this.openDialog(socket);
-  }
-
   onDelete(): void {
     this.service.deleteSelf();
 
   }
 
   onClose(): void {
-    // TODO
+    this.service.setMaxSize(false);
+    this.isActive = false;
   }
 
   openDialog(socket: Partial<XxlSocket>): void {

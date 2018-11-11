@@ -113,7 +113,7 @@ export class FlowBasedService {
     return state;
   }
 
-  prepareSockets(sockets: XxlSocket[]): XxlSocket[] {
+  prepareSockets(sockets: XxlSocket[] = []): XxlSocket[] {
     return sockets.map(s => {
       return Object.assign({id: this.getUniqueId()}, s);
     });
