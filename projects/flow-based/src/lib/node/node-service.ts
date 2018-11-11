@@ -96,10 +96,6 @@ export class NodeService {
     this.flowService.delete(this.state);
   }
 
-  closeSelf(): void {
-    this.flowService.close(this.state);
-  }
-
   addConnection(from: HTMLElement, to: HTMLElement): number {
     const id = this.flowService.getUniqueId();
 

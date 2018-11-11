@@ -73,7 +73,7 @@ export class BasicGraphComponent implements OnInit {
   }
 
   onClose(): void {
-    this.service.closeSelf();
+    // TODO
   }
 
   connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {

@@ -3,57 +3,49 @@ export const basic =
     "id": 1,
     "children": [
       {
-        "type": "random-numbers",
-        "title": "Random number generator",
-        "id": 4,
+        "type": "tap",
+        "title": "Tap",
+        "id": 12,
         "config": {
-          "min": 0,
-          "max": 100,
-          "start": 0,
-          "end": 100,
-          "intervalMax": 10000,
-          "intervalMin": 100,
-          "interval": 100,
-          "integer": true,
-          "integers": true
+          "expanded": true
         },
         "sockets": [
           {
-            "id": 5,
+            "id": 13,
+            "type": "in",
+            "format": "number"
+          },
+          {
+            "id": 14,
             "type": "out",
             "format": "number"
           }
         ],
         "position": {
-          "x": 22.979532877604168,
-          "y": 43.92564494017946
+          "x": 22.509562174479175,
+          "y": 45.157885717846455
         }
       },
       {
-        "type": "random-numbers",
-        "title": "Random number generator",
-        "id": 2,
-        "config": {
-          "min": 0,
-          "max": 100,
-          "start": 0,
-          "end": 100,
-          "intervalMax": 10000,
-          "intervalMin": 100,
-          "interval": 100,
-          "integer": true,
-          "integers": true
-        },
+        "type": "basic-graph",
+        "title": "Basic Graph",
+        "id": 1541966393414,
+        "config": {},
         "sockets": [
           {
-            "id": 3,
+            "id": 1541966393415,
+            "type": "in",
+            "format": "number"
+          },
+          {
+            "id": 1541966393416,
             "type": "out",
             "format": "number"
           }
         ],
         "position": {
-          "x": 22.878824869791668,
-          "y": 23.05427467597209
+          "x": 57.669881184895836,
+          "y": 53.711521684945154
         }
       },
       {
@@ -79,32 +71,62 @@ export const basic =
           }
         ],
         "position": {
-          "x": 35.556844075520836,
-          "y": 33.32113035892323
+          "x": 12.86946614583333,
+          "y": 58.052794740777664
         }
       },
       {
-        "type": "tap",
-        "title": "Tap",
-        "id": 12,
+        "type": "random-numbers",
+        "title": "Random number generator",
+        "id": 4,
         "config": {
-          "expanded": false
+          "min": 0,
+          "max": 100,
+          "start": 0,
+          "end": 100,
+          "intervalMax": 10000,
+          "intervalMin": 100,
+          "interval": 100,
+          "integer": true,
+          "integers": true
         },
         "sockets": [
           {
-            "id": 13,
-            "type": "in",
-            "format": "number"
-          },
-          {
-            "id": 14,
+            "id": 5,
             "type": "out",
             "format": "number"
           }
         ],
         "position": {
-          "x": 47.76123046875,
-          "y": 35.619703389830505
+          "x": 3.468017578124999,
+          "y": 38.99317671984047
+        }
+      },
+      {
+        "type": "random-numbers",
+        "title": "Random number generator",
+        "id": 2,
+        "config": {
+          "min": 0,
+          "max": 100,
+          "start": 0,
+          "end": 100,
+          "intervalMax": 10000,
+          "intervalMin": 100,
+          "interval": 100,
+          "integer": true,
+          "integers": true
+        },
+        "sockets": [
+          {
+            "id": 3,
+            "type": "out",
+            "format": "number"
+          }
+        ],
+        "position": {
+          "x": 13.695068359375005,
+          "y": 30.90961490528415
         }
       },
       {
@@ -112,7 +134,8 @@ export const basic =
         "title": "Statistics",
         "id": 16,
         "config": {
-          "columnWidth": 1
+          "columnWidth": 1,
+          "expanded": true
         },
         "sockets": [
           {
@@ -134,12 +157,19 @@ export const basic =
           }
         ],
         "position": {
-          "x": 58.86311848958333,
-          "y": 34.1814400548355
+          "x": 49.069620768229164,
+          "y": 6.098501370887348
         }
       }
     ],
     "connections": [
+      {
+        "from": 12,
+        "out": 14,
+        "to": 1541966393414,
+        "in": 1541966393415,
+        "id": 1541966393417
+      },
       {
         "from": 12,
         "out": 14,
@@ -170,4 +200,3 @@ export const basic =
       }
     ]
   }
-

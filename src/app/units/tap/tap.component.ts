@@ -52,6 +52,7 @@ export class TapComponent implements OnInit, OnDestroy {
         this.isActive = true;
       }
 
+      this.service.state.config.expanded = this.isActive;
       this.service.calibrate();
     }));
 
@@ -73,10 +74,12 @@ export class TapComponent implements OnInit, OnDestroy {
   }
 
   onDelete(): void {
+    debugger;
     this.service.deleteSelf();
   }
 
   onClose(): void {
     this.isActive = false;
+    this.service.calibrate();
   }
 }

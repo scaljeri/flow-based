@@ -152,58 +152,9 @@ export class FlowBasedService {
     }
   }
 
-  close(state: XxlFlowUnitState): void {
-    // this.blur();
-  }
-
-  // socketClicked(event: XxlSocketEvent): void {
-  //   this.currentFlow.onSocketClick(event);
-  // }
-
-  // getWorker(unitId): FbNodeWorker {
-  //   return this.workers[unitId];
-  // }
-
-  // getSockets(unitId: number): XxlSocket[] {
-  //   return this.workers[unitId].getSockets() || [];
-  // }
-
   delete(state: FbNodeState): void {
-    debugger;
     this.flow.removeNode(state.id!);
     this.currentFlow.updateChildren();
-    //
-    // let flow = parentState || this.currentFlow.state,
-    //   index = flow.children!.indexOf(state);
-    //
-    // if (!parentState) {
-    //   this.blur();
-    // }
-    //
-    // if (index === -1) {
-    //   flow = this.currentFlow.state;
-    //   index = flow.children!.indexOf(state);
-    // }
-    //
-    // // Remove all connection from/to this unit
-    // flow.connections = flow.connections!.reduce((out: XxlConnection[], conn) => {
-    //   if (conn.to as number === state.id) {
-    //     this.workers[state.id].removeStream(conn);
-    //   } else if (conn.from as number === state.id) {
-    //     this.workers[conn.to as number].removeStream(conn);
-    //   } else {
-    //     out.push(conn);
-    //   }
-    //
-    //   return out;
-    // }, []);
-    //
-    // // If it is a flow, destroy all children
-    // ((state as XxlFlow).children || []).forEach(child => {
-    //   this.delete(child, state as XxlFlow);
-    // });
-    //
-    // flow.children!.splice(index, 1);
   }
 
   destroy(): void {

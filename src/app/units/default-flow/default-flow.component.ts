@@ -53,7 +53,7 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
   }
 
   onClose(): void {
-    this.service.closeSelf();
+    // TODO
   }
 
   openDialog(socket: Partial<XxlSocket>): void {

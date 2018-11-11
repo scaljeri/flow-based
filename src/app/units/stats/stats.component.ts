@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnDestroy,
 import { FormBuilder } from '@angular/forms';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { StatsWorker } from '../../workers/stats';
-import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { GoogleCharts } from 'google-charts';
 import { filter } from 'rxjs/operators';
 
@@ -76,17 +76,15 @@ export class StatsComponent implements OnInit, OnDestroy {
         this.isActive = true;
       }
 
+      this.service.state.config.expanded = this.isActive;
       this.service.calibrate();
     });
 
+    this.isActive = this.service.state.config.expanded;
   }
 
   ngOnDestroy(): void {
     this.cdr.detach();
-  }
-
-  setActive(isActive: boolean): void {
-    this.isActive = isActive;
   }
 
   onReset(): void {
@@ -98,7 +96,8 @@ export class StatsComponent implements OnInit, OnDestroy {
   }
 
   onClose(): void {
-    this.service.closeSelf();
+    this.isActive = false;
+    this.service.calibrate();
   }
 
   get min(): string | null {
@@ -111,15 +110,5 @@ export class StatsComponent implements OnInit, OnDestroy {
 
   get avg(): string {
     return this.worker.avg.toFixed(4);
-  }
-
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  }
-
-  getFormat(socket: XxlSocket): string {
-    return '';
-  }
-
-  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 }

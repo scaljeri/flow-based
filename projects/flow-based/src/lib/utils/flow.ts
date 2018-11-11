@@ -94,7 +94,9 @@ export class Flow {
 
     delete this.connections[connection.id];
     state.connections = state.connections!.filter(c => c.id !== connection.id);
-    this.rebuildNodeConnections();
+    if (doRebuild) {
+      this.rebuildNodeConnections();
+    }
   }
 
   removeSocket(socket: XxlSocket): void {
