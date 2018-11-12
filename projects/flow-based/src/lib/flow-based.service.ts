@@ -43,17 +43,14 @@ export class FlowBasedService {
     this.currentFlow.repaintConnections();
   }
 
-  // getSockets(scope?: number): SocketDetails[] {
-  //   return Object.keys(this.sockets).filter(k => !scope || this.sockets[k].scope === scope)
-  //     .reduce((o: SocketDetails[], k) => {
-  //       o.push(this.sockets![k]);
-  //
-  //       return o;
-  //     }, []);
-  // }
-
   nodeClicked(nodeState): void {
-    this.state.children = [...this.state.children!.filter(node => node.id !== nodeState.id), nodeState];
+    const state = this.currentFlow.state;
+
+    if (nodeState === state) {
+      return;
+    }
+
+    state.children = [...state.children!.filter(node => node.id !== nodeState.id), nodeState];
   }
 
   addConnection(connection: XxlConnection): void {

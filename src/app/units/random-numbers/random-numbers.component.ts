@@ -1,8 +1,6 @@
 import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
 
-import {
-  XxlFlowUnitState, XxlSocket
-} from '../../../../projects/flow-based/src/lib/flow-based';
+import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
@@ -19,7 +17,7 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   configForm: FormGroup;
   isActive = false;
-  state: XxlFlowUnitState;
+  state: FbNodeState;
   currentValue: number;
   lastClicked: number;
 

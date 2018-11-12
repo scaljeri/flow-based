@@ -4,6 +4,7 @@ import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker
 import { SocketService } from '../socket.service';
 import { Observable, Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { NodeComponent } from './node.component';
 
 /*
 Primary service for custom nodes to communicate with the framework
@@ -19,6 +20,8 @@ export class NodeService {
 
   private nodeClicked = new Subject<PointerEvent>();
   public nodeClicked$ = this.nodeClicked.asObservable();
+
+  private nodeComponent: NodeComponent;
 
   constructor(public flowService: FlowBasedService,
               private socketService: SocketService) {
@@ -43,8 +46,9 @@ export class NodeService {
     this.flowService.nodeClicked(this.state);
   }
 
-  setState(state: XxlFlowUnitState): void {
+  register(node: NodeComponent, state: XxlFlowUnitState): void {
     this.state = state;
+    this.node = node;
   }
 
   get id(): number {
@@ -62,20 +66,16 @@ export class NodeService {
       socket = Object.assign({id: this.flowService.getUniqueId()}, socket);
     }
 
-    this.state.sockets = [socket, ...this.getSockets()];
-    this.flowService.flow.addSocket(socket.id!, this.id);
+    this.flowService.flow.addSocket(socket, this.id);
 
     setTimeout(() => {
       this.flowService.nodeMoved(this.id);
+      this.node.socketAdded();
     });
   }
 
   getSocket(id: number): SocketDetails {
     return this.socketService.getSocket(id);
-  }
-
-  getSockets(): XxlSocket[] {
-    return this.state.sockets || [];
   }
 
   get worker(): FbNodeWorker {

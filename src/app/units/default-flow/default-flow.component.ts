@@ -68,6 +68,10 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
 
       if (result) {
         this.service.addSocket(result.socket!);
+        setTimeout(() => {
+          console.log(this.service);
+          debugger;
+        })
       }
     });
   }

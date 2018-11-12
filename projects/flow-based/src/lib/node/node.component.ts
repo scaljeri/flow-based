@@ -60,7 +60,7 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
   }
 
   ngOnInit(): void {
-    this.service.setState(this.state);
+    this.service.register(this, this.state);
 
     this.subs.push(this.movable.positionChange.subscribe(() => {
       this.socketService.clearPosition(this.id);
@@ -79,7 +79,6 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
 
         this.flowService.nodeMoved(this.id);
       } else {
-        // this.socketService.clearPosition(this.id);
         this.flowService.nodeMoved(this.id);
       }
     }));
@@ -100,10 +99,8 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
           this.service.unsubscribe('blur'); // release blur
           this.fullSizeSubscription!.unsubscribe();
           this.fullSizeSubscription = null;
-
-          setTimeout(() => {
-            this.socketService.clearPosition();
-          });
+          this.cdr.detectChanges();
+          this.service.calibrate();
         });
 
         setTimeout(() => {
@@ -186,5 +183,13 @@ export class NodeComponent implements OnInit, OnInit, OnChanges, AfterViewInit, 
 
   get id(): number {
     return this.state.id!;
+  }
+
+  socketAdded(): void {
+    this.cdr.detectChanges();
+  }
+
+  changeFullSizeMode(isFull: boolean): void {
+
   }
 }

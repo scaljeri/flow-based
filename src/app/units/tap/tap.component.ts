@@ -74,7 +74,6 @@ export class TapComponent implements OnInit, OnDestroy {
   }
 
   onDelete(): void {
-    debugger;
     this.service.deleteSelf();
   }
 

@@ -140,13 +140,21 @@ export class Flow {
     this.createWorker(nodeState);
     flowState.children = [...flowState.children!, nodeState];
     this.nodes[nodeState.id!] = {state: nodeState, parentId: flowState.id!};
-    (nodeState.sockets || []).forEach(s => this.addSocket(s.id!, nodeState.id!));
+    (nodeState.sockets || []).forEach(s => this.addSocket(s, nodeState.id!));
   }
 
-  removeNode(id: number): void {
-    const parentNode = this.getNode(this.getNode(id).parentId!);
+  removeNode(id: number, doRebuild = true): void {
+    const node = this.getNode(id);
+    const parentNode = this.getNode(node.parentId!);
+
+    if (node.state.children) {
+      for (let i = node.state.children.length - 1; i >= 0; i--) {
+        this.removeNode(node.state.children[i].id!, false);
+      }
+    }
+
+    parentNode.state.children = parentNode.state.children!.filter(child => child.id !== id);
     delete this.nodes[id];
-    parentNode.state.children = parentNode.state.children!.filter(node => node.id !== id);
 
     parentNode.state.connections!.forEach((c: XxlConnection) => {
       if (c.from === id || c.to === id) {
@@ -154,7 +162,9 @@ export class Flow {
       }
     });
 
-    this.rebuildNodeConnections();
+    if (doRebuild) {
+      this.rebuildNodeConnections();
+    }
   }
 
   destroy(): void {
@@ -171,8 +181,10 @@ export class Flow {
     return node!.state.sockets!.filter(s => s.id === id)[0];
   }
 
-  addSocket(id: number, nodeId: number): void {
-    this.sockets[id] = nodeId;
+  addSocket(socket: XxlSocket, nodeId: number): void {
+    const state = this.getNode(nodeId).state;
+    this.sockets[socket.id!] = nodeId;
+    state.sockets = [socket, ...state.sockets!];
   }
 
   private createVirtualFlow(nodes: FbNodeState[], parentId: number) {
@@ -234,7 +246,7 @@ export class Flow {
 
     if (worker) {
       this.workers[id] = new worker(state.config);
-    } else if (this.flowTypes[state.type].isFlow) {
+    } else if (this.flowTypes[state.type].settings.isFlow) {
       this.workers[id] = new FlowWorker(state);
     }
   }
