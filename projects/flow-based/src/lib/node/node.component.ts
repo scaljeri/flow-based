@@ -46,8 +46,7 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
   @ViewChildren(SocketComponent) sockRefs: QueryList<SocketComponent>;
 
   private observer;
-  private fullSizeSubscription: Subscription | null;
-  private subs: Subscription[] = [];
+  private posChangedSub: Subscription;
 
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
@@ -61,10 +60,10 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.service.connectNode(this, this.state);
 
-    this.subs.push(this.movable.positionChange.subscribe(() => {
+    this.posChangedSub = this.movable.positionChange.subscribe(() => {
       this.socketService.clearPosition(this.id);
       this.flowService.nodeMoved(this.id);
-    }));
+    });
 
     this.observer = new window.ResizeObserver(() => {
       // TODO
@@ -94,11 +93,8 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.fullSizeSubscription) {
-      this.fullSizeSubscription.unsubscribe();
-    }
-
-    this.subs.forEach(s => s.unsubscribe());
+    this.posChangedSub.unsubscribe();
+    this.service.unregisterAll();
   }
 
   setMaxSize(isMax): void {

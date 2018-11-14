@@ -33,6 +33,11 @@ export class NodeService {
     this.flowService.register(this.id, callback, type);
   }
 
+  unregisterAll(): void {
+    debugger;
+    this.flowService.unregisterAll(this.id);
+  }
+
   unregister(id: string, type?: string): void {
     this.flowService.unregister(this.id, type);
   }

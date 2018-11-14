@@ -29,8 +29,8 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
   values;
   value;
   streamValues = {};
-  lastClicked;
   private subscriptions: Subscription[] = [];
+  private clickSubscription: Subscription;
 
   @ViewChild('output', {read: ElementRef}) output: ElementRef;
   @ViewChildren('inputs', {read: ElementRef}) inputs: QueryList<ElementRef>;
@@ -84,6 +84,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
+    this.clickSubscription.unsubscribe();
   }
 
   ready(): void {

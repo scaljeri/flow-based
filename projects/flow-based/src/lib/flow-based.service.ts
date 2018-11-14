@@ -25,7 +25,7 @@ export interface ExternalEvent {
 export class FlowBasedService {
   public flow: Flow;
   private flowStack: FlowBasedComponent[] = [];
-  private nodeListeners: Record<string, {id: number, callback: (any) => boolean | void}[]> = {};
+  private nodeListeners: Record<string, { id: number, callback: (any) => boolean | void }[]> = {};
 
   constructor(private socketService: SocketService,
               @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
@@ -140,6 +140,18 @@ export class FlowBasedService {
     if (listeners) {
       listeners.splice(listeners.indexOf(id), 1);
     }
+  }
+
+  unregisterAll(id: number): void {
+    Object.keys(this.nodeListeners).forEach(key => {
+      const listeners = this.nodeListeners[key];
+
+      for (let i = listeners.length - 1; i >= 0; i--) {
+        if (listeners[i].id === id) {
+          listeners.splice(i, 1);
+        }
+      }
+    });
   }
 
   delete(state: FbNodeState): void {
