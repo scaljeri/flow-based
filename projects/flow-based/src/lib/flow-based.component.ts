@@ -32,6 +32,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @Output() stateChanged = new EventEmitter<boolean>();
+  @Output() clicked = new EventEmitter<PointerEvent>();
   @ViewChild('dragArea') area: ElementRef;
 
   private subscription: Subscription;
@@ -62,7 +63,12 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   onClick(event): void {
     event.stopPropagation();
 
+    const shouldPropagate = !this.activeSocketFrom && !this.activeSocketTo;
     this.socketService.outsideClick();
+
+    if (shouldPropagate) {
+      this.clicked.next(event);
+    }
   }
 
   repaintConnections(): void {

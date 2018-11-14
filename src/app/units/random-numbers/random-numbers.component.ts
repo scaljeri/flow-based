@@ -14,12 +14,12 @@ import { Subscription } from 'rxjs';
 })
 export class RandomNumbersComponent implements OnInit, OnDestroy {
   worker: RandomNumbersWorker;
-  private subscriptions: Subscription[] = [];
   configForm: FormGroup;
   isActive = false;
   state: FbNodeState;
   currentValue: number;
-  lastClicked: number;
+  private clickSubscription: Subscription;
+  private valueSubscription: Subscription;
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
@@ -38,7 +38,7 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
     });
 
 
-    this.subscriptions.push(this.configForm.valueChanges.subscribe(form => {
+    this.configForm.valueChanges.subscribe(form => {
       if (form.startValue > this.configForm.controls.endValue.value) {
         this.configForm.controls.endValue.setValue(form.startValue, {onlySelf: true, emitEvent: true});
       }
@@ -49,29 +49,24 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
         this.worker.interval = form.intervalValue;
         this.worker.integer = form.integersOnlyValue;
       });
-    }));
+    });
 
-    this.subscriptions.push(this.worker.getStream().subscribe(value => {
+    this.valueSubscription = this.worker.getStream().subscribe(value => {
       this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
       this.cdr.markForCheck();
-    }));
+    });
 
-    this.subscriptions.push(this.service.nodeClicked$.pipe(
-      filter(e => !(e.target as HTMLElement).closest('button'))
-    ).subscribe((e) => {
-      if (this.isActive) {
-        this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
-        this.lastClicked = Date.now();
-      } else {
-        this.isActive = true;
-      }
-    }));
+    this.service.closeOnDoubleClick(() => this.onClose());
+    this.clickSubscription = this.service.nodeClicked$.subscribe((e) => {
+      this.service.state.config.expanded = this.isActive = true;
+    });
 
     this.isActive = this.service.state.config.expanded;
   }
 
   ngOnDestroy(): void {
-    this.subscriptions.forEach(s => s.unsubscribe());
+    this.clickSubscription.unsubscribe();
+    this.valueSubscription.unsubscribe();
   }
 
   get title(): string | undefined {
@@ -83,6 +78,6 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
   }
 
   onClose(): void {
-    this.isActive = false;
+    this.service.state.config.expanded = this.isActive = false;
   }
 }

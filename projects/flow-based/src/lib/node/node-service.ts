@@ -34,7 +34,6 @@ export class NodeService {
   }
 
   unregisterAll(): void {
-    debugger;
     this.flowService.unregisterAll(this.id);
   }
 

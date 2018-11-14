@@ -42,17 +42,12 @@ export class TapComponent implements OnInit, OnDestroy {
     this.worker = this.service.worker as TapWorker;
     this.connectWithWorker();
 
-    this.subscriptions.push(this.service.nodeClicked$.pipe(
-      filter(e => !(e.target as HTMLElement).closest('button'))
-    ).subscribe((e) => {
-      if (this.isActive) {
-        this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
-        this.lastClicked = Date.now();
-      } else {
-        this.isActive = true;
-      }
+    this.service.closeOnDoubleClick(() => this.onClose());
 
-      this.service.state.config.expanded = this.isActive;
+    this.subscriptions.push(this.service.nodeClicked$.subscribe(() => {
+      this.isActive = true;
+
+      this.service.state.config.expanded = true;
       this.service.calibrate();
     }));
 
@@ -79,6 +74,6 @@ export class TapComponent implements OnInit, OnDestroy {
 
   onClose(): void {
     this.isActive = false;
-    this.service.calibrate();
+    this.service.state.config.expanded = this.isActive = false;
   }
 }

@@ -1,6 +1,6 @@
 <section class="component">
   <ng-container *ngIf="isFlow() && isFullSize">
-    <xxl-flow-based #flow [state]="state" [active]="true" [root]="false"></xxl-flow-based>
+    <xxl-flow-based #flow [state]="state" [active]="true" [root]="false" (clicked)="onClick($event)"></xxl-flow-based>
   </ng-container>
 
   <xxl-connection-lines *ngIf="!!service.connections"

@@ -14,7 +14,7 @@ import { Subscription } from 'rxjs';
 export class DefaultFlowComponent implements OnInit, OnDestroy {
   @Input() title: string;
   private worker: any;
-  private subscriptions: Subscription[] = [];
+  private clickSubscription: Subscription;
 
   @HostBinding('class.is-active') isActive = false;
 
@@ -25,26 +25,24 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.worker = this.service.worker;
 
-    this.subscriptions.push(this.service.nodeClicked$.subscribe(() => {
+    this.service.closeOnDoubleClick(() => this.onClose());
+
+    this.clickSubscription = this.service.nodeClicked$.subscribe(() => {
       if (!this.isActive) {
         this.isActive = true;
-
         this.service.setMaxSize(true);
 
         this.service.register(() => {
-          this.isActive = false;
-          this.service.setMaxSize(false);
+          this.onClose();
 
           return false; // unregister
         }, 'blur');
       }
-    }));
-
-
+    });
   }
 
   ngOnDestroy(): void {
-    this.subscriptions.forEach(s => s.unsubscribe());
+    this.clickSubscription.unsubscribe();
   }
 
   getSockets(): XxlSocket[] {
@@ -53,7 +51,6 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
 
   onDelete(): void {
     this.service.deleteSelf();
-
   }
 
   onClose(): void {
@@ -68,12 +65,7 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
       data: socket
     });
 
-    // this.service.requireBlur(() => dialogRef.close());
-    // this.service.blockBlur();
-
     dialogRef.afterClosed().subscribe((result: DialogAction) => {
-      // this.service.enableBlur();
-
       if (result) {
         this.service.addSocket(result.socket!);
       }
@@ -91,31 +83,14 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
       }
     });
 
-    // this.service.blockEscape();
-    // this.service.requireBlur(() => dialogRef.close());
-
     dialogRef.afterClosed().subscribe((updates: XxlSocket[]) => {
-      // this.service.enableEscape();
-
       if (updates) {
         sockets.filter(socket => {
           if (!updates.some(update => update.id === socket.id)) {
             this.service.socketRemoved(socket);
           }
-
-          // this.worker.state.sockets = [...updates, ...this.worker.getSockets().filter(item => item.type !== type)];
         });
       }
     });
   }
-
-  // connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  // }
-  //
-  // getFormat(socket: XxlSocket): string {
-  //   return '';
-  // }
-  //
-  // disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  // }
 }
