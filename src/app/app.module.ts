@@ -29,6 +29,7 @@ import { EditSocketComponent } from './units/default-flow/edit-socket/edit-socke
 import { FB_CONFIG } from './fb-config';
 import { NODE_HELPERS } from './node-helpers';
 import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.module';
+import { EditTitleComponent } from './components/edit-title/edit-title.component';
 
 @NgModule({
   declarations: [
@@ -44,7 +45,8 @@ import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.mo
     BasicGraphComponent,
     StatsComponent,
     MergeStreamsComponent,
-    EditSocketComponent
+    EditSocketComponent,
+    EditTitleComponent
   ],
   imports: [
     BrowserModule,

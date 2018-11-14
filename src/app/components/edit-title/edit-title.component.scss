@@ -1,0 +1,18 @@
+:host {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.label-title {
+  cursor: pointer;
+  flex: 1;
+  flex-direction: column;
+  line-height: 40px;
+  margin: 0 16px 0 -10px;
+  padding: 0 8px;
+
+  &:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}

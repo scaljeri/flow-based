@@ -47,6 +47,7 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
 
   private observer;
   private posChangedSub: Subscription;
+  public isLabel = true;
 
   constructor(private viewRef: ChangeDetectorRef,
               private element: ElementRef,
@@ -128,5 +129,13 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
 
   repaintConnections(): void {
     this.cdr.detectChanges();
+  }
+
+  hideLabel(): void {
+    this.isLabel = false;
+  }
+
+  showLabel(): void {
+    this.isLabel = true;
   }
 }

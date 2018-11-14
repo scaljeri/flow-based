@@ -4,7 +4,6 @@ import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based'
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
-import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -57,8 +56,11 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
     });
 
     this.service.closeOnDoubleClick(() => this.onClose());
+
     this.clickSubscription = this.service.nodeClicked$.subscribe((e) => {
       this.service.state.config.expanded = this.isActive = true;
+      this.service.calibrate();
+      this.service.hideLabel();
     });
 
     this.isActive = this.service.state.config.expanded;
@@ -78,6 +80,11 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
   }
 
   onClose(): void {
+    this.service.showLabel();
     this.service.state.config.expanded = this.isActive = false;
+  }
+
+  onTitleChange(title): void {
+    this.service.state.title = title;
   }
 }

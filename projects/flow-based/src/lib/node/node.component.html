@@ -5,29 +5,32 @@
 
   <xxl-connection-lines *ngIf="!!service.connections"
                         [connections]="service.connections"
-                        [class.is-dark]="isFlow()" class="tmp-lines" ></xxl-connection-lines>
+                        [class.is-dark]="isFlow()" class="tmp-lines"></xxl-connection-lines>
 
   <ng-container *xxlDynamicComponent="state"></ng-container>
 
   <section class="sockets sockets-in" [class.is-disabled]="isFullSize && !isFlow()">
     <xxl-socket *ngFor="let socket of sockets | socketIn"
-          [state]="socket"
-          [scope]="getScope()"
-          [invert]="isInverted()"
-          [parent]="id"
-          [attr.data-socket-id]="socket.id"
-          class="socket"></xxl-socket>
+                [state]="socket"
+                [scope]="getScope()"
+                [invert]="isInverted()"
+                [parent]="id"
+                [attr.data-socket-id]="socket.id"
+                class="socket"></xxl-socket>
   </section>
 
   <section class="sockets sockets-out" [class.is-disabled]="isFullSize && !isFlow()">
     <xxl-socket *ngFor="let socket of sockets | socketOut"
-          [state]="socket"
-          [scope]="getScope()"
-          [invert]="isInverted()"
-          [parent]="id"
-          class="socket"></xxl-socket>
+                [state]="socket"
+                [scope]="getScope()"
+                [invert]="isInverted()"
+                [parent]="id"
+                class="socket"></xxl-socket>
   </section>
 
-  <input *ngIf="isFullSize" class="title" placeholder="Title" [(ngModel)]="state.title" [class.is-empty]="!state.title">
-  <span class="title" *ngIf="!isFullSize">{{state.title}}</span>
+  <ng-container *ngIf="isLabel">
+    <input *ngIf="isFullSize" class="title" placeholder="Title" [(ngModel)]="state.title"
+           [class.is-empty]="!state.title">
+    <span class="title" *ngIf="!isFullSize">{{state.title}}</span>
+  </ng-container>
 </section>

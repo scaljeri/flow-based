@@ -141,4 +141,12 @@ export class NodeService {
     delete this.connections;
     this.nodeComponent.repaintConnections();
   }
+
+  hideLabel(): void {
+    this.nodeComponent.hideLabel();
+  }
+
+  showLabel(): void {
+    this.nodeComponent.showLabel();
+  }
 }

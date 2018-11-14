@@ -45,9 +45,7 @@ export class TapComponent implements OnInit, OnDestroy {
     this.service.closeOnDoubleClick(() => this.onClose());
 
     this.subscriptions.push(this.service.nodeClicked$.subscribe(() => {
-      this.isActive = true;
-
-      this.service.state.config.expanded = true;
+      this.service.state.config.expanded = this.isActive = true;
       this.service.calibrate();
     }));
 
