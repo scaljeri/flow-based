@@ -66,6 +66,8 @@ export class StatsComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     });
 
+    this.service.closeOnDoubleClick(() => this.onClose());
+
     this.service.nodeClicked$.pipe(
       filter(e => !(e.target as HTMLElement).closest('button'))
     ).subscribe((e) => {
@@ -74,6 +76,7 @@ export class StatsComponent implements OnInit, OnDestroy {
         this.lastClicked = Date.now();
       } else {
         this.isActive = true;
+        this.service.hideLabel();
       }
 
       this.service.state.config.expanded = this.isActive;
@@ -81,6 +84,9 @@ export class StatsComponent implements OnInit, OnDestroy {
     });
 
     this.isActive = this.service.state.config.expanded;
+    if (this.isActive) {
+      this.service.hideLabel();
+    }
   }
 
   ngOnDestroy(): void {
@@ -98,6 +104,7 @@ export class StatsComponent implements OnInit, OnDestroy {
   onClose(): void {
     this.isActive = false;
     this.service.calibrate();
+    this.service.showLabel();
   }
 
   get min(): string | null {
