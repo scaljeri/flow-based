@@ -53,7 +53,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.isActive) {
         if (Object.keys(this.streamValues).length === 0) {
           this.streamValues = values;
-          this.setActive(true);
+          this.createConnections();
         }
       }
 
@@ -62,32 +62,24 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
       this.cdr.detectChanges();
     }));
 
-    // Listen for maxSize events
-    this.subscriptions.push(this.service.nodeMax$.subscribe(isMax => {
-      this.isActive = isMax;
+    this.service.closeOnDoubleClick(() => {
+      this.isActive = false;
+    });
 
-      if (!this.service.connections) {
-        this.setActive(this.isActive);
-      } else if (!isMax) {
-        this.service.removeConnections();
-        this.service.calibrate();
-      }
-    }));
-
-    // Listen for click events
-    this.subscriptions.push(this.service.nodeClicked$.pipe(
-      filter(e => !(e.target as HTMLElement).closest('button'))
-    ).subscribe((e) => {
-      if (this.isActive) {
-        this.isActive = Date.now() - (this.lastClicked || 0) > 300;
-        this.lastClicked = Date.now();
-        this.service.setMaxSize(this.isActive);
-      } else {
-        this.service.removeConnections();
+    this.clickSubscription = this.service.nodeClicked$.subscribe(() => {
+      if (!this.isActive) {
+        this.isActive = true;
         this.service.setMaxSize(true);
-      }
+        this.createConnections();
 
-    }));
+        this.service.register(() => {
+          this.service.setMaxSize(false);
+          this.isActive = false;
+
+          return false;
+        }, 'blur');
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -98,24 +90,23 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
     // TODO
   }
 
-  setActive(state: boolean): void {
-    if (state) {
+  createConnections(): void {
+    this.service.removeConnections();
 
-      setTimeout(() => {
-        this.inputs.forEach((s, i) => {
-          const socketId = s.nativeElement.dataset.socketId;
-          const sd = this.service.getSocket(socketId);
+    setTimeout(() => {
+      this.inputs.forEach((s, i) => {
+        const socketId = s.nativeElement.dataset.socketId;
+        const sd = this.service.getSocket(socketId);
 
-          this.service.addConnection(sd.comp.element.nativeElement, this.inputs.toArray()[i].nativeElement);
-          this.service.addConnection(this.inputs.toArray()[i].nativeElement, this.output.nativeElement);
-        });
-
-        const outSocket = this.state.sockets!.filter(s => s.type === 'out')[0];
-        this.service.addConnection(this.output.nativeElement, this.service.getSocket(outSocket.id!).comp.element.nativeElement);
+        this.service.addConnection(sd.comp.element.nativeElement, this.inputs.toArray()[i].nativeElement);
+        this.service.addConnection(this.inputs.toArray()[i].nativeElement, this.output.nativeElement);
       });
-    } else {
-      this.service.removeConnections();
-    }
+
+      const outSocket = this.state.sockets!.filter(s => s.type === 'out')[0];
+      this.service.addConnection(this.output.nativeElement, this.service.getSocket(outSocket.id!).comp.element.nativeElement);
+
+      this.cdr.detectChanges();
+    });
   }
 
   onDelete(): void {

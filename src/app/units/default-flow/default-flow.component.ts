@@ -26,13 +26,21 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
     this.worker = this.service.worker;
 
     this.subscriptions.push(this.service.nodeClicked$.subscribe(() => {
-      this.isActive = true;
+      if (!this.isActive) {
+        this.isActive = true;
+
+        this.service.setMaxSize(true);
+
+        this.service.register(() => {
+          this.isActive = false;
+          this.service.setMaxSize(false);
+
+          return false; // unregister
+        }, 'blur');
+      }
     }));
 
-    this.subscriptions.push(this.service.subscribe('blur').subscribe(() => {
-      this.isActive = false;
-      this.service.unsubscribe('blur');
-    }));
+
   }
 
   ngOnDestroy(): void {
@@ -68,10 +76,6 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
 
       if (result) {
         this.service.addSocket(result.socket!);
-        setTimeout(() => {
-          console.log(this.service);
-          debugger;
-        })
       }
     });
   }

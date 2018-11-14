@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
-import { ExternalEvent, FlowBasedService } from '../flow-based.service';
+import { FlowBasedService } from '../flow-based.service';
 import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { SocketService } from '../socket.service';
-import { Observable, Subject } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { NodeComponent } from './node.component';
 
 /*
@@ -22,34 +21,51 @@ export class NodeService {
   public nodeClicked$ = this.nodeClicked.asObservable();
 
   private nodeComponent: NodeComponent;
+  private doubleClick: () => void;
+  private thresholdClicks = 300;
+  private lastClicked = 0;
 
   constructor(public flowService: FlowBasedService,
               private socketService: SocketService) {
   }
 
-  subscribe(type?: string): Observable<ExternalEvent> {
-    return this.flowService.subscribe(this.id, type).pipe(
-      filter((data: ExternalEvent) => data.nodeId === this.id && (!type || type === data.type))
-    );
+  register(callback: (ExternalEvent) => boolean | void, type?: string): void {
+    this.flowService.register(this.id, callback, type);
   }
 
-  unsubscribe(type?: string): void {
-    this.flowService.unsubscribe(this.id, type);
+  unregister(id: string, type?: string): void {
+    this.flowService.unregister(this.id, type);
+  }
+
+  connectNode(node: NodeComponent, state: XxlFlowUnitState): void {
+    this.state = state;
+    this.nodeComponent = node;
   }
 
   setMaxSize(isMax: boolean): void {
-    this.nodeMax.next(isMax);
+    this.nodeComponent.setMaxSize(isMax);
+    this.calibrate();
   }
 
   nodeIsClicked(e: PointerEvent): void {
     this.nodeClicked.next(e);
     this.flowService.nodeClicked(this.state);
+
+    if (Date.now() - this.lastClicked < this.thresholdClicks) {
+      if (this.doubleClick) {
+        this.doubleClick();
+        this.nodeComponent.setMaxSize(false);
+      }
+    } else {
+      this.lastClicked = Date.now();
+    }
   }
 
-  register(node: NodeComponent, state: XxlFlowUnitState): void {
-    this.state = state;
-    this.node = node;
+  closeOnDoubleClick(callback: () => void, threshold = 300): void {
+    this.thresholdClicks = threshold;
+    this.doubleClick = callback;
   }
+
 
   get id(): number {
     return this.state.id!;
@@ -62,15 +78,15 @@ export class NodeService {
   }
 
   addSocket(socket: XxlSocket): void {
-    if (!socket.id) {
-      socket = Object.assign({id: this.flowService.getUniqueId()}, socket);
-    }
+    // if (!socket.id) {
+    //   socket = Object.assign({id: this.flowService.getUniqueId()}, socket);
+    // }
 
     this.flowService.flow.addSocket(socket, this.id);
 
     setTimeout(() => {
       this.flowService.nodeMoved(this.id);
-      this.node.socketAdded();
+      this.nodeComponent.socketAdded();
     });
   }
 

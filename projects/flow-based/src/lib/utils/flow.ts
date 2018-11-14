@@ -21,6 +21,7 @@ export class Flow {
   private nodes: FbKeyValues<Node> = {};
   private connections: FbKeyValues<XxlConnection> = {};
   private sockets: FbKeyValues<number> = {};
+  private uniqueIdCount = 0;
 
   constructor(private flowTypes: FbNodeType,
               private helpers?: FbNodeHelpers) {
@@ -183,8 +184,13 @@ export class Flow {
 
   addSocket(socket: XxlSocket, nodeId: number): void {
     const state = this.getNode(nodeId).state;
+
+    if (!socket.id) {
+      socket.id = this.uniqueId;
+      state.sockets = [socket, ...state.sockets!];
+    }
+
     this.sockets[socket.id!] = nodeId;
-    state.sockets = [socket, ...state.sockets!];
   }
 
   private createVirtualFlow(nodes: FbNodeState[], parentId: number) {
@@ -238,6 +244,10 @@ export class Flow {
     }
 
     return isChanged;
+  }
+
+  get uniqueId(): number {
+    return Date.now() + ++this.uniqueIdCount;
   }
 
   private createWorker(state: FbNodeState): void {

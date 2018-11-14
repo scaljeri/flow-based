@@ -1,6 +1,5 @@
 import { Inject, Injectable, Optional } from '@angular/core';
 import {
-  SocketDetails,
   XXL_FLOW_TYPES,
   XxlConnection,
   FbNodeType,
@@ -9,7 +8,6 @@ import {
 } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 import { Flow } from './utils/flow';
-import { Observable, Subject } from 'rxjs';
 import { SocketService } from './socket.service';
 import { deepClone } from './utils/deep-clone';
 
@@ -25,13 +23,9 @@ export interface ExternalEvent {
   providedIn: 'root'
 })
 export class FlowBasedService {
-  private flowStack: FlowBasedComponent[] = [];
   public flow: Flow;
-  private state: FbNodeState;
-  private sockets: FbKeyValues<SocketDetails> = {};
-
-  private externalEventSubject = new Subject<ExternalEvent>();
-  private nodeListeners: number[] = [];
+  private flowStack: FlowBasedComponent[] = [];
+  private nodeListeners: Record<string, {id: number, callback: (any) => boolean | void}[]> = {};
 
   constructor(private socketService: SocketService,
               @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
@@ -61,16 +55,6 @@ export class FlowBasedService {
     this.flow.addConnection(this.currentFlow.state, connection);
   }
 
-  setState(state: FbNodeState): void {
-    if (!state.children) {
-      state.id = this.getUniqueId();
-      state.children = [];
-      state.connections = [];
-    }
-
-    this.state = state;
-  }
-
   get currentFlow(): FlowBasedComponent {
     return this.flowStack[0];
   }
@@ -83,9 +67,15 @@ export class FlowBasedService {
     return ++uniqueId;
   }
 
-  initialize(): void {
+  initialize(state: FbNodeState): void {
+    if (!state.children) {
+      state.id = this.getUniqueId();
+      state.children = [];
+      state.connections = [];
+    }
+
     this.socketService.reset();
-    this.flow = new Flow(this.flowTypes, this.helpers).initialize(this.state);
+    this.flow = new Flow(this.flowTypes, this.helpers).initialize(state);
   }
 
   getWorker(id: number): FbNodeWorker {
@@ -130,20 +120,23 @@ export class FlowBasedService {
   }
 
   triggerEvent(type, payload?: any): void {
-    this.externalEventSubject.next({type, payload, nodeId: (this.nodeListeners[type] || [])[0]});
-  }
+    const listeners = this.nodeListeners[type];
 
-  subscribe(id: number, type?: string): Observable<ExternalEvent> {
-    if (!this.nodeListeners[type || '__default__']) {
-      this.nodeListeners[type || '__default__'] = [];
+    if (listeners && listeners.length > 0) {
+      if (!listeners[0].callback(payload)) {
+        listeners.shift();
+      }
     }
-    this.nodeListeners[type || '__default__'].unshift(id);
-
-    return this.externalEventSubject.asObservable();
   }
 
-  unsubscribe(id, type?: string): void {
-    const listeners = this.nodeListeners[type || '__default__'];
+  register(id: number, callback: (any) => boolean | void, type: string = '__default__'): void {
+    this.nodeListeners[type] = this.nodeListeners[type] || [];
+    this.nodeListeners[type].unshift({id, callback});
+  }
+
+  unregister(id, type: string = '__default__'): void {
+    const listeners = this.nodeListeners[type];
+
     if (listeners) {
       listeners.splice(listeners.indexOf(id), 1);
     }

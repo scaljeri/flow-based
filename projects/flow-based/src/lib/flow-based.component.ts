@@ -31,6 +31,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @Input() state: FbNodeState;
 
   @Output() activeChanged = new EventEmitter<boolean>();
+  @Output() stateChanged = new EventEmitter<boolean>();
   @ViewChild('dragArea') area: ElementRef;
 
   private subscription: Subscription;
@@ -105,8 +106,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   ngOnChanges(obj: SimpleChanges): void {
     if (this.root) {
-      this.flowService.setState(this.state);
-      this.flowService.initialize();
+      this.flowService.initialize(this.state);
     }
   }
 
@@ -116,9 +116,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   reset(): void {
-    // setTimeout(() => {
-    //   this.repaint();
-    // });
   }
 
   get id(): number {
