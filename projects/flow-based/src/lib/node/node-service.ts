@@ -14,9 +14,6 @@ export class NodeService {
   public connections: XxlConnection[];
   public state: XxlFlowUnitState;
 
-  private nodeMax = new Subject<boolean>();
-  public nodeMax$ = this.nodeMax.asObservable();
-
   private nodeClicked = new Subject<PointerEvent>();
   public nodeClicked$ = this.nodeClicked.asObservable();
 
@@ -37,7 +34,7 @@ export class NodeService {
     this.flowService.unregisterAll(this.id);
   }
 
-  unregister(id: string, type?: string): void {
+  unregister(type?: string): void {
     this.flowService.unregister(this.id, type);
   }
 
@@ -82,10 +79,6 @@ export class NodeService {
   }
 
   addSocket(socket: XxlSocket): void {
-    // if (!socket.id) {
-    //   socket = Object.assign({id: this.flowService.getUniqueId()}, socket);
-    // }
-
     this.flowService.flow.addSocket(socket, this.id);
 
     setTimeout(() => {
@@ -103,9 +96,7 @@ export class NodeService {
   }
 
   socketRemoved(socket: XxlSocket): void {
-    this.flowService.flow.removeSocket(socket);
-
-    this.flowService.nodeMoved(this.id);
+    this.flowService.removeSocket(socket);
   }
 
   refresh(): void {
@@ -126,6 +117,7 @@ export class NodeService {
     };
 
     this.connections = [...(this.connections || []), conn];
+    this.updateConnections();
 
     return id;
   }
@@ -133,14 +125,20 @@ export class NodeService {
   updateConnections(): void {
     if (this.connections) {
       this.connections = [...this.connections];
+      this.nodeComponent.connectionsUpdated();
     }
   }
 
   removeConnection(id: number): void {
     this.connections = this.connections!.filter(conn => conn.id !== id);
+
+    setTimeout(() => {
+      this.nodeComponent.repaintConnections();
+    });
   }
 
   removeConnections(): void {
     delete this.connections;
+    this.nodeComponent.repaintConnections();
   }
 }

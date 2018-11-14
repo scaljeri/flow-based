@@ -135,23 +135,13 @@ export class FlowBasedService {
   }
 
   unregister(id, type: string = '__default__'): void {
-    const listeners = this.nodeListeners[type];
-
-    if (listeners) {
-      listeners.splice(listeners.indexOf(id), 1);
+    if (this.nodeListeners[type]) {
+      this.nodeListeners[type] = this.nodeListeners[type].filter(listener => listener.id !== id);
     }
   }
 
   unregisterAll(id: number): void {
-    Object.keys(this.nodeListeners).forEach(key => {
-      const listeners = this.nodeListeners[key];
-
-      for (let i = listeners.length - 1; i >= 0; i--) {
-        if (listeners[i].id === id) {
-          listeners.splice(i, 1);
-        }
-      }
-    });
+    Object.keys(this.nodeListeners).forEach(key =>  this.unregister(id, key));
   }
 
   delete(state: FbNodeState): void {
@@ -161,5 +151,13 @@ export class FlowBasedService {
 
   destroy(): void {
     this.flow.destroy();
+  }
+
+  removeSocket(socket: XxlSocket): void {
+    this.flow.removeSocket(socket);
+
+    this.flowStack.forEach(flow => {
+      flow.repaintConnections();
+    });
   }
 }

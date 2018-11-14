@@ -1,5 +1,5 @@
 <mat-list>
-  <mat-list-item *ngFor="let socket of sockets;let i = index">
+  <mat-list-item *ngFor="let socket of data.sockets;let i = index">
     <button #delete mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id" class="delete">
       <mat-icon>delete_forever</mat-icon>
     </button>

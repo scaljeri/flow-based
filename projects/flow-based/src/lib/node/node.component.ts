@@ -102,6 +102,10 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  connectionsUpdated(): void {
+    this.cdr.detectChanges();
+  }
+
   get sockets(): XxlSocket[] {
     return this.state.sockets || [];
   }
@@ -119,6 +123,10 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
   }
 
   socketAdded(): void {
+    this.cdr.detectChanges();
+  }
+
+  repaintConnections(): void {
     this.cdr.detectChanges();
   }
 }

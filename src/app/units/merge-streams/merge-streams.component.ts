@@ -50,16 +50,14 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
     }));
 
     this.subscriptions.push(this.worker.getValues().subscribe(values => {
-      if (this.isActive) {
-        if (Object.keys(this.streamValues).length === 0) {
-          this.streamValues = values;
-          this.createConnections();
-        }
-      }
-
       this.streamValues = values;
 
-      this.cdr.detectChanges();
+      if (this.isActive) {
+        setTimeout(() => {
+          this.createConnections();
+          this.cdr.detectChanges();
+        });
+      }
     }));
 
     this.service.closeOnDoubleClick(() => {
@@ -72,12 +70,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
         this.service.setMaxSize(true);
         this.createConnections();
 
-        this.service.register(() => {
-          this.service.setMaxSize(false);
-          this.isActive = false;
-
-          return false;
-        }, 'blur');
+        this.service.register(() => this.onClose(), 'blur');
       }
     });
   }
@@ -106,7 +99,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
       const outSocket = this.state.sockets!.filter(s => s.type === 'out')[0];
       this.service.addConnection(this.output.nativeElement, this.service.getSocket(outSocket.id!).comp.element.nativeElement);
 
-      this.cdr.detectChanges();
+      // this.cdr.detectChanges();
     });
   }
 
@@ -116,6 +109,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onClose(): void {
     this.service.setMaxSize(false);
+    this.service.unregister('blur');
     this.isActive = false;
   }
 

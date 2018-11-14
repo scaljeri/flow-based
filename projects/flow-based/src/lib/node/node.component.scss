@@ -120,7 +120,7 @@ xxl-connection-lines {
   @include xxl-position(absolute, 0px 0px 0px 0px);
 
   &.tmp-lines {
-    z-index: 3;
+    z-index: 10;
   }
 
   &.is-dark {

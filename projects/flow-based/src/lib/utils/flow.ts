@@ -15,11 +15,16 @@ interface Node {
   parentId: number | null;
 }
 
+interface NodeConnection {
+  connection: XxlConnection;
+  state: FbNodeState;
+}
+
 export class Flow {
   private workers: FbKeyValues<FbNodeWorker> = {};
   private state: FbNodeState;
   private nodes: FbKeyValues<Node> = {};
-  private connections: FbKeyValues<XxlConnection> = {};
+  private connections: FbKeyValues<NodeConnection> = {};
   private sockets: FbKeyValues<number> = {};
   private uniqueIdCount = 0;
 
@@ -34,7 +39,7 @@ export class Flow {
     const connections = flow.connections!,
       children = flow.children!;
 
-    connections.forEach(c => this.connections[c.id] = c);
+    connections.forEach(c => this.connections[c.id] = {state: flow, connection: c});
     this.createVirtualFlow(children, flow.id!);
 
     let count = 0;
@@ -45,7 +50,7 @@ export class Flow {
     }
 
     Object.keys(this.connections).forEach(key => {
-      this.connectWorkers(this.connections[key]);
+      this.connectWorkers(this.connections[key].connection);
     });
 
     return this;
@@ -57,7 +62,7 @@ export class Flow {
 
   addConnection(state: FbNodeState, connection: XxlConnection): void {
     state.connections = [connection, ...state.connections!];
-    this.connections[connection.id] = connection;
+    this.connections[connection.id] = {connection, state};
     this.connectWorkers(connection);
 
     if (this.connect(connection)) {
@@ -100,40 +105,27 @@ export class Flow {
     }
   }
 
-  removeSocket(socket: XxlSocket): void {
+  removeSocket(socket: XxlSocket, doRebuild = true): void {
     const nodeId = this.sockets[socket.id!],
       node = this.getNode(nodeId);
 
-    // Remove socket
     node.state.sockets = node.state.sockets!.filter(s => s.id !== socket.id);
 
-    // Remove connection and stream and check parent connections to
-    if (node.state.connections) {
-      node.state.connections = node.state.connections.filter(c => {
-        if (c.out === socket.id) {
-          this.workers[c.to as number].removeStream(c);
-          return false;
-          this.workers[c.from as number].removeStream(c);
-        } else if (c.in === socket.id) {
-          return false;
-        }
+    const keys = Object.keys(this.connections);
+    for (let i = keys.length - 1; i >= 0; i--) {
+      const key = keys[i],
+            connection = this.connections[key].connection;
 
-        return true;
-      });
-    } else if (node.parentId) {
-      const parentNode = this.getNode(node.state.id!);
-      parentNode.state.connections = parentNode.state.connections!.filter(c => {
-        if (c.out === socket.id) {
-          this.workers[c.to as number].removeStream(c);
-          return false;
-          this.workers[c.from as number].removeStream(c);
-        } else if (c.in === socket.id) {
-          return false;
-        }
+      if (connection.in === socket.id || connection.out === socket.id) {
+        this.connections[key].state.connections =
+          this.connections[key].state.connections.filter(item => item.id !== connection.id);
+        delete this.connections[key];
+        this.workers[connection.to as number].removeStream(connection);
+      }
+    }
 
-        return true;
-      });
-
+    if (doRebuild) {
+      this.rebuildNodeConnections();
     }
   }
 
@@ -202,7 +194,7 @@ export class Flow {
 
       this.createWorker(node);
       if (node.connections) {
-        node.connections.forEach(c => this.connections[c.id] = c);
+        node.connections.forEach(c => this.connections[c.id] = {connection: c, state: node});
 
         this.createVirtualFlow(node.children!, node.id!);
       }
@@ -213,7 +205,7 @@ export class Flow {
     const keys = Object.keys(this.connections);
 
     for (let i = 0; i < keys.length; i++) {
-      const c = this.connections[keys[i]];
+      const c = this.connections[keys[i]].connection;
 
       if (this.connect(c)) {
         return true;
