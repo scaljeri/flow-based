@@ -54,7 +54,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (this.isActive) {
         setTimeout(() => {
-          this.createConnections();
+          // this.createConnections();
           this.cdr.detectChanges();
         });
       }
