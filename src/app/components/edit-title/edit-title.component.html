@@ -1,10 +1,10 @@
-<span #input *ngIf="!editable"
+<span #input
       (focus)="onFocus()"
       (blur)="onBlur()"
       (keydown.enter)="onEnter($event)"
       class="label-title"
       contenteditable="true">{{state.title}}</span>
 
-<button mat-mini-fab color="primary" (click)="toggleFocusInput($event)">
+<button mat-mini-fab color="primary" (click)="toggleFocusInput()">
   <mat-icon>{{hasFocus ? 'close' : 'edit'}}</mat-icon>
 </button>

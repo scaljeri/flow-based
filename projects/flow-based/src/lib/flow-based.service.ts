@@ -38,6 +38,7 @@ export class FlowBasedService {
   }
 
   nodeClicked(nodeState): void {
+    this.socketService.outsideClick();
     const state = this.currentFlow.state;
 
     if (nodeState === state) {
