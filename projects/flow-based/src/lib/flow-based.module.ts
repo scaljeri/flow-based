@@ -8,7 +8,7 @@ import { FlowBasedManagerService } from './services/flow-based-manager.service';
 import { DraggableDirective } from './drag-drop/draggable/draggable.directive';
 import { MovableDirective } from './drag-drop/movable/movable.directive';
 import { MovableAreaDirective } from './drag-drop/movable-area/movable-area.directive';
-import { FlowUnitComponent } from './flow-unit/flow-unit.component';
+import { NodeComponent } from './node/node.component';
 import { DynamicComponentDirective } from './dynamic-component.directive';
 import { ConnectionLinesComponent } from './connection-lines/connection-lines.component';
 import { SocketInPipe } from './pipes/socket-in.pipe';
@@ -24,7 +24,7 @@ import { SocketComponent } from './socket/socket.component';
   declarations: [
     DynamicComponentDirective,
     FlowBasedComponent,
-    FlowUnitComponent,
+    NodeComponent,
     DraggableDirective,
     MovableDirective,
     MovableAreaDirective,

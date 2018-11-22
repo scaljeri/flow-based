@@ -1,15 +1,24 @@
-import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject } from 'rxjs';
 
-export const RANDOM_NUMBER_CONFIG = {
-  min: 0,
-  max: 100,
-  start: 0,
-  end: 1,
-  intervalMax: 10000,
-  intervalMin: 100,
-  interval: 1000,
-  integer: true
+export const RANDOM_NUMBER_SETTINGS = {
+  title: 'Random number generator',
+  config: {
+    min: 0,
+    max: 100,
+    start: 0,
+    end: 1,
+    intervalMax: 10000,
+    intervalMin: 100,
+    interval: 1000,
+    integer: true
+  },
+  sockets: [
+    {
+      type: 'out',
+      format: 'number'
+    }
+  ]
 };
 
 export class RandomNumbersWorker implements FbNodeWorker {
@@ -39,9 +48,11 @@ export class RandomNumbersWorker implements FbNodeWorker {
 
   }
 
-  removeStream(connection: XxlConnection): void { /* not used */ }
+  removeStream(connection: XxlConnection): void { /* not used */
+  }
 
-  setStream(stream: Observable<any>, connection: XxlConnection): void {  /* not used */ }
+  setStream(stream: Observable<any>, connection: XxlConnection): void {  /* not used */
+  }
 
   get start(): number {
     return this.config.start;

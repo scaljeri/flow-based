@@ -23,7 +23,7 @@
 
 <section *ngIf="isActive" class="expanded">
   <mat-toolbar color="primary">
-    <span>Statistics</span>
+    <xxl-edit-title [state]="state"></xxl-edit-title>
   </mat-toolbar>
 
   <div class="wrapper">
@@ -50,7 +50,7 @@
         <div #distribution></div>
         <div class="column-width">
           <span>Column width: </span>
-          <mat-slider min="0" max="10" step=".1" [(ngModel)]="worker.columnWidth"></mat-slider>
+          <mat-slider class="fb-drag-ignore" min="0" max="10" step=".1" [(ngModel)]="worker.columnWidth"></mat-slider>
           <span>{{worker.columnWidth}}</span>
         </div>
       </mat-card-content>

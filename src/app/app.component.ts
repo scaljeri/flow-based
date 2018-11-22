@@ -1,6 +1,6 @@
 import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
-import { XxlFlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
+import { FlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
 import * as data from './fixtures';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
@@ -30,14 +30,14 @@ export class AppComponent implements OnInit {
   @ViewChild('bg') bgImage: ElementRef;
 
   constructor(private selectionService: ComponentSelectionService,
-              private xxlService: XxlFlowBasedService,
+              private flowService: FlowBasedService,
               private overlay: Overlay) {
   }
 
   ngOnInit(): void {
     this.selectionService.selection$.subscribe(type => {
       this.activeOverlay!.dispose();
-      this.xxlService.add(type);
+      this.flowService.add(type);
     });
   }
 
@@ -65,63 +65,24 @@ export class AppComponent implements OnInit {
     });
   }
 
+  showJSON(): void {
+    this.showJson = !this.showJson;
+  }
+
   onUpdate(): void {
     console.log('updated');
   }
 
   @HostListener('document:keydown.escape', ['$event'])
   escape(event): void {
-    if (this.activeOverlay) {
+    if (this.showJson) {
+      this.showJson = false;
+    } else if (this.activeOverlay) {
       this.activeOverlay.dispose();
 
       this.activeOverlay = null;
     } else {
-      this.xxlService.blur();
+      this.flowService.triggerEvent('blur');
     }
   }
-
-  //
-  // @HostListener('contextmenu', ['$event']) onContextMenu(event): void {
-  //   event.preventDefault();
-  //
-  //   console.log('click=' + event.clientX + ' ' + event.clientY);
-  //   if (this.isContextMenu) {
-  //     this.contextMenuState = false;
-  //
-  //     setTimeout(() => this.isContextMenu = false, 500);
-  //   } else {
-  //     this.menuX = event.clientX;
-  //     this.menuY = event.clientY;
-  //
-  //     this.isContextMenu = true;
-  //
-  //     setTimeout(() => {
-  //       this.contextMenuState = true;
-  //     }, 500);
-  //   }
-  // }
-  //
-  // @HostListener('click', ['$event']) onClick(event): void {
-  //   this.contextMenuState = false;
-  //
-  //   setTimeout(() => this.isContextMenu = false, 500);
-  // }
-  //
-  // closeContextMenu(type: string): void {
-  //   this.contextMenuState = false;
-  //
-  //   setTimeout(() => {
-  //     this.isContextMenu = false;
-  //
-  //     if (type) {
-  //       this.model.entries.push({
-  //         type,
-  //         flow: 'sdf',
-  //         x: this.menuX,
-  //         y: this.menuY
-  //       });
-  //       console.log(this.menuX + ' ' + this.menuY);
-  //     }
-  //   }, 500);
-  // }
 }

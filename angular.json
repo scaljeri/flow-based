@@ -7,7 +7,7 @@
       "root": "",
       "sourceRoot": "src",
       "projectType": "application",
-      "prefix": "fb",
+      "prefix": "xxl",
       "schematics": {},
       "architect": {
         "build": {
@@ -20,6 +20,7 @@
             "tsConfig": "src/tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
+              "src/favicon.png",
               "src/assets"
             ],
             "styles": [
@@ -128,7 +129,7 @@
       "root": "projects/flow-based",
       "sourceRoot": "projects/flow-based/src",
       "projectType": "library",
-      "prefix": "xxl",
+      "prefix": "fb",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-ng-packagr:build",

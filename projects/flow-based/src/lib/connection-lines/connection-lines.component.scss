@@ -5,7 +5,7 @@ svg {
   stroke: #fff;
   stroke-width: 3px;
 
-  .connection:hover,
+  .connection:not(.pointer-path):hover,
   .arrow:hover,
   .connection:hover ~ .arrow {
     cursor: pointer;
@@ -16,11 +16,13 @@ svg {
   .arrow:hover,
   .connection:hover ~ .arrow {
     fill: $active-color;
-
   }
 
   .arrow {
     fill: #fff;
     pointer-events: none;
+  }
+
+  .pointer-path {
   }
 }

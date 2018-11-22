@@ -6,8 +6,10 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  width: 70px;
 
+  &:not(.is-active) {
+    width: 70px;
+  }
 }
 
 section {

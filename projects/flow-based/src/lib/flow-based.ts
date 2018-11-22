@@ -5,7 +5,7 @@ import { SocketComponent } from './socket/socket.component';
 export const XXL_FLOW_TYPES = new InjectionToken<FbNodeTypes>('xxl-flow-types');
 export const XXL_FLOW_UNIT_STATE = new InjectionToken<FbNodeTypes>('xxl-flow-unit-state');
 export const FB_NODE_HELPERS = new InjectionToken<FbNodeTypes>('fb-node-helpers');
-export const XXL_STATE = new InjectionToken<FbNodeTypes>('xxl-state');
+export const FB_SOCKET_COLORS = new InjectionToken<FbNodeTypes>('fb-socket-colors');
 
 // export const XXL_WORKERS = new InjectionToken<FbNodeTypes>('xxl-worker-service');
 
@@ -16,19 +16,12 @@ export interface FbKeyValues<T> {
 
 export interface FbNodeType {
   component: Type<any>;
-  config?: any;
-  isFlow?: boolean;
-  title?: string;
+  settings?: { config: any, title: string, sockets: XxlSocket[], isFlow: boolean };
   type: string;
   worker: FbNodeWorker;
 }
 
 export type FbNodeTypes = FbKeyValues<FbNodeType>;
-
-export interface FbNode {
-  getSockets(): XxlSocket[];
-  setActive(boolean): void;
-}
 
 export interface FbNodeHelpers {
   resetSockets(node: FbNodeState): void;
@@ -46,10 +39,6 @@ export interface FbNodeWorker {
   destroy(): void;
 }
 
-
-export interface XxlFlowUnitOptions {
-  isFlow?: boolean;
-}
 
 export interface XxlPosition {
   x: number;
@@ -94,13 +83,14 @@ export type XxlSocketType = 'in' | 'out';
 export interface XxlSocket {
   type: XxlSocketType;
   id?: number;
+  color?: string;
   name?: string;
   format?: string;
   position?: number;
   description?: string,
 }
 
-export interface XxlSocketEvent extends XxlSocket {
+export interface XxlSocketEvent {
   socket: XxlSocket;
   parentId: number;
   scope: number;
@@ -121,6 +111,8 @@ export interface ConnectionDetails {
 export interface XxlWorkerService {
   create(id: number, type: string): FbNodeWorker;
 }
+
+export type FbSocketColors = Record<string, string>;
 
 export class XxlDriver {
   private flow: XxlFlow[];
@@ -174,6 +166,4 @@ export abstract class FlowBasedServiceHelper {
   removeFlowHandler(): void {
     this.flowHandlers.shift();
   }
-
-
 }

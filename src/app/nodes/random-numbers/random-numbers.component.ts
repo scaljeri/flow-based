@@ -1,27 +1,28 @@
 import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
 
-import {
-  FbNode, XxlFlowUnitState, XxlSocket
-} from '../../../../projects/flow-based/src/lib/flow-based';
+import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss']
 })
-export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
+export class RandomNumbersComponent implements OnInit, OnDestroy {
   worker: RandomNumbersWorker;
   configForm: FormGroup;
   isActive = false;
-  state: XxlFlowUnitState;
+  state: FbNodeState;
   currentValue: number;
+  private clickSubscription: Subscription;
+  private valueSubscription: Subscription;
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
-              @Host() private service: XxlFlowUnitService) {
+              @Host() private service: NodeService) {
     this.state = service.state;
   }
 
@@ -49,48 +50,41 @@ export class RandomNumbersComponent implements FbNode, OnInit, OnDestroy {
       });
     });
 
-    this.worker.getStream().subscribe(value => {
+    this.valueSubscription = this.worker.getStream().subscribe(value => {
       this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
       this.cdr.markForCheck();
     });
+
+    this.service.closeOnDoubleClick(() => this.onClose());
+
+    this.clickSubscription = this.service.nodeClicked$.subscribe((e) => {
+      this.service.state.config.expanded = this.isActive = true;
+      this.service.calibrate();
+      this.service.hideLabel();
+    });
+
+    this.isActive = this.service.state.config.expanded;
   }
 
   ngOnDestroy(): void {
-  }
-
-  setActive(state: boolean): void {
-    this.isActive = state;
+    this.clickSubscription.unsubscribe();
+    this.valueSubscription.unsubscribe();
   }
 
   get title(): string | undefined {
     return this.state.title;
   }
 
-  getSockets(): XxlSocket[] {
-    return [
-      {
-        type: 'out',
-        format: 'number'
-      }
-    ];
-  }
-
-  delete(): void {
+  onDelete(): void {
     this.service.deleteSelf();
   }
 
-  close(): void {
-    this.service.closeSelf();
+  onClose(): void {
+    this.service.showLabel();
+    this.service.state.config.expanded = this.isActive = false;
   }
 
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  onTitleChange(title): void {
+    this.service.state.title = title;
   }
-
-  getFormat(socket: XxlSocket): string {
-    return '';
-  }
-
-  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  }
-
 }

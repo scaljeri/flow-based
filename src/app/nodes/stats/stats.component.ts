@@ -1,21 +1,23 @@
-import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { StatsWorker } from '../../workers/stats';
-import { FbNode, XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { GoogleCharts } from 'google-charts';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'fb-stats',
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.scss']
 })
-export class StatsComponent implements FbNode, OnInit {
+export class StatsComponent implements OnInit, OnDestroy {
   public worker: StatsWorker;
   private state: XxlFlowUnitState;
   data: number[][] = [];
   private graphPlaceHolder: ElementRef;
   private chart;
+  private lastClicked;
 
   @ViewChild('distribution')
   set graph(element: ElementRef) {
@@ -27,7 +29,7 @@ export class StatsComponent implements FbNode, OnInit {
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
-              @Host() private service: XxlFlowUnitService) {
+              @Host() private service: NodeService) {
     this.state = service.state;
   }
 
@@ -63,28 +65,32 @@ export class StatsComponent implements FbNode, OnInit {
 
       this.cdr.detectChanges();
     });
+
+    this.service.closeOnDoubleClick(() => this.onClose());
+
+    this.service.nodeClicked$.pipe(
+      filter(e => !(e.target as HTMLElement).closest('button'))
+    ).subscribe((e) => {
+      if (this.isActive) {
+        this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
+        this.lastClicked = Date.now();
+      } else {
+        this.isActive = true;
+        this.service.hideLabel();
+      }
+
+      this.service.state.config.expanded = this.isActive;
+      this.service.calibrate();
+    });
+
+    this.isActive = this.service.state.config.expanded;
+    if (this.isActive) {
+      this.service.hideLabel();
+    }
   }
 
-  getSockets(): XxlSocket[] {
-    return [
-      {
-        type: 'in',
-        format: 'number'
-      },
-      {
-        type: 'out',
-        name: 'Min value',
-        format: 'number'
-      },
-      {
-        type: 'out',
-        name: 'Max value',
-        format: 'number'
-      }];
-  }
-
-  setActive(isActive: boolean): void {
-    this.isActive = isActive;
+  ngOnDestroy(): void {
+    this.cdr.detach();
   }
 
   onReset(): void {
@@ -96,7 +102,9 @@ export class StatsComponent implements FbNode, OnInit {
   }
 
   onClose(): void {
-    this.service.closeSelf();
+    this.isActive = false;
+    this.service.calibrate();
+    this.service.showLabel();
   }
 
   get min(): string | null {
@@ -109,15 +117,5 @@ export class StatsComponent implements FbNode, OnInit {
 
   get avg(): string {
     return this.worker.avg.toFixed(4);
-  }
-
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
-  }
-
-  getFormat(socket: XxlSocket): string {
-    return '';
-  }
-
-  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
   }
 }

@@ -3,13 +3,13 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
-  EventEmitter,
+  EventEmitter, Inject,
   Input,
   OnChanges,
-  OnInit,
-  Output
+  OnInit, Optional,
+  Output, SimpleChanges
 } from '@angular/core';
-import { XxlConnection, XxlPosition } from '../flow-based';
+import { FB_SOCKET_COLORS, FbSocketColors, XxlConnection, XxlPosition } from '../flow-based';
 import * as bezier from './bezier';
 import { SocketService } from '../socket.service';
 
@@ -41,25 +41,22 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   constructor(private element: ElementRef,
               private viewRef: ChangeDetectorRef,
-              private socketService: SocketService) {
+              private socketService: SocketService,
+              @Optional() @Inject(FB_SOCKET_COLORS) private colors: FbSocketColors) {
   }
 
   ngOnInit() {
-    // this.socketService.movement.subscribe(fromTo => {
-    // });
-
-    // this.updates.subscribe((unitId: string) => {
-    //   console.log('update it', this.socketService.units[unitId]);
-    //
-    // });
+    this.rect = this.element.nativeElement.getBoundingClientRect();
   }
 
-  ngOnChanges(): void {
-    this.rect = this.element.nativeElement.getBoundingClientRect();
-    this.controlPoints = [];
-
-    if (!this.to && !this.from) {
-      this.pointer = null;
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes.connection) {
+      this.rect = this.element.nativeElement.getBoundingClientRect();
+      this.controlPoints = [];
+    } else {
+      if (!this.to && !this.from) {
+        this.pointer = null;
+      }
     }
   }
 
@@ -83,6 +80,22 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     }
 
     return output;
+  }
+
+  pointerColor(): string {
+    const socket = this.socketService.getSocket(this.from || this.to).comp.state;
+
+    return socket.color || (this.colors && this.colors[socket.format!]) || '#fff';
+  }
+
+  stopColorStart(connId): string {
+    const socketDetails = this.socketService.getSocket(connId);
+
+    return socketDetails.comp.state.color || this.colors[socketDetails.comp.state.format!] || '#fff';
+  }
+
+  stopColorEnd(connId): string {
+    return this.stopColorStart(connId);
   }
 
   d(connection: XxlConnection): string {

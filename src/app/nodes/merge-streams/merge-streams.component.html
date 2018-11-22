@@ -4,7 +4,7 @@
   <section class="inputs">
     <ng-container *ngFor="let socket of state.sockets | socketIn" class="socket">
       <mat-card  #inputs *ngFor="let val of streamValues[socket.id]" [attr.data-socket-id]="socket.id" class="socket">
-        <mat-card-content>{{val.toFixed(3)}}</mat-card-content>
+        <mat-card-content>{{val !== undefined  ? val.toFixed(3) : ''}}</mat-card-content>
       </mat-card>
     </ng-container>
   </section>

@@ -1,8 +1,8 @@
 import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
-import { FbNode, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
-import { XxlFlowUnitService } from '../../../../projects/flow-based/src/lib/services/flow-unit-service';
+import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 
 const GRAPH_OPTIONS = {
   legend: 'bottom',
@@ -15,7 +15,7 @@ const GRAPH_OPTIONS = {
   templateUrl: './basic-graph.component.html',
   styleUrls: ['./basic-graph.component.scss']
 })
-export class BasicGraphComponent implements FbNode, OnInit {
+export class BasicGraphComponent implements OnInit {
   @HostBinding('class.is-active') isActive = false;
   @ViewChild('graph') graph: ElementRef;
   chart;
@@ -25,7 +25,7 @@ export class BasicGraphComponent implements FbNode, OnInit {
   startIndex = 0;
 
 
-  constructor(@Host() private service: XxlFlowUnitService) {
+  constructor(@Host() private service: NodeService) {
   }
 
   ngOnInit() {
@@ -36,18 +36,6 @@ export class BasicGraphComponent implements FbNode, OnInit {
     this.worker = this.service.worker as BasicGraphWorker;
 
     this.worker.getStream().subscribe(val => this.update(this.worker.values));
-  }
-
-  getSockets(): XxlSocket[] {
-    return [
-      {
-        type: 'in',
-        format: 'number'
-      },
-      {
-        type: 'out',
-        format: 'number'
-      }];
   }
 
   update(values?: number[]): void {
@@ -85,7 +73,7 @@ export class BasicGraphComponent implements FbNode, OnInit {
   }
 
   onClose(): void {
-    this.service.closeSelf();
+    // TODO
   }
 
   connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {

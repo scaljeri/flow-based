@@ -1,455 +1,296 @@
-export const basic = {
-  "id": 1540846139872,
-  "children": [
-    {
-      "type": "stats",
-      "title": "Statistics",
-      "id": 1540846679094,
-      "config": {
-        "columnWidth": 7.3
-      },
-      "sockets": [
-        {
-          "type": "in",
-          "format": "number",
-          "id": 1540846679095
+export const basic =
+  {
+    "id": 1542057173568,
+    "children": [
+      {
+        "type": "random-numbers",
+        "title": "Random number generator",
+        "id": 1542140574651,
+        "config": {
+          "min": 0,
+          "max": 100,
+          "start": 0,
+          "end": 100,
+          "intervalMax": 10000,
+          "intervalMin": 100,
+          "interval": 100,
+          "integer": true,
+          "integers": true,
+          "expanded": false
         },
-        {
-          "type": "out",
-          "name": "Min value",
-          "format": "number",
-          "id": 1540846679096
-        },
-        {
-          "type": "out",
-          "name": "Max value",
-          "format": "number",
-          "id": 1540846679097
-        }
-      ],
-      "position": {
-        "x": 70.69061832977589,
-        "y": 63.164802467597205
-      }
-    },
-    {
-      "type": "tap",
-      "title": "Tap",
-      "id": 1540846679098,
-      "config": {},
-      "sockets": [
-        {
-          "type": "in",
-          "id": 1540846679099,
-          "format": "number"
-        },
-        {
-          "type": "out",
-          "id": 1540846679100,
-          "format": "number"
-        }
-      ],
-      "position": {
-        "x": 54.67457644076841,
-        "y": 63.7240621884347
-      }
-    },
-    {
-      "type": "random-numbers",
-      "title": "Random number generator",
-      "id": 1540846679105,
-      "config": {
-        "min": 0,
-        "max": 100,
-        "start": 0,
-        "end": 100,
-        "intervalMax": 10000,
-        "intervalMin": 100,
-        "interval": 100,
-        "integer": true,
-        "integers": true
-      },
-      "sockets": [
-        {
-          "type": "out",
-          "format": "number",
-          "id": 1540846679106
-        }
-      ],
-      "position": {
-        "x": 9.221167956243331,
-        "y": 61.93334060319043
-      }
-    },
-    {
-      "type": "random-numbers",
-      "title": "Random number generator",
-      "id": 1540846679107,
-      "config": {
-        "min": 0,
-        "max": 100,
-        "start": 0,
-        "end": 100,
-        "intervalMax": 10000,
-        "intervalMin": 100,
-        "interval": 100,
-        "integer": true,
-        "integers": true
-      },
-      "sockets": [
-        {
-          "type": "out",
-          "format": "number",
-          "id": 1540846679108
-        }
-      ],
-      "position": {
-        "x": 9.250767075773744,
-        "y": 75.11917372881355
-      }
-    },
-    {
-      "type": "random-numbers",
-      "title": "Random number generator",
-      "id": 1540846139873,
-      "config": {
-        "min": 0,
-        "max": 100,
-        "start": 0,
-        "end": 100,
-        "intervalMax": 10000,
-        "intervalMin": 100,
-        "interval": 100,
-        "integer": true,
-        "integers": true
-      },
-      "sockets": [
-        {
-          "type": "out",
-          "format": "number",
-          "id": 1540846139874
-        }
-      ],
-      "position": {
-        "x": 7.232607390608324,
-        "y": 5.9419398055832495
-      }
-    },
-    {
-      "type": "random-numbers",
-      "title": "Random number generator",
-      "id": 1540846139875,
-      "config": {
-        "min": 0,
-        "max": 100,
-        "start": 0,
-        "end": 100,
-        "intervalMax": 10000,
-        "intervalMin": 100,
-        "interval": 100,
-        "integer": true,
-        "integers": true
-      },
-      "sockets": [
-        {
-          "type": "out",
-          "format": "number",
-          "id": 1540846139876
-        }
-      ],
-      "position": {
-        "x": 7.299726520811101,
-        "y": 24.984811191425727
-      }
-    },
-    {
-      "type": "random-numbers",
-      "title": "Random number generator",
-      "id": 1540846679103,
-      "config": {
-        "min": 0,
-        "max": 100,
-        "start": 0,
-        "end": 100,
-        "intervalMax": 10000,
-        "intervalMin": 100,
-        "interval": 100,
-        "integer": true,
-        "integers": true
-      },
-      "sockets": [
-        {
-          "type": "out",
-          "format": "number",
-          "id": 1540846679104
-        }
-      ],
-      "position": {
-        "x": 9.302044423692637,
-        "y": 47.752445787637086
-      }
-    },
-    {
-      "type": "flow",
-      "title": "Composite Unit",
-      "id": 1540846679083,
-      "config": {},
-      "children": [
-        {
-          "type": "merge-streams",
-          "title": "Merge streams",
-          "id": 1540846679087,
-          "config": {},
-          "sockets": [
-            {
-              "type": "in",
-              "format": "number",
-              "id": 1540846679088
-            },
-            {
-              "type": "in",
-              "format": "number",
-              "id": 1540846679089
-            },
-            {
-              "type": "out",
-              "format": "number",
-              "id": 1540846679090
-            }
-          ],
-          "position": {
-            "x": 29.740940553745926,
-            "y": 44.33929474216381
+        "sockets": [
+          {
+            "id": 1542140574652,
+            "type": "out",
+            "format": "number"
           }
+        ],
+        "position": {
+          "x": 4.616767035590273,
+          "y": 21.51132008047692
         }
-      ],
-      "connections": [
-        {
-          "from": 1540846679087,
-          "out": 1540846679090,
-          "to": 1540846679083,
-          "in": 1540846679085,
-          "id": 1540846679093
-        },
-        {
-          "from": 1540846679083,
-          "out": 1540846679084,
-          "to": 1540846679087,
-          "in": 1540846679089,
-          "id": 1540846679092
-        },
-        {
-          "from": 1540846679083,
-          "out": 1540846679086,
-          "to": 1540846679087,
-          "in": 1540846679088,
-          "id": 1540846679091
-        }
-      ],
-      "sockets": [
-        {
-          "id": 1540846679086,
-          "type": "in",
-          "name": "inin",
-          "description": null,
-          "color": null,
-          "format": "number"
-        },
-        {
-          "id": 1540846679085,
-          "type": "out",
-          "name": "out",
-          "description": null,
-          "color": null,
-          "format": "number"
-        },
-        {
-          "id": 1540846679084,
-          "type": "in",
-          "name": "in",
-          "description": null,
-          "color": null,
-          "format": "number"
-        }
-      ],
-      "position": {
-        "x": 33.44575440234792,
-        "y": 61.85350199401796
-      }
-    },
-    {
-      "type": "merge-streams",
-      "title": "Merge streams",
-      "id": 1540846139877,
-      "config": {},
-      "sockets": [
-        {
-          "type": "in",
-          "format": "number",
-          "id": 1540846139878
-        },
-        {
-          "type": "in",
-          "format": "number",
-          "id": 1540846139879
-        },
-        {
-          "type": "out",
-          "format": "number",
-          "id": 1540846139880
-        }
-      ],
-      "position": {
-        "x": 27.247031750266807,
-        "y": 6.4225292871385875
-      }
-    },
-    {
-      "type": "tap",
-      "title": "Tap",
-      "id": 1540846139887,
-      "config": {},
-      "sockets": [
-        {
-          "type": "in",
-          "id": 1540846139888,
-          "format": "number"
-        },
-        {
-          "type": "out",
-          "id": 1540846139889,
-          "format": "number"
-        }
-      ],
-      "position": {
-        "x": 43.240561632870865,
-        "y": 6.573249002991025
-      }
-    },
-    {
-      "type": "stats",
-      "title": "Statistics",
-      "id": 1540846139883,
-      "config": {
-        "columnWidth": 1
       },
-      "sockets": [
-        {
-          "type": "in",
-          "format": "number",
-          "id": 1540846139884
+      {
+        "type": "random-numbers",
+        "title": "Random number generator",
+        "id": 1542140574648,
+        "config": {
+          "min": 0,
+          "max": 100,
+          "start": 0,
+          "end": 100,
+          "intervalMax": 10000,
+          "intervalMin": 100,
+          "interval": 100,
+          "integer": true,
+          "integers": true,
+          "expanded": false
         },
-        {
-          "type": "out",
-          "name": "Min value",
-          "format": "number",
-          "id": 1540846139885
-        },
-        {
-          "type": "out",
-          "name": "Max value",
-          "format": "number",
-          "id": 1540846139886
+        "sockets": [
+          {
+            "id": 1542140574649,
+            "type": "out",
+            "format": "number"
+          }
+        ],
+        "position": {
+          "x": 16.661173502604157,
+          "y": 6.967000181886753
         }
-      ],
-      "position": {
-        "x": 67.84076507470651,
-        "y": 7.512618394815558
-      }
-    },
-    {
-      "type": "basic-graph",
-      "title": "Basic Graph",
-      "id": 1540846982356,
-      "config": {},
-      "sockets": [
-        {
-          "type": "in",
-          "format": "number",
-          "id": 1540846982357
+      },
+      {
+        "type": "tap",
+        "title": "Tap",
+        "id": 1542125048424,
+        "config": {
+          "expanded": false
         },
-        {
-          "type": "out",
-          "format": "number",
-          "id": 1540846982358
+        "sockets": [
+          {
+            "id": 1542125048425,
+            "type": "in",
+            "format": "number"
+          },
+          {
+            "id": 1542125048426,
+            "type": "out",
+            "format": "number"
+          }
+        ],
+        "position": {
+          "x": 39.25069173177083,
+          "y": 18.242038863849427
         }
-      ],
-      "position": {
-        "x": 44.99941635538954,
-        "y": 20.768553713858424
+      },
+      {
+        "type": "stats",
+        "title": "Statistics",
+        "id": 1542140574654,
+        "config": {
+          "columnWidth": 1,
+          "expanded": true
+        },
+        "sockets": [
+          {
+            "id": 1542140574655,
+            "type": "in",
+            "format": "number"
+          },
+          {
+            "id": 1542140574656,
+            "type": "out",
+            "name": "Min value",
+            "format": "number"
+          },
+          {
+            "id": 1542140574657,
+            "type": "out",
+            "name": "Max value",
+            "format": "number"
+          }
+        ],
+        "position": {
+          "x": 61.28479003906251,
+          "y": 2.161759631312318
+        }
+      },
+      {
+        "type": "basic-graph",
+        "title": "Basic Graph",
+        "id": 1542203540854,
+        "config": {},
+        "sockets": [
+          {
+            "id": 1542203540855,
+            "type": "in",
+            "format": "number"
+          },
+          {
+            "id": 1542203540856,
+            "type": "out",
+            "format": "number"
+          }
+        ],
+        "position": {
+          "x": 28.782009548611114,
+          "y": 41.27400426742532
+        }
+      },
+      {
+        "type": "flow",
+        "title": "Composite Unit",
+        "id": 1542057173569,
+        "config": {},
+        "sockets": [
+          {
+            "type": "in",
+            "name": "dfb",
+            "description": null,
+            "color": null,
+            "id": 1542140600722,
+            "format": "number"
+          },
+          {
+            "type": "out",
+            "name": "sa",
+            "description": null,
+            "color": null,
+            "id": 1542140451388,
+            "format": "number"
+          },
+          {
+            "type": "in",
+            "name": "as",
+            "description": null,
+            "color": null,
+            "id": 1542138850863,
+            "format": "number"
+          }
+        ],
+        "children": [
+          {
+            "type": "merge-streams",
+            "title": "Merge streams",
+            "id": 1542140574641,
+            "config": {},
+            "sockets": [
+              {
+                "id": 1542140574642,
+                "type": "in",
+                "format": "number"
+              },
+              {
+                "id": 1542140574643,
+                "type": "in",
+                "format": "number"
+              },
+              {
+                "id": 1542140574644,
+                "type": "out",
+                "format": "number"
+              }
+            ],
+            "position": {
+              "x": 19.285878413865547,
+              "y": 42.98533872598585
+            }
+          },
+          {
+            "type": "tap",
+            "title": "Tap",
+            "id": 1542125048417,
+            "config": {
+              "expanded": true
+            },
+            "sockets": [
+              {
+                "id": 1542125048418,
+                "type": "in",
+                "format": "number"
+              },
+              {
+                "id": 1542125048419,
+                "type": "out",
+                "format": "number"
+              }
+            ],
+            "position": {
+              "x": 38.85577309281671,
+              "y": 10.578783614711401
+            }
+          }
+        ],
+        "connections": [
+          {
+            "from": 1542125048417,
+            "out": 1542125048419,
+            "to": 1542057173569,
+            "in": 1542140451388,
+            "id": 1542203540850
+          },
+          {
+            "from": 1542140574641,
+            "out": 1542140574644,
+            "to": 1542125048417,
+            "in": 1542125048418,
+            "id": 1542203540849
+          },
+          {
+            "from": 1542057173569,
+            "out": 1542138850863,
+            "to": 1542140574641,
+            "in": 1542140574643,
+            "id": 1542140574646
+          },
+          {
+            "from": 1542057173569,
+            "out": 1542140600722,
+            "to": 1542140574641,
+            "in": 1542140574642,
+            "id": 1542140574645
+          }
+        ],
+        "position": {
+          "x": 8.290666852678582,
+          "y": 49.397100084880485
+        }
       }
-    }
-  ],
-  "connections": [
-    {
-      "from": 1540846139887,
-      "out": 1540846139889,
-      "to": 1540846982356,
-      "in": 1540846982357,
-      "id": 1540846982359
-    },
-    {
-      "from": 1540846679103,
-      "out": 1540846679104,
-      "to": 1540846679083,
-      "in": 1540846679086,
-      "id": 1540846679111
-    },
-    {
-      "from": 1540846679105,
-      "out": 1540846679106,
-      "to": 1540846679083,
-      "in": 1540846679086,
-      "id": 1540846679110
-    },
-    {
-      "from": 1540846679107,
-      "out": 1540846679108,
-      "to": 1540846679083,
-      "in": 1540846679084,
-      "id": 1540846679109
-    },
-    {
-      "from": 1540846679083,
-      "out": 1540846679085,
-      "to": 1540846679098,
-      "in": 1540846679099,
-      "id": 1540846679102
-    },
-    {
-      "from": 1540846679098,
-      "out": 1540846679100,
-      "to": 1540846679094,
-      "in": 1540846679095,
-      "id": 1540846679101
-    },
-    {
-      "from": 1540846139887,
-      "out": 1540846139889,
-      "to": 1540846139883,
-      "in": 1540846139884,
-      "id": 1540846139891
-    },
-    {
-      "from": 1540846139877,
-      "out": 1540846139880,
-      "to": 1540846139887,
-      "in": 1540846139888,
-      "id": 1540846139890
-    },
-    {
-      "from": 1540846139875,
-      "out": 1540846139876,
-      "to": 1540846139877,
-      "in": 1540846139879,
-      "id": 1540846139882
-    },
-    {
-      "from": 1540846139873,
-      "out": 1540846139874,
-      "to": 1540846139877,
-      "in": 1540846139878,
-      "id": 1540846139881
-    }
-  ]
-}
+    ],
+    "connections": [
+      {
+        "from": 1542125048424,
+        "out": 1542125048426,
+        "to": 1542203540854,
+        "in": 1542203540855,
+        "id": 1542203540857
+      },
+      {
+        "from": 1542125048424,
+        "out": 1542125048426,
+        "to": 1542140574654,
+        "in": 1542140574655,
+        "id": 1542203540852
+      },
+      {
+        "from": 1542057173569,
+        "out": 1542140451388,
+        "to": 1542125048424,
+        "in": 1542125048425,
+        "id": 1542203540851
+      },
+      {
+        "from": 1542140574651,
+        "out": 1542140574652,
+        "to": 1542057173569,
+        "in": 1542138850863,
+        "id": 1542140574653
+      },
+      {
+        "from": 1542140574648,
+        "out": 1542140574649,
+        "to": 1542057173569,
+        "in": 1542140600722,
+        "id": 1542140574650
+      }
+    ]
+  }

@@ -1,66 +1,59 @@
 import { Inject, Injectable, Optional } from '@angular/core';
 import {
-  SocketDetails,
   XXL_FLOW_TYPES,
   XxlConnection,
-  XxlFlow,
   FbNodeType,
   XxlFlowUnitState,
-  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState, XxlSocket
+  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState, XxlSocket, ConnectionDetails, XxlSocketEvent
 } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
-import { FlowWorker } from './utils/flow-worker';
 import { Flow } from './utils/flow';
+import { SocketService } from './socket.service';
+import { deepClone } from './utils/deep-clone';
 
 let uniqueId = Date.now();
+
+export interface ExternalEvent {
+  type: string;
+  payload: any;
+  nodeId: number;
+}
 
 @Injectable({
   providedIn: 'root'
 })
-export class XxlFlowBasedService {
-  private flowStack: FlowBasedComponent[] = [];
-  private unitBlur: null | (() => void);
-  private workers = {};
+export class FlowBasedService {
   public flow: Flow;
-  private state: FbNodeState;
-  private sockets: FbKeyValues<SocketDetails> = {};
+  private flowStack: FlowBasedComponent[] = [];
+  private nodeListeners: Record<string, { id: number, callback: (any) => boolean | void }[]> = {};
 
-  constructor(@Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
+  constructor(private socketService: SocketService,
+              @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
   }
 
-  socketAdded(): void {
-    this.currentFlow.updateConnections();
+  nodeMoved(id: number): void {
+    this.socketService.clearPosition(id);
+    this.currentFlow.repaintConnections();
   }
 
-  nodeMoved(): void {
-    this.currentFlow.rerender();
-  }
+  nodeClicked(nodeState): void {
+    this.socketService.outsideClick();
+    const state = this.currentFlow.state;
 
-  // addSocket(id: number, socket: SocketDetails): void {
-  //   alert('x');
-  //   this.sockets[id] = socket;
-  // }
-  //
-  // getSocket(id: number): SocketDetails {
-  //   return this.sockets[id];
-  // }
+    if (nodeState === state) {
+      return;
+    }
 
-  getSockets(scope?: number): SocketDetails[] {
-    return Object.keys(this.sockets).filter(k => !scope || this.sockets[k].scope === scope)
-      .reduce((o: SocketDetails[], k) => {
-        o.push(this.sockets![k]);
-
-        return o;
-      }, []);
+    state.children = [...state.children!.filter(node => node.id !== nodeState.id), nodeState];
   }
 
   addConnection(connection: XxlConnection): void {
-    this.flow.addConnection(this.currentFlow.state, connection);
-  }
+    if (!connection.id) {
+      connection.id = this.getUniqueId();
+    }
 
-  setState(state: FbNodeState): void {
-    this.state = state;
+    this.flow.addConnection(this.currentFlow.state, connection);
   }
 
   get currentFlow(): FlowBasedComponent {
@@ -75,14 +68,15 @@ export class XxlFlowBasedService {
     return ++uniqueId;
   }
 
-  initialize(): void {
-    if (!this.state.children) {
-      this.state.id = this.getUniqueId();
-      this.state.children = [];
-      this.state.connections = [];
+  initialize(state: FbNodeState): void {
+    if (!state.children) {
+      state.id = this.getUniqueId();
+      state.children = [];
+      state.connections = [];
     }
 
-    this.flow = new Flow(this.flowTypes, this.helpers).initialize(this.state);
+    this.socketService.reset();
+    this.flow = new Flow(this.flowTypes, this.helpers).initialize(state);
   }
 
   getWorker(id: number): FbNodeWorker {
@@ -90,119 +84,81 @@ export class XxlFlowBasedService {
   }
 
   add(flowType: string): XxlFlowUnitState {
+    const {settings} = this.flowTypes[flowType];
+
     const state = {
       type: flowType,
-      title: this.flowTypes[flowType].title,
+      title: settings.title,
       id: this.getUniqueId(),
-      config: this.flowTypes[flowType].config || {},
-      ...(this.flowTypes[flowType].isFlow ? {children: [], connections: []} : {})
+      config: deepClone(settings.config),
+      sockets: this.prepareSockets(settings.sockets),
+      ...(settings.isFlow ? {children: [], connections: []} : {})
     };
 
-    // this.flow.createWorker(state);
-
-    // this.currentFlow.add(state);
     this.flow.addNode(state, this.currentFlow.state);
+    this.currentFlow.nodeAdded(state);
 
     return state;
   }
 
-  // Flow stuff
-  activate(flow: FlowBasedComponent): void {
-    this.flowStack.unshift(flow);
-  }
-
-  deactivate(): void {
-    this.flowStack.shift();
-    this.currentFlow.childBlurred();
-  }
-
-  blur(): void {
-    if (this.unitBlur) {
-      this.unitBlur();
-      this.removeBlurForUnit();
-    } else {
-      this.currentFlow.blur();
-    }
-  }
-
-  blurForUnit(cb: () => void): void {
-    this.unitBlur = cb;
-
-  }
-
-  removeBlurForUnit(): void {
-    this.unitBlur = null;
-  }
-
-  close(state: XxlFlowUnitState): void {
-    this.blur();
-  }
-
-  // socketClicked(event: XxlSocketEvent): void {
-  //   this.currentFlow.onSocketClick(event);
-  // }
-
-  // getWorker(unitId): FbNodeWorker {
-  //   return this.workers[unitId];
-  // }
-
-  // getSockets(unitId: number): XxlSocket[] {
-  //   return this.workers[unitId].getSockets() || [];
-  // }
-
-  delete(state: FbNodeState, parentState?: XxlFlow): void {
-    let flow = parentState || this.currentFlow.state,
-      index = flow.children!.indexOf(state);
-
-    if (!parentState) {
-      this.blur();
-    }
-
-    if (index === -1) {
-      flow = this.currentFlow.state;
-      index = flow.children!.indexOf(state);
-    }
-
-    // Remove all connection from/to this unit
-    flow.connections = flow.connections!.reduce((out: XxlConnection[], conn) => {
-      if (conn.to as number === state.id) {
-        this.workers[state.id].removeStream(conn);
-      } else if (conn.from as number === state.id) {
-        this.workers[conn.to as number].removeStream(conn);
-      } else {
-        out.push(conn);
-      }
-
-      return out;
-    }, []);
-
-    // If it is a flow, destroy all children
-    ((state as XxlFlow).children || []).forEach(child => {
-      this.delete(child, state as XxlFlow);
+  prepareSockets(sockets: XxlSocket[] = []): XxlSocket[] {
+    return sockets.map(s => {
+      return Object.assign({id: this.getUniqueId()}, s);
     });
+  }
 
-    flow.children!.splice(index, 1);
+  // Flow stuff
+  activateFlow(flow: FlowBasedComponent): void {
+    this.flowStack.unshift(flow);
+    if (this.parentFlow) {
+      this.parentFlow.repaint();
+    }
+  }
+
+  deactivateFlow(): void {
+    this.currentFlow.deactivate();
+    this.flowStack.shift();
+  }
+
+  triggerEvent(type, payload?: any): void {
+    const listeners = this.nodeListeners[type];
+
+    if (listeners && listeners.length > 0) {
+      if (!listeners[0].callback(payload)) {
+        listeners.shift();
+      }
+    }
+  }
+
+  register(id: number, callback: (any) => boolean | void, type: string = '__default__'): void {
+    this.nodeListeners[type] = this.nodeListeners[type] || [];
+    this.nodeListeners[type].unshift({id, callback});
+  }
+
+  unregister(id, type: string = '__default__'): void {
+    if (this.nodeListeners[type]) {
+      this.nodeListeners[type] = this.nodeListeners[type].filter(listener => listener.id !== id);
+    }
+  }
+
+  unregisterAll(id: number): void {
+    Object.keys(this.nodeListeners).forEach(key =>  this.unregister(id, key));
+  }
+
+  delete(state: FbNodeState): void {
+    this.flow.removeNode(state.id!);
+    this.currentFlow.updateChildren();
   }
 
   destroy(): void {
     this.flow.destroy();
   }
 
-  // Create workers and the connections between them
-  private initializeFlow(flow: FbNodeState): void {
-    flow.children!.forEach(child => {
-      const {worker} = this.flowTypes[child.type];
+  removeSocket(socket: XxlSocket): void {
+    this.flow.removeSocket(socket);
 
-      if (child.children) {
-        this.workers[child.id!] = new FlowWorker(child);
-        this.initializeFlow(child);
-      } else if (worker) {
-        this.workers[child.id!] = new worker(child);
-      }
+    this.flowStack.forEach(flow => {
+      flow.repaintConnections();
     });
-
-    // flow.connections.forEach((conn: XxlConnection) => {
-    //   this.setupConnection(conn);
-    // });
   }
 }

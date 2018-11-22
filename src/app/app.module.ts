@@ -5,10 +5,10 @@ import { NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
-import { TapComponent } from './units/tap/tap.component';
-import { DefaultFlowComponent } from './units/default-flow/default-flow.component';
+import { TapComponent } from './nodes/tap/tap.component';
+import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
 import { FlowComponent } from './flow/flow.component';
-import { FB_NODE_HELPERS, XXL_FLOW_TYPES } from '../../projects/flow-based/src/lib/flow-based';
+import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, XXL_FLOW_TYPES } from '../../projects/flow-based/src/lib/flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {
@@ -20,15 +20,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
-import { RandomNumbersComponent } from './units/random-numbers/random-numbers.component';
-import { BasicGraphComponent } from './units/basic-graph/basic-graph.component';
-import { AddSocketComponent } from './units/default-flow/add-socket/add-socket.component';
-import { StatsComponent } from './units/stats/stats.component';
-import { MergeStreamsComponent } from './units/merge-streams/merge-streams.component';
-import { EditSocketComponent } from './units/default-flow/edit-socket/edit-socket.component';
-import { FB_CONFIG } from './fb-config';
+import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.component';
+import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
+import { AddSocketComponent } from './nodes/default-flow/add-socket/add-socket.component';
+import { StatsComponent } from './nodes/stats/stats.component';
+import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
+import { EditSocketComponent } from './nodes/default-flow/edit-socket/edit-socket.component';
+import { FB_CONFIG, XXL_SOCKET_COLORS } from './fb-config';
 import { NODE_HELPERS } from './node-helpers';
 import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.module';
+import { EditTitleComponent } from './components/edit-title/edit-title.component';
 
 @NgModule({
   declarations: [
@@ -44,7 +45,8 @@ import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.mo
     BasicGraphComponent,
     StatsComponent,
     MergeStreamsComponent,
-    EditSocketComponent
+    EditSocketComponent,
+    EditTitleComponent
   ],
   imports: [
     BrowserModule,
@@ -73,6 +75,9 @@ import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.mo
     }, {
       provide: FB_NODE_HELPERS,
       useValue: NODE_HELPERS
+    }, {
+      provide: FB_SOCKET_COLORS,
+      useValue: XXL_SOCKET_COLORS as FbSocketColors
     }
   ],
   entryComponents: [

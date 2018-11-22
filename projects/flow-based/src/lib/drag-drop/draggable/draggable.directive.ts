@@ -18,19 +18,20 @@ export class DraggableDirective {
   private pointerMoveSubscription: Subscription;
 
   @HostListener('pointerdown', ['$event']) onPointerDown(event) {
-    console.log('draggable');
-    event.stopPropagation();
+    if (!event.target.closest('.fb-drag-ignore')) {
+      event.stopPropagation();
 
-    if (event.button !== 0) {
-      return;
+      if (event.button !== 0) {
+        return;
+      }
+
+      this.pointerId = event.pointerId;
+
+      this.dragState = event;
+
+      this.pointerMoveSubscription = fromEvent(document, 'pointermove')
+        .subscribe(e => this.onPointerMove(e));
     }
-
-    this.pointerId = event.pointerId;
-
-    this.dragState = event;
-
-    this.pointerMoveSubscription = fromEvent(document, 'pointermove')
-      .subscribe(e => this.onPointerMove(e));
   }
 
   @HostListener('document:pointerup', ['$event'])

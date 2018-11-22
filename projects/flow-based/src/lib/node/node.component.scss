@@ -24,7 +24,7 @@ $socket-size: 14px;
   min-width: 72px;
   padding: 4px;
   user-select: none;
-  z-index: 100;
+  z-index: $zindex-node;
 
   .sockets-in {
     .socket {
@@ -42,7 +42,7 @@ $socket-size: 14px;
     }
   }
 
-  &:not(.is-active) {
+  &:not(.is-fullsize) {
     cursor: move;
     position: absolute;
 
@@ -69,14 +69,14 @@ $socket-size: 14px;
     }
   }
 
-  &.is-active {
+  &.is-fullsize {
     --socket-size: #{$socket-size * 3};
     height: 100%;
     left: 0 !important;
     position: relative;
     top: 0 !important;
     transform: translate(0, 0);
-    z-index: $xxl-flow-unit-active;
+    z-index: $zindex-node-active;
   }
 }
 
@@ -115,11 +115,12 @@ xxl-flow-based {
 
 xxl-connection-lines {
   background-color: transparent;
+  pointer-events: none;
   z-index: 2;
   @include xxl-position(absolute, 0px 0px 0px 0px);
 
   &.tmp-lines {
-    z-index: 3;
+    z-index: 10;
   }
 
   &.is-dark {
@@ -162,6 +163,10 @@ xxl-connection-lines {
   top: 6px;
   width: var(--socket-size);
   z-index: 3;
+
+  &.is-disabled {
+    pointer-events: none;
+  }
 }
 
 .sockets-in {

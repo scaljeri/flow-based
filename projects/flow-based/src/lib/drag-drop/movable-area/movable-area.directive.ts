@@ -1,4 +1,4 @@
-import {AfterContentInit, ContentChildren, Directive, ElementRef, QueryList} from '@angular/core';
+import { AfterContentInit, ContentChildren, Directive, ElementRef, OnDestroy, QueryList } from '@angular/core';
 import {Subscription} from 'rxjs';
 import {MovableDirective} from '../movable/movable.directive';
 
@@ -12,17 +12,18 @@ export interface Boundaries {
 @Directive({
   selector: '[xxlMovableArea]'
 })
-export class MovableAreaDirective implements AfterContentInit {
+export class MovableAreaDirective implements OnDestroy, AfterContentInit {
   @ContentChildren(MovableDirective) movables: QueryList<MovableDirective>;
 
   private boundaries: Boundaries;
   private subscriptions: Subscription[] = [];
+  private mainSub: Subscription;
 
   constructor(private element: ElementRef) {
   }
 
   ngAfterContentInit(): void {
-    this.movables.changes.subscribe(() => {
+    this.mainSub = this.movables.changes.subscribe(() => {
       this.subscriptions.forEach(sub => sub.unsubscribe());
       this.subscriptions = [];
 
@@ -33,6 +34,14 @@ export class MovableAreaDirective implements AfterContentInit {
     });
 
     this.movables.notifyOnChanges();
+  }
+
+  ngOnDestroy(): void {
+    if (this.subscriptions.length){
+      this.subscriptions.forEach(s => s.unsubscribe());
+    }
+
+    this.mainSub.unsubscribe();
   }
 
   private measureBoundaries(movable: MovableDirective): void {

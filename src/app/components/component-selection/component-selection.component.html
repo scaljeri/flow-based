@@ -6,7 +6,7 @@
   <h2>Flow units</h2>
   <mat-list>
     <mat-list-item *ngFor="let key of flowKeys ">
-      <button mat-button (click)="onSelection(key)">{{flowTypes[key].title}}</button>
+      <button mat-button (click)="onSelection(key)">{{flowTypes[key].settings.title}}</button>
     </mat-list-item>
   </mat-list>
 </section>

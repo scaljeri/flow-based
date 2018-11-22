@@ -21,10 +21,6 @@ export class FlowWorker implements FbNodeWorker {
     console.log('FlowWorker: destroy');
   }
 
-  getSockets(): XxlSocket[] {
-    return this.state.sockets!;
-  }
-
   getStream(socketId: number): Observable<any> {
     return this.getSubject(socketId).asObservable();
   }
