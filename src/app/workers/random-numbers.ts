@@ -16,7 +16,7 @@ export const RANDOM_NUMBER_SETTINGS = {
   sockets: [
     {
       type: 'out',
-      format: 'number'
+      format: 'numberx'
     }
   ]
 };
