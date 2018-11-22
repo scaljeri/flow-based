@@ -32,11 +32,11 @@ xxl-connection-lines {
   @include xxl-position(absolute, 0px 0px 0px 0px);
 }
 
-xxl-flow-unit {
+fb-node {
   z-index: 2;
 
   &.is-moving {
-    z-index: 3;
+    z-index: 5;
   }
 
   &.is-active {
