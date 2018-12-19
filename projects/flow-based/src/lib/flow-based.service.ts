@@ -148,6 +148,8 @@ export class FlowBasedService {
   delete(state: FbNodeState): void {
     this.flow.removeNode(state.id!);
     this.currentFlow.updateChildren();
+
+    this.unregisterAll(state.id!);
   }
 
   destroy(): void {

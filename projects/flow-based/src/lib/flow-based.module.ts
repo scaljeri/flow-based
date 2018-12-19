@@ -32,7 +32,7 @@ import { SocketComponent } from './socket/socket.component';
     SocketInPipe,
     SocketOutPipe,
     SocketComponent],
-  exports: [FlowBasedComponent, SocketInPipe],
+  exports: [FlowBasedComponent, SocketInPipe, SocketOutPipe],
   providers: [
     FlowBasedManagerService,
     {

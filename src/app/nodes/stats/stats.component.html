@@ -1,67 +1,58 @@
-<section *ngIf="!isActive" class="minified">
-  <div>
-    <span class="label">Min:</span>
-    <span class="value">{{min}}</span>
-    <svg width="40px" height="20px">
-      <defs>
-        <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"
-                markerUnits="strokeWidth">
-          <path d="M0,0 L0,6 L4,3 z" fill="#fff"/>
-        </marker>
-      </defs>
-      <line x1="4" y1="10" x2="30" y2="10" stroke="#fff" stroke-width="2" marker-end="url(#arrow)"/>
-    </svg>
-  </div>
-  <div>
-    <span class="label">Max:</span>
-    <span class="value">{{max}}</span>
-    <svg width="40px" height="20px">
-      <line x1="4" y1="10" x2="30" y2="10" stroke="#fff" stroke-width="2" marker-end="url(#arrow)"/>
-    </svg>
-  </div>
-</section>
-
-<section *ngIf="isActive" class="expanded">
-  <mat-toolbar color="primary">
-    <xxl-edit-title [state]="state"></xxl-edit-title>
-  </mat-toolbar>
-
-  <div class="wrapper">
-    <mat-card class="values">
-      <mat-card-content>
-        <span>Min value</span>
+<fb-normal-node (edit)="onEdit($event)">
+    <section class="minified">
+      <div>
+        <span class="label">Min:</span>
         <span class="value">{{min}}</span>
-      </mat-card-content>
-      <mat-card-content>
-        <span>Max value</span>
+        <svg width="40px" height="20px">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto"
+                    markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L4,3 z" fill="#fff"/>
+            </marker>
+          </defs>
+          <line x1="4" y1="10" x2="30" y2="10" stroke="#fff" stroke-width="2" marker-end="url(#arrow)"/>
+        </svg>
+      </div>
+      <div>
+        <span class="label">Max:</span>
         <span class="value">{{max}}</span>
-      </mat-card-content>
-      <mat-card-content>
-        <span>Average value</span>
-        <span class="value">{{avg}}</span>
-      </mat-card-content>
+        <svg width="40px" height="20px">
+          <line x1="4" y1="10" x2="30" y2="10" stroke="#fff" stroke-width="2" marker-end="url(#arrow)"/>
+        </svg>
+      </div>
+    </section>
 
-      <button mat-stroked-button (click)="onReset()">Reset</button>
-    </mat-card>
+    <section class="expanded">
+      <div class="wrapper">
+        <mat-card class="values">
+          <mat-card-content>
+            <span>Min value</span>
+            <span class="value">{{min}}</span>
+          </mat-card-content>
+          <mat-card-content>
+            <span>Max value</span>
+            <span class="value">{{max}}</span>
+          </mat-card-content>
+          <mat-card-content>
+            <span>Average value</span>
+            <span class="value">{{avg}}</span>
+          </mat-card-content>
 
-    <mat-card class="distribution">
-      <mat-card-title>Distribution</mat-card-title>
-      <mat-card-content>
-        <div #distribution></div>
-        <div class="column-width">
-          <span>Column width: </span>
-          <mat-slider class="fb-drag-ignore" min="0" max="10" step=".1" [(ngModel)]="worker.columnWidth"></mat-slider>
-          <span>{{worker.columnWidth}}</span>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
+          <button mat-stroked-button (click)="onReset()">Reset</button>
+        </mat-card>
 
-  <footer>
-    <button mat-button color="warn" (click)="onDelete()">
-      <mat-icon>delete_forever</mat-icon>
-    </button>
-
-    <button mat-button (click)="onClose()" class="close">Close</button>
-  </footer>
-</section>
+        <mat-card class="distribution">
+          <mat-card-title>Distribution</mat-card-title>
+          <mat-card-content>
+            <div #distribution></div>
+            <div class="column-width">
+              <span>Column width: </span>
+              <mat-slider class="fb-drag-ignore" min="0" max="10" step=".1"
+                          [(ngModel)]="worker.columnWidth"></mat-slider>
+              <span>{{worker.columnWidth}}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
+</fb-normal-node>

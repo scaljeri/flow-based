@@ -1,0 +1,45 @@
+@import '../../../../projects/flow-based/src/lib/utils/utils';
+
+:host {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  &.is-fullscreen {
+    height: 100%;
+
+    footer {
+      background-color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: space-between;
+      transform: translateX(-50%);
+      width: 300px;
+      @include xxl-position(absolute, 0 0 8px 50%);
+    }
+  }
+
+  &.is-active {
+    width: 500px;
+  }
+}
+
+fb-edit-socket {
+  z-index: 11;
+}
+
+header mat-toolbar {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+footer {
+  background-color: #fff;
+  display: flex;
+  justify-content: space-between;
+
+  .close {
+    color: #000;
+  }
+}
+

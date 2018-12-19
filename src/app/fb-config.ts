@@ -20,6 +20,5 @@ export const FB_CONFIG = {
 };
 
 export const XXL_SOCKET_COLORS = {
-  'number': 'green',
-  'numberx': 'red'
+  'number': '#025d04'
 };

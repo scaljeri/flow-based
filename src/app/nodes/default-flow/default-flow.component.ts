@@ -3,8 +3,8 @@ import { XxlSocket } from 'projects/flow-based/src/lib/flow-based';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { MatDialog, MatDialogRef } from '@angular/material';
 import { AddSocketComponent, DialogAction } from './add-socket/add-socket.component';
-import { EditSocketComponent } from './edit-socket/edit-socket.component';
 import { Subscription } from 'rxjs';
+import { EditSocketComponent } from '../../components/edit-socket/edit-socket.component';
 
 @Component({
   selector: 'fb-default-flow',
@@ -89,7 +89,6 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
     this.dialogRef.afterClosed().subscribe((updates: XxlSocket[] = []) => {
       (this.service.state.sockets || []).filter(socket => {
         if (socket.type === type && !updates.some(update => update.id === socket.id)) {
-          debugger;
           this.service.socketRemoved(socket);
         }
       });

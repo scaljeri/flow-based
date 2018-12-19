@@ -1,0 +1,46 @@
+<mat-card class="title">
+  <mat-card-content>
+    <mat-form-field matLine>
+      <input matInput placeholder="Title" [(ngModel)]="state.title">
+    </mat-form-field>
+  </mat-card-content>
+</mat-card>
+
+<div class="socket-wrapper">
+  <mat-list class="socket-in">
+    <mat-list-item *ngFor="let socket of sockets | socketIn;let i = index">
+      <button #delete mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id"
+              class="delete">
+        <mat-icon>delete_forever</mat-icon>
+      </button>
+
+      <mat-form-field matLine>
+        <input matInput placeholder="Socket name" [(ngModel)]="socket.name">
+      </mat-form-field>
+      <mat-form-field matLine>
+        <mat-label>Colors</mat-label>
+        <input matInput type="color" (ngModelChange)="setSocketColor($event, socket)"
+               [ngModel]="getSocketColor(socket)">
+      </mat-form-field>
+    </mat-list-item>
+  </mat-list>
+
+  <mat-list class="socket-out">
+    <mat-list-item *ngFor="let socket of sockets | socketOut;let i = index">
+      <button #delete mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id"
+              class="delete">
+        <mat-icon>delete_forever</mat-icon>
+      </button>
+
+      <mat-form-field matLine>
+        <input matInput placeholder="Socket name" [(ngModel)]="socket.name">
+      </mat-form-field>
+      <mat-form-field matLine>
+        <mat-label>Colors</mat-label>
+        <input matInput type="color" (ngModelChange)="setSocketColor($event, socket)"
+               [ngModel]="getSocketColor(socket)">
+      </mat-form-field>
+      <mat-divider></mat-divider>
+    </mat-list-item>
+  </mat-list>
+</div>

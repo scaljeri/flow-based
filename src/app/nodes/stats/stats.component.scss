@@ -10,6 +10,10 @@
   &.is-active {
     width: 500px;
   }
+
+  .expanded {
+    display: none;
+  }
 }
 
 .minified {
@@ -78,13 +82,14 @@
       }
     }
   }
+}
 
-  footer {
-    display: flex;
-    justify-content: space-between;
+.is-active {
+  .minified {
+    display: none;
+  }
 
-    .close {
-      color: #000;
-    }
+  .expanded {
+    display: block;
   }
 }

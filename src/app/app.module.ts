@@ -23,13 +23,14 @@ import { ComponentSelectionService } from './component-selection.service';
 import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.component';
 import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
 import { AddSocketComponent } from './nodes/default-flow/add-socket/add-socket.component';
-import { StatsComponent } from './nodes/stats/stats.component';
 import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
-import { EditSocketComponent } from './nodes/default-flow/edit-socket/edit-socket.component';
 import { FB_CONFIG, XXL_SOCKET_COLORS } from './fb-config';
 import { NODE_HELPERS } from './node-helpers';
 import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.module';
 import { EditTitleComponent } from './components/edit-title/edit-title.component';
+import { StatsComponent } from './nodes/stats/stats.component';
+import { NormalNodeComponent } from './components/normal-node/normal-node.component';
+import { EditSocketComponent } from './components/edit-socket/edit-socket.component';
 
 @NgModule({
   declarations: [
@@ -43,10 +44,11 @@ import { EditTitleComponent } from './components/edit-title/edit-title.component
     DefaultFrontComponent,
     ComponentSelectionComponent,
     BasicGraphComponent,
-    StatsComponent,
     MergeStreamsComponent,
     EditSocketComponent,
-    EditTitleComponent
+    EditTitleComponent,
+    StatsComponent,
+    NormalNodeComponent
   ],
   imports: [
     BrowserModule,

@@ -1,12 +1,10 @@
 import {
   FbKeyValues,
   XxlConnection,
-  XxlFlow,
   FbNodeType,
-  XxlFlowUnitState,
   FbNodeWorker,
   FbNodeHelpers,
-  SocketDetails, FbNodeState, XxlSocket
+  FbNodeState, XxlSocket
 } from '../flow-based';
 import { FlowWorker } from './flow-worker';
 
@@ -247,7 +245,7 @@ export class Flow {
       id = state.id!;
 
     if (worker) {
-      this.workers[id] = new worker(state.config);
+      this.workers[id] = new worker(state.config, state.sockets);
     } else if (this.flowTypes[state.type].settings.isFlow) {
       this.workers[id] = new FlowWorker(state);
     }
@@ -258,9 +256,9 @@ export class Flow {
     const toWorker = this.getWorker(connection.to as number);
 
     if (toWorker && fromWorker) {
-      const stream = fromWorker.getStream(connection!.out!)!;
+      const stream = fromWorker.getStream(this.getSocket(connection!.out!))!;
 
-      toWorker.setStream(stream, connection);
+      toWorker.setStream(stream, this.getSocket(connection.in!), connection);
     }
   }
 }

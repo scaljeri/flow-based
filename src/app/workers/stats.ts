@@ -12,21 +12,20 @@ export const STATS_SETTINGS = {
     },
     {
       type: 'out',
-      name: 'Min value',
+      aux: 'min',
+      name: 'Min valuex',
       format: 'number'
     },
     {
       type: 'out',
+      aux: 'max',
       name: 'Max value',
       format: 'number'
     }]
 };
 
 export class StatsWorker implements FbNodeWorker {
-  private subjects = {
-    max: new Subject<any>(),
-    min: new Subject<any>()
-  };
+  private subjects = { min: new Subject<any>(), max: new Subject<any>()};
   private subscriptions: Subscription[] = [];
 
   public min: number | null = null;
@@ -34,20 +33,19 @@ export class StatsWorker implements FbNodeWorker {
   private total = 0;
   private count = 0;
   private values: any = [];
-  private distribution = [];
 
   private updatedSubject = new Subject<any>();
   public updated$ = this.updatedSubject.asObservable();
 
-  constructor(private config: any) {
+  constructor(private config: any, private sockets: XxlSocket[]) {
     this.initialize();
   }
 
   destroy(): void {
   }
 
-  getStream(id: number): Observable<any> {
-    return this.subjects[id].asObservable();
+  getStream(socket: XxlSocket): Observable<any> {
+    return this.subjects[socket.aux!].asObservable();
   }
 
   // getSockets(): XxlSocket[] {
@@ -68,7 +66,8 @@ export class StatsWorker implements FbNodeWorker {
     this.count = 0;
   }
 
-  setStream(stream: Observable<any>, connection: XxlConnection): void {
+  // INPUT
+  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
     // TODO: Refactor
     this.subscriptions[connection.id] = stream.subscribe(val => {
       if (this.columnWidth === 0) {

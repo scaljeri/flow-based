@@ -34,7 +34,7 @@ export class TapWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
-  setStream(stream: Observable<any>, connection: XxlConnection): void {
+  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
     this.stream = stream;
 
     this.subscriptions[connection.id] = stream.subscribe((val: number) => {

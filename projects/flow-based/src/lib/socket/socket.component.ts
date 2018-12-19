@@ -62,6 +62,8 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.service.addSocket(this.id, {
+      state: this.state,
+      element: this.element.nativeElement,
       comp: this,
       parentId: this.parent,
       scope: this.scope

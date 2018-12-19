@@ -30,9 +30,9 @@ export interface FbNodeHelpers {
 
 // Describes the class doing the actual work
 export interface FbNodeWorker {
-  getStream(id?: number): Observable<any>;
+  getStream(socket?: XxlSocket): Observable<any>;
 
-  setStream(stream: Observable<any>, connection?: XxlConnection): void;
+  setStream(stream: Observable<any>, socket: XxlSocket, connection?: XxlConnection): void;
 
   removeStream(connection?: XxlConnection): void;
 
@@ -87,7 +87,8 @@ export interface XxlSocket {
   name?: string;
   format?: string;
   position?: number;
-  description?: string,
+  description?: string;
+  aux?: 'string';
 }
 
 export interface XxlSocketEvent {
@@ -98,6 +99,8 @@ export interface XxlSocketEvent {
 }
 
 export interface SocketDetails {
+  state: XxlSocket;
+  element: HTMLElement,
   comp: SocketComponent;
   parentId: number;
   scope: number;

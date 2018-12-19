@@ -8,7 +8,7 @@ export class FlowWorker implements FbNodeWorker {
   constructor(private state: FbNodeState) {
   }
 
-  setStream(stream: Observable<any>, connection: XxlConnection): void {
+  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
     const id = connection.to === this.state.id ? connection.in : connection.out;
 
     this.subscriptions[id!] = stream.subscribe(val => {
@@ -21,8 +21,8 @@ export class FlowWorker implements FbNodeWorker {
     console.log('FlowWorker: destroy');
   }
 
-  getStream(socketId: number): Observable<any> {
-    return this.getSubject(socketId).asObservable();
+  getStream(socket: XxlSocket): Observable<any> {
+    return this.getSubject(socket.id!).asObservable();
   }
 
   getSubject(socketId: number): Subject<any> {

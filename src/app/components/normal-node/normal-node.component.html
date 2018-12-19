@@ -1,0 +1,25 @@
+<ng-container *ngIf="!isFullscreen">
+  <header *ngIf="isActive">
+    <mat-toolbar color="primary">
+      <h1>{{title}}</h1>
+
+      <button mat-mini-fab color="primary" (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+      </button>
+    </mat-toolbar>
+  </header>
+
+  <ng-content></ng-content>
+</ng-container>
+
+<ng-container *ngIf="isFullscreen">
+  <fb-edit-socket></fb-edit-socket>
+</ng-container>
+
+<footer *ngIf="isActive">
+  <button mat-button color="warn" (click)="onDelete()">
+    <mat-icon>delete_forever</mat-icon>
+  </button>
+
+  <button mat-button (click)="onClose()" class="close">Close</button>
+</footer>

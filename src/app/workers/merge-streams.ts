@@ -100,7 +100,7 @@ export class MergeStreamsWorker implements FbNodeWorker {
       });
   }
 
-  setStream(stream: Observable<number>, connection: XxlConnection): void {
+  setStream(stream: Observable<number>, socket: XxlSocket, connection: XxlConnection): void {
     this.streams$[connection.id] = stream.pipe(map(v => ({value: v, connection})));
     this.createStream();
   }

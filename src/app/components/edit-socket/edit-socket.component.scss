@@ -1,0 +1,57 @@
+@import '../../../../projects/flow-based/src/lib/utils/utils';
+@import '../../../../projects/flow-based/src/lib/utils/variables';
+
+:host {
+  align-self: center;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  .socket-wrapper {
+    display: flex;
+    flex-direction: row;
+  }
+
+  mat-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px;
+    width: 50%;
+  }
+
+  mat-list-item {
+    margin: 32px 0;
+    position: relative;
+
+    mat-label {
+      color: #0009;
+      font-size: 16px;
+      transform: scale(0.75);
+    }
+  }
+
+  .socket-in {
+    .delete {
+      left: 0;
+      transform: translate(-100%, 0);
+    }
+  }
+
+  .socket-out {
+    .delete {
+      right: 0;
+      transform: translate(100%, 0);
+    }
+  }
+
+  .delete {
+    position: absolute;
+  }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+  }
+}

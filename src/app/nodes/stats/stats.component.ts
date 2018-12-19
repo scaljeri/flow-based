@@ -4,7 +4,6 @@ import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-s
 import { StatsWorker } from '../../workers/stats';
 import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { GoogleCharts } from 'google-charts';
-import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'fb-stats',
@@ -14,18 +13,16 @@ import { filter } from 'rxjs/operators';
 export class StatsComponent implements OnInit, OnDestroy {
   public worker: StatsWorker;
   private state: XxlFlowUnitState;
-  data: number[][] = [];
+  public isEditing = false;
+  public data: number[][] = [];
   private graphPlaceHolder: ElementRef;
   private chart;
-  private lastClicked;
 
   @ViewChild('distribution')
   set graph(element: ElementRef) {
     this.graphPlaceHolder = element;
     this.chart = null;
   }
-
-  @HostBinding('class.is-active') isActive = false;
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
@@ -34,7 +31,6 @@ export class StatsComponent implements OnInit, OnDestroy {
   }
 
   distribution(data): void {
-    if (this.isActive) {
       const dataTable = new GoogleCharts.api.visualization.DataTable();
       dataTable.addColumn('number', 'Value');
       dataTable.addColumn('number', 'Count');
@@ -52,7 +48,6 @@ export class StatsComponent implements OnInit, OnDestroy {
         this.chart = new GoogleCharts.api.visualization.ColumnChart(this.graphPlaceHolder.nativeElement);
       }
       this.chart.draw(view, {legend: 'top', series: {1: {type: 'line'}}});
-    }
   }
 
   ngOnInit(): void {
@@ -65,46 +60,18 @@ export class StatsComponent implements OnInit, OnDestroy {
 
       this.cdr.detectChanges();
     });
-
-    this.service.closeOnDoubleClick(() => this.onClose());
-
-    this.service.nodeClicked$.pipe(
-      filter(e => !(e.target as HTMLElement).closest('button'))
-    ).subscribe((e) => {
-      if (this.isActive) {
-        this.isActive = Date.now() - (this.lastClicked || 0) < 300 ? false : true;
-        this.lastClicked = Date.now();
-      } else {
-        this.isActive = true;
-        this.service.hideLabel();
-      }
-
-      this.service.state.config.expanded = this.isActive;
-      this.service.calibrate();
-    });
-
-    this.isActive = this.service.state.config.expanded;
-    if (this.isActive) {
-      this.service.hideLabel();
-    }
   }
 
   ngOnDestroy(): void {
     this.cdr.detach();
   }
 
+  onEdit(isEditing: boolean): void {
+    this.isEditing = isEditing;
+  }
+
   onReset(): void {
     this.worker.reset();
-  }
-
-  onDelete(): void {
-    this.service.deleteSelf();
-  }
-
-  onClose(): void {
-    this.isActive = false;
-    this.service.calibrate();
-    this.service.showLabel();
   }
 
   get min(): string | null {

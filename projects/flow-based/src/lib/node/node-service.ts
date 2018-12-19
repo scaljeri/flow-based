@@ -67,6 +67,15 @@ export class NodeService {
     this.doubleClick = callback;
   }
 
+  closeOnBlur(cb: () => void, isPermanent = true): void {
+    this.flowService.register(this.id, () => {
+      cb();
+
+      if (isPermanent) {
+        setTimeout(() => this.closeOnBlur(cb, true));
+      }
+    }, 'blur');
+  }
 
   get id(): number {
     return this.state.id!;
@@ -89,6 +98,14 @@ export class NodeService {
 
   getSocket(id: number): SocketDetails {
     return this.socketService.getSocket(id);
+  }
+
+  getSockets(): SocketDetails[] {
+    return (this.state.sockets || []).reduce((sockets, socket: XxlSocket) => {
+      sockets.push(this.getSocket(socket.id!));
+
+      return sockets;
+    }, [] as SocketDetails[]);
   }
 
   get worker(): FbNodeWorker {

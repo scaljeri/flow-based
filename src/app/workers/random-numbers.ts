@@ -51,7 +51,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
   removeStream(connection: XxlConnection): void { /* not used */
   }
 
-  setStream(stream: Observable<any>, connection: XxlConnection): void {  /* not used */
+  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {  /* not used */
   }
 
   get start(): number {

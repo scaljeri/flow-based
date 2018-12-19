@@ -91,6 +91,10 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   stopColorStart(connId): string {
     const socketDetails = this.socketService.getSocket(connId);
 
+    if (!socketDetails) {
+      return '#ffffff';
+    }
+
     return socketDetails.comp.state.color || this.colors[socketDetails.comp.state.format!] || '#fff';
   }
 
@@ -134,7 +138,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
         {x: x2, y: y2},
       ];
 
-      return `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
+      return this.valuesToD(x1, y1, x2, y2, cx1, cy1, cx2, cy2);
     }
   }
 
@@ -169,7 +173,11 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       {x: toX, y: toY},
     ];
 
-    return `M ${fromX} ${fromY} C ${cx1} ${cy1} ${cx2} ${cy2} ${toX} ${toY}`;
+    return this.valuesToD(fromX, fromY, toX, toY, cx1, cy1, cx2, cy2);
+  }
+
+  private valuesToD(x1, y1, x2, y2, cx1, cy1, cx2, cy2): string {
+    return `M ${x1} ${y1 - .0001} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
   }
 
   arrow(connection: XxlConnection): string {
