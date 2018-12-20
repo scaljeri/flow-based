@@ -13,8 +13,7 @@ import {
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
-import { XxlFlowUnitState, XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
-import { filter } from 'rxjs/operators';
+import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -29,6 +28,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
   values;
   value;
   streamValues = {};
+  isFullscreen = false;
   private subscriptions: Subscription[] = [];
   private clickSubscription: Subscription;
 
@@ -59,20 +59,20 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
         });
       }
     }));
+    //
+    // this.service.closeOnDoubleClick(() => {
+    //   this.isActive = false;
+    // });
 
-    this.service.closeOnDoubleClick(() => {
-      this.isActive = false;
-    });
-
-    this.clickSubscription = this.service.nodeClicked$.subscribe(() => {
-      if (!this.isActive) {
-        this.isActive = true;
-        this.service.setMaxSize(true);
-        this.createConnections();
-
-        this.service.register(() => this.onClose(), 'blur');
-      }
-    });
+    // this.clickSubscription = this.service.nodeClicked$.subscribe(() => {
+    //   if (!this.isActive) {
+    //     this.isActive = true;
+    //     this.service.setMaxSize(true);
+    //     this.createConnections();
+    //
+    //     this.service.register(() => this.onClose(), 'blur');
+    //   }
+    // });
   }
 
   ngOnDestroy(): void {
@@ -82,6 +82,18 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ready(): void {
     // TODO
+  }
+
+  onMaxSize(isMaxSize: boolean): void {
+    if (isMaxSize) {
+      this.createConnections();
+    }
+  }
+
+  onEdit(isEditing: boolean): void {
+    if (!isEditing) {
+      this.createConnections();
+    }
   }
 
   createConnections(): void {
@@ -119,6 +131,6 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   get title(): string | null | undefined {
-    return this.worker ? this.worker.title : null;
+    return this.state.title;
   }
 }

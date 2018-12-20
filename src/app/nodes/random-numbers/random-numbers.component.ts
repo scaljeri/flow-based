@@ -79,6 +79,10 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
     this.service.deleteSelf();
   }
 
+  onEdit(): void {
+    // TODO
+  }
+
   onClose(): void {
     this.service.showLabel();
     this.service.state.config.expanded = this.isActive = false;

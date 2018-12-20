@@ -61,7 +61,7 @@ $socket-size: 14px;
       text-align: center;
       top: calc(100% + 4px);
       transform: translateX(-50%);
-      @include xxl-position(absolute, 0 0 0 50%);
+      @include fb-position(absolute, 0 0 0 50%);
 
       &::placeholder {
         color: transparent;
@@ -91,7 +91,7 @@ $socket-size: 14px;
   text-align: center;
   transform: translateX(-50%);
   white-space: nowrap;
-  @include xxl-position(absolute, $xxl-gutter-size 0 0 50%);
+  @include fb-position(absolute, $xxl-gutter-size 0 0 50%);
 
   &::placeholder {
     color: #fff;
@@ -117,7 +117,7 @@ xxl-connection-lines {
   background-color: transparent;
   pointer-events: none;
   z-index: 2;
-  @include xxl-position(absolute, 0px 0px 0px 0px);
+  @include fb-position(absolute, 0px 0px 0px 0px);
 
   &.tmp-lines {
     z-index: 10;
@@ -146,7 +146,7 @@ xxl-connection-lines {
   font-size: 20px;
   outline: none;
   position: absolute;
-  @include xxl-position(absolute, 10px 0 0 30px);
+  @include fb-position(absolute, 10px 0 0 30px);
   @include xxl-size(40px);
 
   &:active {

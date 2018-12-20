@@ -15,7 +15,7 @@
 
 .add-socket,
 .edit-socket {
-  @include xxl-position(absolute, 8px 0 0 0);
+  @include fb-position(absolute, 8px 0 0 0);
 }
 
 .socket-out {
@@ -40,5 +40,5 @@ footer {
   justify-content: space-between;
   transform: translateX(-50%);
   width: 300px;
-  @include xxl-position(absolute, 0 0 8px 50%);
+  @include fb-position(absolute, 0 0 8px 50%);
 }

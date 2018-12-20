@@ -4,7 +4,6 @@ import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-s
 import { MatDialog, MatDialogRef } from '@angular/material';
 import { AddSocketComponent, DialogAction } from './add-socket/add-socket.component';
 import { Subscription } from 'rxjs';
-import { EditSocketComponent } from '../../components/edit-socket/edit-socket.component';
 
 @Component({
   selector: 'fb-default-flow',
@@ -77,23 +76,23 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
   }
 
   editDialog(type: 'in' | 'out'): void {
-    this.dialogRef = this.dialog.open(EditSocketComponent, {
-      width: '400px',
-      data: {
-        sockets: (this.service.state.sockets || []).filter(socket => socket.type === type) || [],
-        service: this.service,
-        type
-      }
-    });
-
-    this.dialogRef.afterClosed().subscribe((updates: XxlSocket[] = []) => {
-      (this.service.state.sockets || []).filter(socket => {
-        if (socket.type === type && !updates.some(update => update.id === socket.id)) {
-          this.service.socketRemoved(socket);
-        }
-      });
-
-      this.dialogRef = null;
-    });
+    // this.dialogRef = this.dialog.open(EditSocketComponent, {
+    //   width: '400px',
+    //   data: {
+    //     sockets: (this.service.state.sockets || []).filter(socket => socket.type === type) || [],
+    //     service: this.service,
+    //     type
+    //   }
+    // });
+    //
+    // this.dialogRef.afterClosed().subscribe((updates: XxlSocket[] = []) => {
+    //   (this.service.state.sockets || []).filter(socket => {
+    //     if (socket.type === type && !updates.some(update => update.id === socket.id)) {
+    //       this.service.socketRemoved(socket);
+    //     }
+    //   });
+    //
+    //   this.dialogRef = null;
+    // });
   }
 }

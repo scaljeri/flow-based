@@ -14,18 +14,12 @@ import { FormBuilder } from '@angular/forms';
 import { FB_SOCKET_COLORS, FbNodeState, SocketDetails, XxlSocket, XxlSocketType } from '../../../../projects/flow-based/src/lib/flow-based';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 
-export interface EditSocket {
-  sockets: XxlSocket[];
-  service: NodeService;
-  type: XxlSocketType;
-}
-
 @Component({
-  selector: 'fb-edit-socket',
-  templateUrl: './edit-socket.component.html',
-  styleUrls: ['./edit-socket.component.scss']
+  selector: 'fb-edit-node',
+  templateUrl: './edit-node.component.html',
+  styleUrls: ['./edit-node.component.scss']
 })
-export class EditSocketComponent implements OnInit, AfterViewInit, OnDestroy {
+export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
   sockets: XxlSocket[];
   state: FbNodeState;
 
@@ -50,6 +44,8 @@ export class EditSocketComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
+    this.service.removeConnections();
+
     setTimeout(() => {
       this.refs.forEach((ref, i) => {
         const el = ref.nativeElement;

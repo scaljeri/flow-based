@@ -3,6 +3,7 @@
 :host {
   display: flex;
   flex-direction: column;
+  height: 100%;
   justify-content: center;
 
   &.is-fullscreen {
@@ -14,16 +15,21 @@
       justify-content: space-between;
       transform: translateX(-50%);
       width: 300px;
-      @include xxl-position(absolute, 0 0 8px 50%);
+      @include fb-position(absolute, 0 0 8px 50%);
     }
   }
 
   &.is-active {
     width: 500px;
+
+    footer {
+      margin: 0 auto;
+      min-width: 500px;
+    }
   }
 }
 
-fb-edit-socket {
+fb-edit-node {
   z-index: 11;
 }
 
@@ -33,10 +39,17 @@ header mat-toolbar {
   width: 100%;
 }
 
+header {
+  align-self: center;
+  max-width: 500px;
+  width: 100%;
+}
+
 footer {
   background-color: #fff;
   display: flex;
   justify-content: space-between;
+  max-width: 500px;
 
   .close {
     color: #000;

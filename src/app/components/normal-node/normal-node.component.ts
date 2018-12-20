@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, EventEmitter, HostBinding, OnInit, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnInit, Output, SimpleChanges } from '@angular/core';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { filter } from 'rxjs/operators';
@@ -12,8 +12,11 @@ export class NormalNodeComponent implements OnInit {
   private state: XxlFlowUnitState;
   private lastClicked;
 
+  isEditing = false;
 
+  @Input() fullscreen = false;
   @Output() edit = new EventEmitter<boolean>();
+  @Output() maxSize = new EventEmitter<boolean>();
 
   @HostBinding('class.is-fullscreen') isFullscreen = false;
   @HostBinding('class.is-active') isActive = false;
@@ -36,7 +39,13 @@ export class NormalNodeComponent implements OnInit {
         this.lastClicked = Date.now();
       } else {
         this.isActive = true;
+
+        this.maxSize.emit(this.fullscreen);
         this.service.hideLabel();
+
+        if (this.fullscreen) {
+          this.service.setMaxSize(true);
+        }
       }
 
       this.service.state.config.expanded = this.isActive;
@@ -54,20 +63,32 @@ export class NormalNodeComponent implements OnInit {
   }
 
   onEdit(): void {
-    console.log('gotof');
+    this.isEditing = true;
+
     this.isFullscreen = true;
-    this.service.setMaxSize(true);
+    if (!this.fullscreen) {
+      this.service.setMaxSize(true);
+      this.maxSize.emit(true);
+    }
     this.edit.emit(true);
   }
 
   onClose(): void {
+    if (this.isEditing) {
+      this.isEditing = false;
+      this.edit.emit(false);
+    }
+
     if (this.isFullscreen) {
       this.isFullscreen = false;
-      this.service.setMaxSize(false);
+      this.service.setMaxSize(this.fullscreen);
+      this.maxSize.emit(this.fullscreen);
       this.edit.emit(true);
     } else {
       this.isActive = false;
       this.service.showLabel();
+      this.service.setMaxSize(false);
+      this.maxSize.emit(false);
     }
 
     this.service.calibrate();

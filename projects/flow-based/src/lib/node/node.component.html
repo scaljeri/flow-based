@@ -29,8 +29,6 @@
   </section>
 
   <ng-container *ngIf="isLabel">
-    <input *ngIf="isFullSize" class="title" placeholder="Title" [(ngModel)]="state.title"
-           [class.is-empty]="!state.title">
     <span class="title" *ngIf="!isFullSize">{{state.title}}</span>
   </ng-container>
 </section>

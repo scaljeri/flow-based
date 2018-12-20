@@ -27,10 +27,10 @@ import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.compo
 import { FB_CONFIG, XXL_SOCKET_COLORS } from './fb-config';
 import { NODE_HELPERS } from './node-helpers';
 import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.module';
-import { EditTitleComponent } from './components/edit-title/edit-title.component';
 import { StatsComponent } from './nodes/stats/stats.component';
 import { NormalNodeComponent } from './components/normal-node/normal-node.component';
-import { EditSocketComponent } from './components/edit-socket/edit-socket.component';
+import { EditNodeComponent } from './components/edit-node/edit-node.component';
+import { NodeHeaderComponent } from './components/node-header/node-header.component';
 
 @NgModule({
   declarations: [
@@ -45,8 +45,8 @@ import { EditSocketComponent } from './components/edit-socket/edit-socket.compon
     ComponentSelectionComponent,
     BasicGraphComponent,
     MergeStreamsComponent,
-    EditSocketComponent,
-    EditTitleComponent,
+    EditNodeComponent,
+    NodeHeaderComponent,
     StatsComponent,
     NormalNodeComponent
   ],
@@ -84,7 +84,6 @@ import { EditSocketComponent } from './components/edit-socket/edit-socket.compon
   ],
   entryComponents: [
     AddSocketComponent,
-    EditSocketComponent,
     ComponentSelectionComponent,
     BasicGraphComponent,
     RandomNumbersComponent,

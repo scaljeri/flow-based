@@ -1,4 +1,4 @@
-@mixin xxl-position($position: relative, $coordinates: 0 0 0 0) {
+@mixin fb-position($position: relative, $coordinates: 0 0 0 0) {
   @if type-of($position) == list {
     $coordinates: $position;
     $position: relative;

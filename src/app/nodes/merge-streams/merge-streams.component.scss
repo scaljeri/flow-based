@@ -5,6 +5,30 @@
   @include xxl-size(100%);
 }
 
+fb-normal-node {
+  &.is-active {
+    width: 100%;
+  }
+
+  &:not(.is-active) .main {
+    display: none;
+  }
+
+  &.is-active {
+    fb-default-front {
+      display: none;
+    }
+  }
+}
+
+mat-toolbar {
+  display: flex;
+  justify-content: space-between;
+  transform: translateX(-50%);
+  width: 500px;
+  @include fb-position(absolute, 16px 0 0 50%);
+}
+
 footer {
   background-color: rgba(255, 255, 255, 0.8);
   display: flex;
@@ -12,7 +36,7 @@ footer {
   transform: translateX(-50%);
   width: 300px;
   z-index: 20;
-  @include xxl-position(absolute, 0 0 8px 50%);
+  @include fb-position(absolute, 0 0 8px 50%);
 }
 
 .main {

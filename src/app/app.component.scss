@@ -30,14 +30,14 @@ mat-toolbar {
   //filter: blur(5px);
   filter: brightness(20%);
   z-index: -2;
-  @include xxl-position(absolute, 0px 0px 0px 0px);
+  @include fb-position(absolute, 0px 0px 0px 0px);
   @include xxl-size(100%);
 }
 
 fb-thunder {
   filter: blur(2px);
   z-index: -1;
-  @include xxl-position(absolute, 0px 0px 0px 0px);
+  @include fb-position(absolute, 0px 0px 0px 0px);
 }
 
 //header {

@@ -6,6 +6,20 @@
   justify-content: center;
 }
 
+fb-normal-node {
+  &:not(.is-active) {
+    .config {
+      display: none;
+    }
+  }
+
+  &.is-active {
+    .minified {
+      display: none;
+    }
+  }
+}
+
 fb-default-front {
   min-height: 80px;
   min-width: 72px;
