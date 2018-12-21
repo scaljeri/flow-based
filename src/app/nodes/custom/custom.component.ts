@@ -1,7 +1,11 @@
-import { AfterViewInit, Component, ElementRef, Host, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, NgZone, OnInit, ViewChild } from '@angular/core';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { CustomWorker } from '../../workers/custom';
 import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { Editor, EditorChangeLinkedList } from 'codemirror';
+
+declare var require: any;
+const CodeMirror = require('codemirror');
 
 @Component({
   selector: 'fb-custom',
@@ -12,10 +16,13 @@ export class CustomComponent implements OnInit, AfterViewInit {
   private worker: CustomWorker;
   private state: FbNodeState;
   public error: boolean;
+  private editor: any;
 
-  @ViewChild('code') code: ElementRef;
+  @ViewChild('code') codeRef: ElementRef;
 
-  constructor(@Host() private service: NodeService) {
+  constructor(@Host() private service: NodeService,
+              private _ngZone: NgZone,
+              private cdr: ChangeDetectorRef) {
     this.state = service.state;
   }
 
@@ -55,5 +62,27 @@ export class CustomComponent implements OnInit, AfterViewInit {
 
   onKeyDown(): void {
     console.log(this.func);
+  }
+
+   onActive(isActive): void {
+    // this._ngZone.runOutsideAngular(() => {
+      if (!this.editor) {
+        this.editor = CodeMirror(this.codeRef.nativeElement, {
+          lineNumbers: true,
+          theme: 'material',
+          mode: 'javascript',
+          value: this.state.config.func
+        });
+
+        this.editor.on(
+          'change',
+          (cm: Editor, change: EditorChangeLinkedList) => {
+            this.worker.compileFunction(cm.getValue());
+            this.cdr.detectChanges();
+            // this._ngZone.run(() => this.codemirrorValueChanged(cm, change)),
+          }
+        );
+      }
+    // });
   }
 }

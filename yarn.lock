@@ -422,6 +422,11 @@
   resolved "https://registry.yarnpkg.com/@types/codemirror/-/codemirror-0.0.58.tgz#48b23cc6179f143dc3a4eb175f3c1f2c11808529"
   integrity sha512-z74f1e0zqxJ8xrss10bsrjnoJZHE4zDkC8Q7ACw82gr6e4ILSUe0GNifNg1uIaSbR3UQf5sqHJO8vn9GQLFKbA==
 
+"@types/codemirror@^0.0.70":
+  version "0.0.70"
+  resolved "https://registry.yarnpkg.com/@types/codemirror/-/codemirror-0.0.70.tgz#2d9c850d6afbc93162c1434a827f86ad5ee90e35"
+  integrity sha512-NHpD8C5J9P+6M/Swm+jIkOs8EywFMeSYzX9c1917QBNfvj2fuS0djROLoLNzSYEMHUWWaEVPLYJ8zDR2M6qaaQ==
+
 "@types/estree@0.0.39":
   version "0.0.39"
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-0.0.39.tgz#e177e699ee1b8c22d23174caaa7422644389509f"
@@ -1762,7 +1767,7 @@ codelyzer@~4.5.0:
     source-map "^0.5.7"
     sprintf-js "^1.1.1"
 
-codemirror@^5.22.2, codemirror@^5.42.2:
+codemirror@^5.42.2:
   version "5.42.2"
   resolved "https://registry.yarnpkg.com/codemirror/-/codemirror-5.42.2.tgz#801ab715a7a7e1c7ed4162b78e9d8138b98de8f0"
   integrity sha512-Tkv6im39VuhduFMsDA3MlXcC/kKas3Z0PI1/8N88QvFQbtOeiiwnfFJE4juGyC8/a4sb1BSxQlzsil8XLQdxRw==
@@ -5548,13 +5553,6 @@ ng-packagr@^4.3.1:
     stylus "^0.54.5"
     uglify-js "^3.0.7"
     update-notifier "^2.3.0"
-
-ng4-codemirror@^0.0.1:
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/ng4-codemirror/-/ng4-codemirror-0.0.1.tgz#72ee3fd17e161ed8f7e640598697e421a151d6b6"
-  integrity sha1-cu4/0X4WHtj35kBZhpfkIaFR1rY=
-  dependencies:
-    codemirror "^5.22.2"
 
 nice-try@^1.0.4:
   version "1.0.5"

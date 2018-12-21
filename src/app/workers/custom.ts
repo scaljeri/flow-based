@@ -3,7 +3,7 @@ import { Observable, Subject, Subscription } from 'rxjs';
 
 export const CUSTOM_SETTINGS = {
   title: 'Dynamic stuff',
-  config: { func: 'out.next(val)'},
+  config: { func: '// const out = new Subject();\n// function(val) {\nout.next(val)'},
   sockets: [
     {
       type: 'in',
@@ -61,6 +61,7 @@ export class CustomWorker implements FbNodeWorker {
     const inputFunc = `return function(val) { ${funcStr} }`;
     try {
       this.func = new Function('out', inputFunc)(this.subject);
+      this.func(null); // Initial call
     } catch (err) {
       this.compileError = err;
     }

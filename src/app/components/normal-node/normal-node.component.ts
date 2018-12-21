@@ -18,6 +18,7 @@ export class NormalNodeComponent implements OnInit {
   @Input() deleteSocket = false;
   @Output() edit = new EventEmitter<boolean>();
   @Output() maxSize = new EventEmitter<boolean>();
+  @Output() active = new EventEmitter<boolean>();
 
   @HostBinding('class.is-fullscreen') isFullscreen = false;
   @Input() @HostBinding('class.is-active') isActive = false;
@@ -47,10 +48,15 @@ export class NormalNodeComponent implements OnInit {
           this.service.closeOnBlur(() => this.onClose());
           this.service.setMaxSize(true);
         }
+
+        setTimeout(() => {
+          this.active.emit(this.isActive);
+        });
       }
 
       this.service.state.config.expanded = this.isActive;
       this.service.calibrate();
+
     });
 
     if (!this.isActive) {
@@ -67,6 +73,10 @@ export class NormalNodeComponent implements OnInit {
         this.service.closeOnBlur(() => this.onClose());
         this.service.setMaxSize(true);
       }
+
+      setTimeout(() => {
+        this.active.emit(this.isActive);
+      });
     }
   }
 
