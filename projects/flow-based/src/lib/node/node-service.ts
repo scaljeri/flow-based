@@ -67,13 +67,9 @@ export class NodeService {
     this.doubleClick = callback;
   }
 
-  closeOnBlur(cb: () => void, isPermanent = true): void {
+  closeOnBlur(cb: () => void): void {
     this.flowService.register(this.id, () => {
       cb();
-
-      if (isPermanent) {
-        setTimeout(() => this.closeOnBlur(cb, true));
-      }
     }, 'blur');
   }
 

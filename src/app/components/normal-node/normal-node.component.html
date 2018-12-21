@@ -13,7 +13,7 @@
 </ng-container>
 
 <ng-container *ngIf="isFullscreen">
-  <fb-edit-node></fb-edit-node>
+  <fb-edit-node [deleteSocket]="deleteSocket"></fb-edit-node>
 </ng-container>
 
 <footer *ngIf="isActive">

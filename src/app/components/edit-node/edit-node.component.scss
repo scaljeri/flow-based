@@ -39,20 +39,29 @@
   }
 
   .socket-in {
-    .delete {
+    .action {
       left: 0;
       transform: translate(-100%, 0);
+    }
+
+    .socket-direction {
+      pointer-events: none;
+      transform: translate(-100%, 0) rotate(180deg);
     }
   }
 
   .socket-out {
-    .delete {
+    .action {
       right: 0;
       transform: translate(100%, 0);
     }
+
+    .socket-direction {
+      pointer-events: none;
+    }
   }
 
-  .delete {
+  .action {
     position: absolute;
   }
 

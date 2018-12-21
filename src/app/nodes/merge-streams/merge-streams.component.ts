@@ -28,7 +28,6 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
   values;
   value;
   streamValues = {};
-  isFullscreen = false;
   private subscriptions: Subscription[] = [];
   private clickSubscription: Subscription;
 
@@ -54,25 +53,10 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (this.isActive) {
         setTimeout(() => {
-          // this.createConnections();
           this.cdr.detectChanges();
         });
       }
     }));
-    //
-    // this.service.closeOnDoubleClick(() => {
-    //   this.isActive = false;
-    // });
-
-    // this.clickSubscription = this.service.nodeClicked$.subscribe(() => {
-    //   if (!this.isActive) {
-    //     this.isActive = true;
-    //     this.service.setMaxSize(true);
-    //     this.createConnections();
-    //
-    //     this.service.register(() => this.onClose(), 'blur');
-    //   }
-    // });
   }
 
   ngOnDestroy(): void {

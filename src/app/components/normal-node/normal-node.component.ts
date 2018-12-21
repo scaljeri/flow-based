@@ -15,6 +15,7 @@ export class NormalNodeComponent implements OnInit {
   isEditing = false;
 
   @Input() fullscreen = false;
+  @Input() deleteSocket = true;
   @Output() edit = new EventEmitter<boolean>();
   @Output() maxSize = new EventEmitter<boolean>();
 
@@ -29,8 +30,6 @@ export class NormalNodeComponent implements OnInit {
   ngOnInit() {
     this.service.closeOnDoubleClick(() => this.onClose());
 
-    this.service.closeOnBlur(() => this.onClose());
-
     this.service.nodeClicked$.pipe(
       filter(e => !(e.target as HTMLElement).closest('button'))
     ).subscribe((e) => {
@@ -44,6 +43,7 @@ export class NormalNodeComponent implements OnInit {
         this.service.hideLabel();
 
         if (this.fullscreen) {
+          this.service.closeOnBlur(() => this.onClose());
           this.service.setMaxSize(true);
         }
       }
@@ -68,8 +68,9 @@ export class NormalNodeComponent implements OnInit {
     this.isFullscreen = true;
     if (!this.fullscreen) {
       this.service.setMaxSize(true);
-      this.maxSize.emit(true);
     }
+
+    this.service.closeOnBlur(() => this.onClose());
     this.edit.emit(true);
   }
 
@@ -84,6 +85,10 @@ export class NormalNodeComponent implements OnInit {
       this.service.setMaxSize(this.fullscreen);
       this.maxSize.emit(this.fullscreen);
       this.edit.emit(true);
+
+      if (!this.fullscreen) {
+        this.service.unregisterAll();
+      }
     } else {
       this.isActive = false;
       this.service.showLabel();

@@ -9,9 +9,14 @@
 <div class="socket-wrapper">
   <mat-list class="socket-in">
     <mat-list-item *ngFor="let socket of sockets | socketIn;let i = index">
-      <button #delete mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id"
-              class="delete">
+      <button *ngIf="deleteSocket" #action mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id"
+              class="action">
         <mat-icon>delete_forever</mat-icon>
+      </button>
+
+      <button ngIf="!deleteSocket" #action mat-mini-fab color="primary" [attr.data-socket-id]="socket.id"
+              class="action socket-direction">
+        <mat-icon>arrow_right_alt</mat-icon>
       </button>
 
       <mat-form-field matLine>
@@ -27,9 +32,14 @@
 
   <mat-list class="socket-out">
     <mat-list-item *ngFor="let socket of sockets | socketOut;let i = index">
-      <button #delete mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id"
-              class="delete">
+      <button *ngIf="deleteSocket" #action mat-mini-fab color="warn" (click)="onDelete(socket, i)" [attr.data-socket-id]="socket.id"
+              class="action">
         <mat-icon>delete_forever</mat-icon>
+      </button>
+
+      <button ngIf="!deleteSocket" #action mat-mini-fab color="primary" [attr.data-socket-id]="socket.id"
+              class="action socket-direction">
+        <mat-icon>arrow_right_alt</mat-icon>
       </button>
 
       <mat-form-field matLine>

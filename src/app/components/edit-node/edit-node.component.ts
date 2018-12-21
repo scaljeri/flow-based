@@ -23,7 +23,9 @@ export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
   sockets: XxlSocket[];
   state: FbNodeState;
 
-  @ViewChildren('delete', {read: ElementRef}) refs: QueryList<ElementRef>;
+  @Input() deleteSocket = true;
+
+  @ViewChildren('action', {read: ElementRef}) refs: QueryList<ElementRef>;
   private connections: { [key: number]: number } = {};
   public socketDetails: SocketDetails[];
 
