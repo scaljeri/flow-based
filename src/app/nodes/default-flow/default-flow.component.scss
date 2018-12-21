@@ -1,8 +1,6 @@
 @import '../../../../projects/flow-based/src/lib/utils/utils';
 
 :host {
-  @include xxl-size(72px);
-
   img {
     pointer-events: none;
     width: 100%;
@@ -10,6 +8,24 @@
 
   &.is-active {
     width: 0;
+  }
+}
+
+fb-normal-node {
+  &:not(.is-active) {
+    @include xxl-size(72px);
+
+    .expanded {
+      display: none;
+    }
+  }
+
+  &.is-active {
+    // @include fb-position(absolute, 4px 4px 4px 4px);
+
+    .minified {
+      display: none;
+    }
   }
 }
 

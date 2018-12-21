@@ -15,12 +15,12 @@ export class NormalNodeComponent implements OnInit {
   isEditing = false;
 
   @Input() fullscreen = false;
-  @Input() deleteSocket = true;
+  @Input() deleteSocket = false;
   @Output() edit = new EventEmitter<boolean>();
   @Output() maxSize = new EventEmitter<boolean>();
 
   @HostBinding('class.is-fullscreen') isFullscreen = false;
-  @HostBinding('class.is-active') isActive = false;
+  @Input() @HostBinding('class.is-active') isActive = false;
 
   constructor(private cdr: ChangeDetectorRef,
               private service: NodeService) {
@@ -38,6 +38,7 @@ export class NormalNodeComponent implements OnInit {
         this.lastClicked = Date.now();
       } else {
         this.isActive = true;
+        this.isFullscreen = this.fullscreen;
 
         this.maxSize.emit(this.fullscreen);
         this.service.hideLabel();
@@ -52,9 +53,20 @@ export class NormalNodeComponent implements OnInit {
       this.service.calibrate();
     });
 
-    this.isActive = this.service.state.config.expanded;
+    if (!this.isActive) {
+      this.isActive = this.service.state.config.expanded;
+    }
+
     if (this.isActive) {
+      this.isFullscreen = this.fullscreen;
+
+      this.maxSize.emit(this.fullscreen);
       this.service.hideLabel();
+
+      if (this.fullscreen) {
+        this.service.closeOnBlur(() => this.onClose());
+        this.service.setMaxSize(true);
+      }
     }
   }
 
@@ -78,24 +90,21 @@ export class NormalNodeComponent implements OnInit {
     if (this.isEditing) {
       this.isEditing = false;
       this.edit.emit(false);
-    }
-
-    if (this.isFullscreen) {
-      this.isFullscreen = false;
-      this.service.setMaxSize(this.fullscreen);
-      this.maxSize.emit(this.fullscreen);
-      this.edit.emit(true);
 
       if (!this.fullscreen) {
-        this.service.unregisterAll();
+        this.isFullscreen = false;
+        this.service.setMaxSize(false);
+        this.maxSize.emit(false);
       }
     } else {
-      this.isActive = false;
+      this.service.unregisterAll();
+      this.service.state.config.expanded = this.isActive = false;
       this.service.showLabel();
       this.service.setMaxSize(false);
       this.maxSize.emit(false);
     }
 
+    this.cdr.detectChanges();
     this.service.calibrate();
   }
 

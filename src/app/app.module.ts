@@ -11,12 +11,14 @@ import { FlowComponent } from './flow/flow.component';
 import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, XXL_FLOW_TYPES } from '../../projects/flow-based/src/lib/flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { CodemirrorModule } from '@ctrl/ngx-codemirror';
 import {
   MAT_DIALOG_DEFAULT_OPTIONS,
   MatButtonModule, MatCardModule, MatCheckboxModule, MatDialogModule,
   MatInputModule, MatListModule, MatSliderModule, MatToolbarModule
 } from '@angular/material';
 import { MatIconModule } from '@angular/material/icon';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
@@ -31,6 +33,7 @@ import { StatsComponent } from './nodes/stats/stats.component';
 import { NormalNodeComponent } from './components/normal-node/normal-node.component';
 import { EditNodeComponent } from './components/edit-node/edit-node.component';
 import { NodeHeaderComponent } from './components/node-header/node-header.component';
+import { CustomComponent } from './nodes/custom/custom.component';
 
 @NgModule({
   declarations: [
@@ -48,7 +51,8 @@ import { NodeHeaderComponent } from './components/node-header/node-header.compon
     EditNodeComponent,
     NodeHeaderComponent,
     StatsComponent,
-    NormalNodeComponent
+    NormalNodeComponent,
+    CustomComponent,
   ],
   imports: [
     BrowserModule,
@@ -65,7 +69,9 @@ import { NodeHeaderComponent } from './components/node-header/node-header.compon
     MatCheckboxModule,
     MatIconModule,
     MatListModule,
-    OverlayModule
+    MatTooltipModule,
+    OverlayModule,
+    CodemirrorModule
   ],
   providers: [
     ComponentSelectionService,
@@ -90,7 +96,8 @@ import { NodeHeaderComponent } from './components/node-header/node-header.compon
     TapComponent,
     DefaultFlowComponent,
     MergeStreamsComponent,
-    StatsComponent
+    StatsComponent,
+    CustomComponent
   ],
   bootstrap: [AppComponent]
 })

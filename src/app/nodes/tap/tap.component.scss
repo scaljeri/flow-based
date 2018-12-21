@@ -7,8 +7,24 @@
   flex-direction: column;
   justify-content: center;
 
-  &:not(.is-active) {
+  .minified {
+    display: flex;
+    justify-content: center;
     width: 70px;
+  }
+}
+
+fb-normal-node {
+  &:not(.is-active) {
+    .expanded {
+      display: none;
+    }
+  }
+
+  &.is-active {
+    .minified {
+      display: none;
+    }
   }
 }
 

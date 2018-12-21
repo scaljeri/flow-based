@@ -61,7 +61,6 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
-    this.clickSubscription.unsubscribe();
   }
 
   ready(): void {

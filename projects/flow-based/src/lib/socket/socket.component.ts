@@ -27,6 +27,8 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   @Output() clicked = new EventEmitter<XxlSocketEvent>();
   private subscription: Subscription;
   private _position: XxlPosition | null;
+  private hover = false;
+  private hoverTimeoutId: number;
 
   @HostBinding('class.is-active') active = false;
   @HostBinding('class.is-accepting') isAccepting: boolean | null;
@@ -96,6 +98,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   @HostListener('pointerdown', ['$event'])
   onPointerDown(event: PointerEvent): void {
     event.stopPropagation();
+    clearTimeout(this.hoverTimeoutId);
 
     this.service.onSocketClick({
       event,
@@ -103,6 +106,21 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
       scope: this.scope,
       parentId: this.nodeService.id});
 
+  }
+
+  @HostListener('mouseenter', ['$event'])
+  @HostListener('mouseleave', ['$event'])
+  onMouseEnter(event): void {
+    this.hover = event.type === 'mouseenter';
+  }
+
+  @HostListener('mousemove', ['$event'])
+  onMouseMove(event): void {
+    clearTimeout(this.hoverTimeoutId);
+    //
+    // this.hoverTimeoutId = setTimeout(() => {
+    //   alert('x');
+    // }, 1000);
   }
 
   get id(): number {

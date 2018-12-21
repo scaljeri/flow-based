@@ -345,6 +345,14 @@
     lodash "^4.17.10"
     to-fast-properties "^2.0.0"
 
+"@ctrl/ngx-codemirror@^1.3.9":
+  version "1.3.9"
+  resolved "https://registry.yarnpkg.com/@ctrl/ngx-codemirror/-/ngx-codemirror-1.3.9.tgz#6eab973d9353527b8c6b6253905b7074b9d6e619"
+  integrity sha512-n6i6/0klkWAZqzKnYsKuEdNduHotA+sq2RLZFdAkXM0TghzvvfL1lJLSo02/AQU4P0OeByQ1ms/Of3/ICt5tAg==
+  dependencies:
+    "@types/codemirror" "0.0.58"
+    tslib "^1.9.0"
+
 "@mrmlnc/readdir-enhanced@^2.2.1":
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/@mrmlnc/readdir-enhanced/-/readdir-enhanced-2.2.1.tgz#524af240d1a360527b730475ecfa1344aa540dde"
@@ -408,6 +416,11 @@
     rxjs "6.3.3"
     semver "5.5.1"
     semver-intersect "1.4.0"
+
+"@types/codemirror@0.0.58":
+  version "0.0.58"
+  resolved "https://registry.yarnpkg.com/@types/codemirror/-/codemirror-0.0.58.tgz#48b23cc6179f143dc3a4eb175f3c1f2c11808529"
+  integrity sha512-z74f1e0zqxJ8xrss10bsrjnoJZHE4zDkC8Q7ACw82gr6e4ILSUe0GNifNg1uIaSbR3UQf5sqHJO8vn9GQLFKbA==
 
 "@types/estree@0.0.39":
   version "0.0.39"
@@ -1748,6 +1761,11 @@ codelyzer@~4.5.0:
     semver-dsl "^1.0.1"
     source-map "^0.5.7"
     sprintf-js "^1.1.1"
+
+codemirror@^5.22.2, codemirror@^5.42.2:
+  version "5.42.2"
+  resolved "https://registry.yarnpkg.com/codemirror/-/codemirror-5.42.2.tgz#801ab715a7a7e1c7ed4162b78e9d8138b98de8f0"
+  integrity sha512-Tkv6im39VuhduFMsDA3MlXcC/kKas3Z0PI1/8N88QvFQbtOeiiwnfFJE4juGyC8/a4sb1BSxQlzsil8XLQdxRw==
 
 collapse-white-space@^1.0.2:
   version "1.0.4"
@@ -5530,6 +5548,13 @@ ng-packagr@^4.3.1:
     stylus "^0.54.5"
     uglify-js "^3.0.7"
     update-notifier "^2.3.0"
+
+ng4-codemirror@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/ng4-codemirror/-/ng4-codemirror-0.0.1.tgz#72ee3fd17e161ed8f7e640598697e421a151d6b6"
+  integrity sha1-cu4/0X4WHtj35kBZhpfkIaFR1rY=
+  dependencies:
+    codemirror "^5.22.2"
 
 nice-try@^1.0.4:
   version "1.0.5"

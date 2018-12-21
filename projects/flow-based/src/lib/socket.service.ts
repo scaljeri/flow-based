@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { FbKeyValues, SocketDetails, XxlSocketEvent } from './flow-based';
 import { Subject } from 'rxjs';
 
-
 @Injectable({providedIn: 'root'})
 export class SocketService {
   private socketClicked = new Subject<XxlSocketEvent | null>();

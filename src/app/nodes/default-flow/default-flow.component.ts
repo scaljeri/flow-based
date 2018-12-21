@@ -25,30 +25,30 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.worker = this.service.worker;
 
-    this.service.closeOnDoubleClick(() => this.onClose());
+    // this.service.closeOnDoubleClick(() => this.onClose());
 
-    this.clickSubscription = this.service.nodeClicked$.subscribe(() => {
-      if (!this.isActive) {
-        this.isActive = true;
-        this.service.setMaxSize(true);
-
-        this.service.register(() => {
-          if (this.dialogRef) {
-            this.dialogRef.close();
-            this.dialogRef = null;
-            return true;
-          }
-
-          this.onClose();
-
-          return false; // unregister
-        }, 'blur');
-      }
-    });
+    // this.clickSubscription = this.service.nodeClicked$.subscribe(() => {
+    //   if (!this.isActive) {
+    //     this.isActive = true;
+    //     this.service.setMaxSize(true);
+    //
+    //     this.service.register(() => {
+    //       if (this.dialogRef) {
+    //         this.dialogRef.close();
+    //         this.dialogRef = null;
+    //         return true;
+    //       }
+    //
+    //       this.onClose();
+    //
+    //       return false; // unregister
+    //     }, 'blur');
+    //   }
+    // });
   }
 
   ngOnDestroy(): void {
-    this.clickSubscription.unsubscribe();
+    // this.clickSubscription.unsubscribe();
   }
 
   onDelete(): void {

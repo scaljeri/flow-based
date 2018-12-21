@@ -1,9 +1,3 @@
-<div #graph class="chart"></div>
-
-<footer *ngIf="isActive">
-  <button mat-button color="warn" (click)="onDelete()">
-    <mat-icon>delete_forever</mat-icon>
-  </button>
-
-  <button mat-button (click)="onClose()">Close</button>
-</footer>
+<fb-normal-node [isActive]="true">
+  <div #graph class="chart"></div>
+</fb-normal-node>

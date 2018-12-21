@@ -1,0 +1,35 @@
+@import 'utils/utils';
+
+:host {
+  .expanded {
+    background-color: #fff;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px 20px;
+  }
+}
+
+ngx-codemirror {
+  width: 400px;
+}
+
+.errors {
+  color: #f00;
+  text-align: center;
+}
+
+fb-normal-node {
+  &:not(.is-active) {
+    .expanded {
+      display: none;
+    }
+  }
+
+  &.is-active {
+    .minified {
+      display: none;
+    }
+  }
+}

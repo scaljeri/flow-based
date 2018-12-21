@@ -9,6 +9,8 @@ import { MERGE_STREAMS_SETTINGS, MergeStreamsWorker } from './workers/merge-stre
 import { TapComponent } from './nodes/tap/tap.component';
 import { TAP_SETTINGS, TapWorker } from './workers/tap';
 import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
+import { CustomComponent } from './nodes/custom/custom.component';
+import { CUSTOM_SETTINGS, CustomWorker } from './workers/custom';
 
 export const FB_CONFIG = {
   'random-numbers': {component: RandomNumbersComponent, settings: RANDOM_NUMBER_SETTINGS, worker: RandomNumbersWorker},
@@ -16,6 +18,7 @@ export const FB_CONFIG = {
   'basic-graph': {component: BasicGraphComponent, settings: BASIC_GRAPH_CONFIG, worker: BasicGraphWorker},
   'merge-streams': {component: MergeStreamsComponent, settings: MERGE_STREAMS_SETTINGS, worker: MergeStreamsWorker},
   'tap': {component: TapComponent, settings: TAP_SETTINGS, worker: TapWorker},
+  'custom': {component: CustomComponent, settings: CUSTOM_SETTINGS, worker: CustomWorker},
   'flow': {component: DefaultFlowComponent, settings: {title: 'Composite Unit', isFlow: true}}
 };
 

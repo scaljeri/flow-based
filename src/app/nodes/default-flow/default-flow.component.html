@@ -1,17 +1,13 @@
-<img *ngIf="!isActive" src="./assets/config.svg">
+<fb-normal-node [fullscreen]="true" [deleteSocket]="true">
+  <img class="minified" src="./assets/config.svg">
 
-<ng-container *ngIf="isActive">
-  <button mat-fab class="add-socket socket-in" (click)="openDialog({type: 'in'})"><mat-icon>add</mat-icon></button>
-  <button mat-fab class="edit-socket socket-in" (click)="editDialog('in')"><mat-icon>edit</mat-icon></button>
-  <button mat-fab class="edit-socket socket-out" (click)="editDialog('out')"><mat-icon>edit</mat-icon></button>
-  <button mat-fab class="add-socket socket-out" (click)="openDialog({type: 'out'})"><mat-icon>add</mat-icon></button>
-
-  <footer>
-    <button mat-button color="warn" (click)="onDelete()">
-      <mat-icon>delete_forever</mat-icon>
+  <div class="expanded">
+    <button mat-fab class="add-socket socket-in" (click)="openDialog({type: 'in'})">
+      <mat-icon>add</mat-icon>
     </button>
 
-    <button mat-button (click)="onClose()">Close</button>
-  </footer>
-</ng-container>
-<!--<h1 *ngIf="title" class="title">{{title}}</h1>-->
+    <button mat-fab class="add-socket socket-out" (click)="openDialog({type: 'out'})">
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
+</fb-normal-node>

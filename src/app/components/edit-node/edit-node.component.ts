@@ -47,6 +47,7 @@ export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.service.removeConnections();
+    console.log('delete is ' + this.deleteSocket);
 
     setTimeout(() => {
       this.refs.forEach((ref, i) => {
@@ -87,6 +88,10 @@ export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onApply(): void {
     // this.dialogRef.close(this.data.sockets);
+  }
+
+  hasSockets(): boolean {
+    return !!this.sockets.length;
   }
 
   private closing(): void {

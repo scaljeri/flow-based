@@ -1,4 +1,4 @@
-<ng-container *ngIf="!isFullscreen">
+<ng-container *ngIf="!isEditing">
   <header *ngIf="isActive">
     <mat-toolbar color="primary">
       <h1>{{title}}</h1>
@@ -12,7 +12,7 @@
   <ng-content></ng-content>
 </ng-container>
 
-<ng-container *ngIf="isFullscreen">
+<ng-container *ngIf="isEditing">
   <fb-edit-node [deleteSocket]="deleteSocket"></fb-edit-node>
 </ng-container>
 

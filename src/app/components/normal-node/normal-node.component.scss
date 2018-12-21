@@ -6,8 +6,23 @@
   height: 100%;
   justify-content: center;
 
+  header button,
+  footer {
+    pointer-events: auto;
+  }
+
   &.is-fullscreen {
     height: 100%;
+
+    header {
+      transform: translateX(-50%);
+      @include fb-position(absolute, 20px 0 0 50%);
+    }
+
+    header,
+    footer {
+      max-width: 500px;
+    }
 
     footer {
       background-color: rgba(255, 255, 255, 0.8);
@@ -18,18 +33,10 @@
       @include fb-position(absolute, 0 0 8px 50%);
     }
   }
-
-  &.is-active {
-    width: 500px;
-
-    footer {
-      margin: 0 auto;
-      min-width: 500px;
-    }
-  }
 }
 
 fb-edit-node {
+  min-width: 200px;
   z-index: 11;
 }
 
@@ -41,7 +48,7 @@ header mat-toolbar {
 
 header {
   align-self: center;
-  max-width: 500px;
+  // max-width: 500px;
   width: 100%;
 }
 
@@ -49,7 +56,7 @@ footer {
   background-color: #fff;
   display: flex;
   justify-content: space-between;
-  max-width: 500px;
+  // max-width: 500px;
 
   .close {
     color: #000;

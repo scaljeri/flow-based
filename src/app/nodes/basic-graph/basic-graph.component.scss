@@ -1,28 +1,21 @@
 @import './utils/utils';
 
 :host {
-  align-self: center;
-  @include xxl-size(400px, 300px);
+}
 
+fb-normal-node {
   &.is-active {
-    padding: 70px 15%;
+    min-height: 300px;
+    min-width: 400px;
   }
 
-  &.is-active,
-  .chart {
-    @include xxl-size(100%);
+  &.is-fullscreen {
+    .chart {
+      @include xxl-size(100%);
+    }
   }
 }
 
 .chart {
   border-radius: 8px;
-}
-
-footer {
-  background-color: rgba(255, 255, 255, 0.8);
-  display: flex;
-  justify-content: space-between;
-  transform: translateX(-50%);
-  width: 300px;
-  @include fb-position(absolute, 0 0 8px 50%);
 }

@@ -23,6 +23,7 @@ $socket-size: 14px;
   min-height: 50px;
   min-width: 72px;
   padding: 4px;
+  position: relative;
   user-select: none;
   z-index: $zindex-node;
 
@@ -109,8 +110,7 @@ input.title {
 }
 
 xxl-flow-based {
-  height: 100%;
-  width: 100%;
+  @include fb-position(absolute, 0px 0px 0px 0px);
 }
 
 xxl-connection-lines {
@@ -162,7 +162,7 @@ xxl-connection-lines {
   position: absolute;
   top: 6px;
   width: var(--socket-size);
-  z-index: 3;
+  z-index: 30;
 
   &.is-disabled {
     pointer-events: none;

@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { SocketDirective } from './socket.component';
+import { CustomComponent } from './custom.component';
 
-describe('SocketComponent', () => {
-  let component: SocketDirective;
-  let fixture: ComponentFixture<SocketDirective>;
+describe('CustomComponent', () => {
+  let component: CustomComponent;
+  let fixture: ComponentFixture<CustomComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ SocketDirective ]
+      declarations: [ CustomComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(SocketDirective);
+    fixture = TestBed.createComponent(CustomComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

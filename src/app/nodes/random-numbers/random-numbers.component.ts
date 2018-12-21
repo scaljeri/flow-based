@@ -54,41 +54,13 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
       this.currentValue = this.worker.integer ? value : parseFloat(value.toFixed(4));
       this.cdr.markForCheck();
     });
-
-    this.service.closeOnDoubleClick(() => this.onClose());
-
-    this.clickSubscription = this.service.nodeClicked$.subscribe((e) => {
-      this.service.state.config.expanded = this.isActive = true;
-      this.service.calibrate();
-      this.service.hideLabel();
-    });
-
-    this.isActive = this.service.state.config.expanded;
   }
 
   ngOnDestroy(): void {
-    this.clickSubscription.unsubscribe();
     this.valueSubscription.unsubscribe();
   }
 
   get title(): string | undefined {
     return this.state.title;
-  }
-
-  onDelete(): void {
-    this.service.deleteSelf();
-  }
-
-  onEdit(): void {
-    // TODO
-  }
-
-  onClose(): void {
-    this.service.showLabel();
-    this.service.state.config.expanded = this.isActive = false;
-  }
-
-  onTitleChange(title): void {
-    this.service.state.title = title;
   }
 }
