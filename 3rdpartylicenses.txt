@@ -429,6 +429,8 @@ MIT
 
 @angular/material/checkbox
 
+@angular/material/autocomplete
+
 @ctrl/ngx-codemirror
 MIT
 MIT License
