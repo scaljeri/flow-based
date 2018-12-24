@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, Inject, NgZone, OnInit, ViewChild } from '@angular/core';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { CustomCodeWorker } from '../../workers/custom-code';
-import { FB_SOCKET_COLORS, FbNodeState, XXL_FLOW_TYPES } from '../../../../projects/flow-based/src/lib/flow-based';
+import { FB_SOCKET_COLORS, FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { Editor, EditorChangeLinkedList } from 'codemirror';
 import { FormControl } from '@angular/forms';
 

@@ -3,6 +3,18 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
+    "flow-based-fractal": {
+      "projectType": "application",
+      "root": "",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-webpack:webpack",
+          "options": {
+            "webpackConfig": "webpack.config.js"
+          }
+        }
+      }
+    },
     "flow-based-demo": {
       "root": "",
       "sourceRoot": "src",
@@ -35,7 +47,9 @@
                 "projects/flow-based/src/lib/"
               ]
             },
-            "scripts": []
+            "scripts": [
+              { "input": "dist/fractals-worker.js", "lazy": true }
+            ]
           },
           "configurations": {
             "production": {
