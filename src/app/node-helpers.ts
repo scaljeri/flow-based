@@ -17,6 +17,8 @@ export const NODE_HELPERS = {
       if (!outSocket.format && inSocket.format) {
         fromNode.sockets!.forEach(s => s.format = inSocket.format);
         didChange = true;
+      } else if (!inSocket.format && outSocket.format) {
+        toNode.sockets!.forEach(s => s.format = outSocket.format);
       }
     } else if (toNode.type === 'tap') {
       if (!inSocket.format && outSocket.format) {

@@ -1,0 +1,34 @@
+<fb-normal-node (active)="onActive($event)">
+  <section class="minified">
+    <fb-default-front [title]="title"></fb-default-front>
+  </section>
+
+  <section class="expanded fb-drag-ignore">
+    <form class="format-form">
+      <mat-form-field class="example-full-width">
+        <input type="text" placeholder="Input format" aria-label="Number" matInput [formControl]="inputFormatControl" [matAutocomplete]="auto">
+        <mat-autocomplete #auto="matAutocomplete">
+          <mat-option *ngFor="let option of types" [value]="option">
+            {{option}}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <mat-form-field class="example-full-width">
+        <input type="text" placeholder="Output format" aria-label="Number" matInput [formControl]="outputFormatControl" [matAutocomplete]="auto">
+        <mat-autocomplete #auto="matAutocomplete">
+          <mat-option *ngFor="let option of types" [value]="option">
+            {{option}}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+    </form>
+
+    <div #code class="code" (change)="onKeyDown()"></div>
+    <div class="errors">
+      <span *ngIf="hasCompileError">Could not compile the code</span>
+      <span *ngIf="hasRuntimeError && !hasCompileError">Runtime error occured</span>
+      <span *ngIf="!hasCompileError && !hasRuntimeError">&nbsp;</span>
+    </div>
+  </section>
+</fb-normal-node>

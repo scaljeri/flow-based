@@ -1,8 +1,8 @@
 import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker, XxlFlowUnitState } from '../../../projects/flow-based/src/lib/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
-export const CUSTOM_SETTINGS = {
-  title: 'Dynamic stuff',
+export const CUSTOM_CODE_SETTINGS = {
+  title: 'Custom code',
   config: { func: '// const out = new Subject();\n// function(val) {\nout.next(val)'},
   sockets: [
     {
@@ -14,7 +14,7 @@ export const CUSTOM_SETTINGS = {
   ]
 };
 
-export class CustomWorker implements FbNodeWorker {
+export class CustomCodeWorker implements FbNodeWorker {
   private subject = new Subject<any>(); // OUTPUT
   private subscriptions: { [id: string]: Subscription } = {};
   private func: (any) => void;

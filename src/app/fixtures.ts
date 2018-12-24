@@ -3,9 +3,107 @@ export const basic =
     "id": 1545429029660,
     "children": [
       {
+        "type": "custom",
+        "title": "Custom code",
+        "id": 1545475831110,
+        "config": {
+          "func": "// const out = new Subject();\n// function(val) {\nout.next(parseInt(val))",
+          "expanded": false
+        },
+        "sockets": [
+          {
+            "id": 1545475831111,
+            "type": "in",
+            "format": "string"
+          },
+          {
+            "id": 1545475831112,
+            "type": "out",
+            "format": "number"
+          }
+        ],
+        "position": {
+          "x": 13.679606119791663,
+          "y": 47.47554212362911
+        }
+      },
+      {
+        "type": "custom",
+        "title": "Custom code",
+        "id": 1545475359040,
+        "config": {
+          "func": "// const out = new Subject();\n// function(val) {\nout.next(val + ' yo');",
+          "expanded": false
+        },
+        "sockets": [
+          {
+            "id": 1545475359041,
+            "type": "in",
+            "format": "number"
+          },
+          {
+            "id": 1545475359042,
+            "type": "out",
+            "format": "string"
+          }
+        ],
+        "position": {
+          "x": 13.516845703125009,
+          "y": 12.428339980059821
+        }
+      },
+      {
+        "type": "tap",
+        "title": "Tap",
+        "id": 1545475359043,
+        "config": {
+          "expanded": false
+        },
+        "sockets": [
+          {
+            "id": 1545475359044,
+            "type": "in",
+            "format": "string"
+          },
+          {
+            "id": 1545475359045,
+            "type": "out",
+            "format": "string"
+          }
+        ],
+        "position": {
+          "x": 31.225585937500007,
+          "y": 11.2354343220339
+        }
+      },
+      {
+        "type": "tap",
+        "title": "Tap",
+        "id": 1545475831114,
+        "config": {
+          "expanded": false
+        },
+        "sockets": [
+          {
+            "id": 1545475831115,
+            "type": "in",
+            "format": "number"
+          },
+          {
+            "id": 1545475831116,
+            "type": "out",
+            "format": "number"
+          }
+        ],
+        "position": {
+          "x": 31.214599609375,
+          "y": 48.40984857926223
+        }
+      },
+      {
         "type": "random-numbers",
         "title": "Random number generator",
-        "id": 1545430288532,
+        "id": 1545475359038,
         "config": {
           "min": 0,
           "max": 100,
@@ -13,137 +111,52 @@ export const basic =
           "end": 100,
           "intervalMax": 10000,
           "intervalMin": 100,
-          "interval": 500,
+          "interval": 1000,
           "integer": true,
-          "expanded": true,
+          "expanded": false,
           "integers": true
         },
         "sockets": [
           {
-            "id": 1545430288533,
+            "id": 1545475359039,
             "type": "out",
             "format": "number"
           }
         ],
         "position": {
-          "x": 7.966105143229168,
-          "y": 1.938325648055832
-        }
-      },
-      {
-        "type": "custom",
-        "title": "Dynamic stuff",
-        "id": 1545430288534,
-        "config": {
-          "func": "// const out = new Subject();\n// function(val) {\nconsole.log(val);\n\nif (val % 2 === 0) {\n    out.next(val);\n}",
-          "expanded": true
-        },
-        "sockets": [
-          {
-            "id": 1545430288535,
-            "type": "in"
-          },
-          {
-            "id": 1545430288536,
-            "type": "out"
-          }
-        ],
-        "position": {
-          "x": 42.454833984375014,
-          "y": 2.26897432701894
-        }
-      },
-      {
-        "type": "tap",
-        "title": "Tap",
-        "id": 1545430288538,
-        "config": {
-          "expanded": false
-        },
-        "sockets": [
-          {
-            "id": 1545430288539,
-            "type": "in"
-          },
-          {
-            "id": 1545430288540,
-            "type": "out"
-          }
-        ],
-        "position": {
-          "x": 74.33044433593749,
-          "y": 42.79738908275175
-        }
-      },
-      {
-        "type": "custom",
-        "title": "Dynamic stuff",
-        "id": 1545429029661,
-        "config": {
-          "func": "// const out = new Subject();\n// function(val) {\nlet count = 0;\n\nsetInterval(() => {\n  out.next(count++);\n}, 1000);",
-          "expanded": true
-        },
-        "sockets": [
-          {
-            "id": 1545429029662,
-            "type": "in"
-          },
-          {
-            "id": 1545429029663,
-            "type": "out",
-            "color": "#3131ec"
-          }
-        ],
-        "position": {
-          "x": 8.121744791666664,
-          "y": 41.479467846460615
-        }
-      },
-      {
-        "type": "tap",
-        "title": "Tap",
-        "id": 1545429029664,
-        "config": {
-          "expanded": false
-        },
-        "sockets": [
-          {
-            "id": 1545429029665,
-            "type": "in",
-            "color": "#fe02eb"
-          },
-          {
-            "id": 1545429029666,
-            "type": "out"
-          }
-        ],
-        "position": {
-          "x": 53.457845052083336,
-          "y": 61.53103190428716
+          "x": 3.050740559895827,
+          "y": 29.10019940179462
         }
       }
     ],
     "connections": [
       {
-        "from": 1545430288532,
-        "out": 1545430288533,
-        "to": 1545430288534,
-        "in": 1545430288535,
-        "id": 1545430601045
+        "from": 1545475831110,
+        "out": 1545475831112,
+        "to": 1545475831114,
+        "in": 1545475831115,
+        "id": 1545475831117
       },
       {
-        "from": 1545430288534,
-        "out": 1545430288536,
-        "to": 1545430288538,
-        "in": 1545430288539,
-        "id": 1545430288541
+        "from": 1545475359043,
+        "out": 1545475359045,
+        "to": 1545475831110,
+        "in": 1545475831111,
+        "id": 1545475831113
       },
       {
-        "from": 1545429029661,
-        "out": 1545429029663,
-        "to": 1545429029664,
-        "in": 1545429029665,
-        "id": 1545429029667
+        "from": 1545475359040,
+        "out": 1545475359042,
+        "to": 1545475359043,
+        "in": 1545475359044,
+        "id": 1545475359047
+      },
+      {
+        "from": 1545475359038,
+        "out": 1545475359039,
+        "to": 1545475359040,
+        "in": 1545475359041,
+        "id": 1545475359046
       }
     ]
   }

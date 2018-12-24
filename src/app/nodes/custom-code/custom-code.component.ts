@@ -1,33 +1,49 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, NgZone, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, Inject, NgZone, OnInit, ViewChild } from '@angular/core';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
-import { CustomWorker } from '../../workers/custom';
-import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { CustomCodeWorker } from '../../workers/custom-code';
+import { FB_SOCKET_COLORS, FbNodeState, XXL_FLOW_TYPES } from '../../../../projects/flow-based/src/lib/flow-based';
 import { Editor, EditorChangeLinkedList } from 'codemirror';
+import { FormControl } from '@angular/forms';
 
 declare var require: any;
 const CodeMirror = require('codemirror');
 
 @Component({
-  selector: 'fb-custom',
-  templateUrl: './custom.component.html',
-  styleUrls: ['./custom.component.scss']
+  selector: 'fb-custom-code',
+  templateUrl: './custom-code.component.html',
+  styleUrls: ['./custom-code.component.scss']
 })
-export class CustomComponent implements OnInit, AfterViewInit {
-  private worker: CustomWorker;
+export class CustomCodeComponent implements OnInit, AfterViewInit {
+  private worker: CustomCodeWorker;
   private state: FbNodeState;
   public error: boolean;
   private editor: any;
 
+  inputFormatControl = new FormControl();
+  outputFormatControl = new FormControl();
+
   @ViewChild('code') codeRef: ElementRef;
 
   constructor(@Host() private service: NodeService,
+              @Inject(FB_SOCKET_COLORS) private colors: Record<string, string>,
               private _ngZone: NgZone,
               private cdr: ChangeDetectorRef) {
     this.state = service.state;
   }
 
   ngOnInit() {
-    this.worker = this.service.worker as CustomWorker;
+    this.worker = this.service.worker as CustomCodeWorker;
+
+    this.inputFormatControl.valueChanges.subscribe((format: string) => {
+      this.state.sockets![0].format = format;
+    });
+
+    this.outputFormatControl.valueChanges.subscribe((format: string) => {
+      this.state.sockets![1].format = format;
+    });
+
+    this.inputFormatControl.setValue(this.state.sockets![0].format);
+    this.outputFormatControl.setValue(this.state.sockets![1].format);
   }
 
   ngAfterViewInit(): void {
@@ -84,5 +100,9 @@ export class CustomComponent implements OnInit, AfterViewInit {
         );
       }
     // });
+  }
+
+  get types(): string[] {
+    return Object.keys(this.colors);
   }
 }

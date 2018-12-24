@@ -13,7 +13,7 @@ import { DefaultFrontComponent } from './components/default-front/default-front.
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { CodemirrorModule } from '@ctrl/ngx-codemirror';
 import {
-  MAT_DIALOG_DEFAULT_OPTIONS,
+  MAT_DIALOG_DEFAULT_OPTIONS, MatAutocompleteModule,
   MatButtonModule, MatCardModule, MatCheckboxModule, MatDialogModule,
   MatInputModule, MatListModule, MatSliderModule, MatToolbarModule
 } from '@angular/material';
@@ -33,7 +33,7 @@ import { StatsComponent } from './nodes/stats/stats.component';
 import { NormalNodeComponent } from './components/normal-node/normal-node.component';
 import { EditNodeComponent } from './components/edit-node/edit-node.component';
 import { NodeHeaderComponent } from './components/node-header/node-header.component';
-import { CustomComponent } from './nodes/custom/custom.component';
+import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
 
 @NgModule({
   declarations: [
@@ -52,7 +52,7 @@ import { CustomComponent } from './nodes/custom/custom.component';
     NodeHeaderComponent,
     StatsComponent,
     NormalNodeComponent,
-    CustomComponent,
+    CustomCodeComponent,
   ],
   imports: [
     BrowserModule,
@@ -71,7 +71,8 @@ import { CustomComponent } from './nodes/custom/custom.component';
     MatListModule,
     MatTooltipModule,
     OverlayModule,
-    CodemirrorModule
+    CodemirrorModule,
+    MatAutocompleteModule
   ],
   providers: [
     ComponentSelectionService,
@@ -97,7 +98,7 @@ import { CustomComponent } from './nodes/custom/custom.component';
     DefaultFlowComponent,
     MergeStreamsComponent,
     StatsComponent,
-    CustomComponent
+    CustomCodeComponent
   ],
   bootstrap: [AppComponent]
 })

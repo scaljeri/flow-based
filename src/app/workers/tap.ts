@@ -38,12 +38,15 @@ export class TapWorker implements FbNodeWorker {
     this.stream = stream;
 
     this.subscriptions[connection.id] = stream.subscribe((val: number) => {
-      this.currentValue = Number.isInteger(val) ? val : parseFloat(val.toFixed(2));
+      if (!isNaN(val)) {
+        val = Number.isInteger(val) ? val : parseFloat(val.toFixed(2));
+      }
+
+      this.currentValue = val;
       this.count++;
 
-      this.history.unshift(Number.isInteger(val) ? val : parseFloat(val.toFixed(2)));
+      this.history.unshift(val);
       this.history = this.history.slice(0, 33);
-
       this.subject.next(val);
     });
   }
