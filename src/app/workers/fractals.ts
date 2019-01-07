@@ -1,9 +1,10 @@
 import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
-import { IDimensions, IZoomable, PIXEL_RATIO_SCALE } from '../fb-config';
 import { FbWebWorker } from './webworker';
 import * as Mandelbrod from './fractals/mandelbrod';
 import * as JuliaSet from './fractals/julia';
+import { IDimensions, IZoomable } from '../app.models';
+import { PIXEL_RATIO_SCALE } from '../app.config';
 
 export const AVAILABLE_FRACTALS = {
   'mandelbrod': {
@@ -69,22 +70,25 @@ export class FractalsWorker implements FbNodeWorker {
     this.setFractal(config.selected);
   }
 
-  setFractal(name: string): void {
-    this.config.selected = name;
+  setFractal(name?: string): void {
+    if (name) {
+      this.config.selected = name;
+    }
+
     this.dimensions = null;
 
     if (this.webWorker) {
       this.webWorker.terminate();
     }
 
-    const dim = Object.assign({}, AVAILABLE_FRACTALS[name].dimensions);
+    const dim = Object.assign({}, AVAILABLE_FRACTALS[this.config.selected].dimensions);
 
     if (PIXEL_RATIO_SCALE !== 1) {
       dim.width *= PIXEL_RATIO_SCALE;
       dim.height *= PIXEL_RATIO_SCALE;
     }
 
-    if (name) {
+    if (this.config.selected) {
       this.run(dim);
 
       // this.webWorker = new Worker('fractals-worker.js');
@@ -150,6 +154,6 @@ export class FractalsWorker implements FbNodeWorker {
   }
 
   reset(): void {
-    this.run(AVAILABLE_FRACTALS[this.config.selected].dimensions);
+    this.setFractal();
   }
 }

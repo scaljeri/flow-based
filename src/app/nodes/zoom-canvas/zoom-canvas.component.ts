@@ -1,7 +1,8 @@
 import { AfterViewInit, Component, ElementRef, Host, OnInit, ViewChild } from '@angular/core';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { ZoomCanvasWorker } from '../../workers/zoom-canvas';
-import { IDimensions, IZoomable, PIXEL_RATIO_SCALE } from '../../fb-config';
+import { IDimensions, IZoomable } from '../../app.models';
+import { PIXEL_RATIO_SCALE } from '../../app.config';
 
 @Component({
   selector: 'fb-zoom-canvas',

@@ -2,7 +2,6 @@ import { Component, Host, OnInit } from '@angular/core';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
 import { FractalsWorker } from '../../workers/fractals';
-import { WebWorkerService } from 'ngx-web-worker';
 
 @Component({
   selector: 'fb-fractal',
@@ -18,8 +17,7 @@ export class FractalComponent implements OnInit {
     {name: 'Julia set', id: 'julia'}
   ];
 
-  constructor(@Host() private service: NodeService,
-              private webWorkerService: WebWorkerService) {
+  constructor(@Host() private service: NodeService) {
     this.state = service.state;
     //
     // webWorkerService.run(input => {

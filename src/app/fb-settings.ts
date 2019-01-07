@@ -31,36 +31,9 @@ export const FB_CONFIG = {
   'flow': {component: DefaultFlowComponent, settings: {title: 'Composite Unit', isFlow: true}}
 };
 
-export const PIXEL_RATIO_SCALE = window.devicePixelRatio > 1.5 ? 2 : 1;
-
 export const XXL_SOCKET_COLORS = {
   'number': '#025d04',
   'worker': '#c1a',
   'dimension': '#bebebe',
   'point': '#9988cf'
 };
-
-export interface IDimensions {
-  x?: number;
-  y?: number;
-  xMin: number;
-  yMin: number;
-  xMax: number;
-  yMax: number;
-  width?: number;
-  height?: number;
-}
-
-export interface IZoomable {
-  metadata: {
-    label: string;
-    dimensions: IDimensions;
-  };
-  imageData: ImageData;
-}
-
-export interface IWorker {
-  label: string;
-  defaults?: IDimensions;
-  worker: Worker;
-}

@@ -1,8 +1,6 @@
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { WebWorkerService } from 'ngx-web-worker';
-
 
 import { AppComponent } from './app.component';
 import { ContextMenuComponent } from './context-menu/context-menu.component';
@@ -27,7 +25,7 @@ import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.co
 import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
 import { AddSocketComponent } from './nodes/default-flow/add-socket/add-socket.component';
 import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
-import { FB_CONFIG, XXL_SOCKET_COLORS } from './fb-config';
+import { FB_CONFIG, XXL_SOCKET_COLORS } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
 import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.module';
 import { StatsComponent } from './nodes/stats/stats.component';
@@ -95,8 +93,7 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
     }, {
       provide: FB_SOCKET_COLORS,
       useValue: XXL_SOCKET_COLORS as FbSocketColors
-    },
-    WebWorkerService
+    }
   ],
   entryComponents: [
     AddSocketComponent,

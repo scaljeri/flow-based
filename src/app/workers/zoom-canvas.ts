@@ -1,7 +1,6 @@
 import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
-import { IDimensions, IWorker, IZoomable } from '../fb-config';
-import { ElementRef, ViewChild } from '@angular/core';
+import { IDimensions, IZoomable } from '../app.models';
 
 export const ZOOM_CANVAS_SETTINGS = {
   title: 'Zoomable canavs',
