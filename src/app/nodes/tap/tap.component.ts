@@ -12,7 +12,6 @@ import { Subscription } from 'rxjs';
 export class TapComponent implements OnInit, OnDestroy {
   public worker: TapWorker;
   public sockets: XxlSocket[] = [];
-  public history;
   private subscriptions: Subscription[] = [];
 
   @HostBinding('class.is-active') isActive = false;

@@ -16,12 +16,14 @@ export class NormalNodeComponent implements OnInit {
 
   @Input() fullscreen = false;
   @Input() deleteSocket = false;
+  @Input() label: string;
+  @Input() @HostBinding('class.is-active') isActive = false;
+
   @Output() edit = new EventEmitter<boolean>();
   @Output() maxSize = new EventEmitter<boolean>();
   @Output() active = new EventEmitter<boolean>();
 
   @HostBinding('class.is-fullscreen') isFullscreen = false;
-  @Input() @HostBinding('class.is-active') isActive = false;
 
   constructor(private cdr: ChangeDetectorRef,
               private service: NodeService) {
@@ -119,6 +121,6 @@ export class NormalNodeComponent implements OnInit {
   }
 
   get title(): string {
-    return this.state.title || '';
+    return this.label || this.state.title || '';
   }
 }

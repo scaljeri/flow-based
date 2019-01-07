@@ -81,3 +81,6 @@ import 'zone.js/dist/zone';  // Included with Angular CLI.
 
 /** Pointer events - https://github.com/jquery/PEP */
 import 'pepjs';
+
+/* nodejs polyfills */
+import 'path-browserify';

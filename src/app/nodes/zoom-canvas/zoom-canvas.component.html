@@ -1,0 +1,6 @@
+<fb-normal-node [isActive]="true" [label]="getTitle()">
+  <canvas (mousemove)="onMouseMove($event)"
+          (mousedown)="onMouseDown($event)"
+          (mouseup)="onMouseUp($event)"
+          #canvas class="fb-drag-ignore"></canvas>
+</fb-normal-node>

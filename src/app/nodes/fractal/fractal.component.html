@@ -1,0 +1,14 @@
+<fb-normal-node [isActive]="true">
+  <div class="content-wrapper">
+    <mat-form-field>
+      <mat-select placeholder="Select a fractal" [(ngModel)]="selected"
+                  (selectionChange)="onFractalChange($event.value)" class="fb-drag-ignore">
+        <mat-option *ngFor="let fractal of fractals" [value]="fractal.id">
+          {{fractal.name}}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-button (click)="onReset()">Reset</button>
+  </div>
+</fb-normal-node>

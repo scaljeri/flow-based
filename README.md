@@ -31,7 +31,13 @@ Angular library for building workflows + demo
    * Audio: http://webaudiodemos.appspot.com/
    * Gauss/charts: https://stackblitz.com/edit/google-charts?file=app%2Fgraph%2Fgraph.component.ts
    * Node red: https://flows.nodered.org/node/node-red-dashboard
+   * Setup webworker: https://stackoverflow.com/questions/43276044/angular-cli-generated-app-with-web-workers/43276045#43276045
+   * Julia Set demo: http://bl.ocks.org/syntagmatic/3736720, http://jsfiddle.net/b6Wb5/
+   * Approximage Pi with mandelbrot: https://www.youtube.com/watch?v=d0vY0CKYhPY
 
+
+### Notes: 
+  * Mandelbrot: cusp
 ## POCs
 
   * https://stackblitz.com/edit/flow-based-programming

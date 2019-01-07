@@ -40,14 +40,13 @@ export class AppComponent implements OnInit {
       this.flowService.add(type);
     });
 
-    const worker = new Worker('fractals-worker.js');
-    worker.onmessage = (event) => {
-      const { output } = event.data;
-      console.log('output=' + output);
-      debugger;
-    };
-
-    worker.postMessage(9);
+    // const worker = new Worker('fractals-worker.js');
+    // worker.onmessage = (event) => {
+    //   const { output } = event.data;
+    //   console.log('output=' + output);
+    // };
+    //
+    // worker.postMessage(9);
   }
 
   openModal(): void {

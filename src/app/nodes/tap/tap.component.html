@@ -1,4 +1,4 @@
-<fb-normal-node>
+<fb-normal-node *ngIf="worker">
   <p class="minified">{{value}}</p>
 
   <section class="expanded">
@@ -16,7 +16,7 @@
 
       <mat-card class="history">
         <mat-card-title>History</mat-card-title>
-        <mat-card-content>
+        <mat-card-content *ngIf="worker.history">
           <span *ngFor="let val of worker.history">{{val}}</span>
         </mat-card-content>
       </mat-card>

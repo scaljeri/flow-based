@@ -51,6 +51,7 @@ export class NodeService {
   nodeIsClicked(e: PointerEvent): void {
     this.nodeClicked.next(e);
     this.flowService.nodeClicked(this.state);
+    console.log('clicked');
 
     if (Date.now() - this.lastClicked < this.thresholdClicks) {
       if (this.doubleClick) {

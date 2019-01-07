@@ -1,6 +1,7 @@
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
+import { WebWorkerService } from 'ngx-web-worker';
 
 
 import { AppComponent } from './app.component';
@@ -15,7 +16,7 @@ import { CodemirrorModule } from '@ctrl/ngx-codemirror';
 import {
   MAT_DIALOG_DEFAULT_OPTIONS, MatAutocompleteModule,
   MatButtonModule, MatCardModule, MatCheckboxModule, MatDialogModule,
-  MatInputModule, MatListModule, MatSliderModule, MatToolbarModule
+  MatInputModule, MatListModule, MatSelectModule, MatSliderModule, MatToolbarModule
 } from '@angular/material';
 import { MatIconModule } from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -34,6 +35,9 @@ import { NormalNodeComponent } from './components/normal-node/normal-node.compon
 import { EditNodeComponent } from './components/edit-node/edit-node.component';
 import { NodeHeaderComponent } from './components/node-header/node-header.component';
 import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
+import { FractalComponent } from './nodes/fractal/fractal.component';
+import { ZoomCanvasComponent } from './nodes/zoom-canvas/zoom-canvas.component';
+import { CanvasComponent } from './nodes/canvas/canvas.component';
 
 @NgModule({
   declarations: [
@@ -53,6 +57,9 @@ import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
     StatsComponent,
     NormalNodeComponent,
     CustomCodeComponent,
+    FractalComponent,
+    ZoomCanvasComponent,
+    CanvasComponent,
   ],
   imports: [
     BrowserModule,
@@ -72,7 +79,8 @@ import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
     MatTooltipModule,
     OverlayModule,
     CodemirrorModule,
-    MatAutocompleteModule
+    MatAutocompleteModule,
+    MatSelectModule
   ],
   providers: [
     ComponentSelectionService,
@@ -87,7 +95,8 @@ import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
     }, {
       provide: FB_SOCKET_COLORS,
       useValue: XXL_SOCKET_COLORS as FbSocketColors
-    }
+    },
+    WebWorkerService
   ],
   entryComponents: [
     AddSocketComponent,
@@ -98,7 +107,10 @@ import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
     DefaultFlowComponent,
     MergeStreamsComponent,
     StatsComponent,
-    CustomCodeComponent
+    CustomCodeComponent,
+    FractalComponent,
+    CanvasComponent,
+    ZoomCanvasComponent
   ],
   bootstrap: [AppComponent]
 })
