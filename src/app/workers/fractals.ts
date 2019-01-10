@@ -11,10 +11,10 @@ export const AVAILABLE_FRACTALS = {
     title: 'Mandelbord',
     fn: Mandelbrod,
     dimensions: {
-      xMin: -2.1,
+      xMin: -3,
       xMax: 1,
-      yMin: -1.1,
-      yMax: 1,
+      yMin: -2,
+      yMax: 2,
       width: 400,
       height: 400,
       maxIterations: 100,
@@ -64,6 +64,8 @@ export class FractalsWorker implements FbNodeWorker {
   private subscriptions: { [id: string]: Subscription } = {};
   private subjects = new BehaviorSubject<IZoomable | null>(null);
   private dimensions;
+  private x: number;
+  private y: number;
 
   constructor(private config: FractalsConfig,
               private sockets: XxlSocket[]) {
@@ -89,6 +91,9 @@ export class FractalsWorker implements FbNodeWorker {
     }
 
     if (this.config.selected) {
+      this.x = dim.x;
+      this.y = dim.y;
+
       this.run(dim);
 
       // this.webWorker = new Worker('fractals-worker.js');
@@ -111,7 +116,9 @@ export class FractalsWorker implements FbNodeWorker {
     const name = this.config.selected;
     if (name) {
       this.dimensions = dim || AVAILABLE_FRACTALS[name].dimensions;
-
+      if (!this.dimensions.maxIterations) {
+        this.dimensions.maxIterations = AVAILABLE_FRACTALS[name].dimensions.maxIterations
+      }
       this.webWorker = new FbWebWorker(AVAILABLE_FRACTALS[name].fn);
 
       this.webWorker.run(this.dimensions)
@@ -138,7 +145,12 @@ export class FractalsWorker implements FbNodeWorker {
   setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
     this.subscriptions[connection.id] = stream.subscribe((dim: IDimensions) => {
       if (this.webWorker && dim) {
-        this.run(Object.assign({maxIterations: 100}, dim));
+        if (dim.x && dim.y) {
+          this.x = dim.x;
+          this.y = dim.y;
+        }
+
+        this.run(Object.assign({x: this.x, y: this.y}, dim));
       }
     });
   }

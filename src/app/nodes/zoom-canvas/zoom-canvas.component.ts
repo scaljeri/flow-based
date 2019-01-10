@@ -59,64 +59,64 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
 
   onMouseUp(event): void {
     this.dragging = false;
-    const x = event.clientX;
-    const y = event.clientY;
+    // const x = event.clientX;
+    // const y = event.clientY;
+    const x = (event.clientX - this.left) * PIXEL_RATIO_SCALE;
+    const y = (event.clientY - this.top) * PIXEL_RATIO_SCALE;
 
-    const distance = Math.pow(x  - this.left - this.startX, 2) + Math.pow(y - this.top - this.startY, 2);
-    const duration = Date.now() - this.startTime;
+    const distance = Math.pow(x - this.startX, 2) + Math.pow(y - this.startY, 2);
 
     if (distance > 20) {
       // if (duration > 500) {
-        this.compute((event.clientX - this.left) * PIXEL_RATIO_SCALE,
-          (event.clientY - this.top) * PIXEL_RATIO_SCALE);
+      // this.compute(x, y);
+      this.compute((event.clientX - this.left) * PIXEL_RATIO_SCALE,
+        (event.clientY - this.top) * PIXEL_RATIO_SCALE);
       // }
     } else {
       this.service.nodeIsClicked(event);
+      this.worker.updateDimensions(Object.assign({}, this.dimensions, {
+        x: this.dimensions.xMin + (this.dimensions.xMax - this.dimensions.xMin) * x / this.dimensions.width!,
+        y: this.dimensions.yMin + (this.dimensions.yMax - this.dimensions.yMin) * y / this.dimensions.height!
+      }));
     }
 
     this.ctx.putImageData(this.imageData, 0, 0);
   }
 
   compute(endX, endY): void {
-    let { xMin, xMax, yMin, yMax }  = this.dimensions;
-    const { x, y } = this.dimensions;
+    let {xMin, xMax, yMin, yMax} = this.dimensions;
     const xScale = (xMax - xMin) / this.canvas.nativeElement.width;
     const yScale = (yMax - yMin) / this.canvas.nativeElement.height;
-    const aspectRatio = this.canvas.nativeElement.width / this.canvas.nativeElement.height;
-
-    // const width = (endX - this.startX) * SCALE;
-    // const height = (endY - this.top - this.startY) * SCALE;
 
     const left = Math.min(this.startX, endX);
     const right = Math.max(this.startX, endX);
     const top = Math.min(this.startY, endY);
     const bottom = Math.max(this.startY, endY);
 
-    // let width = right - left;
-    // let height = bottom - top;
-    //
-    // if (width > height) {
-    //   height = width / aspectRatio;
-    // } else {
-    //   width = height * aspectRatio;
-    // }
-
     xMax = xMin + right * xScale;
     xMin = xMin + left * xScale;
     yMax = yMin + bottom * yScale;
     yMin = yMin + top * yScale;
+    const maxDistance = Math.max(xMax - xMin, yMax - yMin);
+
+    const xMid = xMin + (xMax - xMin) / 2;
+    const yMid = yMin + (yMax - yMin) / 2;
+
+    xMax = xMid + maxDistance / 2;
+    xMin = xMid - maxDistance / 2;
+    yMax = yMid + maxDistance / 2;
+    yMin = yMid - maxDistance / 2;
 
     this.worker.updateDimensions({
-        xMin, xMax, yMin, yMax, x, y,
-        width: this.canvas.nativeElement.width,
-        height: this.canvas.nativeElement.height
+      xMin, xMax, yMin, yMax,
+      width: this.canvas.nativeElement.width,
+      height: this.canvas.nativeElement.height
     });
-
   }
 
   onMouseMove(event): void {
     if (this.dragging) {
-      const x = (event.clientX - this.left) * PIXEL_RATIO_SCALE ;
+      const x = (event.clientX - this.left) * PIXEL_RATIO_SCALE;
       const y = (event.clientY - this.top) * PIXEL_RATIO_SCALE;
 
       this.ctx.putImageData(this.imageData, 0, 0);

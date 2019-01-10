@@ -35,26 +35,48 @@ export class FractalClazz {
     return (y * this.width + x) * 4;
   }
 
+  iterate(zR, zI, cR, cI, iterMax) {
+    let iter = 0;
+    while (true) {
+      iter++;
+
+      if (iter > iterMax) {
+        return 0;
+      }
+
+      const nR = zR * zR - zI * zI + cR;
+      const nI = 2 * zI * zR + cI;
+
+      if (nR > 4 || nI > 4 || nR < -4 || nI < -4) {
+        return iter;
+      }
+
+      zR = nR;
+      zI = nI;
+    }
+  }
+
   compute(): ImageData {
     this.xScale = (this.xMax - this.xMin) / this.width;
     this.yScale = (this.yMax - this.yMin) / this.height;
 
-    console.log('w: ',this.width, this.xScale);
     for (let sx = 0; sx < this.width; sx++) {
       for (let sy = 0; sy < this.height; sy++) {
         const xScaled = sx * this.xScale + this.xMin;
         const yScaled = sy * this.yScale + this.yMin;
 
-        let iteration = 0;
-        let x = 0;
-        let y = 0;
-        while ((x * x + y * y) <= (2 * 2) && iteration < this.maxIterations) {
-          const xTemp = x * x - y * y + xScaled;
-          y = 2 * x * y + yScaled;
-          x = xTemp;
+        // let iteration = 0;
+        // let x = 0;
+        // let y = 0;
+        // while ((x * x + y * y) <= (2 * 2) && iteration < this.maxIterations) {
+        //   const xTemp = x * x - y * y + xScaled;
+        //   y = 2 * x * y + yScaled;
+        //   x = xTemp;
+        //
+        //   iteration = iteration + 1;
+        // }
 
-          iteration = iteration + 1;
-        }
+        const iteration = this.iterate(0, 0, xScaled, yScaled, this.maxIterations);
 
         if (iteration === this.maxIterations) {
           this.updatePixel(this.coord2Index(sx, sy), 0, 0, 0);

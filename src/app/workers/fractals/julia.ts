@@ -51,7 +51,7 @@ export class FractalClazz {
       const nR = zR * zR - zI * zI + cR;
       const nI = 2 * zI * zR + cI;
 
-      if (zR > 4 || zI > 4) {
+      if (nR > 4 || nI > 4 || nR < -4 || nI < -4) {
         return iter;
       }
 
@@ -61,14 +61,7 @@ export class FractalClazz {
   }
 
   compute(): ImageData {
-    // const height = 400,
-    //   width = 400,
-    //   maxIterate = 200,
-    //   xmin = -.5,
-    //   xmax = .5,
-    //   ymin = -.5,
-    //   ymax = .5,
-      const realSpan = this.xMax - this.xMin,
+    const realSpan = this.xMax - this.xMin,
       imagSpan = this.yMax - this.yMin;
 
     let zR, zI;
@@ -83,7 +76,7 @@ export class FractalClazz {
         const iter = this.iterate(zR, zI, this.cR, this.cI, this.maxIterations);
 
         const color = this.getColor(iter, this.maxIterations);
-        this.updatePixel(this.coord2Index(i, j), color[0], color[1],  color[2]);
+        this.updatePixel(this.coord2Index(i, j), color[0], color[1], color[2]);
       }
     }
 

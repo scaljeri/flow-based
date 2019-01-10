@@ -3,7 +3,7 @@ import { Observable, Subject, Subscription } from 'rxjs';
 
 export const CUSTOM_CODE_SETTINGS = {
   title: 'Custom code',
-  config: { func: '// const out = new Subject();\n// function(val) {\nout.next(val)'},
+  config: {func: '// const out = new Subject();\n// function(val) {\nout.next(val)'},
   sockets: [
     {
       type: 'in',
@@ -39,6 +39,7 @@ export class CustomCodeWorker implements FbNodeWorker {
       try {
         this.func(val);
       } catch (err) {
+        console.error(err);
         this.runtimeError = err;
       }
     });
@@ -61,9 +62,16 @@ export class CustomCodeWorker implements FbNodeWorker {
     const inputFunc = `return function(val) { ${funcStr} }`;
     try {
       this.func = new Function('out', inputFunc)(this.subject);
+    } catch (err) {
+      console.error(err);
+      this.compileError = err;
+    }
+
+    try {
       this.func(null); // Initial call
     } catch (err) {
-      this.compileError = err;
+      console.error(err);
+      this.runtimeError = err;
     }
   }
 }

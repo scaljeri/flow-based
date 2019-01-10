@@ -13,7 +13,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   private worker: CanvasWorker;
   private ctx;
 
-  constructor(@Host() private service: NodeService) { }
+  constructor(@Host() private service: NodeService) {
+  }
 
   ngOnInit() {
     this.worker = this.service.worker as CanvasWorker;
@@ -22,11 +23,28 @@ export class CanvasComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.ctx = this.canvas.nativeElement.getContext('2d');
 
-    this.worker.imageData$.subscribe((pixels: ImageData) => {
-      if (pixels) {
-        this.canvas.nativeElement.width = 400;
-        this.canvas.nativeElement.height = 400;
-        this.ctx.putImageData(pixels, 0, 0);
+    this.worker.imageData$.subscribe((input: any) => {
+      if (!input) {
+        return;
+      }
+
+      this.canvas.nativeElement.width = 800;
+      this.canvas.nativeElement.height = 800;
+
+
+      if (!input.type) { // ImageData
+        this.ctx.putImageData(input, 0, 0);
+      } else { // type: 'curve'
+        this.ctx.clearRect(0, 0, 800, 800);
+        const vals = input.data;
+        this.ctx.beginPath();
+        this.ctx.moveTo(vals[0], vals[1]);
+        for (let i = 2; i < vals.length; i += 2) {
+          this.ctx.lineTo(vals[i], vals[i + 1]);
+        }
+        this.ctx.lineWidth = 10;
+        this.ctx.strokeStyle = '#ff0000';
+        this.ctx.stroke();
       }
     });
   }
