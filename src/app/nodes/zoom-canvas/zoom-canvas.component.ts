@@ -1,8 +1,9 @@
-import { AfterViewInit, Component, ElementRef, Host, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, OnInit, ViewChild } from '@angular/core';
 import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { ZoomCanvasWorker } from '../../workers/zoom-canvas';
 import { IDimensions, IZoomable } from '../../app.models';
 import { PIXEL_RATIO_SCALE } from '../../app.config';
+import { AVAILABLE_FRACTALS  } from '../../workers/fractals';
 
 @Component({
   selector: 'fb-zoom-canvas',
@@ -19,12 +20,13 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
   private dragging = false;
   private ctx: any;
   private imageData: ImageData;
-  private dimensions: IDimensions;
+  public dimensions: IDimensions;
   private startTime: number;
 
   @ViewChild('canvas') canvas: ElementRef;
 
-  constructor(@Host() private service: NodeService) {
+  constructor(private cdr: ChangeDetectorRef,
+              @Host() private service: NodeService) {
   }
 
   ngOnInit() {
@@ -38,6 +40,8 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
         this.ctx.putImageData(data.imageData, 0, 0);
         this.imageData = data.imageData;
         this.dimensions = data.metadata.dimensions;
+
+        this.cdr.detectChanges();
       }
     });
   }
@@ -129,5 +133,13 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
 
   getTitle(): string {
     return 'Fractal: ' + this.label ? this.label : 'none';
+  }
+
+  get zoom(): string {
+    return this.dimensions.zoom!.toFixed(2);
+  }
+
+  get width(): number {
+    return this.dimensions.xMax - this.dimensions.xMin;
   }
 }

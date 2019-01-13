@@ -11,6 +11,7 @@ export class FractalClazz {
   pixels: number[];
   xScale: number;
   yScale: number;
+  colors: [number[]?] = [];
 
   constructor({xMin, xMax, yMin, yMax, width, height, maxIterations}) {
     this.xMin = xMin;
@@ -20,6 +21,10 @@ export class FractalClazz {
     this.width = width;
     this.height = height;
     this.maxIterations = maxIterations;
+
+    for (let i = 0; i < maxIterations; i++) {
+      this.colors[i] = this.getColorHsl(i, maxIterations);
+    }
 
     this.pixels = Array(width * height * 4);
   }
@@ -65,31 +70,44 @@ export class FractalClazz {
         const xScaled = sx * this.xScale + this.xMin;
         const yScaled = sy * this.yScale + this.yMin;
 
-        // let iteration = 0;
-        // let x = 0;
-        // let y = 0;
-        // while ((x * x + y * y) <= (2 * 2) && iteration < this.maxIterations) {
-        //   const xTemp = x * x - y * y + xScaled;
-        //   y = 2 * x * y + yScaled;
-        //   x = xTemp;
-        //
-        //   iteration = iteration + 1;
-        // }
-
         const iteration = this.iterate(0, 0, xScaled, yScaled, this.maxIterations);
 
         if (iteration === this.maxIterations) {
           this.updatePixel(this.coord2Index(sx, sy), 0, 0, 0);
         } else {
-          const colors = this.getColor(iteration, this.maxIterations);
+          const colors = this.colors[iteration]!;
 
           this.updatePixel(this.coord2Index(sx, sy), colors[0], colors[1], colors[2]);
-          // this.updatePixel(this.coord2Index(sx, sy), 255, 255, 255, 255); // colors[0], colors[1], colors[2]);
         }
       }
     }
 
     return new ImageData(Uint8ClampedArray.from(this.pixels), this.width, this.height);
+  }
+
+  getColorHsl(iter: number, maxIter: number): number[] {
+    const h = iter / maxIter,
+      s = 1,
+      l = .5;
+
+    let r, g, b, hue2rgb;
+
+    hue2rgb = (a, c, t) => {
+      if (t < 0) { t += 1; }
+      if (t > 1) { t -= 1; }
+      if (t < 1 / 6) { return a + (c - a) * 6 * t; }
+      if (t < 1 / 2) { return c; }
+      if (t < 2 / 3) { return a + (c - a) * (2 / 3 - t) * 6; }
+      return a;
+    };
+
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
   }
 
   getColor(iter: number, maxIterations): number[] {

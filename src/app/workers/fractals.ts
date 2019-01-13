@@ -1,7 +1,7 @@
 import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { FbWebWorker } from './webworker';
-import * as Mandelbrod from './fractals/mandelbrod';
+import * as Mandelbrod from './fractals/mandelbrot';
 import * as JuliaSet from './fractals/julia';
 import { IDimensions, IZoomable } from '../app.models';
 import { PIXEL_RATIO_SCALE } from '../app.config';
@@ -18,6 +18,7 @@ export const AVAILABLE_FRACTALS = {
       width: 400,
       height: 400,
       maxIterations: 100,
+      zoom: 1
     } as IDimensions
   },
   julia: {
@@ -32,7 +33,8 @@ export const AVAILABLE_FRACTALS = {
       yMin: -.5,
       yMax: .5,
       x: -.8,
-      y: .156
+      y: .156,
+      zoom: 1
     } as IDimensions
   }
 };
@@ -94,21 +96,9 @@ export class FractalsWorker implements FbNodeWorker {
       this.x = dim.x;
       this.y = dim.y;
 
-      this.run(dim);
+      this.webWorker = new FbWebWorker(AVAILABLE_FRACTALS[this.config.selected].fn);
 
-      // this.webWorker = new Worker('fractals-worker.js');
-      //
-      // this.webWorker.onmessage = (event: MessageEvent) => {
-      //   this.subjects.next({
-      //     metadata: {
-      //       label: name,
-      //       dimensions: this.dimensions
-      //     },
-      //     imageData: event.data
-      //   });
-      // };
-      //
-      // this.run(AVAILABLE_FRACTALS[name]);
+      this.run(dim);
     }
   }
 
@@ -117,15 +107,14 @@ export class FractalsWorker implements FbNodeWorker {
     if (name) {
       this.dimensions = dim || AVAILABLE_FRACTALS[name].dimensions;
       if (!this.dimensions.maxIterations) {
-        this.dimensions.maxIterations = AVAILABLE_FRACTALS[name].dimensions.maxIterations
+        this.dimensions.maxIterations = AVAILABLE_FRACTALS[name].dimensions.maxIterations;
       }
-      this.webWorker = new FbWebWorker(AVAILABLE_FRACTALS[name].fn);
 
       this.webWorker.run(this.dimensions)
         .then((data: ImageData) => {
           this.subjects.next({
             metadata: {
-              label: name,
+              label: AVAILABLE_FRACTALS[name].title,
               dimensions: this.dimensions
             },
             imageData: data
@@ -150,7 +139,10 @@ export class FractalsWorker implements FbNodeWorker {
           this.y = dim.y;
         }
 
-        this.run(Object.assign({x: this.x, y: this.y}, dim));
+        const init = AVAILABLE_FRACTALS[this.config.selected].dimensions;
+        const zoom = (init.xMax - init.xMin) / (dim.xMax - dim.xMin);
+
+        this.run(Object.assign({x: this.x, y: this.y, zoom}, dim));
       }
     });
   }

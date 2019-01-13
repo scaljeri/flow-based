@@ -13,6 +13,7 @@ export class FractalClazz {
   yScale: number;
   cR: number;
   cI: number;
+  colors: [number[]?] = [];
 
   constructor({x, y, xMin, xMax, yMin, yMax, width, height, maxIterations}) {
     this.cR = x;
@@ -24,6 +25,11 @@ export class FractalClazz {
     this.width = width;
     this.height = height;
     this.maxIterations = maxIterations;
+
+    for(let i = 0; i <= maxIterations; i++) {
+      this.colors[i] = this.getColor(i, maxIterations);
+    }
+
 
     this.pixels = Array(width * height * 4);
   }
@@ -75,7 +81,7 @@ export class FractalClazz {
 
         const iter = this.iterate(zR, zI, this.cR, this.cI, this.maxIterations);
 
-        const color = this.getColor(iter, this.maxIterations);
+        const color = this.colors[iter]!;
         this.updatePixel(this.coord2Index(i, j), color[0], color[1], color[2]);
       }
     }

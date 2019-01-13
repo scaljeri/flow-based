@@ -21,8 +21,55 @@ export const basic =
           }
         ],
         "position": {
-          "x": 38.43729654947915,
-          "y": 56.75590416251245
+          "x": 31.165161132812486,
+          "y": 55.20859297108673
+        }
+      },
+      {
+        "type": "custom",
+        "title": "Mandelbrod point",
+        "id": 1546976282116,
+        "config": {
+          "func": "// const out = new Subject();\n// function(val) {\n\nfunction convert(x, y) {\n    const ox = (x - -4) / (4 - -4) * val.width;\n    const oy = (y - -4) / (4 - -4) * val.height;\n    \n    return [Math.round(ox), Math.round(oy)];\n}\n\nif (val) {\n  const cR = val.x;\n  const cI = val.y;\n  const instr = [{\n    type: 'curve',\n    data: convert(val.x, val.y)\n    }, {\n       type: 'text',\n       data: [{\n       x: 5,\n       y: 50,\n       value: 'points: '}]\n    }\n  ];\n  \n  let i, x, y, nR, nI, zR = 0, zI = 0;\n  for(i = 0; i< val.maxIterations; i++) {\n      nR = zR * zR - zI * zI + cR;\n      nI = 2 * zI * zR + cI;\n\n      zR = nR;\n      zI = nI;\n      [x, y] = convert(zR, zI);\n      if (Math.abs(zR) <= 4 || Math.abs(zI) <= 4) {\n        instr[0].data.push( x, y );\n      } else {\n        break;\n      }\n  }\n  \n  \n  instr[0].data.push( x, y );\n  instr[1].data[0].value += (i + 1);\n  \n \n  out.next(instr);\n}",
+          "expanded": false
+        },
+        "sockets": [
+          {
+            "id": 1546976282117,
+            "type": "in"
+          },
+          {
+            "id": 1546976282118,
+            "type": "out"
+          }
+        ],
+        "position": {
+          "x": 39.22932942708332,
+          "y": 65.5733804083295
+        }
+      },
+      {
+        "type": "zoomcanvas",
+        "title": "Zoomable canvas",
+        "id": 1546340247806,
+        "config": {
+          "expanded": true
+        },
+        "sockets": [
+          {
+            "id": 1546340247807,
+            "type": "in",
+            "format": "imageData"
+          },
+          {
+            "id": 1546340247808,
+            "type": "out",
+            "format": "dimension"
+          }
+        ],
+        "position": {
+          "x": 7.003987630208346,
+          "y": 35.93072286247781
         }
       },
       {
@@ -45,55 +92,8 @@ export const basic =
           }
         ],
         "position": {
-          "x": 15.053304036458334,
-          "y": 10.118862163509476
-        }
-      },
-      {
-        "type": "zoomcanvas",
-        "title": "Zoomable canavs",
-        "id": 1546340247806,
-        "config": {
-          "expanded": true
-        },
-        "sockets": [
-          {
-            "id": 1546340247807,
-            "type": "in",
-            "format": "imageData"
-          },
-          {
-            "id": 1546340247808,
-            "type": "out",
-            "format": "dimension"
-          }
-        ],
-        "position": {
-          "x": 9.955444335937518,
-          "y": 41.79064369391826
-        }
-      },
-      {
-        "type": "custom",
-        "title": "Mandelbrod point",
-        "id": 1546976282116,
-        "config": {
-          "func": "// const out = new Subject();\n// function(val) {\n\nfunction convert(x, y) {\n    const ox = (x - -4) / (4 - -4) * val.width;\n    const oy = (y - -4) / (4 - -4) * val.height;\n    \n    return [Math.round(ox), Math.round(oy)];\n}\n\nif (val) {\n  const cR = val.x;\n  const cI = val.y;\n  const instr = {\n    type: 'curve',\n    data: convert(val.x, val.y)\n  };\n  \n  let x, y, nR, nI, zR = 0, zI = 0;\n  for(let i = 0; i< val.maxIterations; i++) {\n      nR = zR * zR - zI * zI + cR;\n      nI = 2 * zI * zR + cI;\n\n      zR = nR;\n      zI = nI;\n      [x, y] = convert(zR, zI);\n      if (Math.abs(x) > 4 || Math.abs(y) > 4) {\n        instr.data.push( x, y );\n      } else {\n        break;\n      }\n  }\n  \n  \n \n  out.next(instr);\n}",
-          "expanded": false
-        },
-        "sockets": [
-          {
-            "id": 1546976282117,
-            "type": "in"
-          },
-          {
-            "id": 1546976282118,
-            "type": "out"
-          }
-        ],
-        "position": {
-          "x": 47.38037109374998,
-          "y": 64.49200513143742
+          "x": 6.805419921875002,
+          "y": 5.184057203389836
         }
       },
       {
@@ -116,8 +116,8 @@ export const basic =
           }
         ],
         "position": {
-          "x": 32.07519531250001,
-          "y": 6.997367273180448
+          "x": 26.00809733072917,
+          "y": 5.168089481555324
         }
       },
       {
@@ -140,8 +140,8 @@ export const basic =
           }
         ],
         "position": {
-          "x": 48.128458658854164,
-          "y": 7.777059446660022
+          "x": 40.900472005208336,
+          "y": 4.948435942173486
         }
       },
       {
@@ -163,8 +163,8 @@ export const basic =
           }
         ],
         "position": {
-          "x": 71.0443115234375,
-          "y": 47.27575087238285
+          "x": 54.081217447916664,
+          "y": 42.758443419740765
         }
       }
     ],

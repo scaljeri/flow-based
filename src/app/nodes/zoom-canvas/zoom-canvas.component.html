@@ -1,6 +1,13 @@
 <fb-normal-node [isActive]="true" [label]="getTitle()">
-  <canvas (mousemove)="onMouseMove($event)"
-          (mousedown)="onMouseDown($event)"
-          (mouseup)="onMouseUp($event)"
-          #canvas class="fb-drag-ignore"></canvas>
+  <div class="canvas-wrapper">
+    <ng-container *ngIf="dimensions">
+      <span class="xmax-xmin">xMax - xMin: {{width}}</span>
+      <span class="zoom">zoom: {{zoom}}</span>
+    </ng-container>
+
+    <canvas (mousemove)="onMouseMove($event)"
+            (mousedown)="onMouseDown($event)"
+            (mouseup)="onMouseUp($event)"
+            #canvas class="fb-drag-ignore"></canvas>
+  </div>
 </fb-normal-node>

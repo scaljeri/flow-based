@@ -7,6 +7,7 @@ export interface IDimensions {
   yMax: number;
   width?: number;
   height?: number;
+  zoom?: number;
 }
 
 export interface IZoomable {

@@ -2,7 +2,7 @@ import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../pr
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 
 export const CANVAS_SETTINGS = {
-  title: 'Canavs',
+  title: 'Canvas',
   config: {},
   sockets: [
     {

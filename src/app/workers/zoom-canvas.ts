@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 import { IDimensions, IZoomable } from '../app.models';
 
 export const ZOOM_CANVAS_SETTINGS = {
-  title: 'Zoomable canavs',
+  title: 'Zoomable canvas',
   config: {expanded: false},
   sockets: [
     {
@@ -18,7 +18,6 @@ export const ZOOM_CANVAS_SETTINGS = {
 };
 
 export class ZoomCanvasWorker implements FbNodeWorker {
-  label: string;
   private imageData = new Subject<IZoomable>();
   private subscriptions: { [id: string]: Subscription } = {};
   private subject = new BehaviorSubject<IDimensions | null>(null);
