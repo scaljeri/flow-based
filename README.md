@@ -18,6 +18,8 @@ Angular library for building workflows + demo
    $> yarn build
    $> cd dist/flow-based && npm publish --access=public
   
+![Example](images/fractal-demo.gif)
+
 ![Example](images/fbp.jpg)
 
 ![Example](images/gauss.jpg)
@@ -34,6 +36,7 @@ Angular library for building workflows + demo
    * Setup webworker: https://stackoverflow.com/questions/43276044/angular-cli-generated-app-with-web-workers/43276045#43276045
    * Julia Set demo: http://bl.ocks.org/syntagmatic/3736720, http://jsfiddle.net/b6Wb5/
    * Approximage Pi with mandelbrot: https://www.youtube.com/watch?v=d0vY0CKYhPY
+   * Some similar: https://www.luna-lang.org/#Overview
 
 
 ### Notes: 
