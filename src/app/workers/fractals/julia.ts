@@ -14,6 +14,7 @@ export class FractalClazz {
   cR: number;
   cI: number;
   colors: [number[]?] = [];
+  palette: { r: number, g: number, b: number }[] = [];
 
   constructor({x, y, xMin, xMax, yMin, yMax, width, height, maxIterations}) {
     this.cR = x;
@@ -26,12 +27,29 @@ export class FractalClazz {
     this.height = height;
     this.maxIterations = maxIterations;
 
-    for(let i = 0; i <= maxIterations; i++) {
-      this.colors[i] = this.getColor(i, maxIterations);
-    }
+    // for (let i = 0; i <= maxIterations; i++) {
+    //   this.colors[i] = this.getColor(i, maxIterations);
+    // }
 
 
     this.pixels = Array(width * height * 4);
+
+    // let r = 0, g = 0, b = 0;
+    for (let i = 0; i < 1000; i++) {
+      // if (r > 250) {
+      //   if (g > 250) {
+      //     if (b < 255) {
+      //       b += 18;
+      //     }
+      //   } else {
+      //     g += 18;
+      //   }
+      // } else {
+      //   r += 18;
+      // }
+      // this.palette[i] = {r, g, b};
+      this.palette[i] = {r: this.rc(), g: this.rc(), b: this.rc()};
+    }
   }
 
   updatePixel(offset, red, green, blue): void {
@@ -45,25 +63,37 @@ export class FractalClazz {
     return (y * this.width + x) * 4;
   }
 
-  iterate(zR, zI, cR, cI, iterMax) {
-    let iter = 0;
-    while (true) {
+  iterate(r1, i1, x1, y1, iterMax) {
+    let iter = 0,
+      rpow = 0, r1pow2, i1pow2, rlastpow;
+
+    while (iter < iterMax && rpow < 4) {
+      r1pow2 = r1 * r1;
+      i1pow2 = i1 * i1;
+      i1 = 2 * i1 * r1 + y1;
+      r1 = r1pow2 - i1pow2 + x1;
+      rlastpow = rpow;
+      rpow = r1pow2 + i1pow2;
       iter++;
 
-      if (iter > iterMax) {
-        return 0;
-      }
+      // if (iter > iterMax) {
+      //   return 0;
+      // }
 
-      const nR = zR * zR - zI * zI + cR;
-      const nI = 2 * zI * zR + cI;
-
-      if (nR > 4 || nI > 4 || nR < -4 || nI < -4) {
-        return iter;
-      }
-
-      zR = nR;
-      zI = nI;
+      // const nR = zR * zR - zI * zI + cR;
+      // const nI = 2 * zI * zR + cI;
+      //
+      // if (nR > 4 || nI > 4 || nR < -4 || nI < -4) {
+      //   return iter;
+      // }
+      //
+      // zR = nR;
+      // zI = nI;
     }
+
+    const weight = iter + (4 - rlastpow) / (rpow - rlastpow) - 1;
+    const factor = (1.0 - (iter - weight)) * 255;
+    return this.interpolateColors(this.palette[iter], this.palette[iter + 1], factor);
   }
 
   compute(): ImageData {
@@ -79,15 +109,29 @@ export class FractalClazz {
         zR = fx * realSpan + this.xMin; // i === xmax: 1 * (xmax - xmin) + xmin
         zI = fy * imagSpan + this.yMin;
 
-        const iter = this.iterate(zR, zI, this.cR, this.cI, this.maxIterations);
+        // const iter = this.iterate(zR, zI, this.cR, this.cI, this.maxIterations);
+        const color = this.iterate(zR, zI, this.cR, this.cI, this.maxIterations);
 
-        const color = this.colors[iter]!;
+        // const color = this.colors[iter]!;
         this.updatePixel(this.coord2Index(i, j), color[0], color[1], color[2]);
       }
     }
 
     return new ImageData(Uint8ClampedArray.from(this.pixels), this.width, this.height);
   }
+
+  rc() {
+    return Math.round(Math.random() * 255);
+  }
+
+  interpolateColors(c1, c2, weigth: number) {
+    const red = ((c1.r + (((c2.r - c1.r) * weigth) >> 8)) & 0xff);
+    const green = ((c1.g + (((c2.g - c1.g) * weigth) >> 8)) & 0xff);
+    const blue = ((c1.b + (((c2.b - c1.b) * weigth) >> 8)) & 0xff);
+
+    return [red, green, blue];
+  }
+
 
   getColor(iter: number, maxIterations: number): number[] {
     const ratio = iter / maxIterations;

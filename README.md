@@ -37,10 +37,11 @@ Angular library for building workflows + demo
    * Julia Set demo: http://bl.ocks.org/syntagmatic/3736720, http://jsfiddle.net/b6Wb5/
    * Approximage Pi with mandelbrot: https://www.youtube.com/watch?v=d0vY0CKYhPY
    * Some similar: https://www.luna-lang.org/#Overview
+   * Mandelbrot computation comparissons: https://github.com/ColinEberhardt/wasm-mandelbrot
 
 
 ### Notes: 
-  * Mandelbrot: cusp
+  * Mandelbrot: cusp, Seahorse tail
 ## POCs
 
   * https://stackblitz.com/edit/flow-based-programming

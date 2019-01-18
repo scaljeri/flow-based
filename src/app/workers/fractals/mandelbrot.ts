@@ -22,7 +22,7 @@ export class FractalClazz {
     this.height = height;
     this.maxIterations = maxIterations;
 
-    for (let i = 0; i < maxIterations; i++) {
+    for (let i = 0; i <= maxIterations; i++) {
       this.colors[i] = this.getColorHsl(i, maxIterations);
     }
 
@@ -45,8 +45,8 @@ export class FractalClazz {
     while (true) {
       iter++;
 
-      if (iter > iterMax) {
-        return 0;
+      if (iter === iterMax) {
+        return iter;
       }
 
       const nR = zR * zR - zI * zI + cR;
