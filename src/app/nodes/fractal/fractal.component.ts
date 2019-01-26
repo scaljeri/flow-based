@@ -12,7 +12,7 @@ export class FractalComponent implements OnInit {
   private state: FbNodeState;
   private worker: FractalsWorker;
   fractals = [
-    {name: 'Mandelbrod', id: 'mandelbrod'},
+    {name: 'Mandelbrot', id: 'mandelbrot'},
     {name: 'Koch Snowflake', id: 'snowflake'},
     {name: 'Julia set', id: 'julia'}
   ];

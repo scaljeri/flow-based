@@ -1,15 +1,15 @@
 import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { FbWebWorker } from './webworker';
-import * as Mandelbrod from './fractals/mandelbrot';
+import * as Mandelbrot from './fractals/mandelbrot';
 import * as JuliaSet from './fractals/julia';
 import { IDimensions, IZoomable } from '../app.models';
 import { PIXEL_RATIO_SCALE } from '../app.config';
 
 export const AVAILABLE_FRACTALS = {
-  'mandelbrod': {
-    title: 'Mandelbord',
-    fn: Mandelbrod,
+  'mandelbrot': {
+    title: 'Mandelbort',
+    fn: Mandelbrot,
     dimensions: {
       xMin: -3,
       xMax: 1,
@@ -46,7 +46,7 @@ export interface FractalsConfig {
 export const FRACTALS_SETTINGS = {
   title: 'Fractals',
   config: {
-    selected: 'mandelbrod'
+    selected: 'mandelbrot'
   },
   sockets: [
     {

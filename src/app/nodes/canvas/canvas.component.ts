@@ -28,8 +28,8 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.ctx.lineTo(curve.data[i], curve.data[i + 1]);
     }
 
-    this.ctx.lineWidth = 10;
-    this.ctx.strokeStyle = '#ff0000';
+    this.ctx.lineWidth = 3;
+    this.ctx.strokeStyle = '#fff';
     this.ctx.stroke();
   }
 

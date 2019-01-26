@@ -38,6 +38,7 @@ Angular library for building workflows + demo
    * Approximage Pi with mandelbrot: https://www.youtube.com/watch?v=d0vY0CKYhPY
    * Some similar: https://www.luna-lang.org/#Overview
    * Mandelbrot computation comparissons: https://github.com/ColinEberhardt/wasm-mandelbrot
+   * Cardioide: https://nl.wikipedia.org/wiki/Cardio%C3%AFde
 
 
 ### Notes: 
