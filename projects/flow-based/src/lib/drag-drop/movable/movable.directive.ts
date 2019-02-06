@@ -40,8 +40,8 @@ export class MovableDirective extends DraggableDirective {
     this.parentWidth = width;
 
     this.startPosition = {
-      x: (event.clientX  / width * 100 - this.left),
-      y: (event.clientY  / height * 100 - this.top)
+      x: (event.clientX / width * 100 - this.left),
+      y: (event.clientY / height * 100 - this.top)
     };
   }
 
@@ -59,5 +59,9 @@ export class MovableDirective extends DraggableDirective {
   @HostListener('dragEnd', ['$event']) onDragEnd(event: PointerEvent) {
     this.isMoving = false;
     this.positionChange.emit(this.position);
+  }
+
+  update(): void {
+    this.positionChange.emit(this.position); // Weirdness going on here
   }
 }

@@ -37,7 +37,7 @@ export class MovableAreaDirective implements OnDestroy, AfterContentInit {
   }
 
   ngOnDestroy(): void {
-    if (this.subscriptions.length){
+    if (this.subscriptions.length) {
       this.subscriptions.forEach(s => s.unsubscribe());
     }
 
@@ -62,5 +62,7 @@ export class MovableAreaDirective implements OnDestroy, AfterContentInit {
     movable.position.x = Math.min(this.boundaries.maxX, movable.position.x);
     movable.position.y = Math.max(this.boundaries.minY, movable.position.y);
     movable.position.y = Math.min(this.boundaries.maxY, movable.position.y);
+
+    movable.update();
   }
 }
