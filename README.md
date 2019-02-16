@@ -4,6 +4,17 @@ Although a lot is still changing and very buggy, the current state can be seen [
 
 Angular library for building workflows + demo 
 
+Library to create Data flow diagrams with leveling. Depending on the visualisation, it can be just a DFD or documentation. 
+The whole flow is also represented as JSON, which can be exported
+
+![Example](images/fractal-demo.gif)
+
+![FBP as doc](images/fbp-as-doc.jpg)
+
+![Example](images/fbp.jpg)
+
+![Example](images/gauss.jpg)
+
 ### Create project specific component
 
     $>  ng g c foo --project=flow-based
@@ -17,12 +28,6 @@ Angular library for building workflows + demo
 
    $> yarn build
    $> cd dist/flow-based && npm publish --access=public
-  
-![Example](images/fractal-demo.gif)
-
-![Example](images/fbp.jpg)
-
-![Example](images/gauss.jpg)
 
 ## Resources
 
