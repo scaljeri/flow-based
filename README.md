@@ -15,6 +15,13 @@ The whole flow is also represented as JSON, which can be exported
 
 ![Example](images/gauss.jpg)
 
+### TODO
+
+  * Support multiple visualisation
+  * Rewrite library in web-components (lit-element or StencilJS)
+  * Build demo app in Angular, React and Vue
+  * Make nodes external components, which can be npm dependencies
+
 ### Create project specific component
 
     $>  ng g c foo --project=flow-based
