@@ -59,7 +59,3 @@ The whole flow is also represented as JSON, which can be exported
 
   * https://stackblitz.com/edit/flow-based-programming
   * https://stackblitz.com/edit/angular-bezier-curves
-
-### TODO
-  * Refactor sockets setup
-  * Put all z-indices in a $variable
