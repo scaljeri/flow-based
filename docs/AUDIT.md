@@ -525,10 +525,59 @@ Also fixed, found by the strict-mode pass:
   wiring. `merge-streams` was also passing `dataset.socketId` (a string) to a
   numeric lookup, which only worked because JS object keys coerce.
 
+### Stage 3a — propagation and canvas (done)
+
+- **§3.7 the bounded fixpoint loop is gone.** Socket formats now propagate through
+  a worklist: seeded with every connection, re-queueing only the connections that
+  touch a socket which just changed. O(E) amortised instead of a full O(E) sweep
+  per change, and `Flow.lastPropagation` reports convergence, unresolved sockets
+  and cycles instead of a `console.warn` that named nothing.
+- `Flow.findCycles()` detects cycles with an iterative DFS. Reported, not
+  prevented: a cycle is legal in a dataflow graph but usually a mistake.
+- **§3.6 percentage positioning is fixed without a format change.** The real
+  problem was that positions were percentages of the *container*, which resizes.
+  They are now percentages of a fixed-size graph plane inside a transformed
+  viewport — so resize translates instead of distorting, and the persisted JSON is
+  untouched, meaning no migration for existing saved flows.
+- Zoom and pan via `FbViewportService`, which holds state in signals with
+  `transform` as a computed. Provided per `FlowBasedComponent`, so a nested flow
+  has its own viewport. Wheel zooms at the cursor; background drag pans.
+- The connection renderer converts client coordinates to plane space by dividing
+  by the zoom. Without that the CSS transform is applied twice and lines drift
+  from their sockets — which looks like plausible curves, so an e2e test measures
+  the distance from each path's first point to the nearest socket centre at every
+  zoom level. It stays at 1e-4 px.
+- `pointerMoved` used `pageX/pageY` against client-space socket positions; they
+  agree only on an unscrolled page.
+
+### Stage 5 (partial) — editor features that do not need the signals redesign
+
+- **Undo/redo** (`FbHistoryService`), capped at 50 deep-cloned snapshots. Cheap
+  because a flow is already serializable JSON: no command log to keep in sync with
+  the engine. Capture happens *before* mutations, since the engine edits in place,
+  and once per drag rather than per pointermove frame.
+- **Versioned save/load.** `FB_FLOW_FORMAT_VERSION` is 1 with a wired-but-empty
+  migration table, so the first real format change cannot silently misread old
+  files. Bare (pre-versioning) flows are still accepted; a newer format is refused
+  with an explanation; shape errors name the path.
+- **Validation surface.** The toolbar shows unresolved socket formats, cycles and
+  non-convergence, sourced from `lastPropagation`. On the shipped fixture it
+  immediately reports 5 sockets with no negotiated format — true all along, and
+  invisible until now.
+- **Searchable node palette**, sorted by visible title, matching title or registry
+  key, with Enter picking a sole match.
+
 ### Still open
 
-- §3.4 manual change detection, §3.6 percentage positioning, §3.7 the bounded
-  fixpoint loop — Stage 3.
+- **§3.4 manual change detection — the one genuinely large item left.** 35
+  `detectChanges()` calls and 15 `setTimeout`s remain, and removing them is a
+  redesign rather than a fix: `FbNodeState` *is* the persisted JSON shape, plain
+  mutable objects the engine updates in place, so making it reactive means
+  replacing the state layer with immutable updates or per-property signals and
+  rewriting every consumer. Deriving socket positions from graph coordinates
+  belongs with it, and needs a fixed node-geometry model because nodes are
+  CSS-auto-sized today. `FbViewportService` is the pattern to follow. This gates
+  Stage 4, because it is where the Angular-specific reactivity leaves.
 - The library builds in **full** rather than partial compilation mode, because
   `FlowBasedComponent` ↔ `NodeComponent` are mutually recursive and remote scoping
   exists only in full mode. Costs Angular-linker compatibility; the fix is

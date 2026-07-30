@@ -95,6 +95,36 @@ test('opens the node-selection overlay from the toolbar', async ({ page }) => {
   await expect(page.locator('.cdk-overlay-container fb-component-selection')).toBeVisible();
 });
 
+test('filters the node palette and adds the match with Enter', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('fb-node').first()).toBeVisible();
+
+  const before = await page.locator('fb-node').count();
+
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await expect(palette).toBeVisible();
+
+  const items = palette.locator('mat-list-item');
+  const total = await items.count();
+  expect(total).toBeGreaterThan(1);
+
+  const search = palette.locator('input[type="search"]');
+  await search.fill('stat');
+  await expect(items).toHaveCount(1);
+
+  await search.fill('definitely-not-a-node');
+  await expect(items).toHaveCount(0);
+  await expect(palette.locator('.no-matches')).toBeVisible();
+
+  // Narrow to exactly one, then Enter adds it.
+  await search.fill('stat');
+  await expect(items).toHaveCount(1);
+  await search.press('Enter');
+
+  await expect(page.locator('fb-node')).toHaveCount(before + 1);
+});
+
 /**
  * Zoom and pan, checking the invariant that actually matters: every connection
  * path must START exactly on a socket centre, measured in the SVG's own

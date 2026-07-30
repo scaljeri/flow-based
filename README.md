@@ -67,15 +67,31 @@ See [docs/AUDIT.md](docs/AUDIT.md) for an architecture assessment and the staged
 roadmap, and [docs/MIGRATION-CHECKLIST.md](docs/MIGRATION-CHECKLIST.md) for the
 Angular 7 → 22 migration record.
 
+## Editing
+
+  * **Zoom / pan** — wheel zooms at the cursor, dragging empty canvas pans, and the
+    on-canvas controls zoom in/out or reset. Node positions are percentages of a
+    fixed graph plane, so resizing the window translates the graph rather than
+    distorting it.
+  * **Undo / redo** — `Ctrl`/`Cmd`+`Z` and `Ctrl`/`Cmd`+`Shift`+`Z`, or the toolbar.
+  * **Save / load** — downloads a versioned JSON envelope (`{version, flow}`) and
+    reads both that and older bare-flow files.
+  * **Validation** — the toolbar reports sockets whose format could not be
+    negotiated, and any cycles in the graph.
+  * **Searchable palette** — filter flow units by name; `Enter` adds a sole match.
+
 ### TODO
 
-  * Signals-based reactivity, replacing the manual `detectChanges()` scaffolding
-  * Absolute graph coordinates + a viewport transform, unlocking zoom/pan
+  * Replace the manual `detectChanges()` layer with signals (the last large item;
+    see [docs/AUDIT.md](docs/AUDIT.md) — it is a state-layer redesign, and it gates
+    the web-components work)
+  * Derive socket positions from graph coordinates instead of measuring the DOM
   * Support multiple visualisations
   * Extract a framework-agnostic core, then rewrite the shell in web components (Lit)
   * Build demo app in Angular, React and Vue
   * Make nodes external components, which can be npm dependencies
-  * Undo/redo, save/load with a versioned schema, real web-worker execution
+  * Real web-worker modules (the fractal worker still stringifies a class)
+  * Orthogonal connection routing, multi-select, copy/paste
 
 ## Resources
 
