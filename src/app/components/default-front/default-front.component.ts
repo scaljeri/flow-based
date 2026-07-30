@@ -1,14 +1,21 @@
 import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
+import { NodeService } from '@scaljeri/flow-based';
 
 @Component({
+  standalone: false,
   selector: 'fb-default-front',
   templateUrl: './default-front.component.html',
   styleUrls: ['./default-front.component.scss']
 })
 export class DefaultFrontComponent implements OnInit {
-  @Input() title: string;
-  @ViewChild('img') ref: ElementRef;
+  @Input() title = '';
+  /*
+   * `static: true` is required here: the query result is read in ngOnInit.
+   * Under ViewEngine (Angular 7) every non-embedded view query was resolved
+   * before ngOnInit ran; since Ivy only `static: true` queries are, so without
+   * this flag `this.ref` would be undefined and ngOnInit would throw.
+   */
+  @ViewChild('img', {static: true}) ref!: ElementRef;
 
   constructor(private fbService: NodeService) {}
 

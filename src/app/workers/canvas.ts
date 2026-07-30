@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 
 export const CANVAS_SETTINGS = {
@@ -16,14 +16,11 @@ export const CANVAS_SETTINGS = {
 };
 
 export class CanvasWorker implements FbNodeWorker {
-  private stream: Observable<any>;
+  private stream!: Observable<any>;
   private subscriptions: { [id: string]: Subscription } = {};
   private subject = new Subject<any>();
 
   private imageDataSubject = new BehaviorSubject<ImageData | null>(null);
-
-  private imageData: number[];
-
 
   constructor() {
   }

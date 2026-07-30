@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 import { IDimensions, IZoomable } from '../app.models';
 

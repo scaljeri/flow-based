@@ -1,11 +1,10 @@
 ## Flow based programming
 
-Although a lot is still changing and very buggy, the current state can be seen [here](https://scaljeri.github.io/flow-based/) 
+Angular library for building flow-based programs / data flow diagrams, plus a demo app.
+The current state can be seen [here](https://scaljeri.github.io/flow-based/).
 
-Angular library for building workflows + demo 
-
-Library to create Data flow diagrams with leveling. Depending on the visualisation, it can be just a DFD or documentation. 
-The whole flow is also represented as JSON, which can be exported
+Library to create Data flow diagrams with leveling. Depending on the visualisation, it can be just a DFD or documentation.
+The whole flow is also represented as JSON, which can be exported.
 
 ![Example](images/fractal-demo.gif)
 
@@ -15,26 +14,68 @@ The whole flow is also represented as JSON, which can be exported
 
 ![Example](images/gauss.jpg)
 
+## Requirements
+
+  * Node 22.22.3+, 24.15.0+ or 26+ (Angular 22's supported range)
+  * npm (the workspace is npm-locked; there is no yarn.lock any more)
+
+## Getting started
+
+    $> npm install
+    $> npm start          # builds the library, then serves the demo on :4200
+
+The demo consumes the library through its published entry point
+(`@scaljeri/flow-based`, mapped by `tsconfig.json` to `dist/flow-based`) rather
+than by reaching into its source. That means the demo only compiles if the
+package's public API is actually complete — which is the point.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `npm start` | Build the library, then serve the demo |
+| `npm run build:lib` | Build the publishable library into `dist/flow-based` |
+| `npm run build:demo` | Build the library, then the demo into `dist/demo` |
+| `npm run watch:lib` | Rebuild the library on change |
+| `npm test` | Unit tests (vitest, via `ng test`) for library and demo |
+| `npm run test:lib` | Unit tests for the library only |
+| `npm run lint` | ESLint over TypeScript and templates |
+| `npm run e2e` | Playwright smoke tests (starts the dev server itself) |
+| `npm run ngh` | Build and deploy the demo to gh-pages |
+
+### Create a project specific component
+
+    $>  ng g c foo --project=@scaljeri/flow-based
+
+### Publish to npm
+
+    $>  npm run build:lib
+    $>  cd dist/flow-based && npm publish --access=public
+
+## Architecture
+
+  * `projects/flow-based` — the library. `utils/flow.ts` is the graph engine: a
+    plain, framework-free class holding nodes, connections, sockets and workers.
+  * `src` — the demo. Node types are registered in `src/app/fb-settings.ts` as
+    `{component, settings, worker}`: the component draws the node, the
+    `FbNodeWorker` computes it, and they are wired together by RxJS streams per
+    socket.
+  * Composite ("flow") nodes nest a whole flow inside a node, bridged by
+    `FlowWorker` — this is the "leveling" the diagrams above show.
+
+See [docs/AUDIT.md](docs/AUDIT.md) for an architecture assessment and the staged
+roadmap, and [docs/MIGRATION-CHECKLIST.md](docs/MIGRATION-CHECKLIST.md) for the
+Angular 7 → 22 migration record.
+
 ### TODO
 
-  * Support multiple visualisation
-  * Rewrite library in web-components (lit-element or StencilJS)
+  * Signals-based reactivity, replacing the manual `detectChanges()` scaffolding
+  * Absolute graph coordinates + a viewport transform, unlocking zoom/pan
+  * Support multiple visualisations
+  * Extract a framework-agnostic core, then rewrite the shell in web components (Lit)
   * Build demo app in Angular, React and Vue
   * Make nodes external components, which can be npm dependencies
-
-### Create project specific component
-
-    $>  ng g c foo --project=flow-based
-    
-### Deploy to gh-pages
-
-  $>  ng build --prod --base-href "https://scaljeri.github.io/flow-based/" --output-path="dist/"
-  $>  ngh
-  
-# Publish to npm
-
-   $> yarn build
-   $> cd dist/flow-based && npm publish --access=public
+  * Undo/redo, save/load with a versioned schema, real web-worker execution
 
 ## Resources
 
@@ -53,8 +94,9 @@ The whole flow is also represented as JSON, which can be exported
    * Cardioide: https://nl.wikipedia.org/wiki/Cardio%C3%AFde
 
 
-### Notes: 
+### Notes:
   * Mandelbrot: cusp, Seahorse tail
+
 ## POCs
 
   * https://stackblitz.com/edit/flow-based-programming

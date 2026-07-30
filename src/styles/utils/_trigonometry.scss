@@ -1,64 +1,52 @@
-// https://unindented.org/articles/trigonometry-in-sass/
+// Thin wrappers over sass:math.
+//
+// These were originally hand-rolled Taylor-series implementations (from
+// https://unindented.org/articles/trigonometry-in-sass/), written before Dart
+// Sass gained math.sin/cos/tan/pow in 1.25. They relied throughout on `/` for
+// division, which Sass is removing, so the whole file is now delegation.
+//
+// math.sin/cos/tan accept either an angle with units or a unitless value in
+// radians, which matches the old contract exactly.
+
+@use 'sass:math';
 
 @function pi() {
-  @return 3.14159265359;
+  @return math.$pi;
 }
 
 @function rad($angle) {
-  $unit: unit($angle);
-  $unitless: $angle / ($angle * 0 + 1);
-  // If the angle has 'deg' as unit, convert to radians.
-  @if $unit == deg {
-    $unitless: $unitless / 180 * pi();
+  @if math.is-unitless($angle) {
+    @return $angle;
   }
-  @return $unitless;
+
+  @return math.div($angle, 180deg) * math.$pi;
+}
+
+@function pow($number, $exp) {
+  @return math.pow($number, $exp);
 }
 
 @function fact($number) {
+  // No factorial in sass:math.
   $value: 1;
+
   @if $number > 0 {
     @for $i from 1 through $number {
       $value: $value * $i;
     }
   }
-  @return $value;
-}
 
-@function pow($number, $exp) {
-  $value: 1;
-  @if $exp > 0 {
-    @for $i from 1 through $exp {
-      $value: $value * $number;
-    }
-  }
-  @else if $exp < 0 {
-    @for $i from 1 through -$exp {
-      $value: $value / $number;
-    }
-  }
   @return $value;
 }
 
 @function sin($angle) {
-  $sin: 0;
-  $angle: rad($angle);
-  // Iterate a bunch of times.
-  @for $i from 0 through 10 {
-    $sin: $sin + pow(-1, $i) * pow($angle, (2 * $i + 1)) / fact(2 * $i + 1);
-  }
-  @return $sin;
+  @return math.sin($angle);
 }
 
 @function cos($angle) {
-  $cos: 0;
-  $angle: rad($angle);
-  // Iterate a bunch of times.
-  @for $i from 0 through 10 {
-    $cos: $cos + pow(-1, $i) * pow($angle, 2 * $i) / fact(2 * $i);
-  }
-  @return $cos;
+  @return math.cos($angle);
 }
 
 @function tan($angle) {
-  @return sin($angle) / cos($angle);
+  @return math.tan($angle);
 }

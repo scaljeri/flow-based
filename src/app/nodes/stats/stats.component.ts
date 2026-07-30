@@ -1,36 +1,46 @@
-import { ChangeDetectorRef, Component, ElementRef, Host, HostBinding, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
-import { StatsWorker } from '../../workers/stats';
-import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { NodeService, XxlFlowUnitState } from '@scaljeri/flow-based';
+import { StatsDistribution, StatsWorker } from '../../workers/stats';
 import { GoogleCharts } from 'google-charts';
+import { GoogleChart } from '../../app.models';
 
 @Component({
+  standalone: false,
   selector: 'fb-stats',
   templateUrl: './stats.component.html',
   styleUrls: ['./stats.component.scss']
 })
 export class StatsComponent implements OnInit, OnDestroy {
-  public worker: StatsWorker;
+  public worker!: StatsWorker;
   private state: XxlFlowUnitState;
   public isEditing = false;
   public data: number[][] = [];
-  private graphPlaceHolder: ElementRef;
-  private chart;
+  // The `#distribution` div lives inside <fb-normal-node>'s content, which is
+  // removed while the node is being edited, so the query legitimately resolves
+  // to nothing and Angular calls the setter with `undefined`.
+  private graphPlaceHolder?: ElementRef;
+  private chart: GoogleChart | null = null;
 
   @ViewChild('distribution')
-  set graph(element: ElementRef) {
+  set graph(element: ElementRef | undefined) {
     this.graphPlaceHolder = element;
     this.chart = null;
   }
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
-              @Host() private service: NodeService) {
+              private service: NodeService) {
     this.state = service.state;
   }
 
-  distribution(data): void {
+  distribution(data: StatsDistribution): void {
+      const placeHolder = this.graphPlaceHolder;
+
+      if (!placeHolder) {
+        return;
+      }
+
       const dataTable = new GoogleCharts.api.visualization.DataTable();
       dataTable.addColumn('number', 'Value');
       dataTable.addColumn('number', 'Count');
@@ -45,7 +55,8 @@ export class StatsComponent implements OnInit, OnDestroy {
 
       const view = new GoogleCharts.api.visualization.DataView(dataTable);
       if (!this.chart) {
-        this.chart = new GoogleCharts.api.visualization.ColumnChart(this.graphPlaceHolder.nativeElement);
+        const chart: GoogleChart = new GoogleCharts.api.visualization.ColumnChart(placeHolder.nativeElement);
+        this.chart = chart;
       }
       this.chart.draw(view, {legend: 'top', series: {1: {type: 'line'}}});
   }

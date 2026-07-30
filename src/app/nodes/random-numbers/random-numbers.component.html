@@ -12,8 +12,9 @@
               <span>Start</span>
               <div>
                 <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
-                            [thumbLabel]="true"
-                            formControlName="startValue" class="fb-drag-ignore"></mat-slider>
+                            discrete class="fb-drag-ignore">
+                  <input matSliderThumb formControlName="startValue">
+                </mat-slider>
                 <span>{{configForm.controls.startValue.value}}</span>
               </div>
             </label>
@@ -22,8 +23,9 @@
               <span>End</span>
               <div>
                 <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
-                            [thumbLabel]="true"
-                            formControlName="endValue" class="fb-drag-ignore"></mat-slider>
+                            discrete class="fb-drag-ignore">
+                  <input matSliderThumb formControlName="endValue">
+                </mat-slider>
                 <span>{{configForm.controls.endValue.value}}</span>
               </div>
             </label>
@@ -32,8 +34,9 @@
               <span>Interval</span>
               <div>
                 <mat-slider [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"
-                            [thumbLabel]="true"
-                            formControlName="intervalValue" class="fb-drag-ignore"></mat-slider>
+                            discrete class="fb-drag-ignore">
+                  <input matSliderThumb formControlName="intervalValue">
+                </mat-slider>
                 <span>{{configForm.controls.intervalValue.value}}</span>
               </div>
             </label>
@@ -47,7 +50,9 @@
       </mat-card>
 
       <mat-card class="output">
-        <mat-card-title>Current value</mat-card-title>
+        <mat-card-header>
+          <mat-card-title>Current value</mat-card-title>
+        </mat-card-header>
         <mat-card-content>
           {{currentValue}}
         </mat-card-content>

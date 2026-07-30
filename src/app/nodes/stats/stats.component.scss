@@ -1,4 +1,4 @@
-@import '../../../../projects/flow-based/src/lib/utils/utils';
+@use 'utils/utils' as *;
 
 :host {
   color: #fff;
@@ -63,6 +63,13 @@
           font-size: 30px;
           padding-top: 8px;
         }
+      }
+
+      // Material 22 removed `.mat-mdc-card { padding: 16px }`. The three `mat-card-content`
+      // siblings get their own `0 16px` (plus a 16px top on the first child), but the trailing
+      // button is the card's last child, so it has to bring its own inset back.
+      button {
+        margin: 0 16px 16px;
       }
     }
 

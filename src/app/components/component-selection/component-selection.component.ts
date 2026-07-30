@@ -1,14 +1,15 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { XXL_FLOW_TYPES, FbNodeTypes } from '../../../../projects/flow-based/src/lib/flow-based';
+import { XXL_FLOW_TYPES, FbNodeTypes } from '@scaljeri/flow-based';
 import { ComponentSelectionService } from '../../component-selection.service';
 
 @Component({
+  standalone: false,
   selector: 'fb-component-selection',
   templateUrl: './component-selection.component.html',
   styleUrls: ['./component-selection.component.scss']
 })
 export class ComponentSelectionComponent implements OnInit {
-  flowKeys: string[];
+  flowKeys: string[] = [];
 
   constructor(private selectionService: ComponentSelectionService,
               @Inject(XXL_FLOW_TYPES) public flowTypes: FbNodeTypes) {

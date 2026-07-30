@@ -1,4 +1,4 @@
-@import '../../../../projects/flow-based/src/lib/utils/utils';
+@use 'utils/utils' as *;
 
 :host {
   align-items: center;
@@ -66,6 +66,14 @@ article {
   .current {
     padding: 8px;
     @include xxl-size(100%, 150px);
+
+    // This card deliberately runs a tighter 8px inset than the Material default. In v7 that was a
+    // single `padding` override on `.mat-card`; in v22 the padding lives on the header/content
+    // children instead, so it has to be zeroed there or it stacks on top of the 8px.
+    mat-card-header,
+    mat-card-content {
+      padding: 0;
+    }
 
     mat-card-content {
       color: #000;

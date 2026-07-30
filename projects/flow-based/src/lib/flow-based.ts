@@ -5,6 +5,14 @@ import { Observable } from 'rxjs';
 import type { SocketComponent } from './socket/socket.component';
 
 export const XXL_FLOW_TYPES = new InjectionToken<FbNodeTypes>('xxl-flow-types');
+
+/**
+ * @deprecated No longer provided by anything, and never injected by anything
+ * either. Supplying it required giving each dynamically created node a custom
+ * injector, which replaced the element-injector chain and broke `@Host()`
+ * lookups of {@link NodeService}. Get node state from `NodeService.state`.
+ * Scheduled for removal.
+ */
 export const XXL_FLOW_UNIT_STATE = new InjectionToken<FbNodeState>('xxl-flow-unit-state');
 export const FB_NODE_HELPERS = new InjectionToken<FbNodeHelpers>('fb-node-helpers');
 export const FB_SOCKET_COLORS = new InjectionToken<FbSocketColors>('fb-socket-colors');

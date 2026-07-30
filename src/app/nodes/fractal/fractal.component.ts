@@ -1,23 +1,23 @@
-import { Component, Host, OnInit } from '@angular/core';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
-import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { Component, OnInit } from '@angular/core';
+import { FbNodeState, NodeService } from '@scaljeri/flow-based';
 import { FractalsWorker } from '../../workers/fractals';
 
 @Component({
+  standalone: false,
   selector: 'fb-fractal',
   templateUrl: './fractal.component.html',
   styleUrls: ['./fractal.component.scss']
 })
 export class FractalComponent implements OnInit {
   private state: FbNodeState;
-  private worker: FractalsWorker;
+  private worker!: FractalsWorker;
   fractals = [
     {name: 'Mandelbrot', id: 'mandelbrot'},
     {name: 'Koch Snowflake', id: 'snowflake'},
     {name: 'Julia set', id: 'julia'}
   ];
 
-  constructor(@Host() private service: NodeService) {
+  constructor(private service: NodeService) {
     this.state = service.state;
     //
     // webWorkerService.run(input => {
@@ -47,7 +47,7 @@ export class FractalComponent implements OnInit {
     this.state.config.selected = option;
   }
 
-  onFractalChange(fractal): void {
+  onFractalChange(fractal: string): void {
     this.worker.setFractal(fractal);
   }
 

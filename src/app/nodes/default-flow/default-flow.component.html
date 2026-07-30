@@ -1,5 +1,6 @@
 <fb-normal-node [fullscreen]="true" [deleteSocket]="true">
-  <img class="minified" src="./assets/config.svg">
+  <!-- Decorative: the node's title is rendered separately. -->
+  <img class="minified" alt="" src="./assets/config.svg">
 
   <div class="expanded">
     <button mat-fab class="add-socket socket-in" (click)="openDialog({type: 'in'})">

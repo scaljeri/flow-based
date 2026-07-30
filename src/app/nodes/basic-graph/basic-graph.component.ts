@@ -1,8 +1,8 @@
-import { Component, ElementRef, Host, HostBinding, OnInit, ViewChild } from '@angular/core';
-import { XxlSocket } from '../../../../projects/flow-based/src/lib/flow-based';
+import { Component, ElementRef, HostBinding, OnInit, ViewChild } from '@angular/core';
+import { NodeService, XxlSocket } from '@scaljeri/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
+import { GoogleChart, GoogleChartDataTable, GoogleChartDataView } from '../../app.models';
 
 const GRAPH_OPTIONS = {
   legend: 'bottom',
@@ -11,21 +11,22 @@ const GRAPH_OPTIONS = {
 };
 
 @Component({
+  standalone: false,
   selector: 'fb-basic-graph',
   templateUrl: './basic-graph.component.html',
   styleUrls: ['./basic-graph.component.scss']
 })
 export class BasicGraphComponent implements OnInit {
   @HostBinding('class.is-active') isActive = false;
-  @ViewChild('graph') graph: ElementRef;
-  chart;
-  dataTable;
-  view;
-  worker: BasicGraphWorker;
+  @ViewChild('graph') graph!: ElementRef;
+  chart: GoogleChart | null = null;
+  dataTable: GoogleChartDataTable | null = null;
+  view: GoogleChartDataView | null = null;
+  worker!: BasicGraphWorker;
   startIndex = 0;
 
 
-  constructor(@Host() private service: NodeService) {
+  constructor(private service: NodeService) {
   }
 
   ngOnInit() {
@@ -43,23 +44,28 @@ export class BasicGraphComponent implements OnInit {
       if (this.dataTable && values.length === this.dataTable.getNumberOfRows()) {
         this.startIndex++;
       }
-      this.dataTable = new GoogleCharts.api.visualization.DataTable();
-      this.dataTable.addColumn('number', 'Count');
-      this.dataTable.addColumn('number', 'Values');
+      const dataTable: GoogleChartDataTable = new GoogleCharts.api.visualization.DataTable();
+      this.dataTable = dataTable;
+
+      dataTable.addColumn('number', 'Count');
+      dataTable.addColumn('number', 'Values');
       values.forEach((value, index) => {
-        this.dataTable.addRow([index + this.startIndex, value]);
+        dataTable.addRow([index + this.startIndex, value]);
       });
 
 
-      this.view = new GoogleCharts.api.visualization.DataView(this.dataTable);
+      this.view = new GoogleCharts.api.visualization.DataView(dataTable);
     }
 
-    if (this.view) {
+    // `chart` is only created once GoogleCharts.load() has resolved, which can
+    // happen after the first stream value arrives; without the extra guard this
+    // dereferenced null.
+    if (this.view && this.chart) {
       this.chart.draw(this.dataTable, GRAPH_OPTIONS);
     }
   }
 
-  setActive(state): void {
+  setActive(state: boolean): void {
     this.isActive = state;
     setTimeout(() => {
       this.update();

@@ -1,32 +1,35 @@
-import {Component, ElementRef, EventEmitter, HostListener, Input, OnInit, Output, ViewChild} from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnInit, Output } from '@angular/core';
 
 // https://codepen.io/lbebber/pen/LELBEo
 
 @Component({
+  standalone: false,
   selector: 'fb-context-menu',
   templateUrl: './context-menu.component.html',
   styleUrls: ['./context-menu.component.scss']
 })
 export class ContextMenuComponent implements OnInit {
   @Input() open = false;
-  @Output() close = new EventEmitter<string | void>();
+  // `closed`, not `close`: an output named after a native DOM event shadows it,
+  // so a parent's (close) binding could fire for either.
+  @Output() closed = new EventEmitter<string | void>();
 
   constructor() { }
 
   ngOnInit() {
   }
 
-  @HostListener('click', ['$event']) onMouseDown(event): void {
+  @HostListener('click', ['$event']) onMouseDown(event: MouseEvent): void {
     event.stopPropagation();
   }
 
-  toggle(checked): void {
+  toggle(checked: boolean): void {
     setTimeout(() => {
-      this.close.emit();
+      this.closed.emit();
     }, 200);
   }
 
   add(type: string): void {
-    this.close.emit(type);
+    this.closed.emit(type);
   }
 }

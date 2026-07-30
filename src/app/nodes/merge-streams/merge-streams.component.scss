@@ -1,4 +1,4 @@
-@import '../../../../projects/flow-based/src/lib/utils/utils';
+@use 'utils/utils' as *;
 
 :host {
   display: block;
@@ -49,6 +49,9 @@ footer {
 mat-card {
   align-items: center;
   display: flex;
+  // Material 22's `.mat-mdc-card` is `display: flex; flex-direction: column`, and that class
+  // selector outranks this element selector — restore the row axis this centring was written for.
+  flex-direction: row;
   justify-content: center;
 }
 

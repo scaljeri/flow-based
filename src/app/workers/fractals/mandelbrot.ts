@@ -1,5 +1,20 @@
 // https://github.com/JamesRandall/Mandelbrot-Set.git
 
+/*
+ * NOTE: this class is stringified (FbWebWorker.build()) and re-evaluated inside a
+ * web worker, so only erasable type syntax may be added here — no enums, no
+ * parameter properties, no decorators.
+ */
+interface FractalParams {
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+  width: number;
+  height: number;
+  maxIterations: number;
+}
+
 export class FractalClazz {
   maxIterations: number;
   xMin: number;
@@ -9,11 +24,11 @@ export class FractalClazz {
   width: number;
   height: number;
   pixels: number[];
-  xScale: number;
-  yScale: number;
-  colors: [number[]?] = [];
+  xScale = 0;
+  yScale = 0;
+  colors: (number[] | undefined)[] = [];
 
-  constructor({xMin, xMax, yMin, yMax, width, height, maxIterations}) {
+  constructor({xMin, xMax, yMin, yMax, width, height, maxIterations}: FractalParams) {
     this.xMin = xMin;
     this.xMax = xMax;
     this.yMin = yMin;
@@ -29,7 +44,7 @@ export class FractalClazz {
     this.pixels = Array(width * height * 4);
   }
 
-  updatePixel(offset, red, green, blue, alpha = 255): void {
+  updatePixel(offset: number, red: number, green: number, blue: number, alpha = 255): void {
     this.pixels[offset] = red;
     this.pixels[offset + 1] = green;
     this.pixels[offset + 2] = blue;
@@ -40,7 +55,7 @@ export class FractalClazz {
     return (y * this.width + x) * 4;
   }
 
-  iterate(zR, zI, cR, cI, iterMax) {
+  iterate(zR: number, zI: number, cR: number, cI: number, iterMax: number): number {
     let iter = 0;
     while (true) {
       iter++;
@@ -90,9 +105,7 @@ export class FractalClazz {
       s = 1,
       l = .5;
 
-    let r, g, b, hue2rgb;
-
-    hue2rgb = (a, c, t) => {
+    const hue2rgb = (a: number, c: number, t: number): number => {
       if (t < 0) { t += 1; }
       if (t > 1) { t -= 1; }
       if (t < 1 / 6) { return a + (c - a) * 6 * t; }
@@ -103,14 +116,14 @@ export class FractalClazz {
 
     const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
+    const r = hue2rgb(p, q, h + 1 / 3);
+    const g = hue2rgb(p, q, h);
+    const b = hue2rgb(p, q, h - 1 / 3);
 
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
   }
 
-  getColor(iter: number, maxIterations): number[] {
+  getColor(iter: number, maxIterations: number): number[] {
     const ratio = iter / maxIterations;
     let red = 0;
     let green = 0;

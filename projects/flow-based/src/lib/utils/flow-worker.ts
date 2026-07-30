@@ -1,5 +1,5 @@
 import { Observable, Subject, Subscription } from 'rxjs';
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker, FbNodeState } from '../flow-based';
+import { XxlConnection, XxlSocket, FbNodeWorker, FbNodeState } from '../flow-based';
 
 export class FlowWorker implements FbNodeWorker {
   private subjects: { [key: number]: Subject<any> } = {};

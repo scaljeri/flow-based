@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
 export const TAP_SETTINGS = {
@@ -15,7 +15,7 @@ export const TAP_SETTINGS = {
 };
 
 export class TapWorker implements FbNodeWorker {
-  private stream: Observable<any>;
+  private stream!: Observable<any>;
   private subscriptions: { [id: string]: Subscription } = {};
   private subject = new Subject<any>();
 

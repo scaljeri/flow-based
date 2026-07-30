@@ -1,33 +1,22 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  HostBinding,
-  Inject,
-  Input,
-  OnDestroy,
-  OnInit,
-  QueryList,
-  ViewChildren
-} from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { FB_SOCKET_COLORS, FbNodeState, SocketDetails, XxlSocket, XxlSocketType } from '../../../../projects/flow-based/src/lib/flow-based';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
+import { FB_SOCKET_COLORS, FbNodeState, NodeService, SocketDetails, XxlSocket } from '@scaljeri/flow-based';
 
 @Component({
+  standalone: false,
   selector: 'fb-edit-node',
   templateUrl: './edit-node.component.html',
   styleUrls: ['./edit-node.component.scss']
 })
 export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
-  sockets: XxlSocket[];
-  state: FbNodeState;
+  sockets: XxlSocket[] = [];
+  state!: FbNodeState;
 
   @Input() deleteSocket = true;
 
-  @ViewChildren('action', {read: ElementRef}) refs: QueryList<ElementRef>;
+  @ViewChildren('action', {read: ElementRef}) refs!: QueryList<ElementRef>;
   private connections: { [key: number]: number } = {};
-  public socketDetails: SocketDetails[];
+  public socketDetails: SocketDetails[] = [];
 
   constructor(private element: ElementRef,
               private fb: FormBuilder,
@@ -69,7 +58,7 @@ export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
     return socket.color || this.socketColors[socket.format!] || '#ffffff';
   }
 
-  setSocketColor(color, socket: XxlSocket): void {
+  setSocketColor(color: string, socket: XxlSocket): void {
     socket.color = color;
   }
 

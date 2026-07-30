@@ -1,3 +1,70 @@
+@use '@angular/material' as mat;
+@use 'styles/theme-colors' as fb-palette;
+
+/* ==========================================================================
+   Angular Material theming
+   ==========================================================================
+   This replaces the `indigo-pink.css` prebuilt stylesheet that used to be listed
+   in angular.json. The M2 prebuilt themes do still ship in 22.1, but Material's
+   own theming guide says they "will be removed in a future version".
+
+   Two shapes of the same config are needed, which is not obvious:
+
+   - `mat.theme()` takes the config MAP, and is what emits the `--mat-sys-*`
+     custom properties the rest of this file relies on.
+   - `mat.color-variants-backwards-compatibility()` routes into the M2 inspection
+     API and needs a theme OBJECT from `define-theme()`. Handing it the plain map
+     fails to compile.
+
+   The compat mixin is what keeps `color="primary"` / `color="warn"` working in the
+   templates. `mat.theme()` is the M3 API and emits no `.mat-primary`/`.mat-accent`/
+   `.mat-warn` rules at all, so without it all 12 coloured controls would silently
+   render unthemed. It covers buttons, checkboxes, sliders, selects, form fields
+   and options — but NOT mat-toolbar, which has no entry in the mixin, so the
+   toolbar is themed explicitly below. All five toolbars here use color="primary".
+   ========================================================================== */
+
+/*
+ * Custom M3 palettes generated from the exact colours of the old indigo-pink M2
+ * theme (primary #3F51B5, accent #FF4081) via
+ *   ng generate @angular/material:m3-theme
+ * The twelve built-in palettes have no indigo; `mat.$violet-palette` rendered a
+ * much louder purple than the demo's published look.
+ */
+$fb-color: (
+  primary: fb-palette.$primary-palette,
+  tertiary: fb-palette.$tertiary-palette,
+  theme-type: light,
+);
+
+$fb-typography: (
+  plain-family: ('Source Code Pro', monospace),
+  brand-family: ('Source Code Pro', monospace),
+);
+
+$fb-theme-config: (
+  color: $fb-color,
+  typography: $fb-typography,
+  density: 0,
+);
+
+$fb-theme-object: mat.define-theme((
+  color: $fb-color,
+  typography: $fb-typography,
+  density: (scale: 0),
+));
+
+html {
+  color-scheme: light;
+
+  @include mat.theme($fb-theme-config);
+  @include mat.color-variants-backwards-compatibility($fb-theme-object);
+  @include mat.toolbar-overrides((
+    container-background-color: var(--mat-sys-primary),
+    container-text-color: var(--mat-sys-on-primary),
+  ));
+}
+
 /* stylelint-disable */
 /* You can add global styles to this file, and also import other style files */
 html, body {
@@ -54,4 +121,58 @@ table {
 }
 /* stylelint-enable */
 
-@import 'styles/index';
+/* ==========================================================================
+   Global app styles
+   ==========================================================================
+   Previously src/styles/_index.scss, inlined here. It has to come *after* the
+   reset above to win the cascade, and `@use` is only legal at the top of a file,
+   so pulling it in as a module would have reversed that order.
+   ========================================================================== */
+
+:root {
+  --fb-gutter-size: 16px;
+
+  font-family: 'Source Code Pro', monospace;
+
+  *:focus {
+    outline: none;
+  }
+}
+
+fb-root {
+  background-color: #000;
+}
+
+/*
+ * The v22 dialog DOM adds two nesting levels that did not exist in v7:
+ *   mat-dialog-container > .mat-mdc-dialog-inner-container > .mat-mdc-dialog-surface
+ * `overflow` moved off the container, so clipping has to be released on the
+ * surface instead — the socket-format dropdown overflows the dialog bounds.
+ */
+.cdk-overlay-container .mat-mdc-dialog-surface {
+  overflow: visible;
+}
+
+.dark-backdrop {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/*
+ * `.add-socket-dialog mat-dialog-container { padding: 0 }` was dropped: neither
+ * .mat-mdc-dialog-container nor .mat-mdc-dialog-surface carries padding in v22,
+ * so zero is already the default. If mat-dialog-content is ever introduced here,
+ * zero it with tokens instead:
+ *   .add-socket-dialog { --mat-dialog-content-padding: 0; }
+ */
+
+@keyframes create {
+  0% {
+    background-color: #ff4081;
+    border-radius: 50%;
+  }
+
+  100% {
+    background-color: #000;
+    border-radius: 3px;
+  }
+}

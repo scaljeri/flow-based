@@ -1,5 +1,27 @@
 // https://github.com/JamesRandall/Mandelbrot-Set.git
 
+/*
+ * NOTE: this class is stringified (FbWebWorker.build()) and re-evaluated inside a
+ * web worker, so only erasable type syntax may be added here.
+ */
+interface JuliaParams {
+  x: number;
+  y: number;
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+  width: number;
+  height: number;
+  maxIterations: number;
+}
+
+interface Rgb {
+  r: number;
+  g: number;
+  b: number;
+}
+
 export class FractalClazz {
   maxIterations: number;
   xMin: number;
@@ -9,14 +31,14 @@ export class FractalClazz {
   width: number;
   height: number;
   pixels: number[];
-  xScale: number;
-  yScale: number;
+  xScale = 0;
+  yScale = 0;
   cR: number;
   cI: number;
-  colors: [number[]?] = [];
-  palette: { r: number, g: number, b: number }[] = [];
+  colors: (number[] | undefined)[] = [];
+  palette: Rgb[] = [];
 
-  constructor({x, y, xMin, xMax, yMin, yMax, width, height, maxIterations}) {
+  constructor({x, y, xMin, xMax, yMin, yMax, width, height, maxIterations}: JuliaParams) {
     this.cR = x;
     this.cI = y;
     this.xMin = xMin;
@@ -52,7 +74,7 @@ export class FractalClazz {
     }
   }
 
-  updatePixel(offset, red, green, blue): void {
+  updatePixel(offset: number, red: number, green: number, blue: number): void {
     this.pixels[offset] = red;
     this.pixels[offset + 1] = green;
     this.pixels[offset + 2] = blue;
@@ -63,9 +85,9 @@ export class FractalClazz {
     return (y * this.width + x) * 4;
   }
 
-  iterate(r1, i1, x1, y1, iterMax) {
+  iterate(r1: number, i1: number, x1: number, y1: number, iterMax: number): number[] {
     let iter = 0,
-      rpow = 0, r1pow2, i1pow2, rlastpow;
+      rpow = 0, r1pow2 = 0, i1pow2 = 0, rlastpow = 0;
 
     while (iter < iterMax && rpow < 4) {
       r1pow2 = r1 * r1;
@@ -100,7 +122,7 @@ export class FractalClazz {
     const realSpan = this.xMax - this.xMin,
       imagSpan = this.yMax - this.yMin;
 
-    let zR, zI;
+    let zR = 0, zI = 0;
     for (let i = 0; i < this.width; i++) {
       for (let j = 0; j < this.height; j++) {
         const fx = i / this.width;
@@ -120,11 +142,11 @@ export class FractalClazz {
     return new ImageData(Uint8ClampedArray.from(this.pixels), this.width, this.height);
   }
 
-  rc() {
+  rc(): number {
     return Math.round(Math.random() * 255);
   }
 
-  interpolateColors(c1, c2, weigth: number) {
+  interpolateColors(c1: Rgb, c2: Rgb, weigth: number): number[] {
     const red = ((c1.r + (((c2.r - c1.r) * weigth) >> 8)) & 0xff);
     const green = ((c1.g + (((c2.g - c1.g) * weigth) >> 8)) & 0xff);
     const blue = ((c1.b + (((c2.b - c1.b) * weigth) >> 8)) & 0xff);

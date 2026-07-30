@@ -1,4 +1,5 @@
-@import 'utils';
+@use 'sass:math';
+@use 'utils' as *;
 
 //vars
 $fg: #ff4081;
@@ -48,8 +49,8 @@ $opening-angle: $pi - 0.2;
   display: block;
   height: $height;
   left: 50%;
-  margin-left: -$width/2;
-  margin-top: -$height/2;
+  margin-left: math.div(-$width, 2);
+  margin-top: math.div(-$height, 2);
   position: absolute;
   top: 50%;
   transition: transform 200ms;
@@ -78,8 +79,8 @@ $hamburger-spacing: 8px;
   font-size: 20px;
   height: $height;
   left: 50%;
-  margin-left: -$width/2;
-  padding-left: $width/2;
+  margin-left: math.div(-$width, 2);
+  padding-left: math.div($width, 2);
   padding-top: 20px;
   position: absolute;
   text-align: left;
@@ -134,7 +135,7 @@ $hamburger-spacing: 8px;
 .menu-open:checked ~ .menu-item {
   transition-timing-function: cubic-bezier(0.935, 0, 0.34, 1.33);
   @for $i from 1 through $menu-items {
-    $angle: (($pi - $opening-angle)/2)+(($opening-angle/($menu-items - 1))*($i - 1));
+    $angle: math.div($pi - $opening-angle, 2) + (math.div($opening-angle, $menu-items - 1) * ($i - 1));
 
     &:nth-child(#{$i+2}) {
 

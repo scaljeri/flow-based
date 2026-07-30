@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_SETTINGS = {
@@ -22,7 +22,7 @@ export const RANDOM_NUMBER_SETTINGS = {
 };
 
 export class RandomNumbersWorker implements FbNodeWorker {
-  private intervalId: number;
+  private intervalId = 0;
   private subject = new Subject<any>();
 
   constructor(private config: any) {
@@ -82,7 +82,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
     return this.config.interval;
   }
 
-  set interval(val) {
+  set interval(val: number) {
     this.config.interval = val;
     this.initialize();
   }

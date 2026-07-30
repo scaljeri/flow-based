@@ -1,5 +1,5 @@
-@import '../../../../../projects/flow-based/src/lib/utils/utils';
-@import '../../../../../projects/flow-based/src/lib/utils/variables';
+@use 'utils/utils' as *;
+@use 'utils/variables' as *;
 
 :host {
   background-color: #fff;

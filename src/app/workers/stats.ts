@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
@@ -24,17 +24,26 @@ export const STATS_SETTINGS = {
     }]
 };
 
+/** Payload published on `StatsWorker.updated$`. */
+export interface StatsDistribution {
+  values: number[];
+  gauss?: number[];
+  start: number;
+  end: number;
+}
+
 export class StatsWorker implements FbNodeWorker {
-  private subjects = { min: new Subject<any>(), max: new Subject<any>()};
+  // Keyed by XxlSocket.aux, so this needs an index signature, not a literal type.
+  private subjects: Record<string, Subject<any>> = {min: new Subject<any>(), max: new Subject<any>()};
   private subscriptions: Subscription[] = [];
 
   public min: number | null = null;
   public max: number | null = null;
   private total = 0;
   private count = 0;
-  private values: any = [];
+  private values: number[] = [];
 
-  private updatedSubject = new Subject<any>();
+  private updatedSubject = new Subject<StatsDistribution>();
   public updated$ = this.updatedSubject.asObservable();
 
   constructor(private config: any, private sockets: XxlSocket[]) {
@@ -104,17 +113,17 @@ export class StatsWorker implements FbNodeWorker {
       const mean = calcMean(this.values);
       const averageMax = calcMax(this.values, mean);
       const sd = calcStandardDeviation(mean, this.values);
-      let gauss;
+      let gauss: number[] | undefined;
       if (averageMax) { // TODO: Maximum required
         gauss = getGaussian(mean, sd, averageMax, this.values.length);
       }
 
-
       this.updatedSubject.next({
         values: this.values,
         gauss,
-        start: this.min,
-        end: this.max,
+        // Both were assigned from `val` above, so neither is null here.
+        start: this.min!,
+        end: this.max!,
       });
     });
   }

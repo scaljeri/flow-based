@@ -1,13 +1,24 @@
-<fb-normal-node (active)="onActive($event)">
+<fb-normal-node (active)="onActive()">
   <section class="minified">
     <fb-default-front [title]="title"></fb-default-front>
   </section>
 
   <section class="expanded fb-drag-ignore">
     <form class="format-form">
+      <!--
+        Two <mat-autocomplete> panels in one template previously both used #auto.
+        ViewEngine tolerated the duplicate and bound both inputs to the first;
+        Ivy rejects duplicate reference names in a single template scope.
+
+        <mat-label> is also mandatory now: without it Material 22 renders no label
+        element at all and `placeholder` degrades to a native placeholder that
+        disappears on focus.
+      -->
       <mat-form-field class="example-full-width">
-        <input type="text" placeholder="Input format" aria-label="Number" matInput [formControl]="inputFormatControl" [matAutocomplete]="auto">
-        <mat-autocomplete #auto="matAutocomplete">
+        <mat-label>Input format</mat-label>
+        <input type="text" aria-label="Input format" matInput
+               [formControl]="inputFormatControl" [matAutocomplete]="autoIn">
+        <mat-autocomplete #autoIn="matAutocomplete">
           <mat-option *ngFor="let option of types" [value]="option">
             {{option}}
           </mat-option>
@@ -15,8 +26,10 @@
       </mat-form-field>
 
       <mat-form-field class="example-full-width">
-        <input type="text" placeholder="Output format" aria-label="Number" matInput [formControl]="outputFormatControl" [matAutocomplete]="auto">
-        <mat-autocomplete #auto="matAutocomplete">
+        <mat-label>Output format</mat-label>
+        <input type="text" aria-label="Output format" matInput
+               [formControl]="outputFormatControl" [matAutocomplete]="autoOut">
+        <mat-autocomplete #autoOut="matAutocomplete">
           <mat-option *ngFor="let option of types" [value]="option">
             {{option}}
           </mat-option>
@@ -24,7 +37,10 @@
       </mat-form-field>
     </form>
 
-    <div #code class="code" (change)="onKeyDown()"></div>
+    <!-- CodeMirror 6 mounts into this element and reports edits through its own
+         updateListener, so the old (change) binding is gone. -->
+    <div #code class="code"></div>
+
     <div class="errors">
       <span *ngIf="hasCompileError">Could not compile the code</span>
       <span *ngIf="hasRuntimeError && !hasCompileError">Runtime error occured</span>

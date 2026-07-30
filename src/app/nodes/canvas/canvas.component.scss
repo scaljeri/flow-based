@@ -1,4 +1,4 @@
-@import '../../../../projects/flow-based/src/lib/utils/_utils.scss';
+@use 'utils/utils' as *;
 
 canvas {
   @include xxl-size(400px);

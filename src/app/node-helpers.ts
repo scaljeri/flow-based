@@ -1,4 +1,4 @@
-import { FbNodeState, XxlSocket } from '../../projects/flow-based/src/lib/flow-based';
+import { FbNodeState, XxlSocket } from '@scaljeri/flow-based';
 
 // Only resetPosition socket which do not have initially a format
 export const NODE_HELPERS = {

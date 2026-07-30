@@ -7,17 +7,27 @@ import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { TapComponent } from './nodes/tap/tap.component';
 import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
 import { FlowComponent } from './flow/flow.component';
-import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, XXL_FLOW_TYPES } from '../../projects/flow-based/src/lib/flow-based';
+import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, XXL_FLOW_TYPES } from '@scaljeri/flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { CodemirrorModule } from '@ctrl/ngx-codemirror';
-import {
-  MAT_DIALOG_DEFAULT_OPTIONS, MatAutocompleteModule,
-  MatButtonModule, MatCardModule, MatCheckboxModule, MatDialogModule,
-  MatInputModule, MatListModule, MatSelectModule, MatSliderModule, MatToolbarModule
-} from '@angular/material';
+
+/*
+ * The `@angular/material` barrel was removed in v9 — every symbol now comes from
+ * its own entry point.
+ */
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DIALOG_DEFAULT_OPTIONS, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import {MatTooltipModule} from '@angular/material/tooltip';
+import { MatInputModule } from '@angular/material/input';
+import { MatListModule } from '@angular/material/list';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
@@ -27,7 +37,6 @@ import { AddSocketComponent } from './nodes/default-flow/add-socket/add-socket.c
 import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
 import { FB_CONFIG, XXL_SOCKET_COLORS } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
-import { FlowBasedModule } from '../../projects/flow-based/src/lib/flow-based.module';
 import { StatsComponent } from './nodes/stats/stats.component';
 import { NormalNodeComponent } from './components/normal-node/normal-node.component';
 import { EditNodeComponent } from './components/edit-node/edit-node.component';
@@ -61,11 +70,17 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
   ],
   imports: [
     BrowserModule,
-    BrowserAnimationsModule,
+    /*
+     * BrowserAnimationsModule is gone: Material 22 no longer peer-depends on
+     * @angular/animations (it animates with native CSS), and that package is
+     * itself deprecated. `provideAnimationsAsync()` is deprecated too, so it is
+     * not the replacement — there is simply nothing to register.
+     */
     ReactiveFormsModule,
     FormsModule,
     MatDialogModule,
     MatToolbarModule,
+    MatFormFieldModule,
     MatInputModule,
     MatSliderModule,
     FlowBasedModule,
@@ -76,9 +91,13 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
     MatListModule,
     MatTooltipModule,
     OverlayModule,
-    CodemirrorModule,
     MatAutocompleteModule,
-    MatSelectModule
+    MatSelectModule,
+    /*
+     * CodemirrorModule (@ctrl/ngx-codemirror) is gone with the move to
+     * CodeMirror 6, which has no Angular wrapper and needs none — the editor is
+     * constructed directly in CustomCodeComponent.
+     */
   ],
   providers: [
     ComponentSelectionService,
@@ -95,20 +114,11 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
       useValue: XXL_SOCKET_COLORS as FbSocketColors
     }
   ],
-  entryComponents: [
-    AddSocketComponent,
-    ComponentSelectionComponent,
-    BasicGraphComponent,
-    RandomNumbersComponent,
-    TapComponent,
-    DefaultFlowComponent,
-    MergeStreamsComponent,
-    StatsComponent,
-    CustomCodeComponent,
-    FractalComponent,
-    CanvasComponent,
-    ZoomCanvasComponent
-  ],
+  /*
+   * `entryComponents` was removed in v16. Ivy resolves dynamically created
+   * components without pre-registration, which is what the node registry
+   * (FB_CONFIG -> DynamicComponentDirective) relies on.
+   */
   bootstrap: [AppComponent]
 })
 export class AppModule {

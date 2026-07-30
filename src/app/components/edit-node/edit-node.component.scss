@@ -1,5 +1,5 @@
-@import '../../../../projects/flow-based/src/lib/utils/utils';
-@import '../../../../projects/flow-based/src/lib/utils/variables';
+@use 'utils/utils' as *;
+@use 'utils/variables' as *;
 
 :host {
   align-self: center;
@@ -10,8 +10,14 @@
   position: relative;
 
   .title {
-    padding-bottom: 0;
     @include fb-position(absolute, -80px 0px 0 0px);
+
+    // Material 22 dropped `.mat-mdc-card { padding: 16px }`; the padding now lives on
+    // `.mat-mdc-card-content` (`0 16px`, plus 16px top/bottom as first/last child).
+    // Zero the bottom there, which is what `padding-bottom: 0` on the card used to do.
+    mat-card-content {
+      padding-bottom: 0;
+    }
   }
 
   .socket-wrapper {
@@ -19,7 +25,11 @@
     flex-direction: row;
   }
 
-  mat-list {
+  // Was `<mat-list>` / `<mat-list-item>`. In Material 22 `.mdc-list-item` is a fixed-height
+  // (48px), `overflow: hidden`, `white-space: nowrap` text row, which clipped the mini-fab and
+  // the two form fields in each row. These are form rows, not list rows, so they are plain
+  // flex containers now.
+  .socket-list {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -27,15 +37,11 @@
     width: 50%;
   }
 
-  mat-list-item {
+  .socket-row {
+    display: flex;
+    flex-direction: column;
     margin: 32px 0;
     position: relative;
-
-    mat-label {
-      color: #0009;
-      font-size: 16px;
-      transform: scale(0.75);
-    }
   }
 
   .socket-in {

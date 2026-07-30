@@ -1,17 +1,18 @@
-import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
-import { XxlFlow } from '../../projects/flow-based/src/lib/flow-based';
-import { FlowBasedService } from '../../projects/flow-based/src/lib/flow-based.service';
+import { Component, HostListener, OnInit } from '@angular/core';
+import { FbNodeState, FlowBasedService } from '@scaljeri/flow-based';
 import * as data from './fixtures';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ComponentSelectionService } from './component-selection.service';
 
-const KEY_PRESS = {
-  ESC: 27
-};
+/*
+ * The KEY_PRESS = { ESC: 27 } map is gone: `keyCode` has been deprecated for
+ * years and the Escape handler binds `keydown.escape` declaratively instead.
+ */
 
 @Component({
+  standalone: false,
   selector: 'fb-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
@@ -23,11 +24,9 @@ export class AppComponent implements OnInit {
   // menuX: number;
   // menuY: number;
 
-  activeOverlay: OverlayRef | null;
+  activeOverlay: OverlayRef | null = null;
   showJson = false;
-  flow: XxlFlow = data.basic as XxlFlow;
-
-  @ViewChild('bg') bgImage: ElementRef;
+  flow: FbNodeState = data.basic as FbNodeState;
 
   constructor(private selectionService: ComponentSelectionService,
               private flowService: FlowBasedService,
@@ -67,7 +66,7 @@ export class AppComponent implements OnInit {
 
     this.activeOverlay.attach(portal);
 
-    this.activeOverlay.backdropClick().subscribe((e: PointerEvent) => {
+    this.activeOverlay.backdropClick().subscribe(() => {
       this.activeOverlay!.dispose();
       this.activeOverlay = null;
     });
@@ -81,8 +80,10 @@ export class AppComponent implements OnInit {
     console.log('updated');
   }
 
-  @HostListener('document:keydown.escape', ['$event'])
-  escape(event): void {
+  // Angular types `$event` as the base Event for key-modified bindings, and the
+  // event was never used here anyway.
+  @HostListener('document:keydown.escape')
+  escape(): void {
     if (this.showJson) {
       this.showJson = false;
     } else if (this.activeOverlay) {

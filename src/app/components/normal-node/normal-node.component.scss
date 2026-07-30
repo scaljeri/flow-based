@@ -1,4 +1,4 @@
-@import '../../../../projects/flow-based/src/lib/utils/utils';
+@use 'utils/utils' as *;
 
 :host {
   display: flex;

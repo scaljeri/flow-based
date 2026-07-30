@@ -4,5 +4,10 @@
     "outDir": "./out-tsc/spec",
     "types": ["vitest/globals"]
   },
-  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+  /*
+   * All sources, not just specs: the app's components are `standalone: false`,
+   * so AppModule has to be in the program for their template scope to resolve.
+   * With only `*.spec.ts` here, every Material binding fails NG8002.
+   */
+  "include": ["src/**/*.ts"]
 }

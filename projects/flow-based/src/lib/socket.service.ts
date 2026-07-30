@@ -19,7 +19,7 @@ export class SocketService {
   }
 
   outsideClick(): void {
-    if (!!this.lastEvent) {
+    if (this.lastEvent) {
       this.socketClicked.next(null);
     }
 

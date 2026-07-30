@@ -1,28 +1,29 @@
-import { ChangeDetectorRef, Component, Host, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 
-import { FbNodeState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { FbNodeState, NodeService } from '@scaljeri/flow-based';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { RandomNumbersWorker } from '../../workers/random-numbers';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
 import { Subscription } from 'rxjs';
 
 @Component({
+  standalone: false,
   selector: 'fb-random-numbers',
   templateUrl: './random-numbers.component.html',
   styleUrls: ['./random-numbers.component.scss']
 })
 export class RandomNumbersComponent implements OnInit, OnDestroy {
-  worker: RandomNumbersWorker;
-  configForm: FormGroup;
+  worker!: RandomNumbersWorker;
+  configForm!: FormGroup;
   isActive = false;
   state: FbNodeState;
-  currentValue: number;
-  private clickSubscription: Subscription;
-  private valueSubscription: Subscription;
+  // Genuinely absent until the first value arrives; `{{currentValue}}` must stay
+  // blank until then, so this must not be initialised to 0.
+  currentValue?: number;
+  private valueSubscription!: Subscription;
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
-              @Host() private service: NodeService) {
+              private service: NodeService) {
     this.state = service.state;
   }
 
@@ -60,7 +61,7 @@ export class RandomNumbersComponent implements OnInit, OnDestroy {
     this.valueSubscription.unsubscribe();
   }
 
-  get title(): string | undefined {
-    return this.state.title;
+  get title(): string {
+    return this.state.title ?? '';
   }
 }

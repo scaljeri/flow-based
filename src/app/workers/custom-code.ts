@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker, XxlFlowUnitState } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
 export const CUSTOM_CODE_SETTINGS = {
@@ -14,13 +14,25 @@ export const CUSTOM_CODE_SETTINGS = {
   ]
 };
 
+/*
+ * Under `strict`, a `catch` binding is `unknown` (useUnknownInCatchVariables), and
+ * user code compiled with `new Function` really can throw a non-Error.
+ */
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 export class CustomCodeWorker implements FbNodeWorker {
   private subject = new Subject<any>(); // OUTPUT
   private subscriptions: { [id: string]: Subscription } = {};
-  private func: (any) => void;
+  /*
+   * NOTE: this was declared `(any) => void`, which means "one parameter *named*
+   * `any`, of implicit any type" — not "takes any value".
+   */
+  private func!: (val: unknown) => void;
 
-  public compileError: Error | null;
-  public runtimeError: Error | null;
+  public compileError: Error | null = null;
+  public runtimeError: Error | null = null;
 
   constructor(private config: any) {
     this.compileFunction();
@@ -40,7 +52,7 @@ export class CustomCodeWorker implements FbNodeWorker {
         this.func(val);
       } catch (err) {
         console.error(err);
-        this.runtimeError = err;
+        this.runtimeError = toError(err);
       }
     });
   }
@@ -64,14 +76,14 @@ export class CustomCodeWorker implements FbNodeWorker {
       this.func = new Function('out', inputFunc)(this.subject);
     } catch (err) {
       console.error(err);
-      this.compileError = err;
+      this.compileError = toError(err);
     }
 
     try {
       this.func(null); // Initial call
     } catch (err) {
       console.error(err);
-      this.runtimeError = err;
+      this.runtimeError = toError(err);
     }
   }
 }

@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subject, Subscription, zip } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -21,12 +21,13 @@ export const MERGE_STREAMS_SETTINGS = {
 };
 
 export class MergeStreamsWorker implements FbNodeWorker {
-  private subscription: Subscription;
+  // Absent until the first stream is connected; every read is already guarded.
+  private subscription?: Subscription;
   private subject = new ReplaySubject<number>(1);
 
   private streams$: { [s: string]: Observable<{ value: number, connection: XxlConnection }> } = {};
   public streamValues: { [key: string]: number[] } = {};
-  public outputValue: number;
+  public outputValue = 0;
   private valuesSubject = new Subject<any>();
 
   constructor(private state: XxlFlowUnitState) {
@@ -62,22 +63,18 @@ export class MergeStreamsWorker implements FbNodeWorker {
     }
 
     const ids = Object.keys(this.streams$);
-    const streams$ = ids.reduce((out: any, item) => {
-      out.push(this.streams$[item]);
-
-      return out;
-    }, []);
+    const streams$ = ids.map(id => this.streams$[id]);
 
     if (!ids.length) {
       return;
     }
 
     this.subscription = zip(...streams$)
-      .subscribe((values: { value: number, connection: XxlConnection }[]) => {
+      .subscribe(values => {
         this.outputValue = values.reduce((a, b) => a + b.value, 0);
         this.subject.next(this.outputValue);
 
-        const vals = values.reduce((o: any, v) => {
+        const vals = values.reduce((o: { [id: string]: number[] }, v) => {
           const id = v.connection.in!;
           if (!o[id]) {
             o[id] = [];

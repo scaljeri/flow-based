@@ -1,22 +1,22 @@
-import { ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnInit, Output, SimpleChanges } from '@angular/core';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
-import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnInit, Output } from '@angular/core';
+import { NodeService, XxlFlowUnitState } from '@scaljeri/flow-based';
 import { filter } from 'rxjs/operators';
 
 @Component({
+  standalone: false,
   selector: 'fb-normal-node',
   templateUrl: './normal-node.component.html',
   styleUrls: ['./normal-node.component.scss']
 })
 export class NormalNodeComponent implements OnInit {
   private state: XxlFlowUnitState;
-  private lastClicked;
+  private lastClicked = 0;
 
   isEditing = false;
 
   @Input() fullscreen = false;
   @Input() deleteSocket = false;
-  @Input() label: string;
+  @Input() label = '';
   @Input() @HostBinding('class.is-active') isActive = false;
 
   @Output() edit = new EventEmitter<boolean>();

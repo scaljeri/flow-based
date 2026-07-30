@@ -7,7 +7,9 @@ import { XxlSocket } from '../flow-based';
   standalone: false,
 })
 export class SocketOutPipe implements PipeTransform {
-  transform(sockets: XxlSocket[]): XxlSocket[] {
-    return sockets.filter(socket => socket.type === XxlSocketBuilderService.SOCKET_OUT);
+  // `FbNodeState.sockets` is optional, so accept nullish rather than forcing
+  // every caller to assert in its template.
+  transform(sockets: XxlSocket[] | null | undefined): XxlSocket[] {
+    return (sockets ?? []).filter(socket => socket.type === XxlSocketBuilderService.SOCKET_OUT);
   }
 }

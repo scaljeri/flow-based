@@ -41,7 +41,11 @@ export class Flow {
     this.createVirtualFlow(children, flow.id!);
 
     let count = 0;
+    // Fixpoint: re-sweep every connection until no socket format changes.
+    // Bounded at 100 sweeps. Replaced by a topological pass in Stage 3.
     while (this.connectNodes() && ++count < 100) {
+      // Intentionally empty — connectNodes() does the work and reports whether
+      // anything changed.
     }
     if (count === 100) {
       console.warn('Connecting all nodes failed');
@@ -82,7 +86,9 @@ export class Flow {
     });
 
     let count = 0;
+    // Same bounded fixpoint as initialize(); see the note there.
     while (this.connectNodes() && ++count < 100) {
+      // Intentionally empty.
     }
 
     if (count === 100) {
@@ -202,8 +208,8 @@ export class Flow {
   private connectNodes(): boolean {
     const keys = Object.keys(this.connections);
 
-    for (let i = 0; i < keys.length; i++) {
-      const c = this.connections[keys[i]].connection;
+    for (const key of keys) {
+      const c = this.connections[key].connection;
 
       if (this.connect(c)) {
         return true;

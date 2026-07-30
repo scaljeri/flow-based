@@ -1,32 +1,34 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Host, OnInit, ViewChild } from '@angular/core';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { NodeService } from '@scaljeri/flow-based';
 import { ZoomCanvasWorker } from '../../workers/zoom-canvas';
 import { IDimensions, IZoomable } from '../../app.models';
 import { PIXEL_RATIO_SCALE } from '../../app.config';
-import { AVAILABLE_FRACTALS  } from '../../workers/fractals';
 
 @Component({
+  standalone: false,
   selector: 'fb-zoom-canvas',
   templateUrl: './zoom-canvas.component.html',
   styleUrls: ['./zoom-canvas.component.scss']
 })
 export class ZoomCanvasComponent implements OnInit, AfterViewInit {
-  private worker: ZoomCanvasWorker;
-  private label: string;
-  private left: number;
-  private top: number;
-  private startX: number;
-  private startY: number;
+  private worker!: ZoomCanvasWorker;
+  private label = '';
+  private left = 0;
+  private top = 0;
+  private startX = 0;
+  private startY = 0;
   private dragging = false;
-  private ctx: any;
-  private imageData: ImageData;
-  public dimensions: IDimensions;
-  private startTime: number;
+  private ctx!: CanvasRenderingContext2D;
+  private imageData!: ImageData;
+  // Only read from behind the template's `*ngIf="dimensions"` and from handlers
+  // on the canvas, both of which come after the first worker emission.
+  public dimensions!: IDimensions;
+  private startTime = 0;
 
-  @ViewChild('canvas') canvas: ElementRef;
+  @ViewChild('canvas') canvas!: ElementRef;
 
   constructor(private cdr: ChangeDetectorRef,
-              @Host() private service: NodeService) {
+              private service: NodeService) {
   }
 
   ngOnInit() {
@@ -51,7 +53,7 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
 
   }
 
-  onMouseDown(event): void {
+  onMouseDown(event: MouseEvent): void {
     const boundingRect = this.canvas.nativeElement.getBoundingClientRect();
     this.left = boundingRect.left;
     this.top = boundingRect.top;
@@ -61,7 +63,7 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
     this.startTime = Date.now();
   }
 
-  onMouseUp(event): void {
+  onMouseUp(event: MouseEvent): void {
     this.dragging = false;
     // const x = event.clientX;
     // const y = event.clientY;
@@ -77,7 +79,9 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
         (event.clientY - this.top) * PIXEL_RATIO_SCALE);
       // }
     } else {
-      this.service.nodeIsClicked(event);
+      // NodeService.nodeIsClicked() is typed PointerEvent but only reads MouseEvent
+      // members; the library narrows the same way at node.component.ts:69.
+      this.service.nodeIsClicked(event as PointerEvent);
       this.worker.updateDimensions(Object.assign({}, this.dimensions, {
         x: this.dimensions.xMin + (this.dimensions.xMax - this.dimensions.xMin) * x / this.dimensions.width!,
         y: this.dimensions.yMin + (this.dimensions.yMax - this.dimensions.yMin) * y / this.dimensions.height!
@@ -87,7 +91,7 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
     this.ctx.putImageData(this.imageData, 0, 0);
   }
 
-  compute(endX, endY): void {
+  compute(endX: number, endY: number): void {
     let {xMin, xMax, yMin, yMax} = this.dimensions;
     const xScale = (xMax - xMin) / this.canvas.nativeElement.width;
     const yScale = (yMax - yMin) / this.canvas.nativeElement.height;
@@ -118,7 +122,7 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
     });
   }
 
-  onMouseMove(event): void {
+  onMouseMove(event: MouseEvent): void {
     if (this.dragging) {
       const x = (event.clientX - this.left) * PIXEL_RATIO_SCALE;
       const y = (event.clientY - this.top) * PIXEL_RATIO_SCALE;

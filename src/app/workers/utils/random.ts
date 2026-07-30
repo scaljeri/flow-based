@@ -2,13 +2,13 @@ export class Random {
   private m = 0x80000000; // 2**31;
   private a = 1103515245;
   private c = 12345;
-  private state: number;
+  private state = 0;
 
-  constructor(private seed) {
+  constructor(private seed?: number) {
     this.reset();
   }
 
-  reset() {
+  reset(): void {
     this.state = this.seed ? this.seed : Math.floor(Math.random() * (this.m - 1));
   }
 
@@ -22,7 +22,7 @@ export class Random {
     return this.nextInt() / (this.m - 1);
   }
 
-  nextRange(start, end) {
+  nextRange(start: number, end: number): number {
     // returns in range [start, end): including start, excluding end
     // can't modulu nextInt because of weak randomness in lower bits
     const rangeSize = end - start;
@@ -31,7 +31,7 @@ export class Random {
     return start + Math.floor(randomUnder1 * rangeSize);
   }
 
-  choice(array): number[] {
+  choice<T>(array: T[]): T {
     return array[this.nextRange(0, array.length)];
   }
 }

@@ -1,20 +1,21 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { XxlSocket } from 'projects/flow-based/src/lib/flow-based';
+import { XxlSocket } from '@scaljeri/flow-based';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 export interface DialogAction {
   action: 'delete' | 'edit' | 'create';
   socket?: XxlSocket;
 }
 @Component({
+  standalone: false,
   selector: 'fb-add-socket',
   templateUrl: './add-socket.component.html',
   styleUrls: ['./add-socket.component.scss']
 })
 export class AddSocketComponent implements OnInit {
-  socketForm: FormGroup;
-  isNew: boolean;
+  socketForm!: FormGroup;
+  isNew = false;
 
   constructor(private fb: FormBuilder,
               public dialogRef: MatDialogRef<AddSocketComponent>,

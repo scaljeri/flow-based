@@ -42,13 +42,16 @@
         </mat-card>
 
         <mat-card class="distribution">
-          <mat-card-title>Distribution</mat-card-title>
+          <mat-card-header>
+            <mat-card-title>Distribution</mat-card-title>
+          </mat-card-header>
           <mat-card-content>
             <div #distribution></div>
             <div class="column-width">
               <span>Column width: </span>
-              <mat-slider class="fb-drag-ignore" min="0" max="10" step=".1"
-                          [(ngModel)]="worker.columnWidth"></mat-slider>
+              <mat-slider class="fb-drag-ignore" min="0" max="10" step=".1">
+                <input matSliderThumb [(ngModel)]="worker.columnWidth">
+              </mat-slider>
               <span>{{worker.columnWidth}}</span>
             </div>
           </mat-card-content>

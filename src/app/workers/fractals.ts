@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '../../../projects/flow-based/src/lib/flow-based';
+import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { FbWebWorker } from './webworker';
 import * as Mandelbrot from './fractals/mandelbrot';
@@ -6,7 +6,18 @@ import * as JuliaSet from './fractals/julia';
 import { IDimensions, IZoomable } from '../app.models';
 import { PIXEL_RATIO_SCALE } from '../app.config';
 
-export const AVAILABLE_FRACTALS = {
+export interface FractalDefinition {
+  title: string;
+  /** Module namespace exporting `FractalClazz`; stringified into a web worker. */
+  fn: unknown;
+  dimensions: IDimensions;
+}
+
+/*
+ * NOTE: keyed by the ids used in FractalComponent's dropdown. `snowflake` is
+ * offered there but has no entry here, so selecting it yields `undefined`.
+ */
+export const AVAILABLE_FRACTALS: Record<string, FractalDefinition> = {
   'mandelbrot': {
     title: 'Mandelbort',
     fn: Mandelbrot,
@@ -61,13 +72,14 @@ export const FRACTALS_SETTINGS = {
 };
 
 export class FractalsWorker implements FbNodeWorker {
-  private webWorker: FbWebWorker<ImageData>;
+  // Assigned by setFractal(), which the constructor always calls.
+  private webWorker!: FbWebWorker<ImageData>;
 
   private subscriptions: { [id: string]: Subscription } = {};
   private subjects = new BehaviorSubject<IZoomable | null>(null);
-  private dimensions;
-  private x: number;
-  private y: number;
+  private dimensions: IDimensions | null = null;
+  private x?: number;
+  private y?: number;
 
   constructor(private config: FractalsConfig,
               private sockets: XxlSocket[]) {
@@ -88,8 +100,9 @@ export class FractalsWorker implements FbNodeWorker {
     const dim = Object.assign({}, AVAILABLE_FRACTALS[this.config.selected].dimensions);
 
     if (PIXEL_RATIO_SCALE !== 1) {
-      dim.width *= PIXEL_RATIO_SCALE;
-      dim.height *= PIXEL_RATIO_SCALE;
+      // Every entry in AVAILABLE_FRACTALS declares both.
+      dim.width = dim.width! * PIXEL_RATIO_SCALE;
+      dim.height = dim.height! * PIXEL_RATIO_SCALE;
     }
 
     if (this.config.selected) {
@@ -115,7 +128,9 @@ export class FractalsWorker implements FbNodeWorker {
           this.subjects.next({
             metadata: {
               label: AVAILABLE_FRACTALS[name].title,
-              dimensions: this.dimensions
+              // Set by the assignment above; re-read here (not captured) to keep
+              // the original behaviour of publishing whatever is current.
+              dimensions: this.dimensions!
             },
             imageData: data
           });

@@ -1,42 +1,29 @@
-import {
-  AfterViewInit,
-  ChangeDetectorRef,
-  Component,
-  ElementRef,
-  Host,
-  OnDestroy,
-  OnInit,
-  QueryList,
-  ViewChild,
-  ViewChildren
-} from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
-import { XxlFlowUnitState } from '../../../../projects/flow-based/src/lib/flow-based';
+import { NodeService, XxlFlowUnitState } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 
 @Component({
+  standalone: false,
   selector: 'fb-merge-streams',
   templateUrl: './merge-streams.component.html',
   styleUrls: ['./merge-streams.component.scss']
 })
 export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
   state: XxlFlowUnitState;
-  worker: MergeStreamsWorker;
+  worker!: MergeStreamsWorker;
   isActive = false;
-  values;
-  value;
-  streamValues = {};
+  value = '';
+  streamValues: { [socketId: string]: number[] } = {};
   private subscriptions: Subscription[] = [];
-  private clickSubscription: Subscription;
 
-  @ViewChild('output', {read: ElementRef}) output: ElementRef;
-  @ViewChildren('inputs', {read: ElementRef}) inputs: QueryList<ElementRef>;
+  @ViewChild('output', {read: ElementRef}) output!: ElementRef;
+  @ViewChildren('inputs', {read: ElementRef}) inputs!: QueryList<ElementRef>;
 
   constructor(private fb: FormBuilder,
               private cdr: ChangeDetectorRef,
-              @Host() private service: NodeService) {
+              private service: NodeService) {
     this.state = service.state;
   }
 
@@ -113,7 +100,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  get title(): string | null | undefined {
-    return this.state.title;
+  get title(): string {
+    return this.state.title ?? '';
   }
 }

@@ -1,26 +1,45 @@
-import { AfterViewInit, Component, ElementRef, Host, OnInit, ViewChild } from '@angular/core';
-import { NodeService } from '../../../../projects/flow-based/src/lib/node/node-service';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { NodeService } from '@scaljeri/flow-based';
 import { CanvasWorker } from '../../workers/canvas';
 
+/** Drawing instructions produced by the custom-code nodes upstream of this one. */
+interface CurveInstruction {
+  type: 'curve';
+  data: number[];
+}
+
+interface TextInstruction {
+  type: 'text';
+  data: { x: number; y: number; value: string }[];
+}
+
+interface ImageDataInstruction {
+  type: 'image-data';
+  data: ImageData;
+}
+
+type DrawInstruction = CurveInstruction | TextInstruction | ImageDataInstruction;
+
 @Component({
+  standalone: false,
   selector: 'fb-canvas',
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.scss']
 })
 export class CanvasComponent implements OnInit, AfterViewInit {
-  @ViewChild('canvas') canvas: ElementRef;
+  @ViewChild('canvas') canvas!: ElementRef;
 
-  private worker: CanvasWorker;
-  private ctx;
+  private worker!: CanvasWorker;
+  private ctx!: CanvasRenderingContext2D;
 
-  constructor(@Host() private service: NodeService) {
+  constructor(private service: NodeService) {
   }
 
   ngOnInit() {
     this.worker = this.service.worker as CanvasWorker;
   }
 
-  drawCurve(curve): void {
+  drawCurve(curve: CurveInstruction): void {
     this.ctx.clearRect(0, 0, 800, 800);
     this.ctx.beginPath();
     this.ctx.moveTo(curve.data[0], curve.data[1]);
@@ -33,7 +52,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
     this.ctx.stroke();
   }
 
-  drawText(item): void {
+  drawText(item: TextInstruction): void {
     this.ctx.fillStyle = '#fff';
     this.ctx['font'] = 'bold 32px serif';
     item.data.forEach(text => {
@@ -52,7 +71,7 @@ export class CanvasComponent implements OnInit, AfterViewInit {
       this.canvas.nativeElement.width = 800;
       this.canvas.nativeElement.height = 800;
 
-      input.forEach(item => {
+      input.forEach((item: DrawInstruction) => {
         if (item.type === 'curve') {
           this.drawCurve(item);
         } else if (item.type === 'image-data') {

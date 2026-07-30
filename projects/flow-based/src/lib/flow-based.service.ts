@@ -137,12 +137,12 @@ export class FlowBasedService {
     }
   }
 
-  register(id: number, callback: FbNodeEventCallback, type: string = '__default__'): void {
+  register(id: number, callback: FbNodeEventCallback, type = '__default__'): void {
     this.nodeListeners[type] = this.nodeListeners[type] || [];
     this.nodeListeners[type].unshift({id, callback});
   }
 
-  unregister(id: number, type: string = '__default__'): void {
+  unregister(id: number, type = '__default__'): void {
     if (this.nodeListeners[type]) {
       this.nodeListeners[type] = this.nodeListeners[type].filter(listener => listener.id !== id);
     }
