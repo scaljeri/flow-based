@@ -19,7 +19,7 @@ export interface FractalDefinition {
  */
 export const AVAILABLE_FRACTALS: Record<string, FractalDefinition> = {
   'mandelbrot': {
-    title: 'Mandelbort',
+    title: 'Mandelbrot',
     fn: Mandelbrot,
     dimensions: {
       xMin: -3,
