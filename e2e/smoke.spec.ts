@@ -265,6 +265,46 @@ test('undoes and redoes a node deletion', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+/**
+ * Dragging a node must move its connections with it.
+ *
+ * This is the sharpest test of Stage 3b. Redrawing used to be forced by
+ * `detectChanges()` after every pointer move; now the node's position bumps a
+ * `geometry` revision signal that the connection renderer reads, and Angular
+ * refreshes the view itself. If that dependency were missing, the node would
+ * still visibly move while its lines stayed behind — which no build or unit test
+ * would catch.
+ */
+test('drags a node and its connections follow', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', err => errors.push(err.message));
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.goto('/');
+  await expect(page.locator('fb-node').first()).toBeVisible();
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  // A small collapsed node is easiest to grab without hitting inner controls.
+  const node = page.locator('fb-node').nth(4);
+  const start = await node.boundingBox();
+  expect(start).not.toBeNull();
+
+  await page.mouse.move(start!.x + start!.width / 2, start!.y + start!.height / 2);
+  await page.mouse.down();
+  // Several steps: the drag only begins after the first pointermove.
+  await page.mouse.move(start!.x + start!.width / 2 + 120, start!.y + start!.height / 2 - 90, { steps: 12 });
+  await page.mouse.up();
+
+  const moved = await node.boundingBox();
+  expect(Math.abs(moved!.x - start!.x)).toBeGreaterThan(40);
+
+  // The whole point: the lines came along.
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+  expect(errors).toEqual([]);
+});
+
 test('toggles the JSON view, which is the serialisable flow state', async ({ page }) => {
   await page.goto('/');
 

@@ -16,6 +16,7 @@ export * from './lib/flow-based.module';
 // Editor shell
 export * from './lib/flow-based.component';
 export * from './lib/flow-based.service';
+export * from './lib/graph-signals.service';
 
 // Node authoring surface
 export * from './lib/node/node.component';
@@ -43,5 +44,6 @@ export * from './lib/utils/flow';
 export * from './lib/utils/flow-worker';
 export * from './lib/utils/deep-clone';
 export * from './lib/utils/id-generator';
+export * from './lib/utils/change-emitter';
 export * from './lib/utils/serialization';
 export * from './lib/utils/history.service';

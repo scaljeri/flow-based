@@ -384,6 +384,77 @@ describe('lookup safety (AUDIT.md §3.9)', () => {
   });
 });
 
+describe('change notification', () => {
+  const record = (flow: Flow) => {
+    const seen: string[] = [];
+    flow.changes.subscribe(kind => seen.push(kind));
+    return seen;
+  };
+
+  it('announces structure changes when a node is added or removed', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const seen = record(flow);
+
+    flow.addNode({ id: 60, type: 'sink', sockets: [] } as any, root);
+    expect(seen).toContain('structure');
+
+    seen.length = 0;
+    flow.removeNode(60);
+    expect(seen).toContain('structure');
+  });
+
+  it('announces connection changes', () => {
+    const { root, conn } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const seen = record(flow);
+
+    flow.removeConnection(conn, root);
+
+    expect(seen).toContain('connections');
+  });
+
+  it('announces socket changes', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const seen = record(flow);
+
+    flow.addSocket({ type: 'in' } as any, 10);
+
+    expect(seen).toContain('sockets');
+  });
+
+  it('announces format changes only when a format actually moved', () => {
+    const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
+    const inner: any = {
+      id: 40,
+      type: 'flow',
+      sockets: [{ id: 400, type: 'out' }],
+      children: [leaf],
+      connections: [{ id: 2000, from: 30, to: 40, out: 300, in: 400 }],
+    };
+    const root: any = { id: 1, type: 'flow', sockets: [], children: [inner], connections: [] };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const seen = record(flow);
+
+    // Everything is already settled, so re-propagating must stay quiet.
+    flow.addConnection(root, { id: 4242, from: 40, to: 40, out: 400, in: 400 } as any);
+
+    expect(seen).not.toContain('formats');
+  });
+
+  it('drops listeners on destroy', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    record(flow);
+
+    flow.destroy();
+
+    expect(flow.changes.size).toBe(0);
+  });
+});
+
 describe('format propagation (AUDIT.md §3.7)', () => {
   it('reports convergence and the steps taken', () => {
     const { root } = flatFixture();

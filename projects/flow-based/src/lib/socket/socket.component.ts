@@ -6,7 +6,7 @@ import {
   EventEmitter,
   HostBinding,
   HostListener,
-  Input, OnDestroy, Output
+  Input, OnDestroy, Output, signal
 } from '@angular/core';
 import { FbPosition, FbSocket, FbSocketEvent } from '../flow-based';
 import { Subscription } from 'rxjs';
@@ -31,12 +31,26 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   private hover = false;
   private hoverTimeoutId?: ReturnType<typeof setTimeout>;
 
-  @HostBinding('class.is-active') active = false;
-  @HostBinding('class.is-accepting') isAccepting: boolean | null = null;
+  /*
+   * Signals, not plain fields. These are written from an RxJS subscription while
+   * the component is OnPush and nothing called markForCheck — so the class
+   * changes only landed when some *other* change detection pass happened to run.
+   * A signal read from a host binding marks this view dirty on its own.
+   */
+  readonly active = signal(false);
+  readonly isAccepting = signal<boolean | null>(null);
+
+  @HostBinding('class.is-active') get isActiveClass(): boolean {
+    return this.active();
+  }
+
+  @HostBinding('class.is-accepting') get isAcceptingClass(): boolean {
+    return this.isAccepting() === true;
+  }
 
   @HostBinding('class.is-disabled')
   get isDisabled(): boolean {
-    return this.isAccepting === false;
+    return this.isAccepting() === false;
   }
 
   @HostBinding('class')
@@ -73,16 +87,17 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
     });
 
     this.subscription = this.service.socketClicked$.subscribe((event: FbSocketEvent | null) => {
-      this.active = false;
-      this.isAccepting = null;
+      this.active.set(false);
+      this.isAccepting.set(null);
 
       if (event && this.scope === event.scope) {
         if (event.socket.id === this.state.id) {
-          this.active = true;
+          this.active.set(true);
         } else if (event.socket.type === this.getType() || event.parentId === this.nodeService.id) {
-          this.isAccepting = false;
+          this.isAccepting.set(false);
         } else {
-          this.isAccepting = !this.state.format || !event.socket.format || this.state.format === event.socket.format;
+          this.isAccepting.set(
+            !this.state.format || !event.socket.format || this.state.format === event.socket.format);
         }
       }
     });

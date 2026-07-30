@@ -1,7 +1,8 @@
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, forwardRef, HostBinding, HostListener, Input, OnChanges, OnDestroy, OnInit, Optional, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, forwardRef, HostBinding, HostListener, Input, OnChanges, OnDestroy, OnInit, Optional, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { FbAnyConnection, FbConnection, FbNodeState, FbPosition, FbSocketEvent, isElementConnection } from './flow-based';
 import { FbViewportService } from './viewport/viewport.service';
+import { FbGraphSignals } from './graph-signals.service';
 import { FlowBasedService } from './flow-based.service';
 import { SocketService } from './socket.service';
 import { filter } from 'rxjs/operators';
@@ -47,10 +48,10 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
   constructor(
     private element: ElementRef,
-    private cdr: ChangeDetectorRef,
     public flowService: FlowBasedService,
     public socketService: SocketService,
     public viewport: FbViewportService,
+    public graph: FbGraphSignals,
     @Optional() private nodeService: NodeService) {
   }
 
@@ -132,13 +133,13 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   /*
-   * Socket positions are cached client-space rects, so they go stale the moment the
-   * plane is transformed. Invalidating here keeps it ordered and synchronous; the
-   * signals rewrite makes geometry derived and removes the need entirely.
+   * Socket positions are cached client-space rects, so a plane transform makes
+   * them stale. Invalidate the cache, then bump geometry — every view that draws
+   * a line reads that signal, so they refresh themselves.
    */
   private afterViewportChange(): void {
     this.socketService.clearPosition();
-    this.cdr.detectChanges();
+    this.graph.touchGeometry();
   }
 
   private capturePlaneSize(): void {
@@ -149,6 +150,29 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     const {width, height} = this.viewportRect();
 
     this.viewport.setPlaneSize(width, height);
+  }
+
+  /* ----------------------------------------------------------------------
+     Reactive reads
+     ----------------------------------------------------------------------
+     These read a revision signal before returning the plain state, which is what
+     gives the view a real dependency. An OnPush view that reads a signal is
+     marked dirty when it bumps, so the manual `detectChanges()` calls — and the
+     `state.x = [...state.x]` identity tricks that existed only to force *ngFor to
+     re-run — are no longer needed. *ngFor diffs contents on every check, so an
+     in-place mutation is picked up once the view is dirty.
+   */
+
+  get children(): FbNodeState[] {
+    this.graph.structure();
+
+    return this.state.children ?? [];
+  }
+
+  get connections(): FbConnection[] {
+    this.graph.connections();
+
+    return this.state.connections ?? [];
   }
 
   @HostListener('pointermove', ['$event'])
@@ -173,10 +197,12 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     }
   }
 
+  /**
+   * @deprecated Nothing needs to ask for a repaint any more — the view tracks the
+   * graph's revision signals. Kept as a no-op-ish nudge for external callers.
+   */
   repaintConnections(): void {
-    this.state.connections = [...this.state.connections!];
-
-    this.cdr.detectChanges();
+    this.graph.touchGeometry();
   }
 
   ngOnInit() {
@@ -198,9 +224,13 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
         if (this.activeSocketTo && this.activeSocketFrom) {
           this.flowService.addConnection(this.buildConnection(this.lastSocketEvent, event));
-          setTimeout(() => {
-            this.socketService.onSocketClick(null);
-          });
+
+          /*
+           * Deferred deliberately, and not a change-detection trick: this clears
+           * the socket selection by pushing through the very Subject whose
+           * subscription we are inside. Doing it synchronously would re-enter.
+           */
+          queueMicrotask(() => this.socketService.onSocketClick(null));
 
         }
 
@@ -235,22 +265,28 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     return this.state.id!;
   }
 
+  /**
+   * Invalidate cached socket positions and let every line-drawing view refresh.
+   *
+   * The setTimeout this used to sit in existed only to defer `detectChanges()`
+   * past the current cycle. Positions are re-measured lazily when the `position`
+   * getter is next read during render, so there is nothing left to wait for.
+   */
   repaint(): void {
-    setTimeout(() => {
-      this.socketService.clearPosition();
-      this.state.connections = [...this.state.connections!];
-      this.cdr.detectChanges();
-    });
+    this.socketService.clearPosition();
+    this.graph.touchGeometry();
   }
 
+  /**
+   * @deprecated The view tracks `graph.structure()`; nothing needs to announce a
+   * child-list change any more.
+   */
   updateChildren(): void {
-    this.state.children = [...this.state.children!];
-    this.state.connections = [...this.state.connections!];
-    this.cdr.detectChanges();
+    this.graph.touch('structure');
   }
 
   deactivate(): void {
-    // this.cdr.detectChanges();
+    // Nothing to do: the view no longer needs telling.
   }
 
   onDragStart(event: PointerEvent, state: FbNodeState): void {
@@ -260,11 +296,18 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   onDragEnd(event: PointerEvent, state: FbNodeState): void {
+    // Move the dragged node last so it paints on top. A genuine reorder, not a
+    // repaint trick — but the engine cannot see it, so announce it.
     this.state.children = [...this.state.children!.filter(child => child !== state), state];
+    this.graph.touch('structure');
   }
 
+  /**
+   * @deprecated The view tracks `graph.structure()`, which the engine bumps when
+   * a node is added.
+   */
   nodeAdded(nodeState: FbNodeState): void {
-    this.cdr.detectChanges();
+    this.graph.touch('structure');
   }
 
   entryClicked(index: number): void {
@@ -279,13 +322,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
     this.flowService.flow.removeConnection(connection, this.state);
   }
-
-  // repaintConnections(): void {
-  //   setTimeout(() => { // TODO: Fix timeout-ception
-  //     this.state.connections = [...this.state.connections!];
-  //     // this.cdr.detectChanges();
-  //   });
-  // }
 
   registerOnChange(onChange: (state: any) => void): void {
     this.onChange = onChange;

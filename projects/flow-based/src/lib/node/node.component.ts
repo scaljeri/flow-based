@@ -1,6 +1,6 @@
 import {
   AfterViewInit,
-  ChangeDetectorRef,
+  signal,
   Component, ElementRef,
   EventEmitter,
   HostBinding, HostListener,
@@ -17,6 +17,7 @@ import { NodeService } from './node-service';
 import { SocketService } from '../socket.service';
 import { SocketComponent } from '../socket/socket.component';
 import { Subscription } from 'rxjs';
+import { FbGraphSignals } from '../graph-signals.service';
 
 @Component({
   selector: 'fb-node',
@@ -28,7 +29,17 @@ import { Subscription } from 'rxjs';
 export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() state!: FbNodeState;
   @Input() scope!: number;
-  @HostBinding('class.is-fullsize') isFullSize = false;
+  /*
+   * Local view state as signals. A signal read from the template (or a host
+   * binding) marks this view dirty when it changes, which is what removes the
+   * markForCheck/detectChanges pairs that used to follow every assignment.
+   */
+  readonly isFullSize = signal(false);
+  readonly isLabel = signal(true);
+
+  @HostBinding('class.is-fullsize') get isFullSizeClass(): boolean {
+    return this.isFullSize();
+  }
 
   @Output() socketClick = new EventEmitter<FbSocket>();
   @Output() updated = new EventEmitter<void>();
@@ -37,11 +48,10 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private observer?: ResizeObserver;
   private posChangedSub!: Subscription;
-  public isLabel = true;
 
   constructor(private element: ElementRef,
-              private cdr: ChangeDetectorRef,
               private flowService: FlowBasedService,
+              private graph: FbGraphSignals,
               public service: NodeService,
               public socketService: SocketService,
               private movable: MovableDirective) {
@@ -70,11 +80,11 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getScope(): number {
-    return this.isFullSize ? this.id : this.scope;
+    return this.isFullSize() ? this.id : this.scope;
   }
 
   isInverted(): boolean {
-    return this.isFullSize && this.isFlow();
+    return this.isFullSize() && this.isFlow();
   }
 
   ngAfterViewInit(): void {
@@ -90,15 +100,21 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setMaxSize(isMax: boolean): void {
-    this.isFullSize = isMax;
-    this.cdr.markForCheck();
+    this.isFullSize.set(isMax);
   }
 
+  /**
+   * @deprecated The view tracks the graph's revision signals; nothing needs to
+   * announce a redraw.
+   */
   connectionsUpdated(): void {
-    this.cdr.detectChanges();
+    this.graph.touchGeometry();
   }
 
   get sockets(): FbSocket[] {
+    // Tracked, so adding or removing a socket refreshes this list on its own.
+    this.graph.sockets();
+
     return this.state.sockets || [];
   }
 
@@ -114,19 +130,21 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.state.id!;
   }
 
+  /** @deprecated The socket list tracks `graph.sockets()`. */
   socketAdded(): void {
-    this.cdr.detectChanges();
+    this.graph.touch('sockets');
   }
 
+  /** @deprecated Line-drawing views track `graph.layout()`. */
   repaintConnections(): void {
-    this.cdr.detectChanges();
+    this.graph.touchGeometry();
   }
 
   hideLabel(): void {
-    this.isLabel = false;
+    this.isLabel.set(false);
   }
 
   showLabel(): void {
-    this.isLabel = true;
+    this.isLabel.set(true);
   }
 }

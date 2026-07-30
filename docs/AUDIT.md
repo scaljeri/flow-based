@@ -567,17 +567,50 @@ Also fixed, found by the strict-mode pass:
 - **Searchable node palette**, sorted by visible title, matching title or registry
   key, with Enter picking a sole match.
 
+### Stage 3b — signals (done)
+
+**§3.4 is closed.** The library contains no `detectChanges()`, no `markForCheck()`
+and no `setTimeout` any more.
+
+The approach matters, because the obvious one is wrong here. `FbNodeState` *is*
+the persisted JSON format — plain, serializable, mutable objects — and wrapping it
+in signals would either destroy that property or force a conversion on every save
+and load. So the state stays plain and the *revision* is reactive:
+
+- `Flow` gained `FbChangeEmitter`, a synchronous emitter with no Angular and no
+  RxJS, emitting `structure` / `connections` / `sockets` / `formats`. The engine
+  stays framework-agnostic, which Stage 4 depends on.
+- `FbGraphSignals` adapts those emissions into signal counters, plus a `geometry`
+  counter the Angular layer bumps for node moves. Views read the counter they
+  depend on — `layout()` for anything that draws a line — and an OnPush view that
+  reads a signal is marked dirty automatically.
+- Because the view now has a real dependency, the `state.x = [...state.x]`
+  identity tricks are gone too: `*ngFor` diffs contents on every check, so an
+  in-place mutation is picked up once the view is dirty.
+- Local view state (`isFullSize`, `isLabel`, socket `active`/`isAccepting`) became
+  signals. The socket flags were being written from an RxJS subscription under
+  OnPush with no `markForCheck` at all — they only landed when some unrelated
+  change-detection pass happened to run.
+- The `setTimeout`s in `NodeService` became `afterNextRender`. That deferral is
+  genuine, not a CD trick: `<fb-connection-lines>` precedes the `<fb-node>`
+  children in the template, so measuring socket positions in the same pass reads
+  the layout from before the nodes updated.
+
+Converting `isFullSize` to a signal made the compiler point at two call sites that
+had been reading the field without calling it — the kind of mistake a plain
+boolean hides.
+
+Verified by an e2e test that drags a node and asserts its connections follow,
+measured as endpoint distance. If the geometry dependency were missing the node
+would still visibly move while its lines stayed behind, which no build and no unit
+test would catch.
+
 ### Still open
 
-- **§3.4 manual change detection — the one genuinely large item left.** 35
-  `detectChanges()` calls and 15 `setTimeout`s remain, and removing them is a
-  redesign rather than a fix: `FbNodeState` *is* the persisted JSON shape, plain
-  mutable objects the engine updates in place, so making it reactive means
-  replacing the state layer with immutable updates or per-property signals and
-  rewriting every consumer. Deriving socket positions from graph coordinates
-  belongs with it, and needs a fixed node-geometry model because nodes are
-  CSS-auto-sized today. `FbViewportService` is the pattern to follow. This gates
-  Stage 4, because it is where the Angular-specific reactivity leaves.
+- **Deriving socket positions from graph coordinates.** Positions are still
+  measured with `getBoundingClientRect` and cached, invalidated by a `geometry`
+  bump. Deriving them needs a fixed node-geometry model, because nodes are
+  CSS-auto-sized today.
 - The library builds in **full** rather than partial compilation mode, because
   `FlowBasedComponent` ↔ `NodeComponent` are mutually recursive and remote scoping
   exists only in full mode. Costs Angular-linker compatibility; the fix is

@@ -7,6 +7,7 @@ import { SocketService } from './socket.service';
 import { deepClone } from './utils/deep-clone';
 import { IdGenerator } from './utils/id-generator';
 import { FbHistoryService } from './utils/history.service';
+import { FbGraphSignals } from './graph-signals.service';
 
 export interface ExternalEvent {
   type: string;
@@ -36,6 +37,7 @@ export class FlowBasedService {
 
   constructor(private socketService: SocketService,
               private history: FbHistoryService,
+              public graph: FbGraphSignals,
               @Inject(FB_NODE_TYPES) private flowTypes: FbNodeTypes,
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
   }
@@ -52,7 +54,7 @@ export class FlowBasedService {
 
   nodeMoved(id: number): void {
     this.socketService.clearPosition(id);
-    this.currentFlow.repaintConnections();
+    this.graph.touchGeometry();
   }
 
   nodeClicked(nodeState: FbNodeState): void {
@@ -63,7 +65,10 @@ export class FlowBasedService {
       return;
     }
 
+    // Reorder for z-order: clicked node paints last. The engine cannot see this,
+    // so announce it.
     state.children = [...state.children!.filter(node => node.id !== nodeState.id), nodeState];
+    this.graph.touch('structure');
   }
 
   addConnection(connection: FbConnection): void {
@@ -100,7 +105,10 @@ export class FlowBasedService {
     }
 
     this.socketService.reset();
-    this.flow = new Flow(this.flowTypes, this.helpers, this.ids).initialize(state);
+    this.flow = new Flow(this.flowTypes, this.helpers, this.ids);
+    // Subscribe before initialize(), so the format propagation it runs is seen.
+    this.graph.bind(this.flow);
+    this.flow.initialize(state);
   }
 
   // May be undefined: a node type with neither a worker nor isFlow has none.
@@ -122,8 +130,8 @@ export class FlowBasedService {
       ...(settings.isFlow ? {children: [], connections: []} : {})
     };
 
+    // No nodeAdded() call: Flow emits 'structure', which the view tracks.
     this.flow.addNode(state, this.currentFlow.state);
-    this.currentFlow.nodeAdded(state);
 
     return state;
   }
@@ -176,8 +184,6 @@ export class FlowBasedService {
     this.captureHistory();
 
     this.flow.removeNode(state.id!);
-    this.currentFlow.updateChildren();
-
     this.unregisterAll(state.id!);
   }
 
@@ -188,10 +194,7 @@ export class FlowBasedService {
   removeSocket(socket: FbSocket): void {
     this.captureHistory();
 
+    // Flow emits 'sockets'; every view that draws a line tracks it.
     this.flow.removeSocket(socket);
-
-    this.flowStack.forEach(flow => {
-      flow.repaintConnections();
-    });
   }
 }

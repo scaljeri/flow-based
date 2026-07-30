@@ -20,6 +20,7 @@ import {
 import * as bezier from './bezier';
 import { SocketService } from '../socket.service';
 import { FbViewportService } from '../viewport/viewport.service';
+import { FbGraphSignals } from '../graph-signals.service';
 
 @Component({
   selector: 'fb-connection-lines',
@@ -60,6 +61,7 @@ export class ConnectionLinesComponent implements OnChanges {
               private viewRef: ChangeDetectorRef,
               private socketService: SocketService,
               @Optional() private viewport: FbViewportService | null,
+              @Optional() private graph: FbGraphSignals | null,
               @Optional() @Inject(FB_SOCKET_COLORS) private colors: FbSocketColors | null) {
   }
 
@@ -107,6 +109,8 @@ export class ConnectionLinesComponent implements OnChanges {
   }
 
   pointerPath(): string {
+    this.graph?.layout();
+
     const anchor = this.socketService.getSocket((this.from || this.to)!);
 
     if (!anchor) {
@@ -172,6 +176,14 @@ export class ConnectionLinesComponent implements OnChanges {
   }
 
   d(connection: FbAnyConnection): string {
+    /*
+     * Establish the dependency here rather than on an @Input. The parent hands us
+     * the same array instance every time — that is the point of dropping the
+     * `[...spread]` identity tricks — so an unchanged reference would never mark
+     * this OnPush view dirty. Reading the signal during template evaluation does.
+     */
+    this.graph?.layout();
+
     let cx1, cx2, cy1, cy2;
 
     // Narrowed via a type guard, so neither branch needs a cast.

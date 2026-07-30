@@ -8,6 +8,7 @@ import {
 } from '../flow-based';
 import { FlowWorker } from './flow-worker';
 import { IdGenerator } from './id-generator';
+import { FbChangeEmitter } from './change-emitter';
 
 interface Node {
   state: FbNodeState;
@@ -41,6 +42,13 @@ export class Flow {
   private connections: FbKeyValues<NodeConnection> = {};
   private sockets: FbKeyValues<number> = {};
   private propagationReport: FbPropagationReport | null = null;
+
+  /**
+   * Fires whenever the graph changes. Deliberately a plain emitter rather than a
+   * signal or Subject: this class must stay framework-agnostic (Stage 4). The
+   * Angular side adapts it in FbGraphSignals.
+   */
+  readonly changes = new FbChangeEmitter();
 
   constructor(private flowTypes: FbNodeTypes,
               private helpers?: FbNodeHelpers,
@@ -85,6 +93,8 @@ export class Flow {
     if (this.connect(connection)) {
       this.rebuildNodeConnections();
     }
+
+    this.changes.emit('connections');
   }
 
   private rebuildNodeConnections(): void {
@@ -111,9 +121,12 @@ export class Flow {
 
     delete this.connections[connection.id];
     state.connections = state.connections!.filter(c => c.id !== connection.id);
+
     if (doRebuild) {
       this.rebuildNodeConnections();
     }
+
+    this.changes.emit('connections');
   }
 
   removeSocket(socket: FbSocket, doRebuild = true): void {
@@ -152,6 +165,8 @@ export class Flow {
     if (doRebuild) {
       this.rebuildNodeConnections();
     }
+
+    this.changes.emit('sockets');
   }
 
   addNode(nodeState: FbNodeState, flowState: FbNodeState): void {
@@ -159,6 +174,8 @@ export class Flow {
     flowState.children = [...flowState.children!, nodeState];
     this.nodes[nodeState.id!] = {state: nodeState, parentId: flowState.id!};
     (nodeState.sockets || []).forEach(s => this.addSocket(s, nodeState.id!));
+
+    this.changes.emit('structure');
   }
 
   removeNode(id: number, doRebuild = true): void {
@@ -207,10 +224,13 @@ export class Flow {
     if (doRebuild) {
       this.rebuildNodeConnections();
     }
+
+    this.changes.emit('structure');
   }
 
   destroy(): void {
     Object.keys(this.workers).forEach(key => this.destroyWorker(Number(key)));
+    this.changes.clear();
   }
 
   private destroyWorker(id: number): void {
@@ -249,6 +269,8 @@ export class Flow {
     }
 
     this.sockets[socket.id!] = nodeId;
+
+    this.changes.emit('sockets');
   }
 
   private createVirtualFlow(nodes: FbNodeState[], parentId: number) {
@@ -318,6 +340,7 @@ export class Flow {
     const maxSteps = Math.max(1000, all.length * 8);
     let steps = 0;
     let converged = true;
+    let changedAny = false;
 
     while (queue.length) {
       if (++steps > maxSteps) {
@@ -331,6 +354,8 @@ export class Flow {
       if (!this.connect(connection)) {
         continue;
       }
+
+      changedAny = true;
 
       for (const socketId of [connection.out, connection.in]) {
         if (socketId === undefined) {
@@ -360,6 +385,10 @@ export class Flow {
       unresolvedSocketIds,
       cycles: this.findCycles(),
     };
+
+    if (changedAny) {
+      this.changes.emit('formats');
+    }
 
     if (!converged) {
       console.warn(

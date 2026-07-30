@@ -12,13 +12,13 @@
            [style.height.px]="viewport.planeSize().height || null"
            [style.transform]="viewport.transform()">
     <fb-connection-lines
-      [connections]="state.connections!"
+      [connections]="connections"
       [pointerMoved]="pointerMove"
       [from]="activeSocketFrom"
       [to]="activeSocketTo"
       (lineClick)="removeConnection($event)"></fb-connection-lines>
 
-    <ng-container *ngFor="let child of state.children; index as i">
+    <ng-container *ngFor="let child of children; index as i">
       <fb-node #node
                class="block"
                fbMovable

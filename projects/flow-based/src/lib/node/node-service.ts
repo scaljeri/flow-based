@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector, afterNextRender } from '@angular/core';
 import { FbNodeEventCallback, FlowBasedService } from '../flow-based.service';
 import { FbElementConnection, FbNodeState, FbNodeWorker, FbSocket, FbSocketDetails } from '../flow-based';
 import { SocketService } from '../socket.service';
@@ -31,7 +31,22 @@ export class NodeService {
   private lastClicked = 0;
 
   constructor(public flowService: FlowBasedService,
-              private socketService: SocketService) {
+              private socketService: SocketService,
+              private injector: Injector) {
+  }
+
+  /**
+   * Run once the DOM has settled.
+   *
+   * These were `setTimeout(...)`, and the deferral is genuinely needed rather
+   * than a change-detection trick: <fb-connection-lines> precedes the <fb-node>
+   * children in the template, so measuring socket positions in the same pass
+   * reads the layout from *before* the nodes updated. afterNextRender is the
+   * hook for exactly this, and unlike a macrotask it is tied to Angular's own
+   * render cycle.
+   */
+  private afterRender(work: () => void): void {
+    afterNextRender(work, { injector: this.injector });
   }
 
   register(callback: FbNodeEventCallback, type?: string): void {
@@ -86,18 +101,13 @@ export class NodeService {
   }
 
   calibrate(): void {
-    setTimeout(() => {
-      this.flowService.nodeMoved(this.id);
-    });
+    this.afterRender(() => this.flowService.nodeMoved(this.id));
   }
 
   addSocket(socket: FbSocket): void {
     this.flowService.flow.addSocket(socket, this.id);
 
-    setTimeout(() => {
-      this.flowService.nodeMoved(this.id);
-      this.nodeComponent.socketAdded();
-    });
+    this.afterRender(() => this.flowService.nodeMoved(this.id));
   }
 
   getSocket(id: number): FbSocketDetails | undefined {
@@ -151,21 +161,19 @@ export class NodeService {
   updateConnections(): void {
     if (this.connections) {
       this.connections = [...this.connections];
-      this.nodeComponent.connectionsUpdated();
+      this.flowService.graph.touchGeometry();
     }
   }
 
   removeConnection(id: number): void {
     this.connections = this.connections!.filter(conn => conn.id !== id);
 
-    setTimeout(() => {
-      this.nodeComponent.repaintConnections();
-    });
+    this.afterRender(() => this.flowService.graph.touchGeometry());
   }
 
   removeConnections(): void {
     delete this.connections;
-    this.nodeComponent.repaintConnections();
+    this.flowService.graph.touchGeometry();
   }
 
   hideLabel(): void {
