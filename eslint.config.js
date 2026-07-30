@@ -71,6 +71,34 @@ module.exports = tseslint.config(
     },
   },
   {
+    /*
+     * The core package is the framework-agnostic half: the node/connection model,
+     * the engine, propagation, serialisation, the worker contract. Keeping it free
+     * of Angular is what lets a Lit, React or Vue shell sit on the same engine —
+     * and a boundary that is only a convention erodes. So the build enforces it.
+     *
+     * rxjs is deliberately allowed: the worker contract is Observable-based and
+     * rxjs is not a framework.
+     */
+    files: ['projects/flow-based-core/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          {
+            group: ['@angular/*', 'lit', 'lit/*', 'lit-element', 'lit-html', 'react', 'react-dom', 'vue'],
+            message:
+              'The core must stay framework-agnostic. Put framework code in the shell package (projects/flow-based) instead.',
+          },
+          {
+            group: ['@scaljeri/flow-based'],
+            message:
+              'The core cannot depend on the Angular package — that is the dependency it exists to invert.',
+          },
+        ],
+      }],
+    },
+  },
+  {
     files: ['**/*.html'],
     extends: [
       ...angular.configs.templateRecommended,

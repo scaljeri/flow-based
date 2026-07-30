@@ -1,4 +1,4 @@
-import { FbNodeState } from '../flow-based';
+import { FbNodeState } from './types';
 
 /**
  * Version of the persisted flow format.

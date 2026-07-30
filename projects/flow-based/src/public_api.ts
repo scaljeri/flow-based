@@ -39,11 +39,5 @@ export * from './lib/drag-drop/draggable/draggable.directive';
 export * from './lib/drag-drop/movable/movable.directive';
 export * from './lib/drag-drop/movable-area/movable-area.directive';
 
-// Graph engine
-export * from './lib/utils/flow';
-export * from './lib/utils/flow-worker';
-export * from './lib/utils/deep-clone';
-export * from './lib/utils/id-generator';
-export * from './lib/utils/change-emitter';
-export * from './lib/utils/serialization';
+// Graph engine — re-exported from @scaljeri/flow-based-core via ./lib/flow-based
 export * from './lib/utils/history.service';

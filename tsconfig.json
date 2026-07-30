@@ -18,7 +18,12 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
-      "@scaljeri/flow-based": ["./dist/flow-based"]
+      "@scaljeri/flow-based": [
+        "./dist/flow-based"
+      ],
+      "@scaljeri/flow-based-core": [
+        "./dist/flow-based-core"
+      ]
     }
   },
   "angularCompilerOptions": {
@@ -29,9 +34,23 @@
   },
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.spec.json" },
-    { "path": "./projects/flow-based/tsconfig.lib.json" },
-    { "path": "./projects/flow-based/tsconfig.spec.json" }
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/flow-based/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/flow-based/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/flow-based-core/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/flow-based-core/tsconfig.spec.json"
+    }
   ]
 }

@@ -5,7 +5,7 @@ import {
   FbNodeWorker,
   FbNodeHelpers,
   FbNodeState, FbSocket
-} from '../flow-based';
+} from './types';
 import { FlowWorker } from './flow-worker';
 import { IdGenerator } from './id-generator';
 import { FbChangeEmitter } from './change-emitter';

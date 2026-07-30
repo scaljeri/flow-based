@@ -2,10 +2,10 @@ import { Inject, Injectable, Optional } from '@angular/core';
 import { FB_NODE_TYPES, FbConnection, FbNodeTypes, FbNodeState, FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbSocket } from './flow-based';
 // Type-only: FlowBasedComponent injects this service (NG3003 cycle otherwise).
 import type { FlowBasedComponent } from './flow-based.component';
-import { Flow } from './utils/flow';
+import { Flow } from '@scaljeri/flow-based-core';
 import { SocketService } from './socket.service';
-import { deepClone } from './utils/deep-clone';
-import { IdGenerator } from './utils/id-generator';
+import { deepClone } from '@scaljeri/flow-based-core';
+import { IdGenerator } from '@scaljeri/flow-based-core';
 import { FbHistoryService } from './utils/history.service';
 import { FbGraphSignals } from './graph-signals.service';
 

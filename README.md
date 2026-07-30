@@ -34,7 +34,8 @@ package's public API is actually complete — which is the point.
 | Command | What it does |
 |---|---|
 | `npm start` | Build the library, then serve the demo |
-| `npm run build:lib` | Build the publishable library into `dist/flow-based` |
+| `npm run build:core` | Build `@scaljeri/flow-based-core` into `dist/flow-based-core` |
+| `npm run build:lib` | Build the core, then the Angular library into `dist/flow-based` |
 | `npm run build:demo` | Build the library, then the demo into `dist/demo` |
 | `npm run watch:lib` | Rebuild the library on change |
 | `npm test` | Unit tests (vitest, via `ng test`) for library and demo |
@@ -54,8 +55,17 @@ package's public API is actually complete — which is the point.
 
 ## Architecture
 
-  * `projects/flow-based` — the library. `utils/flow.ts` is the graph engine: a
-    plain, framework-free class holding nodes, connections, sockets and workers.
+Two published packages in one repo:
+
+  * **`@scaljeri/flow-based-core`** (`projects/flow-based-core`) — the
+    framework-agnostic half: the node/connection model, the graph engine
+    (`flow.ts`), socket-format propagation, serialisation, undo/redo, viewport
+    maths and the worker contract. No Angular; an ESLint rule enforces that, so a
+    Lit, React or Vue shell can sit on the same engine and the same JSON.
+  * **`@scaljeri/flow-based`** (`projects/flow-based`) — the Angular shell:
+    components, directives, injection tokens, and thin signal wrappers over the
+    core's plain classes. Re-exports the core, so Angular consumers still have a
+    single import.
   * `src` — the demo. Node types are registered in `src/app/fb-settings.ts` as
     `{component, settings, worker}`: the component draws the node, the
     `FbNodeWorker` computes it, and they are wired together by RxJS streams per
@@ -82,12 +92,10 @@ Angular 7 → 22 migration record.
 
 ### TODO
 
-  * Replace the manual `detectChanges()` layer with signals (the last large item;
-    see [docs/AUDIT.md](docs/AUDIT.md) — it is a state-layer redesign, and it gates
-    the web-components work)
   * Derive socket positions from graph coordinates instead of measuring the DOM
-  * Support multiple visualisations
-  * Extract a framework-agnostic core, then rewrite the shell in web components (Lit)
+  * A document representation: the same JSON rendered as prose with the node
+    visuals embedded as figures ("FBP as doc")
+  * Rewrite the shell in web components (Lit), with Angular as a thin wrapper
   * Build demo app in Angular, React and Vue
   * Make nodes external components, which can be npm dependencies
   * Real web-worker modules (the fractal worker still stringifies a class)

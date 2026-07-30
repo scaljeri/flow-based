@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy, Signal, computed, signal } from '@angular/core';
-import { Flow } from './utils/flow';
-import { FbChangeKind } from './utils/change-emitter';
+import { Flow } from '@scaljeri/flow-based-core';
+import { FbChangeKind } from '@scaljeri/flow-based-core';
 
 /**
  * Adapts the engine's framework-agnostic change emitter into Angular signals.

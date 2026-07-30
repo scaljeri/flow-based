@@ -1,0 +1,24 @@
+{
+  "name": "@scaljeri/flow-based-core",
+  "version": "0.1.0",
+  "description": "Framework-agnostic graph engine for flow-based programming: the node/connection model, socket-format propagation, serialisation and the worker contract.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scaljeri/flow-based"
+  },
+  "keywords": [
+    "flow-based-programming",
+    "fbp",
+    "dataflow",
+    "graph",
+    "node-editor"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "rxjs": "^6.5.3 || ^7.4.0"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  }
+}

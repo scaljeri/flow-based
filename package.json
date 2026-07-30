@@ -7,14 +7,16 @@
     "ng": "ng",
     "start": "npm run build:lib && ng serve",
     "build": "npm run build:lib",
-    "build:lib": "ng build @scaljeri/flow-based",
+    "build:lib": "npm run build:core && ng build @scaljeri/flow-based",
     "build:demo": "npm run build:lib && ng build flow-based-demo",
     "watch:lib": "ng build @scaljeri/flow-based --watch --configuration development",
-    "test": "ng test @scaljeri/flow-based && ng test flow-based-demo",
+    "test": "ng test @scaljeri/flow-based-core && ng test @scaljeri/flow-based && ng test flow-based-demo",
     "test:lib": "ng test @scaljeri/flow-based",
     "lint": "ng lint",
     "e2e": "playwright test",
-    "ngh": "npm run build:demo -- --base-href \"https://scaljeri.github.io/flow-based/\" && ngh --dir=dist/demo/browser"
+    "ngh": "npm run build:demo -- --base-href \"https://scaljeri.github.io/flow-based/\" && ngh --dir=dist/demo/browser",
+    "build:core": "ng build @scaljeri/flow-based-core",
+    "test:core": "ng test @scaljeri/flow-based-core"
   },
   "dependencies": {
     "@angular/cdk": "^22.1.0",

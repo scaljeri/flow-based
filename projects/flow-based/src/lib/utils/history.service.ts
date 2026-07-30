@@ -1,89 +1,58 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { FbNodeState } from '../flow-based';
+import { Injectable, OnDestroy, computed, signal } from '@angular/core';
+import { FbHistory, FbNodeState } from '@scaljeri/flow-based-core';
 
-export const FB_HISTORY_LIMIT = 50;
+export { FB_HISTORY_LIMIT } from '@scaljeri/flow-based-core';
 
 /**
- * Undo/redo for a flow.
+ * Angular face of {@link FbHistory}.
  *
- * Cheap to do here precisely because a flow is plain serializable JSON: a
- * snapshot is a `structuredClone`, so there is no command log to keep in sync
- * with the engine and no risk of an inverse operation being subtly wrong.
- *
- * The engine mutates state in place, so callers must `capture()` BEFORE a
- * mutation, not after. FlowBasedService does this for add/delete/connect/etc.;
- * drags call `capture()` on drag start, since capturing every pointermove frame
- * would flood the stack.
+ * The snapshot logic is framework-free and lives in the core, so a Lit or React
+ * shell gets undo/redo for nothing; this adapts its change notification into
+ * signals for templates to bind to.
  */
 @Injectable({ providedIn: 'root' })
-export class FbHistoryService {
-  private readonly past = signal<FbNodeState[]>([]);
-  private readonly future = signal<FbNodeState[]>([]);
+export class FbHistoryService implements OnDestroy {
+  /** The framework-free history. Exposed for shells that want it directly. */
+  readonly core = new FbHistory();
 
-  readonly canUndo = computed(() => this.past().length > 0);
-  readonly canRedo = computed(() => this.future().length > 0);
-  readonly depth = computed(() => this.past().length);
+  private readonly revision = signal(0);
+  private readonly unsubscribe = this.core.changes.subscribe(() => this.revision.update(n => n + 1));
 
-  /** Snapshot the current state as an undo point. Discards any redo branch. */
+  readonly canUndo = computed(() => {
+    this.revision();
+
+    return this.core.canUndo;
+  });
+
+  readonly canRedo = computed(() => {
+    this.revision();
+
+    return this.core.canRedo;
+  });
+
+  readonly depth = computed(() => {
+    this.revision();
+
+    return this.core.depth;
+  });
+
   capture(state: FbNodeState | undefined | null): void {
-    if (!state) {
-      return;
-    }
-
-    const snapshot = structuredClone(state);
-
-    this.past.update(stack => {
-      const next = [...stack, snapshot];
-
-      // Drop the oldest entries rather than growing without bound.
-      return next.length > FB_HISTORY_LIMIT ? next.slice(next.length - FB_HISTORY_LIMIT) : next;
-    });
-
-    if (this.future().length) {
-      this.future.set([]);
-    }
+    this.core.capture(state);
   }
 
-  /**
-   * Step back. `current` is the live state, which becomes the redo entry.
-   * Returns a fresh object, so assigning it to an `@Input()` is seen as a change.
-   */
   undo(current: FbNodeState | undefined | null): FbNodeState | null {
-    const stack = this.past();
-
-    if (!stack.length) {
-      return null;
-    }
-
-    const previous = stack[stack.length - 1];
-    this.past.set(stack.slice(0, -1));
-
-    if (current) {
-      this.future.update(f => [...f, structuredClone(current)]);
-    }
-
-    return structuredClone(previous);
+    return this.core.undo(current);
   }
 
   redo(current: FbNodeState | undefined | null): FbNodeState | null {
-    const stack = this.future();
-
-    if (!stack.length) {
-      return null;
-    }
-
-    const next = stack[stack.length - 1];
-    this.future.set(stack.slice(0, -1));
-
-    if (current) {
-      this.past.update(p => [...p, structuredClone(current)]);
-    }
-
-    return structuredClone(next);
+    return this.core.redo(current);
   }
 
   clear(): void {
-    this.past.set([]);
-    this.future.set([]);
+    this.core.clear();
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribe();
   }
 }

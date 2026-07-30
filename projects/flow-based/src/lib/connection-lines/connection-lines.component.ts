@@ -17,7 +17,7 @@ import {
   FbSocketColors,
   isElementConnection,
 } from '../flow-based';
-import * as bezier from './bezier';
+import * as bezier from '@scaljeri/flow-based-core';
 import { SocketService } from '../socket.service';
 import { FbViewportService } from '../viewport/viewport.service';
 import { FbGraphSignals } from '../graph-signals.service';

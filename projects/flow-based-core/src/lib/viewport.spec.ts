@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { FB_ZOOM_MAX, FB_ZOOM_MIN, FbViewportService } from './viewport.service';
+import { FB_ZOOM_MAX, FB_ZOOM_MIN, FbViewport } from './viewport';
 
 describe('FbViewportService', () => {
-  let viewport: FbViewportService;
+  let viewport: FbViewport;
 
   beforeEach(() => {
-    viewport = new FbViewportService();
+    viewport = new FbViewport();
   });
 
   it('starts at 1:1 with no pan', () => {
-    expect(viewport.zoom()).toBe(1);
-    expect(viewport.pan()).toEqual({ x: 0, y: 0 });
+    expect(viewport.zoom).toBe(1);
+    expect(viewport.pan).toEqual({ x: 0, y: 0 });
     expect(viewport.transform()).toBe('translate(0px, 0px) scale(1)');
   });
 
@@ -24,17 +24,17 @@ describe('FbViewportService', () => {
 
   it('clamps zoom to the supported range', () => {
     viewport.setZoom(100);
-    expect(viewport.zoom()).toBe(FB_ZOOM_MAX);
+    expect(viewport.zoom).toBe(FB_ZOOM_MAX);
 
     viewport.setZoom(0.0001);
-    expect(viewport.zoom()).toBe(FB_ZOOM_MIN);
+    expect(viewport.zoom).toBe(FB_ZOOM_MIN);
   });
 
   it('accumulates pan', () => {
     viewport.panBy(10, 10);
     viewport.panBy(-3, 7);
 
-    expect(viewport.pan()).toEqual({ x: 7, y: 17 });
+    expect(viewport.pan).toEqual({ x: 7, y: 17 });
   });
 
   it('keeps the point under the cursor fixed while zooming', () => {
@@ -43,7 +43,7 @@ describe('FbViewportService', () => {
 
     viewport.zoomAt(2, cursor);
 
-    expect(viewport.zoom()).toBe(2);
+    expect(viewport.zoom).toBe(2);
     expect(viewport.toPlane(cursor).x).toBeCloseTo(before.x, 6);
     expect(viewport.toPlane(cursor).y).toBeCloseTo(before.y, 6);
   });
@@ -65,13 +65,13 @@ describe('FbViewportService', () => {
     viewport.setZoom(FB_ZOOM_MAX);
 
     const cursor = { x: 100, y: 100 };
-    const panBefore = viewport.pan();
+    const panBefore = viewport.pan;
 
     // Already at the ceiling: nothing should move.
     viewport.zoomAt(4, cursor);
 
-    expect(viewport.zoom()).toBe(FB_ZOOM_MAX);
-    expect(viewport.pan()).toEqual(panBefore);
+    expect(viewport.zoom).toBe(FB_ZOOM_MAX);
+    expect(viewport.pan).toEqual(panBefore);
   });
 
   it('anchors correctly when the step is partially clamped', () => {
@@ -83,7 +83,7 @@ describe('FbViewportService', () => {
     // 3 * 4 = 12, clamped to FB_ZOOM_MAX; the pan must use the applied ratio.
     viewport.zoomAt(4, cursor);
 
-    expect(viewport.zoom()).toBe(FB_ZOOM_MAX);
+    expect(viewport.zoom).toBe(FB_ZOOM_MAX);
     expect(viewport.toPlane(cursor).x).toBeCloseTo(before.x, 6);
     expect(viewport.toPlane(cursor).y).toBeCloseTo(before.y, 6);
   });
@@ -100,7 +100,7 @@ describe('FbViewportService', () => {
     viewport.panBy(100, 100);
     viewport.reset();
 
-    expect(viewport.zoom()).toBe(1);
-    expect(viewport.pan()).toEqual({ x: 0, y: 0 });
+    expect(viewport.zoom).toBe(1);
+    expect(viewport.pan).toEqual({ x: 0, y: 0 });
   });
 });

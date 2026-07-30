@@ -3,7 +3,9 @@
   "version": 1,
   "cli": {
     "packageManager": "npm",
-    "schematicCollections": ["angular-eslint"]
+    "schematicCollections": [
+      "angular-eslint"
+    ]
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -25,7 +27,9 @@
             "index": "src/index.html",
             "tsConfig": "tsconfig.app.json",
             "outputPath": "dist/demo",
-            "polyfills": ["zone.js"],
+            "polyfills": [
+              "zone.js"
+            ],
             "inlineStyleLanguage": "scss",
             "assets": [
               {
@@ -39,11 +43,20 @@
                 "output": "assets"
               }
             ],
-            "styles": ["src/styles.scss"],
+            "styles": [
+              "src/styles.scss"
+            ],
             "stylePreprocessorOptions": {
-              "includePaths": ["src/styles", "projects/flow-based/src/lib"],
+              "includePaths": [
+                "src/styles",
+                "projects/flow-based/src/lib"
+              ],
               "sass": {
-                "silenceDeprecations": ["import", "global-builtin", "slash-div"]
+                "silenceDeprecations": [
+                  "import",
+                  "global-builtin",
+                  "slash-div"
+                ]
               }
             }
           },
@@ -95,7 +108,10 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
           }
         }
       }
@@ -130,6 +146,40 @@
             "lintFilePatterns": [
               "projects/flow-based/**/*.ts",
               "projects/flow-based/**/*.html"
+            ]
+          }
+        }
+      }
+    },
+    "@scaljeri/flow-based-core": {
+      "projectType": "library",
+      "root": "projects/flow-based-core",
+      "sourceRoot": "projects/flow-based-core/src",
+      "prefix": "fbc",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-core/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-core/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-core/tsconfig.spec.json"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-core/**/*.ts"
             ]
           }
         }

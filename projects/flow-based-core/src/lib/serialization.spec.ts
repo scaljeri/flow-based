@@ -7,7 +7,7 @@ import {
   serializeFlow,
   serializeFlowToJson,
 } from './serialization';
-import { FbNodeState } from '../flow-based';
+import { FbNodeState } from './types';
 
 const flow = (): FbNodeState => ({
   id: 1,
