@@ -631,11 +631,40 @@ throughout. Only element-to-element lines still measure, and they must: they are
 drawn between two arbitrary DOM nodes inside a single node's subtree, with no
 graph position to compute from.
 
+## Stage 4b — one editor instead of two
+
+The Angular package is now a wrapper over the web-component shell rather than a
+second implementation of it. `angularNodeMount` boots an Angular component into
+the shell's host with a `NodeService` backed by `FbNodeApi`, so existing node
+types are untouched. Deleted: NodeComponent, SocketComponent,
+ConnectionLinesComponent, three drag-and-drop directives, DynamicComponentDirective
+and four services — about 1,200 duplicated lines.
+
+Two findings were only visible by looking at the running app, not by building it:
+
+- **Shadow DOM silently ate node styling.** Node content was mounted inside
+  shadow roots, which `document` stylesheets cannot match into. Material's M3
+  styling is mostly custom properties, and those inherit across the boundary — so
+  the cards looked right while `.material-icons` did not apply and every node icon
+  rendered as clipped text. Nodes now render into the light DOM and are slotted
+  into the plane.
+- **Border vs. geometry.** An absolutely positioned child is placed against its
+  containing block's padding box, so a border on the node host offsets every
+  socket, while `FbGeometry` measures the border box. The frame moved to an inner
+  element and the sockets stayed on the host, so the two share an origin by
+  construction.
+
+Also fixed: both Playwright web servers rebuilt `dist/flow-based-core`
+concurrently, and a compiler reading it mid-write reported missing exports that
+plainly existed. One build now, everything waiting on it.
+
+### Debt paid off here
+- **All three packages build in `partial` compilation mode again.** Full mode was
+  forced by the `FlowBasedComponent` ↔ `NodeComponent` template cycle, since
+  remote scoping exists only in full mode. The cycle went with `NodeComponent`,
+  and with it the Angular-linker incompatibility.
+
 ### Still open
-- The library builds in **full** rather than partial compilation mode, because
-  `FlowBasedComponent` ↔ `NodeComponent` are mutually recursive and remote scoping
-  exists only in full mode. Costs Angular-linker compatibility; the fix is
-  structural and belongs with Stage 3/4.
 - `ng lint` reports 0 errors but ~265 warnings, concentrated in four families
   (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,
   `no-empty-function`) that Stages 3–4 remove. `config: any` is the big one: node

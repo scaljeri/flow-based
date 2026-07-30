@@ -4,6 +4,11 @@
     "declarationMap": false
   },
   "angularCompilerOptions": {
-    "compilationMode": "full"
+    /*
+     * "partial" is the publishable mode, and there is nothing here that needs
+     * more: this package contains no Angular components at all, only Lit
+     * elements over the framework-free core.
+     */
+    "compilationMode": "partial"
   }
 }

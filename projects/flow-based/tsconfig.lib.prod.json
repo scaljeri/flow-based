@@ -5,24 +5,15 @@
   },
   "angularCompilerOptions": {
     /*
-     * NOTE: "full" rather than the recommended "partial".
+     * "partial", the recommended mode, which this package could not use while it
+     * contained its own view layer: FlowBasedComponent and NodeComponent were
+     * mutually recursive templates, and the "remote scoping" that resolves such a
+     * cycle is only implemented for full compilation. Full compilation costs
+     * Angular-linker compatibility, which is a real constraint on consumers.
      *
-     * FlowBasedComponent and NodeComponent are mutually recursive by design —
-     * that recursion IS the hierarchical "leveling" feature: a flow renders
-     * <fb-node> children, and a composite node renders a nested <xxl-flow-based>.
-     * Angular resolves such cyclic NgModule component references with "remote
-     * scoping", which is only implemented for full compilation; partial mode
-     * fails with NG3003.
-     *
-     * Trade-off: a full-compiled package is not processed by the Angular linker,
-     * so consumers must be on the same Angular major (22.x) as this build.
-     * Acceptable at 0.1.0, but it is real debt.
-     *
-     * Removing it means breaking the file-level cycle — rendering the nested flow
-     * imperatively instead of via a static <xxl-flow-based> tag, so the compiler
-     * never needs to add the cyclic import. That belongs with the Stage 3/4 shell
-     * rework, not a toolchain migration. See docs/AUDIT.md.
+     * The cycle went with NodeComponent. This package now declares one component,
+     * whose template is a web component.
      */
-    "compilationMode": "full"
+    "compilationMode": "partial"
   }
 }
