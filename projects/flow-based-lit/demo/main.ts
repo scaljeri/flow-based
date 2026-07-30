@@ -113,6 +113,42 @@ editor.load({
   ],
 });
 
+/*
+ * `?nodes=N` builds a large flow for benchmarking. Real editors get big, and the
+ * cost that matters is a drag frame, not first paint.
+ */
+const bulk = Number(new URLSearchParams(location.search).get('nodes') ?? 0);
+
+if (bulk > 0) {
+  const children = [];
+  const connections = [];
+
+  for (let i = 0; i < bulk; i++) {
+    children.push({
+      id: 1000 + i,
+      type: i % 3 === 2 ? 'scope' : (i % 2 ? 'sink' : 'source'),
+      title: `Node ${i}`,
+      position: { x: (i % 12) * 7 + 2, y: Math.floor(i / 12) * 9 + 2 },
+      sockets: [
+        { id: 100000 + i * 2, type: 'in' as const, format: 'number' },
+        { id: 100001 + i * 2, type: 'out' as const, format: 'number' },
+      ],
+    });
+
+    if (i > 0) {
+      connections.push({
+        id: 5000 + i,
+        from: 1000 + i - 1,
+        to: 1000 + i,
+        out: 100001 + (i - 1) * 2,
+        in: 100000 + i * 2,
+      });
+    }
+  }
+
+  editor.load({ id: 1, type: 'flow', title: `Benchmark (${bulk} nodes)`, sockets: [], children, connections });
+}
+
 const app = document.getElementById('app')!;
 
 const canvas = document.createElement('fb-flow-canvas') as FbFlowCanvasElement;

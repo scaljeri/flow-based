@@ -1,6 +1,8 @@
 import { LitElement, PropertyValues, css, html, svg, nothing } from 'lit';
 import { FbAnyConnection, FbConnection, FbPosition, derivative, gradient, normal } from '@scaljeri/flow-based-core';
-import { FbEditor } from './editor';
+import { repeat } from 'lit/directives/repeat.js';
+import { guard } from 'lit/directives/guard.js';
+import { FbEditor, FbEditorChange } from './editor';
 
 /**
  * The connection layer.
@@ -73,7 +75,15 @@ export class FbConnectionsElement extends LitElement {
 
   private subscribe(): void {
     this.unsubscribe?.();
-    this.unsubscribe = this.editor?.changes.subscribe(() => this.requestUpdate());
+    this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
+      // Anything that can move a line. Not 'history' or 'formats' on their own —
+      // those arrive alongside a structure or connection change anyway.
+      if (change.kind === 'geometry' || change.kind === 'connections'
+        || change.kind === 'sockets' || change.kind === 'structure'
+        || change.kind === 'interaction' || change.kind === 'viewport') {
+        this.requestUpdate();
+      }
+    });
   }
 
   protected override render() {
@@ -81,12 +91,48 @@ export class FbConnectionsElement extends LitElement {
       return nothing;
     }
 
+    /*
+     * Keyed, and guarded on the geometry each curve actually depends on.
+     *
+     * Dragging one node changes two curves, but re-rendering rebuilt all of them:
+     * at 500 connections that was ~2000 bindings re-evaluated per frame for two
+     * that moved. `guard` skips a sub-template whose inputs are unchanged, so the
+     * cost of a drag stops scaling with the size of the graph.
+     */
     return html`
       <svg xmlns="http://www.w3.org/2000/svg">
-        ${this.editor.connections.map(connection => this.renderConnection(connection))}
+        ${repeat(
+          this.editor.connections,
+          connection => connection.id,
+          connection => guard([this.geometryKey(connection)], () => this.renderConnection(connection)),
+        )}
         ${this.renderPending()}
       </svg>
     `;
+  }
+
+  /**
+   * Everything a curve's shape and colour depend on, as one comparable value.
+   * Cheap to build and cheap to compare — much cheaper than rebuilding the path.
+   */
+  private geometryKey(connection: FbConnection): string {
+    const { geometry } = this.editor;
+    const from = this.editor.nodeById(connection.from);
+    const to = this.editor.nodeById(connection.to);
+
+    if (!from || !to) {
+      return 'x';
+    }
+
+    const fp = from.position ?? { x: 0, y: 0 };
+    const tp = to.position ?? { x: 0, y: 0 };
+    const fs = from.id === undefined ? undefined : geometry.getNodeSize(from.id);
+    const ts = to.id === undefined ? undefined : geometry.getNodeSize(to.id);
+    const plane = this.editor.viewport.planeSize;
+
+    return `${fp.x},${fp.y},${fs?.width},${fs?.height},${tp.x},${tp.y},${ts?.width},${ts?.height},`
+      + `${connection.out},${connection.in},${plane.width},${plane.height},`
+      + `${from.sockets?.length},${to.sockets?.length}`;
   }
 
   private renderConnection(connection: FbConnection) {

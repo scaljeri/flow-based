@@ -1,6 +1,7 @@
 import { LitElement, PropertyValues, css, html, nothing } from 'lit';
 import { FbNodeState, FbPosition } from '@scaljeri/flow-based-core';
-import { FbEditor } from './editor';
+import { repeat } from 'lit/directives/repeat.js';
+import { FbEditor, FbEditorChange } from './editor';
 import './connections-element';
 import './node-element';
 
@@ -70,7 +71,13 @@ export class FbFlowCanvasElement extends LitElement {
 
   private subscribe(): void {
     this.unsubscribe?.();
-    this.unsubscribe = this.editor?.changes.subscribe(() => this.requestUpdate());
+    this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
+      // The canvas owns the node list and the plane transform. A node moving or
+      // resizing is the node's and the connection layer's business, not its.
+      if (change.kind === 'structure' || change.kind === 'viewport') {
+        this.requestUpdate();
+      }
+    });
   }
 
   /* ----------------------------------------------------------------------
@@ -158,9 +165,13 @@ export class FbFlowCanvasElement extends LitElement {
         @line-click=${this.onLineClick}>
         <fb-connections .editor=${this.editor}></fb-connections>
 
-        ${this.editor.children.map((child: FbNodeState) => html`
-          <fb-node-box .editor=${this.editor} .state=${child}></fb-node-box>
-        `)}
+        ${repeat(
+          this.editor.children,
+          (child: FbNodeState) => child.id ?? child,
+          (child: FbNodeState) => html`
+            <fb-node-box .editor=${this.editor} .state=${child}></fb-node-box>
+          `,
+        )}
       </div>
     `;
   }

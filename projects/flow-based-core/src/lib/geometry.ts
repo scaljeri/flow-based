@@ -47,7 +47,13 @@ export const FB_DEFAULT_SOCKET_LAYOUT: FbSocketLayout = {
 export class FbGeometry {
   private readonly sizes = new Map<number, FbSize>();
 
-  readonly changes = new FbEmitter<void>();
+  /**
+   * Fires with the node whose size changed, or `undefined` when positions moved
+   * in bulk. Consumers that only care about one node — the node itself — can
+   * then ignore everything else, which is what keeps a drag from costing a
+   * re-render per node on the canvas.
+   */
+  readonly changes = new FbEmitter<number | undefined>();
 
   constructor(readonly layout: FbSocketLayout = FB_DEFAULT_SOCKET_LAYOUT) {}
 
@@ -61,7 +67,7 @@ export class FbGeometry {
     }
 
     this.sizes.set(nodeId, size);
-    this.changes.emit();
+    this.changes.emit(nodeId);
   }
 
   getNodeSize(nodeId: number): FbSize | undefined {
@@ -70,13 +76,13 @@ export class FbGeometry {
 
   forgetNode(nodeId: number): void {
     if (this.sizes.delete(nodeId)) {
-      this.changes.emit();
+      this.changes.emit(nodeId);
     }
   }
 
   clear(): void {
     this.sizes.clear();
-    this.changes.emit();
+    this.changes.emit(undefined);
   }
 
   /** Top-left of a node in plane pixels. */

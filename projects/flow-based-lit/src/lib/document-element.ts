@@ -8,7 +8,7 @@ import {
   documentFor,
   paragraphsOf,
 } from '@scaljeri/flow-based-core';
-import { FbEditor } from './editor';
+import { FbEditor, FbEditorChange } from './editor';
 
 /**
  * The same flow, read as a document.
@@ -101,7 +101,13 @@ export class FbFlowDocumentElement extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.unsubscribe = this.editor?.changes.subscribe(() => this.requestUpdate());
+    this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
+      // A document has no connections and no viewport; only the set of nodes and
+      // their prose can change what it says.
+      if (change.kind === 'structure' || change.kind === 'sockets') {
+        this.requestUpdate();
+      }
+    });
 
     // Re-attached after being moved in the DOM; see FbNodeElement.
     if (this.hasUpdated) {

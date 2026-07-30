@@ -1,6 +1,6 @@
 import { LitElement, PropertyValues, css, html, nothing } from 'lit';
 import { FbNodeApi, FbNodeHandle, FbNodeState, FbSocket } from '@scaljeri/flow-based-core';
-import { FbEditor } from './editor';
+import { FbEditor, FbEditorChange } from './editor';
 
 /**
  * One node: chrome, dragging, socket dots, and a host element into which the
@@ -101,7 +101,7 @@ export class FbNodeElement extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.unsubscribe = this.editor?.changes.subscribe(() => this.requestUpdate());
+    this.unsubscribe = this.editor?.changes.subscribe(change => this.onChange(change));
 
     /*
      * A custom element can be MOVED in the DOM, which fires disconnect then
@@ -137,6 +137,34 @@ export class FbNodeElement extends LitElement {
     }
 
     this.applyPosition();
+  }
+
+  /**
+   * Re-render only for what this node actually depends on.
+   *
+   * Notably NOT every geometry change: another node moving cannot alter this
+   * one's markup, and its own drag applies the new position directly to the style
+   * rather than through a render. Only its own SIZE matters, because socket
+   * placement is derived from it.
+   */
+  private onChange(change: FbEditorChange): void {
+    switch (change.kind) {
+      case 'structure':
+      case 'sockets':
+      case 'formats':
+      case 'interaction':
+        this.requestUpdate();
+        break;
+
+      case 'geometry':
+        if (change.nodeId === this.state?.id) {
+          this.requestUpdate();
+        }
+        break;
+
+      default:
+        break;
+    }
   }
 
   /* ----------------------------------------------------------------------
@@ -258,8 +286,12 @@ export class FbNodeElement extends LitElement {
     this.dragFrom = { x: event.clientX, y: event.clientY };
 
     this.applyPosition();
-    // Positions feed socket geometry, so every line has to follow.
-    this.editor.geometry.changes.emit();
+    /*
+     * Positions feed socket geometry, so the lines have to follow. Emitted
+     * without a node id: this is a position change, not a size change, so nodes
+     * ignore it and only the connection layer redraws.
+     */
+    this.editor.geometry.changes.emit(undefined);
   };
 
   private onPointerUp = (): void => {

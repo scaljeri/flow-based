@@ -14,6 +14,29 @@ import {
   IdGenerator,
 } from '@scaljeri/flow-based-core';
 
+/**
+ * What changed, so a view can subscribe to only what concerns it.
+ *
+ * One undifferentiated "something changed" is the easy design and the wrong one:
+ * with 200 nodes it cost a re-render per node per drag frame — 17.8 ms a frame,
+ * degrading linearly. A node cares about its own sockets and its own size; it does
+ * not care that a different node moved.
+ */
+export interface FbEditorChange {
+  kind:
+    | 'structure'
+    | 'connections'
+    | 'sockets'
+    | 'formats'
+    /** Positions or sizes moved. `nodeId` is set when it was one node's size. */
+    | 'geometry'
+    | 'viewport'
+    | 'history'
+    /** The pending connection, or the pointer while one is being drawn. */
+    | 'interaction';
+  nodeId?: number;
+}
+
 /** A socket the user has clicked, waiting to be joined to another. */
 export interface FbPendingSocket {
   socket: FbSocket;
@@ -41,7 +64,7 @@ export class FbEditor {
   readonly geometry = new FbGeometry();
   readonly viewport = new FbViewport();
   readonly history = new FbHistory();
-  readonly changes = new FbEmitter<void>();
+  readonly changes = new FbEmitter<FbEditorChange>();
 
   readonly types: FbNodeTypes<FbNodeMount>;
   readonly socketColors: Record<string, string>;
@@ -63,9 +86,9 @@ export class FbEditor {
     this.helpers = options.helpers;
     this.socketColors = options.socketColors ?? {};
 
-    this.geometry.changes.subscribe(() => this.changes.emit());
-    this.viewport.changes.subscribe(() => this.changes.emit());
-    this.history.changes.subscribe(() => this.changes.emit());
+    this.geometry.changes.subscribe(nodeId => this.changes.emit({ kind: 'geometry', nodeId }));
+    this.viewport.changes.subscribe(() => this.changes.emit({ kind: 'viewport' }));
+    this.history.changes.subscribe(() => this.changes.emit({ kind: 'history' }));
   }
 
   load(state: FbNodeState): void {
@@ -81,12 +104,12 @@ export class FbEditor {
 
     this.state = state;
     this.flow = new Flow(this.types, this.helpers, this.ids);
-    this.unbind = this.flow.changes.subscribe(() => this.changes.emit());
+    this.unbind = this.flow.changes.subscribe(kind => this.changes.emit({ kind }));
     this.flow.initialize(state);
 
     this.pending = null;
     this.pointer = null;
-    this.changes.emit();
+    this.changes.emit({ kind: 'structure' });
   }
 
   get children(): FbNodeState[] {
@@ -168,7 +191,7 @@ export class FbEditor {
   socketClicked(socket: FbSocket, nodeId: number): void {
     if (!this.pending) {
       this.pending = { socket, nodeId };
-      this.changes.emit();
+      this.changes.emit({ kind: 'interaction' });
 
       return;
     }
@@ -191,14 +214,19 @@ export class FbEditor {
   }
 
   cancelPending(): void {
+    if (!this.pending && !this.pointer) {
+      // Every background press would otherwise wake every subscriber.
+      return;
+    }
+
     this.pending = null;
     this.pointer = null;
-    this.changes.emit();
+    this.changes.emit({ kind: 'interaction' });
   }
 
   setPointer(point: FbPosition | null): void {
     this.pointer = point;
-    this.changes.emit();
+    this.changes.emit({ kind: 'interaction' });
   }
 
   /** True when `socket` could legally receive the pending connection. */

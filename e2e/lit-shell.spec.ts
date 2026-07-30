@@ -269,3 +269,66 @@ test('switches back from document to flow without losing the graph', async ({ pa
   expect(await nodeCount(page)).toBe(3);
   expect(await worstEndpointError(page)).toBeLessThan(1);
 });
+
+/**
+ * Guards the performance work, not just the correctness of it.
+ *
+ * Dragging one node must not re-render every other node, and must not rebuild
+ * every curve. Both are easy to reintroduce with a one-line subscription change
+ * and impossible to notice by looking — the editor stays correct, it just gets
+ * slower as graphs grow. So the invariant is asserted rather than assumed.
+ */
+test('a drag does not cost work proportional to the size of the graph', async ({ page }) => {
+  await page.goto(`${HARNESS}?nodes=200`);
+  await expect(canvas(page)).toBeVisible();
+
+  const result = await page.evaluate(async () => {
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+    const nodes = [...root.querySelectorAll('fb-node-box')] as (HTMLElement & {
+      update?: (c: unknown) => void;
+      updateComplete: Promise<boolean>;
+    })[];
+    const conn = root.querySelector('fb-connections') as HTMLElement & { updateComplete: Promise<boolean> };
+    const editor = window.fbEditor;
+
+    let nodeRenders = 0;
+
+    for (const node of nodes) {
+      const original = node.update?.bind(node);
+
+      if (original) {
+        node.update = c => {
+          nodeRenders++;
+          return original(c);
+        };
+      }
+    }
+
+    await conn.updateComplete;
+
+    const FRAMES = 20;
+    const start = performance.now();
+
+    for (let i = 0; i < FRAMES; i++) {
+      editor.children[0].position!.x += 0.02;
+      editor.geometry.changes.emit(undefined);
+      await conn.updateComplete;
+    }
+
+    return {
+      nodes: nodes.length,
+      nodeRenders,
+      msPerUpdate: (performance.now() - start) / FRAMES,
+    };
+  });
+
+  expect(result.nodes).toBe(200);
+
+  // Moving one node re-renders none of them: a node's markup cannot depend on
+  // where a different node sits.
+  expect(result.nodeRenders).toBe(0);
+
+  // Generous, because CI machines vary — but it was 4.3 ms before the curves were
+  // guarded, so a regression to rebuilding everything would blow straight past it.
+  expect(result.msPerUpdate).toBeLessThan(3);
+});
