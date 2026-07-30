@@ -605,12 +605,33 @@ measured as endpoint distance. If the geometry dependency were missing the node
 would still visibly move while its lines stayed behind, which no build and no unit
 test would catch.
 
-### Still open
+### Stage 3b (part 2) — socket positions are computed, not measured
 
-- **Deriving socket positions from graph coordinates.** Positions are still
-  measured with `getBoundingClientRect` and cached, invalidated by a `geometry`
-  bump. Deriving them needs a fixed node-geometry model, because nodes are
-  CSS-auto-sized today.
+`FbGeometry` in the core now derives socket positions from the graph: node
+position (a percentage of the plane) plus the node's rendered size plus the
+socket's index in its group. The shell reports sizes from a ResizeObserver — the
+one thing arithmetic cannot supply, because nodes size themselves to their
+content — and everything downstream is maths.
+
+The layout constants reproduce the shell's stylesheet exactly (`top: 6px`,
+`height: calc(100% - 12px)`, `space-around`, and the left/right offsets), so this
+changed nothing on screen. Measured against the real DOM at several zoom levels,
+computed positions agree with actual socket centres to **0.015 px** — sub-pixel,
+and the residue is the browser's own rounding in a flex column.
+
+What that removes: `getBoundingClientRect` from the entire graph-connection render
+path, the cached `_position` on every socket, and `SocketService.clearPosition()`,
+which used to walk every registered socket — including ones belonging to destroyed
+components — on every node move. Connection geometry is now deterministic and
+testable without a browser.
+
+The pointer for a pending connection is converted to plane space by the component
+that owns the viewport, so the renderer works in one coordinate system
+throughout. Only element-to-element lines still measure, and they must: they are
+drawn between two arbitrary DOM nodes inside a single node's subtree, with no
+graph position to compute from.
+
+### Still open
 - The library builds in **full** rather than partial compilation mode, because
   `FlowBasedComponent` ↔ `NodeComponent` are mutually recursive and remote scoping
   exists only in full mode. Costs Angular-linker compatibility; the fix is

@@ -53,7 +53,6 @@ export class FlowBasedService {
   }
 
   nodeMoved(id: number): void {
-    this.socketService.clearPosition(id);
     this.graph.touchGeometry();
   }
 

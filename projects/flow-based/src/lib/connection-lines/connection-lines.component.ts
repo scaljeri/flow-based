@@ -40,15 +40,15 @@ export class ConnectionLinesComponent implements OnChanges {
   @Input() from: number | null = null;
   @Input() to: number | null = null;
 
-  @Input() set pointerMoved(event: PointerEvent) {
-    if (event) {
-      // clientX/clientY, not pageX/pageY: socket positions come from
-      // getBoundingClientRect, which is client space. The two only agreed while
-      // the page was unscrolled.
-      this.pointer = {x: event.clientX, y: event.clientY};
-    } else {
-      this.pointer = null;
-    }
+  /**
+   * The pending connection's free end, in PLANE coordinates.
+   *
+   * The parent converts it, because only the parent knows the viewport. This used
+   * to take a raw PointerEvent and read pageX/pageY off it, against socket
+   * positions that were client-space — the two only agreed on an unscrolled page.
+   */
+  @Input() set pointerMoved(point: FbPosition | null) {
+    this.pointer = point ?? null;
   }
 
   @Output() lineClick = new EventEmitter<FbAnyConnection>();
@@ -68,17 +68,11 @@ export class ConnectionLinesComponent implements OnChanges {
   /**
    * Client-space point to this SVG's own coordinate space.
    *
-   * The SVG lives inside the zoomed plane, so CSS already scales whatever is
-   * drawn. Socket positions, however, come from getBoundingClientRect and are
-   * therefore *already* scaled — dividing by the zoom is what stops the transform
-   * being applied twice.
-   *
-   * The rect is re-read per call because pan and zoom move it and there is no
-   * change-detection signal for that. Cheap enough at demo scale (transforms do
-   * not trigger layout), and it goes away once geometry is derived from graph
-   * coordinates instead of measured.
+   * Only element-to-element lines still need this: those are drawn between two
+   * arbitrary DOM nodes inside a single node's own subtree, so there is no graph
+   * position to compute from. Graph connections no longer measure anything.
    */
-  private toPlane(clientX: number, clientY: number): FbPosition {
+  private toSvgLocal(clientX: number, clientY: number): FbPosition {
     const rect: DOMRect = this.element.nativeElement.getBoundingClientRect();
     const zoom = this.viewport?.zoom() ?? 1;
 
@@ -113,27 +107,23 @@ export class ConnectionLinesComponent implements OnChanges {
 
     const anchor = this.socketService.getSocket((this.from || this.to)!);
 
-    if (!anchor) {
+    if (!anchor || !this.pointer) {
       return '';
     }
 
-    const socket = anchor.comp.position;
-    let output = '';
-
-    if (!this.pointer) {
-      return output;
-    }
-
-    const start = this.toPlane(socket.x, socket.y);
-    const cursor = this.toPlane(this.pointer.x, this.pointer.y);
+    // Both are already plane coordinates.
+    const start = anchor.comp.position;
+    const cursor = this.pointer;
 
     if (this.from) {
-      output = this.computeD(0, start.x, start.y, cursor.x, cursor.y);
-    } else if (this.to) {
-      output = this.computeD(0, cursor.x, cursor.y, start.x, start.y);
+      return this.computeD(0, start.x, start.y, cursor.x, cursor.y);
     }
 
-    return output;
+    if (this.to) {
+      return this.computeD(0, cursor.x, cursor.y, start.x, start.y);
+    }
+
+    return '';
   }
 
   pointerColor(): string {
@@ -199,19 +189,23 @@ export class ConnectionLinesComponent implements OnChanges {
         return '';
       }
 
-      const start = startDetails.comp.position;
-      const end = (this.socketService.getSocket(connection.in!) ?? startDetails).comp.position;
+      const endDetails = this.socketService.getSocket(connection.in!) ?? startDetails;
 
-      if (!start || !start.x || !end || !end.x) {
+      // Positions are computed from node geometry, so they are only meaningful
+      // once both nodes have been measured. Drawing before then would put the
+      // line at the plane origin.
+      if (!startDetails.comp.hasPosition || !endDetails.comp.hasPosition) {
         return '';
       }
 
-      const p1 = this.toPlane(start.x, start.y);
-      const p2 = this.toPlane(end.x, end.y);
-      const x1 = p1.x;
-      const y1 = p1.y;
-      const x2 = p2.x;
-      const y2 = p2.y;
+      // Already plane coordinates — no measuring, no zoom division.
+      const start = startDetails.comp.position;
+      const end = endDetails.comp.position;
+
+      const x1 = start.x;
+      const y1 = start.y;
+      const x2 = end.x;
+      const y2 = end.y;
 
       cx1 = Math.round(x1 + Math.abs(x1 - x2) / 2);
       cx2 = Math.round(x2 - Math.abs(x1 - x2) / 2);
@@ -238,8 +232,8 @@ export class ConnectionLinesComponent implements OnChanges {
     const fromRect = connection.from.getBoundingClientRect(),
       toRect = connection.to.getBoundingClientRect();
 
-    const from = this.toPlane(fromRect.left + fromRect.width / 2, fromRect.top + fromRect.height / 2);
-    const to = this.toPlane(toRect.left + toRect.width / 2, toRect.top + toRect.height / 2);
+    const from = this.toSvgLocal(fromRect.left + fromRect.width / 2, fromRect.top + fromRect.height / 2);
+    const to = this.toSvgLocal(toRect.left + toRect.width / 2, toRect.top + toRect.height / 2);
 
     return this.computeD(connection.id, from.x, from.y, to.x, to.y);
   }

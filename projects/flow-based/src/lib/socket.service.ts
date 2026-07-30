@@ -46,12 +46,14 @@ export class SocketService {
     return this.sockets[id];
   }
 
+  /**
+   * @deprecated No-op. Socket positions are computed from node geometry now
+   * (FbGeometry), so there is no cached client rect to invalidate. This used to
+   * walk every registered socket — including ones belonging to destroyed
+   * components — on every single node move.
+   */
   clearPosition(id?: number): void {
-    Object.keys(this.sockets).map(k => this.sockets[k])
-      .filter((s: FbSocketDetails) => !id || s.parentId === id)
-      .forEach(s => {
-        s.comp.resetPosition();
-      });
+    // Intentionally empty.
   }
 
   reset(): void {

@@ -12,6 +12,8 @@ import { FbPosition, FbSocket, FbSocketEvent } from '../flow-based';
 import { Subscription } from 'rxjs';
 import { NodeService } from '../node/node-service';
 import { SocketService } from '../socket.service';
+import { FbGeometryService } from '../geometry.service';
+import { FbViewportService } from '../viewport/viewport.service';
 
 @Component({
   selector: 'fb-socket',
@@ -27,7 +29,6 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   @Input() parent!: number;
   @Output() clicked = new EventEmitter<FbSocketEvent>();
   private subscription!: Subscription;
-  private _position: FbPosition | null = null;
   private hover = false;
   private hoverTimeoutId?: ReturnType<typeof setTimeout>;
 
@@ -58,23 +59,43 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
     return 'socket-' + (this.state ? this.getType() : '');
   }
 
+  /**
+   * Centre of this socket in PLANE coordinates.
+   *
+   * Computed from the node's position and measured size, not from
+   * `getBoundingClientRect`. The old version measured client-space rects and
+   * cached them behind a hand-managed invalidation (`clearPosition`), which meant
+   * connection geometry silently depended on when the browser last laid out — and
+   * on the client rect being read after, not before, the node moved.
+   *
+   * Returns the node's origin while the size is still unknown, which is a real
+   * state during first render; the connection renderer treats that as "not ready".
+   */
   get position(): FbPosition {
-    if (!this._position) {
-      const rect = this.element.nativeElement.getBoundingClientRect();
+    const node = this.nodeService.state;
+    const planeSize = this.viewport.planeSize();
 
-      this._position = {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
-    }
+    return this.geometry.socketPosition(node, this.state, planeSize)
+      ?? this.geometry.core.nodeOrigin(node, planeSize);
+  }
 
-    return this._position;
+  /** True once the owning node has been measured. */
+  get hasPosition(): boolean {
+    return !!this.geometry.socketPosition(this.nodeService.state, this.state, this.viewport.planeSize());
   }
 
   constructor(public element: ElementRef,
               private nodeService: NodeService,
+              private geometry: FbGeometryService,
+              private viewport: FbViewportService,
               private service: SocketService) {
   }
 
+  /**
+   * @deprecated Positions are derived now, so there is no cache to invalidate.
+   */
   resetPosition(): void {
-    this._position = null;
+    // Intentionally empty.
   }
 
   ngAfterViewInit(): void {

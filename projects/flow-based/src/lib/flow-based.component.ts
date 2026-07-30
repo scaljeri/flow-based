@@ -36,7 +36,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   private subscription!: Subscription;
 
   onChange!: (state: any) => void;
-  pointerMove!: PointerEvent;
+  pointerMove: FbPosition | null = null;
   activeSocketFrom: number | null = null;
   activeSocketTo: number | null = null;
   lastSocketEvent!: FbSocketEvent;
@@ -138,7 +138,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
    * a line reads that signal, so they refresh themselves.
    */
   private afterViewportChange(): void {
-    this.socketService.clearPosition();
     this.graph.touchGeometry();
   }
 
@@ -178,7 +177,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   @HostListener('pointermove', ['$event'])
   updatePointer(event: PointerEvent): void {
     if (this.activeSocketFrom || this.activeSocketTo) {
-      this.pointerMove = event;
+      // Converted here because only this component knows the viewport; the
+      // connection renderer works purely in plane coordinates.
+      this.pointerMove = this.viewport.toPlane(this.toLocal(event));
     }
   }
 
@@ -273,7 +274,6 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
    * getter is next read during render, so there is nothing left to wait for.
    */
   repaint(): void {
-    this.socketService.clearPosition();
     this.graph.touchGeometry();
   }
 

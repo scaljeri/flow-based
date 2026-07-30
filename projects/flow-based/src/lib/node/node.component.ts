@@ -18,6 +18,7 @@ import { SocketService } from '../socket.service';
 import { SocketComponent } from '../socket/socket.component';
 import { Subscription } from 'rxjs';
 import { FbGraphSignals } from '../graph-signals.service';
+import { FbGeometryService } from '../geometry.service';
 
 @Component({
   selector: 'fb-node',
@@ -52,6 +53,7 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(private element: ElementRef,
               private flowService: FlowBasedService,
               private graph: FbGraphSignals,
+              private geometry: FbGeometryService,
               public service: NodeService,
               public socketService: SocketService,
               private movable: MovableDirective) {
@@ -65,10 +67,21 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.flowService.nodeMoved(this.id);
     });
 
-    this.observer = new ResizeObserver(() => {
-      // TODO
-      // this.wrapper.update();
-      // this.flowService.updateConnection();
+    /*
+     * Report this node's rendered size so socket positions can be COMPUTED rather
+     * than measured. Nodes size themselves to their content — a collapsed node is
+     * ~50px, the fractal canvas is 400px — so the size is the one thing the
+     * geometry model cannot derive from the graph alone.
+     *
+     * This observer previously had an empty body with a `// TODO`.
+     */
+    this.observer = new ResizeObserver(entries => {
+      const box = entries[0]?.contentRect ?? this.element.nativeElement.getBoundingClientRect();
+
+      this.geometry.setNodeSize(this.id, {
+        width: this.element.nativeElement.offsetWidth || box.width,
+        height: this.element.nativeElement.offsetHeight || box.height,
+      });
     });
     this.observer.observe(this.element.nativeElement);
   }
@@ -96,6 +109,7 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.posChangedSub.unsubscribe();
     this.observer?.disconnect();
+    this.geometry.forgetNode(this.id);
     this.service.unregisterAll();
   }
 
