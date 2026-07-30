@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy, computed, signal } from '@angular/core';
-import { FbPosition, FbSize, FbViewport } from '@scaljeri/flow-based-core';
+import { FbPosition, FbViewport } from '@scaljeri/flow-based-core';
 
 /**
  * Angular face of {@link FbViewport}.

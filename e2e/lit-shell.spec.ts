@@ -201,3 +201,71 @@ declare global {
     };
   }
 }
+
+/**
+ * The document representation.
+ *
+ * Same JSON, different reading. What matters is that the figures are the node
+ * components themselves — still live, still computing — rather than pictures of
+ * them, because that is what "the JSON is the source and the flow view is one
+ * representation of it" actually means in practice.
+ */
+test('renders the same flow as a document, with live nodes as figures', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', err => errors.push(err.message));
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await page.locator('#view').click();
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+  // The editor surface is gone; this is a different view of the same data.
+  await expect(page.locator('fb-flow-canvas')).toHaveCount(0);
+
+  const doc = await page.evaluate(() => {
+    const root = document.querySelector('fb-flow-document')!.shadowRoot!;
+    const figures = [...root.querySelectorAll('.figure-body')];
+
+    return {
+      title: root.querySelector('h1')?.textContent ?? '',
+      headings: [...root.querySelectorAll('h2')].map(h => h.textContent),
+      paragraphs: root.querySelectorAll('p').length,
+      figures: figures.length,
+      // Each figure mounted real content through FbNodeMount.
+      mounted: figures.filter(f => f.firstElementChild).length,
+      // ...including the node that draws to a canvas.
+      canvases: root.querySelectorAll('canvas').length,
+      floats: [...root.querySelectorAll('figure')].map(f => f.className),
+    };
+  });
+
+  expect(doc.title).toBe('Signals and scopes');
+  expect(doc.headings).toEqual(['Source', 'Sink', 'Scope']);
+  expect(doc.figures).toBe(3);
+  expect(doc.mounted).toBe(3);
+  expect(doc.canvases).toBe(1);
+
+  // Prose in the fixture belongs to one node, so exactly one figure floats.
+  expect(doc.paragraphs).toBe(2);
+  expect(doc.floats.filter(c => c.includes('float-none'))).toHaveLength(2);
+  expect(doc.floats.filter(c => c.includes('float-right'))).toHaveLength(1);
+
+  expect(errors).toEqual([]);
+});
+
+test('switches back from document to flow without losing the graph', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await page.locator('#view').click();
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+
+  await page.locator('#view').click();
+  await expect(canvas(page)).toBeVisible();
+
+  expect(await nodeCount(page)).toBe(3);
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+});

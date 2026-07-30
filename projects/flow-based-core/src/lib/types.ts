@@ -79,8 +79,13 @@ export interface FbNodeState {
   sockets?: FbSocket[];
   connections?: FbConnection[];
   children?: FbNodeState[];
-  /** Prose and figure settings for the document representation. */
+  /** Prose and figure settings for this node in the document representation. */
   doc?: FbNodeDoc;
+  /**
+   * How this flow reads as a document. Only meaningful on a flow (a node with
+   * children); see `documentFor`, which derives one when this is absent.
+   */
+  document?: import('./document').FbDocument;
 }
 
 /**

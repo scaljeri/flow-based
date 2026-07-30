@@ -1,5 +1,5 @@
 import { FbNodeMount, FbNodeTypes } from '@scaljeri/flow-based-core';
-import { FbEditor, FbFlowCanvasElement } from '@scaljeri/flow-based-lit';
+import { FbEditor, FbFlowCanvasElement, FbFlowDocumentElement } from '@scaljeri/flow-based-lit';
 
 /**
  * A standalone harness for the web-component shell, with no Angular anywhere.
@@ -83,6 +83,7 @@ const editor = new FbEditor({
 editor.load({
   id: 1,
   type: 'flow',
+  title: 'Signals and scopes',
   sockets: [],
   children: [
     {
@@ -96,6 +97,14 @@ editor.load({
     {
       id: 30, type: 'scope', title: 'Scope', position: { x: 45, y: 45 },
       sockets: [{ id: 300, type: 'in', format: 'number' }],
+      doc: {
+        body: 'The scope renders whatever reaches its input socket. In the '
+          + 'document it is the same live component the editor draws, not a '
+          + 'screenshot of one \u2014 the JSON is the source, and both views read it.\n\n'
+          + 'Because the figure is the node itself, anything it computes keeps '
+          + 'computing while you read.',
+        figure: { width: '260px' },
+      },
     },
   ],
   connections: [
@@ -104,9 +113,29 @@ editor.load({
   ],
 });
 
+const app = document.getElementById('app')!;
+
 const canvas = document.createElement('fb-flow-canvas') as FbFlowCanvasElement;
 canvas.editor = editor;
-document.getElementById('app')!.appendChild(canvas);
+
+const doc = document.createElement('fb-flow-document') as FbFlowDocumentElement;
+doc.editor = editor;
+doc.style.cssText = 'background:#fff;color:#111;height:100%';
+
+app.appendChild(canvas);
+
+/*
+ * Two representations of one JSON. Swapping between them is the whole point:
+ * neither view owns the data, and the figures in the document are the very same
+ * node components the editor draws.
+ */
+let showing: 'flow' | 'document' = 'flow';
+
+document.getElementById('view')!.addEventListener('click', () => {
+  showing = showing === 'flow' ? 'document' : 'flow';
+  app.replaceChildren(showing === 'flow' ? canvas : doc);
+  document.getElementById('view')!.textContent = showing === 'flow' ? 'Document' : 'Flow';
+});
 
 // Minimal controls, so the harness can be driven from a test.
 document.getElementById('zoom-in')!.addEventListener('click', () => canvas.zoomIn());

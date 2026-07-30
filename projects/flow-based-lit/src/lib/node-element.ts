@@ -102,6 +102,17 @@ export class FbNodeElement extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.unsubscribe = this.editor?.changes.subscribe(() => this.requestUpdate());
+
+    /*
+     * A custom element can be MOVED in the DOM, which fires disconnect then
+     * connect — switching between the flow and document views does exactly that.
+     * disconnectedCallback tears the content and observer down, so re-entering
+     * has to build them back; firstUpdated only ever runs once.
+     */
+    if (this.hasUpdated) {
+      this.mountContent();
+      this.observeSize();
+    }
   }
 
   override disconnectedCallback(): void {

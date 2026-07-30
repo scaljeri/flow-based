@@ -55,13 +55,18 @@ package's public API is actually complete — which is the point.
 
 ## Architecture
 
-Two published packages in one repo:
+Three published packages in one repo:
 
   * **`@scaljeri/flow-based-core`** (`projects/flow-based-core`) — the
     framework-agnostic half: the node/connection model, the graph engine
     (`flow.ts`), socket-format propagation, serialisation, undo/redo, viewport
     maths and the worker contract. No Angular; an ESLint rule enforces that, so a
     Lit, React or Vue shell can sit on the same engine and the same JSON.
+  * **`@scaljeri/flow-based-lit`** (`projects/flow-based-lit`) — a web-component
+    shell: `<fb-flow-canvas>`, `<fb-node-box>`, `<fb-connections>` and
+    `<fb-flow-document>`. No Angular; `npm run build:lit-demo && npm run
+    serve:lit-demo` runs it standalone, and its e2e tests assert that no Angular
+    is loaded on the page.
   * **`@scaljeri/flow-based`** (`projects/flow-based`) — the Angular shell:
     components, directives, injection tokens, and thin signal wrappers over the
     core's plain classes. Re-exports the core, so Angular consumers still have a
@@ -89,13 +94,17 @@ Angular 7 → 22 migration record.
   * **Validation** — the toolbar reports sockets whose format could not be
     negotiated, and any cycles in the graph.
   * **Searchable palette** — filter flow units by name; `Enter` adds a sole match.
+  * **Document view** (web-component shell) — the same JSON read as a document:
+    prose with the node visuals embedded as figures. The figures are the live node
+    components, not screenshots, so a fractal in the document is still computing.
+    Authored via `flow.document`, and derived from the graph when absent.
 
 ### TODO
 
   * Derive socket positions from graph coordinates instead of measuring the DOM
-  * A document representation: the same JSON rendered as prose with the node
-    visuals embedded as figures ("FBP as doc")
-  * Rewrite the shell in web components (Lit), with Angular as a thin wrapper
+  * Make the Angular package a thin wrapper over the web components (the shells
+    are currently two implementations; the core and the mount contract are shared)
+  * Rich text and formulas in the document view (currently plain paragraphs)
   * Build demo app in Angular, React and Vue
   * Make nodes external components, which can be npm dependencies
   * Real web-worker modules (the fractal worker still stringifies a class)

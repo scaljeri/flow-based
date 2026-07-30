@@ -5,6 +5,7 @@
   <title>flow-based — web-component shell</title>
   <style>
     body { background:#000; color:#eee; font:14px system-ui; margin:0; }
+    #app { background:#000; }
     header { align-items:center; background:#3f51b5; display:flex; gap:12px; padding:8px 12px; }
     #app { height: calc(100vh - 45px); }
   </style>
@@ -12,6 +13,7 @@
 <body>
   <header>
     <strong>Lit shell</strong>
+    <button id="view">Document</button>
     <button id="add">Add</button>
     <button id="undo">Undo</button>
     <button id="zoom-out">−</button>

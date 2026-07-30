@@ -17,3 +17,4 @@ export * from './lib/editor';
 export * from './lib/canvas-element';
 export * from './lib/node-element';
 export * from './lib/connections-element';
+export * from './lib/document-element';
