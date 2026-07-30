@@ -21,7 +21,7 @@ function canvas(page: Page): Locator {
 
 async function nodeCount(page: Page): Promise<number> {
   return page.evaluate(() =>
-    document.querySelector('fb-flow-canvas')!.shadowRoot!.querySelectorAll('fb-node-box').length);
+    document.querySelector('fb-flow-canvas')!.querySelectorAll('fb-node-box').length);
 }
 
 async function connectionPaths(page: Page): Promise<string[]> {
@@ -44,7 +44,7 @@ async function worstEndpointError(page: Page): Promise<number> {
 
     const sockets: { x: number; y: number }[] = [];
 
-    for (const node of root.querySelectorAll('fb-node-box')) {
+    for (const node of document.querySelectorAll('fb-flow-canvas fb-node-box')) {
       for (const dot of node.shadowRoot!.querySelectorAll('.socket')) {
         const r = dot.getBoundingClientRect();
         sockets.push({
@@ -101,9 +101,7 @@ test('renders nodes, mounted content and connections with no Angular present', a
    * shadow root, so content mounted there would render unstyled.
    */
   const mounted = await page.evaluate(() => {
-    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
-
-    return [...root.querySelectorAll('fb-node-box')].map(n => {
+    return [...document.querySelectorAll('fb-flow-canvas fb-node-box')].map(n => {
       const host = n.querySelector('.fb-node-content');
       const slot = n.shadowRoot!.querySelector('slot') as HTMLSlotElement;
       const isSlotted = slot.assignedElements().includes(host!);
@@ -136,8 +134,7 @@ test('drags a node and the connections follow', async ({ page }) => {
 
   // Grab the source node's mounted content, which is safely inside the node box.
   const box = await page.evaluate(() => {
-    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
-    const node = root.querySelectorAll('fb-node-box')[0] as HTMLElement;
+    const node = document.querySelectorAll('fb-flow-canvas fb-node-box')[0] as HTMLElement;
     const r = node.getBoundingClientRect();
 
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -166,8 +163,7 @@ test('connects two sockets by clicking them', async ({ page }) => {
   await expect.poll(() => nodeCount(page)).toBe(4);
 
   const clickSocket = (nodeIndex: number, type: 'in' | 'out') => page.evaluate(({ nodeIndex, type }) => {
-    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
-    const node = root.querySelectorAll('fb-node-box')[nodeIndex];
+    const node = document.querySelectorAll('fb-flow-canvas fb-node-box')[nodeIndex];
     const dot = node.shadowRoot!.querySelector(`.socket-${type}`) as HTMLElement;
 
     dot.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
@@ -298,7 +294,7 @@ test('a drag does not cost work proportional to the size of the graph', async ({
 
   const result = await page.evaluate(async () => {
     const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
-    const nodes = [...root.querySelectorAll('fb-node-box')] as (HTMLElement & {
+    const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')] as (HTMLElement & {
       update?: (c: unknown) => void;
       updateComplete: Promise<boolean>;
     })[];

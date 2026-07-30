@@ -48,6 +48,9 @@ export interface FbNodeApi {
 
   unregister(type?: string): void;
 
+  /** Drop every listener this node registered. */
+  unregisterAll(): void;
+
   /** Called when this node is clicked. Returns an unsubscribe function. */
   onClick(listener: (event: PointerEvent) => void): () => void;
 

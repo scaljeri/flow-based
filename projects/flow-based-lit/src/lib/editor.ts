@@ -48,6 +48,13 @@ export interface FbEditorOptions {
   types: FbNodeTypes<FbNodeMount>;
   helpers?: FbNodeHelpers;
   socketColors?: Record<string, string>;
+  /**
+   * Undo stack to use instead of a private one.
+   *
+   * A host app that shows its own undo button needs the *same* stack the editor
+   * pushes to, not a second one that silently disagrees with it.
+   */
+  history?: FbHistory;
 }
 
 /**
@@ -64,7 +71,7 @@ export interface FbEditorOptions {
 export class FbEditor {
   readonly geometry = new FbGeometry();
   readonly viewport = new FbViewport();
-  readonly history = new FbHistory();
+  readonly history: FbHistory;
   readonly changes = new FbEmitter<FbEditorChange>();
 
   /** Messages between the shell and node content — not graph changes. */
@@ -87,6 +94,7 @@ export class FbEditor {
 
   constructor(options: FbEditorOptions) {
     this.types = options.types;
+    this.history = options.history ?? new FbHistory();
     this.helpers = options.helpers;
     this.socketColors = options.socketColors ?? {};
 

@@ -79,8 +79,9 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
         (event.clientY - this.top) * PIXEL_RATIO_SCALE);
       // }
     } else {
-      // NodeService.nodeIsClicked() is typed PointerEvent but only reads MouseEvent
-      // members; the library narrows the same way at node.component.ts:69.
+      // The canvas swallows pointer events, so the shell never sees this click;
+      // reporting it keeps double-click-to-close working inside the node.
+      // Typed PointerEvent but only MouseEvent members are read.
       this.service.nodeIsClicked(event as PointerEvent);
       this.worker.updateDimensions(Object.assign({}, this.dimensions, {
         x: this.dimensions.xMin + (this.dimensions.xMax - this.dimensions.xMin) * x / this.dimensions.width!,

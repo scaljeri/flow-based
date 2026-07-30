@@ -218,6 +218,7 @@ export class FbFlowDocumentElement extends LitElement {
       calibrate: () => undefined,
       register: () => undefined,
       unregister: () => undefined,
+      unregisterAll: () => undefined,
       onClick: () => () => undefined,
       wire: () => 0,
       unwire: () => undefined,

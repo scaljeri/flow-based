@@ -19,10 +19,10 @@ import { expect, test } from '@playwright/test';
  * real geometry", which is a property of the app rather than a sleep.
  */
 async function waitUntilReady(page: import('@playwright/test').Page): Promise<void> {
-  await expect(page.locator('fb-node').first()).toBeVisible();
+  await expect(page.locator('fb-node-box').first()).toBeVisible();
 
   await expect.poll(
-    () => page.locator('fb-connection-lines svg path.connection')
+    () => page.locator('fb-connections path.connection')
       .evaluateAll(els => els.length > 0 && els.every(el => (el.getAttribute('d') ?? '').startsWith('M'))),
     { timeout: 15_000 },
   ).toBe(true);
@@ -44,16 +44,16 @@ test('renders the flow editor and draws connections, with no console errors', as
   await expect(page.locator('fb-flow-based').first()).toBeVisible();
 
   // The fixture's nodes rendered.
-  const nodes = page.locator('fb-node');
+  const nodes = page.locator('fb-node-box');
   await expect(nodes.first()).toBeVisible();
   expect(await nodes.count()).toBeGreaterThan(1);
 
   // Sockets registered (they are what connection geometry is measured from).
-  expect(await page.locator('fb-socket').count()).toBeGreaterThan(1);
+  expect(await page.locator('fb-node-box .socket').count()).toBeGreaterThan(1);
 
   // Connections are SVG paths with a non-empty `d`; an empty `d` means the
   // socket-position lookup failed, which is the classic symptom here.
-  const paths = page.locator('fb-connection-lines svg path.connection');
+  const paths = page.locator('fb-connections path.connection');
   expect(await paths.count()).toBeGreaterThan(0);
 
   const ds = await paths.evaluateAll(els => els.map(el => el.getAttribute('d') ?? ''));
@@ -80,22 +80,22 @@ test('deletes a node and its connections without errors', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
 
-  const before = await page.locator('fb-node').count();
-  const socketsBefore = await page.locator('fb-socket').count();
+  const before = await page.locator('fb-node-box').count();
+  const socketsBefore = await page.locator('fb-node-box .socket').count();
   expect(before).toBeGreaterThan(1);
 
   // The delete control lives in the expanded node's footer.
-  const del = page.locator('fb-node footer button:has(mat-icon:text-is("delete_forever"))').first();
+  const del = page.locator('fb-node-box footer button:has(mat-icon:text-is("delete_forever"))').first();
   await del.click({ force: true });
 
-  await expect(page.locator('fb-node')).toHaveCount(before - 1);
+  await expect(page.locator('fb-node-box')).toHaveCount(before - 1);
 
   // Its sockets must go with it, and the survivors must still be drawn.
-  expect(await page.locator('fb-socket').count()).toBeLessThan(socketsBefore);
-  await expect(page.locator('fb-node').first()).toBeVisible();
+  expect(await page.locator('fb-node-box .socket').count()).toBeLessThan(socketsBefore);
+  await expect(page.locator('fb-node-box').first()).toBeVisible();
 
   const ds = await page
-    .locator('fb-connection-lines svg path.connection')
+    .locator('fb-connections path.connection')
     .evaluateAll(els => els.map(el => el.getAttribute('d') ?? ''));
   // No surviving connection may render an empty path: that is the symptom of a
   // socket lookup failing after removal.
@@ -119,7 +119,7 @@ test('filters the node palette and adds the match with Enter', async ({ page }) 
   await page.goto('/');
   await waitUntilReady(page);
 
-  const before = await page.locator('fb-node').count();
+  const before = await page.locator('fb-node-box').count();
 
   await page.locator('mat-toolbar button.add').click();
   const palette = page.locator('.cdk-overlay-container fb-component-selection');
@@ -142,7 +142,7 @@ test('filters the node palette and adds the match with Enter', async ({ page }) 
   await expect(items).toHaveCount(1);
   await search.press('Enter');
 
-  await expect(page.locator('fb-node')).toHaveCount(before + 1);
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
 });
 
 /**
@@ -158,22 +158,35 @@ test('filters the node palette and adds the match with Enter', async ({ page }) 
  */
 async function worstEndpointError(page: import('@playwright/test').Page): Promise<number> {
   return page.evaluate(() => {
-    const svg = document.querySelector('fb-connection-lines svg');
-    if (!svg) return Number.NaN;
+    /*
+     * Reached through the shadow roots explicitly. Playwright's CSS engine
+     * pierces them, but `document.querySelector` inside the page does not — and
+     * the editor surface is now a web component, so the sockets and the curves
+     * live in three different roots.
+     */
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+    const plane = root.querySelector('.plane') as HTMLElement;
+    if (!plane) return Number.NaN;
 
-    const svgRect = svg.getBoundingClientRect();
-    const scale = svgRect.width / (svg as SVGGraphicsElement & { clientWidth: number }).clientWidth || 1;
+    const planeRect = plane.getBoundingClientRect();
+    const scale = planeRect.width / plane.offsetWidth || 1;
 
-    const sockets = [...document.querySelectorAll('fb-socket')].map(el => {
-      const r = el.getBoundingClientRect();
-      return {
-        x: (r.left + r.width / 2 - svgRect.left) / scale,
-        y: (r.top + r.height / 2 - svgRect.top) / scale,
-      };
-    });
+    const sockets: { x: number; y: number }[] = [];
 
+    for (const node of document.querySelectorAll('fb-flow-canvas fb-node-box')) {
+      for (const dot of node.shadowRoot!.querySelectorAll('.socket')) {
+        const r = dot.getBoundingClientRect();
+        sockets.push({
+          x: (r.left + r.width / 2 - planeRect.left) / scale,
+          y: (r.top + r.height / 2 - planeRect.top) / scale,
+        });
+      }
+    }
+
+    const conn = root.querySelector('fb-connections');
     let worst = 0;
-    for (const path of document.querySelectorAll('fb-connection-lines svg path.connection')) {
+
+    for (const path of conn?.shadowRoot?.querySelectorAll('path.connection') ?? []) {
       const m = (path.getAttribute('d') ?? '').match(/^M\s*([-\d.]+)\s+([-\d.]+)/);
       if (!m) continue;
 
@@ -263,24 +276,24 @@ test('undoes and redoes a node deletion', async ({ page }) => {
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
 
-  const before = await page.locator('fb-node').count();
-  const socketsBefore = await page.locator('fb-socket').count();
+  const before = await page.locator('fb-node-box').count();
+  const socketsBefore = await page.locator('fb-node-box .socket').count();
 
-  await page.locator('fb-node footer button:has(mat-icon:text-is("delete_forever"))').first()
+  await page.locator('fb-node-box footer button:has(mat-icon:text-is("delete_forever"))').first()
     .click({ force: true });
-  await expect(page.locator('fb-node')).toHaveCount(before - 1);
+  await expect(page.locator('fb-node-box')).toHaveCount(before - 1);
   await expect(undo).toBeEnabled();
 
   await undo.click();
-  await expect(page.locator('fb-node')).toHaveCount(before);
+  await expect(page.locator('fb-node-box')).toHaveCount(before);
   // The restored node's sockets must come back with it, and be re-registered —
   // otherwise its connections would render as empty paths.
-  await expect(page.locator('fb-socket')).toHaveCount(socketsBefore);
+  await expect(page.locator('fb-node-box .socket')).toHaveCount(socketsBefore);
   expect(await worstEndpointError(page)).toBeLessThan(1);
 
   await expect(redo).toBeEnabled();
   await redo.click();
-  await expect(page.locator('fb-node')).toHaveCount(before - 1);
+  await expect(page.locator('fb-node-box')).toHaveCount(before - 1);
 
   expect(errors).toEqual([]);
 });
@@ -307,7 +320,7 @@ test('drags a node and its connections follow', async ({ page }) => {
   expect(await worstEndpointError(page)).toBeLessThan(1);
 
   // A small collapsed node is easiest to grab without hitting inner controls.
-  const node = page.locator('fb-node').nth(4);
+  const node = page.locator('fb-node-box').nth(4);
   const start = await node.boundingBox();
   expect(start).not.toBeNull();
 

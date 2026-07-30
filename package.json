@@ -7,7 +7,7 @@
     "ng": "ng",
     "start": "npm run build:lib && ng serve",
     "build": "npm run build:lib",
-    "build:lib": "npm run build:core && ng build @scaljeri/flow-based",
+    "build:lib": "npm run build:lit && ng build @scaljeri/flow-based",
     "build:demo": "npm run build:lib && ng build flow-based-demo",
     "watch:lib": "ng build @scaljeri/flow-based --watch --configuration development",
     "test": "ng test @scaljeri/flow-based-core && ng test @scaljeri/flow-based && ng test flow-based-demo",
@@ -19,7 +19,8 @@
     "test:core": "ng test @scaljeri/flow-based-core",
     "build:lit": "npm run build:core && ng build @scaljeri/flow-based-lit",
     "build:lit-demo": "npm run build:lit && node scripts/build-lit-demo.mjs",
-    "serve:lit-demo": "node scripts/serve-static.mjs dist/lit-demo 4400"
+    "serve:lit-demo": "node scripts/serve-static.mjs dist/lit-demo 4400",
+    "build:e2e": "npm run build:lib && node scripts/build-lit-demo.mjs"
   },
   "dependencies": {
     "@angular/cdk": "^22.1.0",
@@ -54,5 +55,8 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.47.0",
     "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "@scaljeri/flow-based-lit": "^0.1.0"
   }
 }

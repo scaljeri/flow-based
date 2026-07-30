@@ -22,15 +22,26 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'npm start',
+      command: 'npm run build:e2e && npx ng serve',
       url: 'http://localhost:4200',
       reuseExistingServer: !process.env['CI'],
-      // The library builds plus a first dev-server compile are slow on
-      // low-powered hardware (this was developed on a Raspberry Pi).
+      /*
+       * The ONE build, and everything else waits on it.
+       *
+       * Both servers used to build for themselves, and Playwright starts them in
+       * parallel — so two `ng build`s rewrote dist/flow-based-core at the same
+       * time and whichever compiler read it mid-write failed with errors about
+       * exports that plainly do exist. The static server below simply 404s until
+       * this finishes, which is exactly the "not ready yet" Playwright already
+       * waits for.
+       *
+       * The library builds plus a first dev-server compile are slow on
+       * low-powered hardware (this was developed on a Raspberry Pi).
+       */
       timeout: 360_000,
     },
     {
-      command: 'npm run build:lit-demo && npm run serve:lit-demo',
+      command: 'npm run serve:lit-demo',
       url: 'http://localhost:4400/',
       reuseExistingServer: !process.env['CI'],
       timeout: 360_000,

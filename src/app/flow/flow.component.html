@@ -11,8 +11,8 @@
   </button>
 
   <button type="button" mat-button class="zoom-level" (click)="editor.resetView()"
-          [attr.aria-label]="'Reset view, currently ' + editor.viewport.zoomPercent() + ' percent'">
-    {{editor.viewport.zoomPercent()}}%
+          [attr.aria-label]="'Reset view, currently ' + editor.zoomPercent() + ' percent'">
+    {{editor.zoomPercent()}}%
   </button>
 
   <button type="button" mat-mini-fab color="primary" (click)="editor.zoomIn()" aria-label="Zoom in">

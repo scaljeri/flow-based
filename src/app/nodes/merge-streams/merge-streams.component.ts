@@ -76,12 +76,12 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
         const socketId = Number(s.nativeElement.dataset.socketId);
         const sd = this.service.getSocket(socketId);
 
-        // A socket component that has not registered yet has nothing to draw to.
+        // A socket the shell has not drawn yet has nothing to wire to.
         if (!sd) {
           return;
         }
 
-        this.service.addConnection(sd.comp.element.nativeElement, this.inputs.toArray()[i].nativeElement);
+        this.service.addConnection(sd.element, this.inputs.toArray()[i].nativeElement);
         this.service.addConnection(this.inputs.toArray()[i].nativeElement, this.output.nativeElement);
       });
 
@@ -89,7 +89,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
       const outDetails = outSocket ? this.service.getSocket(outSocket.id!) : undefined;
 
       if (outDetails) {
-        this.service.addConnection(this.output.nativeElement, outDetails.comp.element.nativeElement);
+        this.service.addConnection(this.output.nativeElement, outDetails.element);
       }
 
       // this.cdr.detectChanges();

@@ -1,88 +1,107 @@
-import { Injectable, Injector, afterNextRender } from '@angular/core';
-import { FlowBasedService } from '../flow-based.service';
-import { FbElementConnection, FbNodeEventCallback, FbNodeState, FbNodeWorker, FbSocket, FbSocketDetails } from '../flow-based';
-import { SocketService } from '../socket.service';
-import { Subject } from 'rxjs';
-// Type-only: NodeComponent provides this service, so an emitted import would
-// create a cycle the AOT compiler rejects (NG3003).
-import type { NodeComponent } from './node.component';
+import { Observable, Subject } from 'rxjs';
+import { FbNodeApi, FbNodeEventCallback, FbNodeState, FbNodeWorker, FbSocket } from '@scaljeri/flow-based-core';
+import { FbSocketDetails } from '../flow-based';
 
 /*
 Primary service for custom nodes to communicate with the framework
  */
 
-@Injectable()
+/**
+ * The Angular face of {@link FbNodeApi}.
+ *
+ * Every method here forwards to the shell's framework-free node contract. That
+ * is the point: the same node component runs unchanged whether the editor around
+ * it is the web-component shell, a React one, or the document view — and a node
+ * shipped as its own npm package needs `FbNodeApi` alone, with this as a
+ * convenience for Angular authors.
+ *
+ * It used to reach into `NodeComponent` and two Angular services, which is why
+ * node types could not exist outside an Angular editor at all.
+ *
+ * Constructed by the adapter, never by DI — hence no `@Injectable()`. It is
+ * provided per node with `useValue`, so the class object serves only as a token.
+ */
 export class NodeService {
-  /*
-   * Element-to-element lines a node type draws inside itself (see
-   * addConnection). These are NOT graph edges — they never enter the Flow — which
-   * is why they have their own type instead of overloading FbConnection.from/to
-   * with `number | HTMLElement`.
-   */
-  public connections?: FbElementConnection[];
-  public state!: FbNodeState;
+  private readonly nodeClicked = new Subject<PointerEvent>();
 
-  private nodeClicked = new Subject<PointerEvent>();
-  public nodeClicked$ = this.nodeClicked.asObservable();
+  /** Emits when this node is clicked, but not when a drag happens to end on it. */
+  readonly nodeClicked$: Observable<PointerEvent> = this.nodeClicked.asObservable();
 
-  private nodeComponent!: NodeComponent;
   private doubleClick?: () => void;
   private thresholdClicks = 300;
   private lastClicked = 0;
 
-  constructor(public flowService: FlowBasedService,
-              private socketService: SocketService,
-              private injector: Injector) {
+  constructor(private readonly api: FbNodeApi) {
+    this.api.onClick(event => this.onClick(event));
+  }
+
+  get state(): FbNodeState {
+    return this.api.state;
+  }
+
+  get id(): number {
+    return this.api.state.id!;
+  }
+
+  get worker(): FbNodeWorker | undefined {
+    return this.api.worker;
+  }
+
+  /* ----------------------------------------------------------------------
+     Size and chrome
+     ---------------------------------------------------------------------- */
+
+  setMaxSize(isMax: boolean): void {
+    this.api.setMaxSize(isMax);
+    this.api.calibrate();
+  }
+
+  hideLabel(): void {
+    this.api.setLabelVisible(false);
+  }
+
+  showLabel(): void {
+    this.api.setLabelVisible(true);
   }
 
   /**
-   * Run once the DOM has settled.
+   * Re-measure this node.
    *
-   * These were `setTimeout(...)`, and the deferral is genuinely needed rather
-   * than a change-detection trick: <fb-connection-lines> precedes the <fb-node>
-   * children in the template, so measuring socket positions in the same pass
-   * reads the layout from *before* the nodes updated. afterNextRender is the
-   * hook for exactly this, and unlike a macrotask it is tied to Angular's own
-   * render cycle.
+   * Nodes size themselves to their content and the shell watches with a
+   * ResizeObserver, so this is only for changes the observer cannot see. It no
+   * longer defers past a render: socket positions are computed from the measured
+   * size rather than read back out of the DOM, so there is no layout to wait for.
    */
-  private afterRender(work: () => void): void {
-    afterNextRender(work, { injector: this.injector });
+  calibrate(): void {
+    this.api.calibrate();
   }
 
-  register(callback: FbNodeEventCallback, type?: string): void {
-    this.flowService.register(this.id, callback, type);
-  }
+  /* ----------------------------------------------------------------------
+     Clicks
+     ---------------------------------------------------------------------- */
 
-  unregisterAll(): void {
-    this.flowService.unregisterAll(this.id);
-  }
-
-  unregister(type?: string): void {
-    this.flowService.unregister(this.id, type);
-  }
-
-  connectNode(node: NodeComponent, state: FbNodeState): void {
-    this.state = state;
-    this.nodeComponent = node;
-  }
-
-  setMaxSize(isMax: boolean): void {
-    this.nodeComponent.setMaxSize(isMax);
-    this.calibrate();
-  }
-
-  nodeIsClicked(e: PointerEvent): void {
-    this.nodeClicked.next(e);
-    this.flowService.nodeClicked(this.state);
+  private onClick(event: PointerEvent): void {
+    this.nodeClicked.next(event);
 
     if (Date.now() - this.lastClicked < this.thresholdClicks) {
       if (this.doubleClick) {
         this.doubleClick();
-        this.nodeComponent.setMaxSize(false);
+        this.api.setMaxSize(false);
       }
     } else {
       this.lastClicked = Date.now();
     }
+  }
+
+  /**
+   * Report a click that the content handled itself.
+   *
+   * Content that swallows pointer events — a canvas the user drags on — never
+   * lets one reach the shell, so it says so here instead. Same path as a real
+   * click, so double-click-to-close keeps working inside such a node.
+   */
+  nodeIsClicked(event: PointerEvent): void {
+    this.onClick(event);
   }
 
   closeOnDoubleClick(callback: () => void, threshold = 300): void {
@@ -90,97 +109,93 @@ export class NodeService {
     this.doubleClick = callback;
   }
 
-  closeOnBlur(cb: () => void): void {
-    this.flowService.register(this.id, () => {
-      cb();
+  closeOnBlur(callback: () => void): void {
+    this.api.register(() => {
+      callback();
     }, 'blur');
   }
 
-  get id(): number {
-    return this.state.id!;
+  /* ----------------------------------------------------------------------
+     Framework events
+     ---------------------------------------------------------------------- */
+
+  register(callback: FbNodeEventCallback, type?: string): void {
+    this.api.register(callback, type);
   }
 
-  calibrate(): void {
-    this.afterRender(() => this.flowService.nodeMoved(this.id));
+  unregister(type?: string): void {
+    this.api.unregister(type);
   }
+
+  unregisterAll(): void {
+    this.api.unregisterAll();
+  }
+
+  /* ----------------------------------------------------------------------
+     Sockets
+     ---------------------------------------------------------------------- */
 
   addSocket(socket: FbSocket): void {
-    this.flowService.flow.addSocket(socket, this.id);
-
-    this.afterRender(() => this.flowService.nodeMoved(this.id));
-  }
-
-  getSocket(id: number): FbSocketDetails | undefined {
-    return this.socketService.getSocket(id);
-  }
-
-  /** Only sockets whose components have registered; see getSocket. */
-  getSockets(): FbSocketDetails[] {
-    return (this.state.sockets || []).reduce((sockets, socket: FbSocket) => {
-      const details = this.getSocket(socket.id!);
-
-      if (details) {
-        sockets.push(details);
-      }
-
-      return sockets;
-    }, [] as FbSocketDetails[]);
-  }
-
-  get worker(): FbNodeWorker | undefined {
-    return this.flowService.getWorker(this.id);
+    this.api.addSocket(socket);
   }
 
   socketRemoved(socket: FbSocket): void {
-    this.flowService.removeSocket(socket);
+    this.api.removeSocket(socket);
   }
 
-  refresh(): void {
-    this.updateConnections();
+  /**
+   * Where a socket is drawn, for content that wires itself to it.
+   *
+   * `undefined` until the shell has rendered the socket — a real state on the
+   * first pass, and better admitted than papered over with a timeout.
+   */
+  getSocket(id: number): FbSocketDetails | undefined {
+    const socket = (this.state.sockets ?? []).find(s => s.id === id);
+    const element = this.api.socketElement(id);
+
+    return socket && element ? { state: socket, element, parentId: this.id } : undefined;
   }
 
-  deleteSelf(): void {
-    this.flowService.delete(this.state);
+  /** Only sockets the shell has drawn; see getSocket. */
+  getSockets(): FbSocketDetails[] {
+    return (this.state.sockets ?? [])
+      .map(socket => this.getSocket(socket.id!))
+      .filter((details): details is FbSocketDetails => !!details);
   }
 
-  addConnection(from: HTMLElement, to: HTMLElement): number {
-    const id = this.flowService.getUniqueId();
+  /* ----------------------------------------------------------------------
+     Internal wiring
+     ----------------------------------------------------------------------
+     Lines a node draws between two of its OWN elements. Never graph edges: they
+     are not in the Flow, are not serialised, and join DOM elements rather than
+     sockets. The shell draws them because it owns the layer above the content.
+   */
 
-    const conn = {
-      id,
-      from: from,
-      to: to
-    };
-
-    this.connections = [...(this.connections || []), conn];
-    this.updateConnections();
-
-    return id;
-  }
-
-  updateConnections(): void {
-    if (this.connections) {
-      this.connections = [...this.connections];
-      this.flowService.graph.touchGeometry();
-    }
+  addConnection(from: Element, to: Element): number {
+    return this.api.wire(from, to);
   }
 
   removeConnection(id: number): void {
-    this.connections = this.connections!.filter(conn => conn.id !== id);
-
-    this.afterRender(() => this.flowService.graph.touchGeometry());
+    this.api.unwire(id);
   }
 
   removeConnections(): void {
-    delete this.connections;
-    this.flowService.graph.touchGeometry();
+    this.api.clearWiring();
   }
 
-  hideLabel(): void {
-    this.nodeComponent.hideLabel();
+  updateConnections(): void {
+    this.api.refreshWiring();
   }
 
-  showLabel(): void {
-    this.nodeComponent.showLabel();
+  refresh(): void {
+    this.api.refreshWiring();
+  }
+
+  /* ----------------------------------------------------------------------
+     Graph
+     ---------------------------------------------------------------------- */
+
+  deleteSelf(): void {
+    this.api.deleteSelf();
   }
 }

@@ -18,22 +18,59 @@ export class FbNodeElement extends LitElement {
   };
 
   static override styles = css`
+    /*
+     * The host carries NO border or padding, and the sockets are its children
+     * rather than the frame's.
+     *
+     * That is deliberate. An absolutely positioned element is placed against its
+     * containing block's PADDING box, so a border on the host would shift every
+     * socket inwards by its width — and FbGeometry, which computes where the
+     * connection curves end, measures the host's border box. The two would
+     * disagree by exactly the border, and the curves would miss. Keeping the
+     * frame on an inner element means the socket coordinates and the geometry
+     * model share one origin by construction rather than by agreement.
+     */
     :host {
+      cursor: move;
       position: absolute;
+      user-select: none;
       z-index: 2;
     }
 
     :host([dragging]) {
       z-index: 5;
-      user-select: none;
+    }
+
+    /* Expanded: fill the surface rather than grow in place. */
+    :host([expanded]) {
+      --fb-socket-size: 42px;
+
+      cursor: default;
+      height: 100%;
+      left: 0 !important;
+      position: relative;
+      top: 0 !important;
+      z-index: 50;
+    }
+
+    :host([expanded]) .box {
+      height: 100%;
     }
 
     .box {
-      border-radius: 8px;
-      display: inline-flex;
+      --inner-border-color: var(--fb-block-border-color, #868686);
+
+      align-items: center;
+      background-color: var(--fb-node-background, rgba(0, 0, 0, 0.8));
+      border: 3px solid var(--inner-border-color);
+      border-radius: 12px;
+      box-sizing: border-box;
+      display: flex;
       justify-content: center;
+      min-height: 50px;
+      min-width: 72px;
       overflow: hidden;
-      padding: 1px;
+      padding: 4px;
       position: relative;
     }
 
@@ -275,6 +312,7 @@ export class FbNodeElement extends LitElement {
       calibrate: () => this.measure(),
       register: (callback, type) => editor.events.register(state.id!, callback, type),
       unregister: type => editor.events.unregister(state.id!, type),
+      unregisterAll: () => editor.events.unregisterAll(state.id!),
       onClick: listener => {
         this.clickListeners.add(listener);
 
@@ -479,12 +517,12 @@ export class FbNodeElement extends LitElement {
 
         <svg class="wires"></svg>
 
-        ${sockets.map(s => this.renderSocket(s))}
-
         ${this.showLabel && this.state?.title
           ? html`<span class="title">${this.state.title}</span>`
           : nothing}
       </div>
+
+      ${sockets.map(s => this.renderSocket(s))}
     `;
   }
 

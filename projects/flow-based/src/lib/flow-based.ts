@@ -7,9 +7,6 @@ import {
   FbSocket,
   FbSocketColors,
 } from '@scaljeri/flow-based-core';
-// Type-only: SocketComponent imports this module back, and an emitted import
-// would create a cycle the AOT compiler rejects (NG3003).
-import type { SocketComponent } from './socket/socket.component';
 
 /*
  * Everything framework-agnostic now lives in @scaljeri/flow-based-core: the node
@@ -54,13 +51,18 @@ export interface FbSocketEvent {
   event: PointerEvent;
 }
 
-/** A registered socket component, plus where it sits in the graph. */
+/**
+ * Where a socket is drawn, plus which node it belongs to.
+ *
+ * `element` is the shell's socket dot — a plain element rather than a component
+ * instance, which is what it became once socket positions were computed from the
+ * graph instead of measured from the DOM. Nothing needs to find a component any
+ * more, so the whole socket registry went with it.
+ */
 export interface FbSocketDetails {
   state: FbSocket;
   element: HTMLElement;
-  comp: SocketComponent;
   parentId: number;
-  scope: number;
 }
 
 /* ==========================================================================

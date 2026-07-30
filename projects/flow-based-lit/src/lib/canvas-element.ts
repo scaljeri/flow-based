@@ -1,4 +1,4 @@
-import { LitElement, PropertyValues, css, html, nothing } from 'lit';
+import { LitElement, PropertyValues, css, html, nothing, render } from 'lit';
 import { FbNodeState, FbPosition } from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
 import { FbEditor, FbEditorChange } from './editor';
@@ -67,6 +67,12 @@ export class FbFlowCanvasElement extends LitElement {
     // Freeze the plane size from the first layout; see the class comment.
     const rect = this.getBoundingClientRect();
     this.editor?.viewport.setPlaneSize(rect.width, rect.height);
+  }
+
+  protected override updated(): void {
+    if (this.editor?.flow) {
+      this.renderNodes();
+    }
   }
 
   private subscribe(): void {
@@ -145,6 +151,35 @@ export class FbFlowCanvasElement extends LitElement {
      Render
      ---------------------------------------------------------------------- */
 
+  /**
+   * The nodes, rendered into the LIGHT DOM and slotted into the plane.
+   *
+   * Everything else this element draws is chrome and belongs in the shadow root.
+   * The nodes do not, because they host other people's content: a stylesheet in
+   * `document` cannot match a class inside a shadow root, so Angular, Vue or
+   * plain CSS node content rendered in here would lose every class-based rule it
+   * has. That failure is quiet and partial — Material's M3 styles are mostly
+   * custom properties, which DO inherit across the boundary, so the cards looked
+   * right while the icon font silently did not apply.
+   *
+   * Rendering them as children instead puts node content back in the document,
+   * where a node author's CSS behaves the way they wrote it, while the slot keeps
+   * them inside the zoom/pan transform.
+   */
+  private renderNodes(): void {
+    render(
+      repeat(
+        this.editor.children,
+        (child: FbNodeState) => child.id ?? child,
+        (child: FbNodeState) => html`
+          <fb-node-box .editor=${this.editor} .state=${child}></fb-node-box>
+        `,
+      ),
+      this,
+      { host: this },
+    );
+  }
+
   protected override render() {
     if (!this.editor?.flow) {
       return nothing;
@@ -165,13 +200,7 @@ export class FbFlowCanvasElement extends LitElement {
         @line-click=${this.onLineClick}>
         <fb-connections .editor=${this.editor}></fb-connections>
 
-        ${repeat(
-          this.editor.children,
-          (child: FbNodeState) => child.id ?? child,
-          (child: FbNodeState) => html`
-            <fb-node-box .editor=${this.editor} .state=${child}></fb-node-box>
-          `,
-        )}
+        <slot></slot>
       </div>
     `;
   }
