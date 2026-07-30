@@ -562,3 +562,58 @@ test('routes connections orthogonally on request, and keeps them on their socket
   });
   expect(leavesFlat).toBe(true);
 });
+
+test('renders inline formatting in a document, without letting it become markup', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+  await page.locator('#view').click();
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+
+  const doc = await page.evaluate(() => {
+    const root = document.querySelector('fb-flow-document')!.shadowRoot!;
+
+    return {
+      strong: [...root.querySelectorAll('strong')].map(e => e.textContent),
+      code: [...root.querySelectorAll('code')].map(e => e.textContent),
+      inlineMath: [...root.querySelectorAll('span.math-source')].map(e => e.textContent),
+      displayMath: [...root.querySelectorAll('.math-display')].map(e => e.textContent?.trim()),
+    };
+  });
+
+  expect(doc.strong).toEqual(['input socket']);
+  expect(doc.code).toEqual(['sin(x/12)']);
+  expect(doc.inlineMath).toEqual(['y = 60 + 40\\sin(x/12)']);
+  // No typesetter is wired up here, so a formula shows its source rather than
+  // rendering blank — which is the documented fallback.
+  expect(doc.displayMath).toEqual(['\\sum_{i=0}^{n} x_i']);
+
+  /*
+   * And document text cannot become markup. Injected through the live state, the
+   * way a loaded JSON file would carry it.
+   */
+  const injected = await page.evaluate(() => {
+    const editor = window.fbEditor as unknown as {
+      children: { doc?: { body?: string } }[];
+      changes: { emit(c: { kind: string }): void };
+    };
+
+    editor.children[2].doc!.body = 'before <img src=x onerror="window.__x=1"> after';
+    editor.changes.emit({ kind: 'structure' });
+
+    return new Promise<{ images: number; text: string; flag: unknown }>(resolve => {
+      setTimeout(() => {
+        const root = document.querySelector('fb-flow-document')!.shadowRoot!;
+
+        resolve({
+          images: root.querySelectorAll('img').length,
+          text: root.querySelector('p')?.textContent ?? '',
+          flag: (window as unknown as { __x?: unknown }).__x,
+        });
+      }, 50);
+    });
+  });
+
+  expect(injected.images).toBe(0);
+  expect(injected.flag).toBeUndefined();
+  expect(injected.text).toContain('<img src=x');
+});

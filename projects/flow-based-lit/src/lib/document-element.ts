@@ -2,12 +2,16 @@ import { LitElement, PropertyValues, css, html, nothing } from 'lit';
 import {
   FbDocBlock,
   FbDocNodeBlock,
+  FbInline,
   FbNodeApi,
   FbNodeHandle,
   FbNodeState,
   documentFor,
+  isDisplayMath,
   paragraphsOf,
+  parseInline,
 } from '@scaljeri/flow-based-core';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { FbEditor, FbEditorChange } from './editor';
 
 /**
@@ -55,6 +59,30 @@ export class FbFlowDocumentElement extends LitElement {
       text-align: justify;
     }
 
+    code {
+      background: rgba(127, 127, 127, 0.18);
+      border-radius: 4px;
+      font-size: 0.9em;
+      padding: 0.1em 0.35em;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+    }
+
+    .math-display {
+      margin: 1.2em 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+
+    /* Unrendered TeX, when no typesetter is wired up. */
+    .math-source {
+      font-family: ui-monospace, monospace;
+      opacity: 0.85;
+    }
+
     figure {
       margin: 0 0 1em;
     }
@@ -94,6 +122,25 @@ export class FbFlowDocumentElement extends LitElement {
   `;
 
   declare editor: FbEditor;
+
+  /**
+   * How to typeset TeX. Optional, and unset by default on purpose.
+   *
+   * A document renderer that hard-wired KaTeX or MathJax would put a large
+   * dependency into every consumer, including the ones with no formulas at all —
+   * and would pick the engine for them. This takes a function instead:
+   *
+   *   doc.mathRenderer = (tex, display) => katex.renderToString(tex, {
+   *     displayMode: display, throwOnError: false,
+   *   });
+   *
+   * Returning a string means that string is trusted as markup, which is what a
+   * typesetter produces — so this hook is the ONE place document content can
+   * become HTML, supplied by the host app rather than by the JSON. With no
+   * renderer, formulas show as their TeX source, which is readable and honest
+   * rather than blank.
+   */
+  mathRenderer?: (tex: string, display: boolean) => string;
 
   /** One mounted node instance per figure, so they can be torn down. */
   private readonly handles = new Map<number, FbNodeHandle>();
@@ -251,9 +298,15 @@ export class FbFlowDocumentElement extends LitElement {
           : html`<h2>${block.text}</h2>`;
 
       case 'text':
-        // Interpolated as text, never as markup: this content comes from a JSON
-        // file that may not be the reader's own.
-        return paragraphsOf(block.text).map(p => html`<p>${p}</p>`);
+        return paragraphsOf(block.text).map(paragraph => {
+          const tokens = parseInline(paragraph);
+
+          // A paragraph that is only a display formula is a block of its own; a
+          // <p> around it would inherit the justified body text alignment.
+          return isDisplayMath(tokens)
+            ? this.renderInline(tokens[0])
+            : html`<p>${tokens.map(token => this.renderInline(token))}</p>`;
+        });
 
       case 'node':
         return this.renderFigure(block);
@@ -261,6 +314,53 @@ export class FbFlowDocumentElement extends LitElement {
       default:
         return nothing;
     }
+  }
+
+  /**
+   * One inline token.
+   *
+   * Every branch interpolates the text as TEXT, which Lit escapes — there is no
+   * path from document JSON to markup. The single exception is a rendered
+   * formula, and that markup comes from the host app's typesetter rather than
+   * from the document.
+   */
+  private renderInline(token: FbInline) {
+    switch (token.type) {
+      case 'strong':
+        return html`<strong>${token.text}</strong>`;
+
+      case 'em':
+        return html`<em>${token.text}</em>`;
+
+      case 'code':
+        return html`<code>${token.text}</code>`;
+
+      case 'link':
+        // rel is not decoration: a document may link anywhere, and the target
+        // must not get a handle on this window.
+        return html`<a href=${token.href} target="_blank" rel="noopener noreferrer">${token.text}</a>`;
+
+      case 'math':
+        return this.renderMath(token.tex, token.display);
+
+      default:
+        return html`${token.text}`;
+    }
+  }
+
+  private renderMath(tex: string, display: boolean) {
+    const typeset = this.mathRenderer?.(tex, display);
+
+    if (typeset === undefined) {
+      // No typesetter: show the source. Readable, and obviously a formula.
+      return display
+        ? html`<div class="math-display math-source">${tex}</div>`
+        : html`<span class="math-source">${tex}</span>`;
+    }
+
+    const content = unsafeHTML(typeset);
+
+    return display ? html`<div class="math-display">${content}</div>` : html`<span>${content}</span>`;
   }
 
   private renderFigure(block: FbDocNodeBlock) {

@@ -98,11 +98,13 @@ editor.load({
       id: 30, type: 'scope', title: 'Scope', position: { x: 45, y: 45 },
       sockets: [{ id: 300, type: 'in', format: 'number' }],
       doc: {
-        body: 'The scope renders whatever reaches its input socket. In the '
+        body: 'The scope renders whatever reaches its **input socket**. In the '
           + 'document it is the same live component the editor draws, not a '
           + 'screenshot of one \u2014 the JSON is the source, and both views read it.\n\n'
           + 'Because the figure is the node itself, anything it computes keeps '
-          + 'computing while you read.',
+          + 'computing while you read. The trace is `sin(x/12)`, sampled at '
+          + 'every pixel, so the drawn curve is $y = 60 + 40\\sin(x/12)$.\n\n'
+          + '$$\\sum_{i=0}^{n} x_i$$',
         figure: { width: '260px' },
       },
     },

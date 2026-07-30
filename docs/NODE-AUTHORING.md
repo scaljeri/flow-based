@@ -185,6 +185,39 @@ through the same contract in both — so it keeps computing on the page — but 
 document's `FbNodeApi` is inert: everything that would mutate the flow does
 nothing. Draw accordingly, and do not assume `setMaxSize` will have an effect.
 
+### Prose, formatting and formulas
+
+Block text supports a small Markdown subset plus TeX spans:
+
+```
+**bold**   *italic*   `code`   [text](https://example.com)   $x^2$   $$\sum_i x_i$$
+```
+
+It is parsed into tokens, never into an HTML string, and the renderer sets
+`textContent` — so document text cannot become markup no matter what a loaded
+file contains. `javascript:` and `data:` links are rendered as plain text rather
+than followed.
+
+Formulas need a typesetter, and the library does not choose one for you — that
+would put a large dependency on every consumer, including those with no
+formulas. Supply one instead:
+
+```ts
+import katex from 'katex';   // or MathJax, or anything that returns markup
+
+const doc = document.querySelector('fb-flow-document');
+
+doc.mathRenderer = (tex, display) =>
+  katex.renderToString(tex, { displayMode: display, throwOnError: false });
+```
+
+Remember KaTeX's own stylesheet — without it the output is unstyled markup. With
+no renderer set, formulas display their TeX source: readable, and obviously a
+formula, rather than blank.
+
+This hook is the one place document content becomes trusted markup, and it comes
+from your app rather than from the JSON.
+
 Give a node prose and it will read as a section rather than a box:
 
 ```json
