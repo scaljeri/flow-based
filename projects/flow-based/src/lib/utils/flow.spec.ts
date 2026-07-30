@@ -384,6 +384,174 @@ describe('lookup safety (AUDIT.md §3.9)', () => {
   });
 });
 
+describe('format propagation (AUDIT.md §3.7)', () => {
+  it('reports convergence and the steps taken', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    const report = flow.lastPropagation!;
+
+    expect(report.converged).toBe(true);
+    expect(report.steps).toBeGreaterThan(0);
+  });
+
+  it('propagates a format across a chain of composite nodes', () => {
+    // leaf(out:number) -> innerA(no format) -> innerB(no format) -> sink
+    const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
+    const innerA: any = {
+      id: 40,
+      type: 'flow',
+      sockets: [{ id: 400, type: 'out' }],
+      children: [leaf],
+      connections: [{ id: 2000, from: 30, to: 40, out: 300, in: 400 }],
+    };
+    const innerB: any = {
+      id: 50,
+      type: 'flow',
+      sockets: [{ id: 500, type: 'out' }],
+      children: [],
+      connections: [],
+    };
+    const root: any = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [innerA, innerB],
+      connections: [{ id: 3000, from: 40, to: 50, out: 400, in: 500 }],
+    };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    expect(innerA.sockets[0].format).toBe('number');
+    expect(innerB.sockets[0].format).toBe('number');
+    expect(flow.lastPropagation!.converged).toBe(true);
+  });
+
+  it('lists sockets it could not resolve instead of failing silently', () => {
+    const a: any = { id: 10, type: 'source', sockets: [{ id: 100, type: 'out' }] };
+    const b: any = { id: 20, type: 'sink', sockets: [{ id: 200, type: 'in' }] };
+    const root: any = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [a, b],
+      connections: [{ id: 1000, from: 10, to: 20, out: 100, in: 200 }],
+    };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    expect(flow.lastPropagation!.unresolvedSocketIds.sort()).toEqual([100, 200]);
+  });
+
+  it('terminates and reports non-convergence when helpers never settle', () => {
+    const { root } = flatFixture();
+    // A helper that always claims it changed something would have spun the old
+    // loop 100 times and then whispered to the console.
+    const helpers = { resetSockets: () => undefined, connect: () => true };
+
+    const flow = new Flow(flowTypes() as any, helpers as any).initialize(root);
+
+    expect(flow.lastPropagation!.converged).toBe(false);
+    expect(flow.lastPropagation!.steps).toBeGreaterThan(0);
+  });
+});
+
+describe('Flow.findCycles', () => {
+  it('returns nothing for an acyclic graph', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    expect(flow.findCycles()).toEqual([]);
+  });
+
+  it('finds a two-node cycle', () => {
+    const a: any = {
+      id: 10, type: 'source',
+      sockets: [{ id: 100, type: 'out', format: 'number' }, { id: 101, type: 'in', format: 'number' }],
+    };
+    const b: any = {
+      id: 20, type: 'sink',
+      sockets: [{ id: 200, type: 'in', format: 'number' }, { id: 201, type: 'out', format: 'number' }],
+    };
+    const root: any = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [a, b],
+      connections: [
+        { id: 1000, from: 10, to: 20, out: 100, in: 200 },
+        { id: 1001, from: 20, to: 10, out: 201, in: 101 },
+      ],
+    };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const cycles = flow.findCycles();
+
+    expect(cycles).toHaveLength(1);
+    // Order depends on the DFS start node, so compare membership.
+    expect(new Set(cycles[0])).toEqual(new Set([10, 20]));
+    // Closed loop: first and last entries are the same node.
+    expect(cycles[0][0]).toBe(cycles[0][cycles[0].length - 1]);
+  });
+
+  it('finds a three-node cycle', () => {
+    const mk = (id: number) => ({
+      id,
+      type: 'source',
+      sockets: [
+        { id: id * 10, type: 'out', format: 'number' },
+        { id: id * 10 + 1, type: 'in', format: 'number' },
+      ],
+    });
+    const a: any = mk(10), b: any = mk(20), c: any = mk(30);
+    const root: any = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [a, b, c],
+      connections: [
+        { id: 1, from: 10, to: 20, out: 100, in: 201 },
+        { id: 2, from: 20, to: 30, out: 200, in: 301 },
+        { id: 3, from: 30, to: 10, out: 300, in: 101 },
+      ],
+    };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const cycles = flow.findCycles();
+
+    expect(cycles).toHaveLength(1);
+    expect(new Set(cycles[0])).toEqual(new Set([10, 20, 30]));
+  });
+
+  it('does not report a diamond as a cycle', () => {
+    // 10 -> 20 -> 40 and 10 -> 30 -> 40: shared nodes, no cycle.
+    const mk = (id: number) => ({
+      id,
+      type: 'source',
+      sockets: [
+        { id: id * 10, type: 'out', format: 'number' },
+        { id: id * 10 + 1, type: 'in', format: 'number' },
+      ],
+    });
+    const root: any = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [mk(10), mk(20), mk(30), mk(40)],
+      connections: [
+        { id: 1, from: 10, to: 20, out: 100, in: 201 },
+        { id: 2, from: 10, to: 30, out: 100, in: 301 },
+        { id: 3, from: 20, to: 40, out: 200, in: 401 },
+        { id: 4, from: 30, to: 40, out: 300, in: 401 },
+      ],
+    };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    expect(flow.findCycles()).toEqual([]);
+  });
+});
+
 describe('id generation (AUDIT.md §3.8)', () => {
   it('mints ids that never collide with the loaded flow\'s existing ids', () => {
     const { root } = flatFixture();

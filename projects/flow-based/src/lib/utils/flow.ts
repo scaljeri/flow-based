@@ -19,12 +19,28 @@ interface NodeConnection {
   state: FbNodeState;
 }
 
+/**
+ * Outcome of a socket-format propagation pass. Exposed so a host app can surface
+ * problems in the UI instead of leaving them in the console.
+ */
+export interface FbPropagationReport {
+  /** False if propagation hit its step ceiling, which means helpers are unstable. */
+  converged: boolean;
+  /** Worklist steps taken; useful for spotting pathological graphs. */
+  steps: number;
+  /** Sockets still without a format once propagation settled. */
+  unresolvedSocketIds: number[];
+  /** Node-id cycles in the graph, innermost node repeated at both ends. */
+  cycles: number[][];
+}
+
 export class Flow {
   private workers: FbKeyValues<FbNodeWorker> = {};
   private state!: FbNodeState;
   private nodes: FbKeyValues<Node> = {};
   private connections: FbKeyValues<NodeConnection> = {};
   private sockets: FbKeyValues<number> = {};
+  private propagationReport: FbPropagationReport | null = null;
 
   constructor(private flowTypes: FbNodeTypes,
               private helpers?: FbNodeHelpers,
@@ -43,16 +59,7 @@ export class Flow {
     connections.forEach(c => this.connections[c.id] = {state: flow, connection: c});
     this.createVirtualFlow(children, flow.id!);
 
-    let count = 0;
-    // Fixpoint: re-sweep every connection until no socket format changes.
-    // Bounded at 100 sweeps. Replaced by a topological pass in Stage 3.
-    while (this.connectNodes() && ++count < 100) {
-      // Intentionally empty — connectNodes() does the work and reports whether
-      // anything changed.
-    }
-    if (count === 100) {
-      console.warn('Connecting all nodes failed');
-    }
+    this.propagateFormats();
 
     Object.keys(this.connections).forEach(key => {
       this.connectWorkers(this.connections[key].connection);
@@ -88,15 +95,7 @@ export class Flow {
       }
     });
 
-    let count = 0;
-    // Same bounded fixpoint as initialize(); see the note there.
-    while (this.connectNodes() && ++count < 100) {
-      // Intentionally empty.
-    }
-
-    if (count === 100) {
-      console.warn('Connecting all nodes failed');
-    }
+    this.propagateFormats();
   }
 
   removeConnection(connection: FbConnection, state: FbNodeState, doRebuild = true): void {
@@ -263,18 +262,168 @@ export class Flow {
     });
   }
 
-  private connectNodes(): boolean {
-    const keys = Object.keys(this.connections);
+  /** The most recent propagation pass; see {@link FbPropagationReport}. */
+  get lastPropagation(): FbPropagationReport | null {
+    return this.propagationReport;
+  }
 
-    for (const key of keys) {
-      const c = this.connections[key].connection;
+  private allConnections(): FbConnection[] {
+    return Object.keys(this.connections).map(key => this.connections[key].connection);
+  }
 
-      if (this.connect(c)) {
-        return true;
+  /**
+   * Propagate socket formats along connections using a worklist.
+   *
+   * Replaces `while (connectNodes() && ++count < 100) {}`, which re-swept *every*
+   * connection in the graph on each pass — O(E) work per changed socket — and then
+   * gave up with a bare `console.warn('Connecting all nodes failed')`, leaving the
+   * user a silently half-typed graph (docs/AUDIT.md §3.7).
+   *
+   * Propagation is monotonic in the normal case: a socket's format only goes from
+   * unset to set. So seeding a worklist with every connection and re-queueing only
+   * the connections that touch a socket which just changed converges in O(E)
+   * amortised. The step ceiling remains as a backstop, because an app's
+   * FbNodeHelpers.connect() is free to be non-monotonic — but now that outcome is
+   * reported rather than whispered.
+   */
+  private propagateFormats(): FbPropagationReport {
+    const all = this.allConnections();
+
+    // socket id -> connections touching it
+    const bySocket = new Map<number, FbConnection[]>();
+
+    for (const connection of all) {
+      for (const socketId of [connection.out, connection.in]) {
+        if (socketId === undefined) {
+          continue;
+        }
+
+        const list = bySocket.get(socketId);
+
+        if (list) {
+          list.push(connection);
+        } else {
+          bySocket.set(socketId, [connection]);
+        }
       }
     }
 
-    return false;
+    const queue = [...all];
+    const queued = new Set<number>(all.map(c => c.id));
+    const maxSteps = Math.max(1000, all.length * 8);
+    let steps = 0;
+    let converged = true;
+
+    while (queue.length) {
+      if (++steps > maxSteps) {
+        converged = false;
+        break;
+      }
+
+      const connection = queue.shift()!;
+      queued.delete(connection.id);
+
+      if (!this.connect(connection)) {
+        continue;
+      }
+
+      for (const socketId of [connection.out, connection.in]) {
+        if (socketId === undefined) {
+          continue;
+        }
+
+        for (const neighbour of bySocket.get(socketId) ?? []) {
+          if (!queued.has(neighbour.id)) {
+            queued.add(neighbour.id);
+            queue.push(neighbour);
+          }
+        }
+      }
+    }
+
+    const unresolvedSocketIds: number[] = [];
+
+    for (const socketId of bySocket.keys()) {
+      if (!this.getSocket(socketId)?.format) {
+        unresolvedSocketIds.push(socketId);
+      }
+    }
+
+    this.propagationReport = {
+      converged,
+      steps,
+      unresolvedSocketIds,
+      cycles: this.findCycles(),
+    };
+
+    if (!converged) {
+      console.warn(
+        `[flow-based] Socket-format propagation did not settle after ${steps} steps. ` +
+        `A custom FbNodeHelpers.connect() is probably flipping a format back and forth.`,
+      );
+    }
+
+    return this.propagationReport;
+  }
+
+  /**
+   * Cycles in the node graph, found with an iterative DFS (recursion would blow
+   * the stack on a large flow). Reported rather than prevented: a cycle is legal
+   * in a dataflow graph, but it is usually a mistake and the UI should be able to
+   * point at it.
+   */
+  findCycles(): number[][] {
+    const edges = new Map<number, number[]>();
+
+    for (const connection of this.allConnections()) {
+      const list = edges.get(connection.from);
+
+      if (list) {
+        list.push(connection.to);
+      } else {
+        edges.set(connection.from, [connection.to]);
+      }
+    }
+
+    const cycles: number[][] = [];
+    const seen = new Set<number>();
+
+    for (const start of edges.keys()) {
+      if (seen.has(start)) {
+        continue;
+      }
+
+      // path doubles as the "on current stack" set, via index lookup.
+      const stack: { node: number; next: number }[] = [{ node: start, next: 0 }];
+      const path = [start];
+
+      while (stack.length) {
+        const frame = stack[stack.length - 1];
+        const targets = edges.get(frame.node) ?? [];
+
+        if (frame.next >= targets.length) {
+          seen.add(frame.node);
+          stack.pop();
+          path.pop();
+          continue;
+        }
+
+        const target = targets[frame.next++];
+        const at = path.indexOf(target);
+
+        if (at !== -1) {
+          cycles.push([...path.slice(at), target]);
+          continue;
+        }
+
+        if (!seen.has(target)) {
+          stack.push({ node: target, next: 0 });
+          path.push(target);
+        }
+      }
+    }
+
+    return cycles;
   }
 
   private connect(connection: FbConnection): boolean {
