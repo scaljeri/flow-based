@@ -2,6 +2,7 @@ import katex from 'katex';
 import katexCss from 'katex/dist/katex.min.css';
 import { FbNodeMount, FbNodeTypes } from '@scaljeri/flow-based-core';
 import { FbEditor, FbFlowCanvasElement, FbFlowDocumentElement } from '@scaljeri/flow-based-lit';
+import { reactNode } from './react-node';
 
 /**
  * A standalone harness for the web-component shell, with no Angular anywhere.
@@ -74,6 +75,15 @@ const types: FbNodeTypes<FbNodeMount> = {
   scope: {
     component: canvasNode,
     settings: { title: 'Scope', sockets: [{ type: 'in', format: 'number' }] },
+  },
+  /*
+   * Written in React, in an editor that has never heard of React. Nothing here
+   * differs from the plain-DOM types above — the registry takes a mount
+   * function, and what happens inside it is the node author's business.
+   */
+  react: {
+    component: reactNode,
+    settings: { title: 'React', sockets: [{ type: 'in' }, { type: 'out' }] },
   },
 };
 

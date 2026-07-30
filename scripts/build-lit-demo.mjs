@@ -25,6 +25,8 @@ await build({
   outfile: 'dist/lit-demo/main.js',
   // KaTeX's stylesheet is imported as a string and adopted into a shadow root.
   loader: { '.css': 'text' },
+  // One node type in the harness is written in React; see demo/react-node.tsx.
+  jsx: 'automatic',
   alias: {
     '@scaljeri/flow-based-core': './dist/flow-based-core',
     '@scaljeri/flow-based-lit': './dist/flow-based-lit',

@@ -633,3 +633,50 @@ test('renders inline formatting in a document, without letting it become markup'
   expect(injected.flag).toBeUndefined();
   expect(injected.text).toContain('<img src=x');
 });
+
+test('hosts a node written in React, in an editor that has never heard of React', async ({ page }) => {
+  const problems: string[] = [];
+  page.on('pageerror', err => problems.push(err.message));
+  page.on('console', msg => {
+    if (msg.type() === 'error' || msg.type() === 'warning') problems.push(msg.text());
+  });
+
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  /*
+   * Added here rather than shipped in the fixture, so the other tests keep
+   * asserting node counts against a graph this one does not change.
+   */
+  await page.evaluate(() => (window.fbEditor as unknown as {
+    addNode(type: string): unknown;
+  }).addNode('react'));
+
+  /*
+   * The plain-DOM node proves the contract needs no framework; this proves the
+   * harder half — that a real framework's lifecycle fits it. React owns a root,
+   * renders asynchronously and holds its own state, and the shell knows none of
+   * that.
+   */
+  const react = page.locator('fb-flow-canvas .react-node');
+  await expect(react).toHaveCount(1);
+  await expect(react.locator('.react-node-ticks')).toHaveText('0');
+
+  // Its own state advances, so it really is running rather than rendered once.
+  await expect(react.locator('.react-node-ticks')).not.toHaveText('0', { timeout: 3000 });
+
+  /*
+   * Switching views moves the node in the DOM, which disconnects and reconnects
+   * the element and therefore unmounts and remounts the React root. Doing that
+   * cleanly is exactly where a framework adapter goes wrong — an unmount
+   * deferred past the shell's own cleanup threw here before it was made
+   * synchronous.
+   */
+  await page.locator('#view').click();
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+  await page.locator('#view').click();
+  await expect(canvas(page)).toBeVisible();
+
+  await expect(page.locator('fb-flow-canvas .react-node')).toHaveCount(1);
+  expect(problems).toEqual([]);
+});

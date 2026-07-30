@@ -19,7 +19,9 @@ module.exports = tseslint.config(
     ignores: ['dist/**', 'out-tsc/**', 'coverage/**', '.angular/**', 'test-results/**', 'playwright-report/**'],
   },
   {
-    files: ['**/*.ts'],
+    // .tsx too: one demo node type is written in React, and an unlinted file is
+    // an unlinted file whatever its extension.
+    files: ['**/*.ts', '**/*.tsx'],
     extends: [
       eslint.configs.recommended,
       ...tseslint.configs.recommended,
