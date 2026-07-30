@@ -28,6 +28,8 @@ import { FbEditor, FbEditorChange } from './editor';
 export class FbFlowDocumentElement extends LitElement {
   static override properties = {
     editor: { attribute: false },
+    mathRenderer: { attribute: false },
+    extraStyles: { attribute: false },
   };
 
   static override styles = css`
@@ -140,7 +142,24 @@ export class FbFlowDocumentElement extends LitElement {
    * renderer, formulas show as their TeX source, which is readable and honest
    * rather than blank.
    */
-  mathRenderer?: (tex: string, display: boolean) => string;
+  declare mathRenderer?: (tex: string, display: boolean) => string;
+
+  /**
+   * Stylesheets to adopt into this element's shadow root.
+   *
+   * A typesetter's output needs the typesetter's CSS, and a `<link>` in the page
+   * head cannot reach in here — the same shadow-DOM boundary that makes the rest
+   * of this component's styling safe. Node CONTENT sidesteps it by living in the
+   * light DOM; a rendered formula cannot, because it is part of the prose.
+   *
+   *   const sheet = new CSSStyleSheet();
+   *   sheet.replaceSync(katexCss);
+   *   doc.extraStyles = [sheet];
+   *
+   * Relative URLs inside the CSS — KaTeX's font files — resolve against the
+   * document, not against wherever the stylesheet came from.
+   */
+  declare extraStyles?: CSSStyleSheet[];
 
   /** One mounted node instance per figure, so they can be torn down. */
   private readonly handles = new Map<number, FbNodeHandle>();
@@ -171,7 +190,29 @@ export class FbFlowDocumentElement extends LitElement {
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
+    /*
+     * Unconditional rather than gated on a changed property. Both of these are
+     * `declare`d — without that, a TypeScript class field is DEFINED on the
+     * instance and shadows Lit's reactive accessor, so the property change is
+     * never recorded and a gate on it never opens. Idempotent and cheap; a gate
+     * here buys nothing and can silently close.
+     */
+    this.adoptExtraStyles();
     this.mountFigures();
+  }
+
+  private adoptExtraStyles(): void {
+    const root = this.renderRoot as ShadowRoot;
+
+    if (!this.extraStyles?.length || !root.adoptedStyleSheets) {
+      return;
+    }
+
+    // Appended, not assigned: Lit puts this component's own styles here, and
+    // replacing the array would strip them.
+    const own = root.adoptedStyleSheets.filter(sheet => !this.extraStyles!.includes(sheet));
+
+    root.adoptedStyleSheets = [...own, ...this.extraStyles];
   }
 
   private destroyFigures(): void {

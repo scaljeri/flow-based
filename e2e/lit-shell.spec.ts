@@ -575,17 +575,33 @@ test('renders inline formatting in a document, without letting it become markup'
     return {
       strong: [...root.querySelectorAll('strong')].map(e => e.textContent),
       code: [...root.querySelectorAll('code')].map(e => e.textContent),
-      inlineMath: [...root.querySelectorAll('span.math-source')].map(e => e.textContent),
-      displayMath: [...root.querySelectorAll('.math-display')].map(e => e.textContent?.trim()),
+      typeset: root.querySelectorAll('.katex').length,
+      unrendered: root.querySelectorAll('.math-source').length,
+      displayBlocks: root.querySelectorAll('.math-display').length,
+      // KaTeX's own stylesheet, adopted into the shadow root by the harness.
+      adopted: (root as ShadowRoot).adoptedStyleSheets.length,
+      mathFont: root.querySelector('.katex')
+        ? getComputedStyle(root.querySelector('.katex')!).fontFamily
+        : '',
     };
   });
 
   expect(doc.strong).toEqual(['input socket']);
   expect(doc.code).toEqual(['sin(x/12)']);
-  expect(doc.inlineMath).toEqual(['y = 60 + 40\\sin(x/12)']);
-  // No typesetter is wired up here, so a formula shows its source rather than
-  // rendering blank — which is the documented fallback.
-  expect(doc.displayMath).toEqual(['\\sum_{i=0}^{n} x_i']);
+
+  // One inline formula and one display formula, both typeset by the app's
+  // renderer rather than falling back to their TeX source.
+  expect(doc.typeset).toBe(2);
+  expect(doc.unrendered).toBe(0);
+  expect(doc.displayBlocks).toBe(1);
+
+  /*
+   * And the typesetter's stylesheet reached inside the shadow root. Without it
+   * KaTeX renders structurally correct markup in the wrong font and the wrong
+   * places — visible, but silently wrong, which is the failure worth pinning.
+   */
+  expect(doc.adopted).toBeGreaterThan(1);
+  expect(doc.mathFont).toContain('KaTeX');
 
   /*
    * And document text cannot become markup. Injected through the live state, the

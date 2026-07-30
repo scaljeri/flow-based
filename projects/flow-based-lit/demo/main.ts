@@ -1,3 +1,5 @@
+import katex from 'katex';
+import katexCss from 'katex/dist/katex.min.css';
 import { FbNodeMount, FbNodeTypes } from '@scaljeri/flow-based-core';
 import { FbEditor, FbFlowCanvasElement, FbFlowDocumentElement } from '@scaljeri/flow-based-lit';
 
@@ -158,6 +160,22 @@ canvas.editor = editor;
 
 const doc = document.createElement('fb-flow-document') as FbFlowDocumentElement;
 doc.editor = editor;
+
+/*
+ * The typesetter is supplied by the app, not by the library.
+ *
+ * <fb-flow-document> takes a function and hard-wires nothing, so a consumer with
+ * no formulas carries no formula engine — and one that has them picks its own.
+ * `throwOnError: false` renders a bad expression in red rather than throwing
+ * mid-render and taking the rest of the document with it.
+ */
+doc.mathRenderer = (tex, display) =>
+  katex.renderToString(tex, { displayMode: display, throwOnError: false });
+
+const katexSheet = new CSSStyleSheet();
+
+katexSheet.replaceSync(katexCss);
+doc.extraStyles = [katexSheet];
 doc.style.cssText = 'background:#fff;color:#111;height:100%';
 
 app.appendChild(canvas);

@@ -203,17 +203,30 @@ would put a large dependency on every consumer, including those with no
 formulas. Supply one instead:
 
 ```ts
-import katex from 'katex';   // or MathJax, or anything that returns markup
+import katex from 'katex';
+import katexCss from 'katex/dist/katex.min.css';   // as text; see below
 
 const doc = document.querySelector('fb-flow-document');
 
 doc.mathRenderer = (tex, display) =>
   katex.renderToString(tex, { displayMode: display, throwOnError: false });
+
+// The typesetter's CSS has to be adopted, not linked: a <link> in the page head
+// cannot reach into this element's shadow root.
+const sheet = new CSSStyleSheet();
+
+sheet.replaceSync(katexCss);
+doc.extraStyles = [sheet];
 ```
 
-Remember KaTeX's own stylesheet — without it the output is unstyled markup. With
-no renderer set, formulas display their TeX source: readable, and obviously a
-formula, rather than blank.
+Two practical notes. Import the stylesheet as a **string** — with esbuild that is
+`loader: { '.css': 'text' }`. And KaTeX's CSS references its font files
+relatively; because the stylesheet is adopted, those URLs resolve against the
+**document**, so the fonts belong beside `index.html` rather than beside the CSS.
+`scripts/build-lit-demo.mjs` copies them.
+
+With no renderer set, formulas display their TeX source: readable, and obviously
+a formula, rather than blank.
 
 This hook is the one place document content becomes trusted markup, and it comes
 from your app rather than from the JSON.

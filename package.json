@@ -46,17 +46,16 @@
     "@angular/cli": "^22.1.0",
     "@angular/compiler-cli": "^22.1.0",
     "@playwright/test": "^1.62.0",
+    "@types/katex": "^0.16.8",
     "@types/node": "^24.10.0",
     "angular-cli-ghpages": "^3.1.0",
     "angular-eslint": "^22.1.0",
     "eslint": "^9.39.0",
     "jsdom": "^28.1.0",
+    "katex": "^0.18.1",
     "ng-packagr": "^22.1.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.47.0",
     "vitest": "^4.1.10"
-  },
-  "peerDependencies": {
-    "@scaljeri/flow-based-lit": "^0.1.0"
   }
 }
