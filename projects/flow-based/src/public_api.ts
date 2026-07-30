@@ -39,3 +39,4 @@ export * from './lib/drag-drop/movable-area/movable-area.directive';
 export * from './lib/utils/flow';
 export * from './lib/utils/flow-worker';
 export * from './lib/utils/deep-clone';
+export * from './lib/utils/id-generator';

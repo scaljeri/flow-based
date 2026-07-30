@@ -1,7 +1,7 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 
-export const CANVAS_SETTINGS = {
+export const CANVAS_SETTINGS: FbNodeSettings = {
   title: 'Canvas',
   config: {},
   sockets: [

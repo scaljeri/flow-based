@@ -70,10 +70,10 @@ describe('Flow.initialize', () => {
     const { root, a } = flatFixture();
     const flow = new Flow(flowTypes() as any).initialize(root);
 
-    expect(flow.getNode(1).state).toBe(root);
-    expect(flow.getNode(1).parentId).toBeNull();
-    expect(flow.getNode(10).state).toBe(a);
-    expect(flow.getNode(10).parentId).toBe(1);
+    expect(flow.getNode(1)!.state).toBe(root);
+    expect(flow.getNode(1)!.parentId).toBeNull();
+    expect(flow.getNode(10)!.state).toBe(a);
+    expect(flow.getNode(10)!.parentId).toBe(1);
   });
 
   it('indexes child sockets so they are resolvable by id', () => {
@@ -194,7 +194,7 @@ describe('Flow.addNode / addConnection', () => {
     flow.addNode(added, root);
 
     expect(root.children).toContain(added);
-    expect(flow.getNode(60).parentId).toBe(1);
+    expect(flow.getNode(60)!.parentId).toBe(1);
     expect(flow.getWorker(60)).toBeInstanceOf(RecordingWorker);
     expect(flow.getSocket(600)).toBe(added.sockets[0]);
   });
@@ -282,34 +282,59 @@ describe('Flow.destroy', () => {
 });
 
 /**
- * Known defects, recorded as expected failures so they are visible in every run
- * without blocking the suite. Stage 1 flips these to plain `it(...)`.
- * See docs/AUDIT.md §3.3 and §3.5.
+ * Regressions for the defects recorded in docs/AUDIT.md §3.3, §3.8 and §3.9.
+ * These were `it.fails` entries when the audit was written; Stage 1 fixed the
+ * engine and flipped them.
  */
-describe('known defects (AUDIT.md §3.3)', () => {
-  it.fails('should destroy and forget a removed node\'s worker', () => {
+describe('resource release on removal (AUDIT.md §3.3)', () => {
+  it('destroys and forgets a removed node\'s worker', () => {
     const { root } = flatFixture();
     const flow = new Flow(flowTypes() as any).initialize(root);
     const source = flow.getWorker(10) as any as RecordingWorker;
 
     flow.removeNode(10);
 
-    // Today: the worker stays in the registry and keeps running forever.
     expect(source.destroyed).toBe(1);
     expect(flow.getWorker(10)).toBeUndefined();
   });
 
-  it.fails('should deregister the sockets of a removed node', () => {
+  it('stops a removed node\'s stream from reaching its old peer', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const source = flow.getWorker(10) as any as RecordingWorker;
+    const sink = flow.getWorker(20) as any as RecordingWorker;
+
+    flow.removeNode(10);
+    source.subject.next('after-delete');
+
+    expect(sink.received).toEqual([]);
+  });
+
+  it('deregisters the sockets of a removed node', () => {
     const { root } = flatFixture();
     const flow = new Flow(flowTypes() as any).initialize(root);
 
     flow.removeNode(10);
 
-    // Today: this still resolves, so stale sockets accumulate.
     expect(flow.getSocket(100)).toBeUndefined();
   });
 
-  it.fails('should not throw when removing a socket whose peer node has no worker', () => {
+  it('destroys the workers of a removed composite node\'s children', () => {
+    const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
+    const inner: any = { id: 40, type: 'flow', sockets: [], children: [leaf], connections: [] };
+    const root: any = { id: 1, type: 'flow', sockets: [], children: [inner], connections: [] };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const leafWorker = flow.getWorker(30) as any as RecordingWorker;
+
+    flow.removeNode(40);
+
+    expect(leafWorker.destroyed).toBe(1);
+    expect(flow.getWorker(30)).toBeUndefined();
+    expect(flow.getSocket(300)).toBeUndefined();
+  });
+
+  it('does not throw when removing a socket whose peer node has no worker', () => {
     const producer: any = { id: 70, type: 'source', sockets: [{ id: 700, type: 'out', format: 'number' }] };
     const consumer: any = { id: 80, type: 'inert', sockets: [{ id: 800, type: 'in', format: 'number' }] };
     const root: any = {
@@ -322,7 +347,70 @@ describe('known defects (AUDIT.md §3.3)', () => {
 
     const flow = new Flow(flowTypes() as any).initialize(root);
 
-    // removeConnection guards `worker && worker.removeStream`; removeSocket does not.
-    flow.removeSocket(producer.sockets[0]);
+    expect(() => flow.removeSocket(producer.sockets[0])).not.toThrow();
+    expect(flow.getSocket(700)).toBeUndefined();
+    expect(root.connections).toEqual([]);
+  });
+
+  it('releases every worker on destroy()', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    flow.destroy();
+
+    expect(flow.getWorker(10)).toBeUndefined();
+    expect(flow.getWorker(20)).toBeUndefined();
+  });
+});
+
+describe('lookup safety (AUDIT.md §3.9)', () => {
+  it('returns undefined for an unknown node or socket instead of throwing', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    expect(flow.getNode(999)).toBeUndefined();
+    expect(flow.getSocket(999)).toBeUndefined();
+  });
+
+  it('survives a connection that references an already-removed node', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    // Inject a connection pointing at a node that does not exist, then force a
+    // full format-propagation sweep over it.
+    flow.addConnection(root, { id: 9999, from: 10, to: 4242, out: 100, in: 4243 } as any);
+
+    expect(() => flow.removeNode(20)).not.toThrow();
+  });
+});
+
+describe('id generation (AUDIT.md §3.8)', () => {
+  it('mints ids that never collide with the loaded flow\'s existing ids', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    const existing = new Set([1, 10, 20, 100, 200, 1000]);
+    const minted = [flow.uniqueId, flow.uniqueId, flow.uniqueId];
+
+    expect(minted.some(id => existing.has(id))).toBe(false);
+    expect(new Set(minted).size).toBe(3);
+  });
+
+  it('is deterministic: the same flow yields the same ids every run', () => {
+    const first = new Flow(flowTypes() as any).initialize(flatFixture().root);
+    const second = new Flow(flowTypes() as any).initialize(flatFixture().root);
+
+    expect([first.uniqueId, first.uniqueId]).toEqual([second.uniqueId, second.uniqueId]);
+  });
+
+  it('assigns an id to a socket added without one', () => {
+    const { root } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    const socket: any = { type: 'in', format: 'number' };
+    flow.addSocket(socket, 10);
+
+    expect(typeof socket.id).toBe('number');
+    expect(flow.getSocket(socket.id)).toBe(socket);
   });
 });

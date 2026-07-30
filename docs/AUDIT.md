@@ -397,3 +397,116 @@ Now cheap, because the foundation supports them:
    plain class — this is hours, not days, and it makes everything after it safe.
 3. **Make the demo consume the built package** (§3.1). One change that exposes a
    fundamental packaging defect nobody can currently see.
+
+---
+
+## 6. Progress log
+
+The assessment above is preserved as written, on commit `0eb283c`. This section
+records what has since changed.
+
+### Stage 0 — toolchain (done)
+
+Angular 7 → 22.1, TypeScript 6.0.3, ESLint, vitest, Playwright, `@angular/build`.
+Library and demo both build; the demo now consumes the library through its package
+entry point, so §3.1 is closed. Details in `docs/MIGRATION-CHECKLIST.md`.
+
+Corrections to this document that the migration turned up:
+
+- §2 claimed `indigo-pink.css` was gone. It still ships in Material 22.1 (all four
+  M2 prebuilts do), though the theming guide says they will be removed.
+- §2 said to drop zone.js. That was wrong to do in Stage 0: this code depends on
+  `setTimeout` plus 35 manual `detectChanges()` calls, so zoneless has to wait for
+  Stage 3 to remove that scaffolding. zone.js is opted back in explicitly.
+- `ComponentFactoryResolver` (§3.9's neighbour) was removed in Angular **22.0**
+  itself, so the dynamic-node fix was mandatory rather than advisable.
+
+New defects found while migrating, invisible to the compiler:
+
+- **`deepClone` crashed on any config containing an array.** It called
+  `this.deepclone(item)` from inside a plain exported function — `this` undefined
+  *and* the name misspelled — and also threw on `null`. Now `structuredClone`,
+  with tests. Fixed.
+- **`@Host()` no longer reaches the creating component's providers** for a
+  dynamically created component, so every node type's `@Host() NodeService`
+  failed with NG0201. Dropped from all ten. Fixed.
+- **`XXL_FLOW_UNIT_STATE` was actively harmful, not merely dead** (§3.10 listed it
+  as unused): providing it required a custom injector, which replaces the
+  element-injector chain and broke the `@Host()` lookups above. Deprecated.
+- **The fractal web worker was a syntax error.** It stringifies a class and
+  re-evaluates it in a worker, relying on the old `es5` output where methods were
+  separate *enumerable* prototype assignments and the function was named. A native
+  ES2022 class keeps methods inline and non-enumerable, and the bundler drops the
+  name, so the emitted text began `class {` — invalid as a statement. Fixed, but
+  the approach is inherently fragile; see Stage 5.
+- **Edited custom-code was never persisted.** `CustomCodeComponent` has a `func`
+  setter that writes `state.config.func`, but nothing called it, so code typed
+  into the editor never reached the exported JSON. Fixed via the CM6 update
+  listener.
+
+### Stage 1 — engine tests and bug fixes (done)
+
+51 unit tests on the engine, up from zero real ones (§3.11). Every defect below
+now has a regression test.
+
+Fixed from this document:
+
+- §3.3 worker leak — `removeNode` now destroys the worker and drops it from the
+  registry, recursively for a composite node's children.
+- §3.3 socket-index leak — removed nodes deregister their sockets; `SocketService`
+  gained the `removeSocket` that `addSocket` never had, and `SocketComponent`
+  calls it on destroy.
+- §3.3 unguarded `removeStream` in `removeSocket` — guarded, like
+  `removeConnection` already was.
+- §3.5 the `changes.connection` typo — the input is `connections`, so that branch
+  was dead and `rect` was measured once and never re-measured.
+- §3.5 unguarded out-socket lookup in `d()` — the `in` socket had a fallback, the
+  `out` socket did not.
+- §3.2 `initialize()` on every `ngOnChanges` — now gated on `changes['state']`.
+- §3.8 timestamp ids — one shared `IdGenerator`, seeded past everything in a
+  loaded flow, replacing two colliding wall-clock generators. Ids are now
+  deterministic, so fixtures are reproducible.
+- §3.9 `getNode`/`getSocket` returning `| undefined` instead of lying about
+  always-present and crashing through `!`.
+- Composite nodes' own connection lists are cleaned on removal; they never were.
+
+Also fixed, found by the strict-mode pass:
+
+- `zoom-canvas`: `'Fractal: ' + this.label ? … : …` parses as
+  `('Fractal: ' + label) ? … : …`, always truthy — the prefix and the `'none'`
+  fallback never rendered.
+- `random-numbers`: the worker read `config.integers` while the settings declare
+  `integer`, so "Integers only" always started unchecked against its own default.
+- `canvas`: `putImageData(input, 0, 0)` passed the whole instruction array instead
+  of `item.data`.
+- `custom-code`: a compile failure left `func` undefined, and the immediately
+  following initial call threw a TypeError recorded as `runtimeError` — masking
+  the real `compileError`.
+- `fractal`: the dropdown offered "Koch Snowflake", which has no entry in
+  `AVAILABLE_FRACTALS`, so selecting it threw. Removed until implemented.
+- `default-front`: `@ViewChild('img')` was read in `ngOnInit` without
+  `{static: true}`. ViewEngine resolved such queries before `ngOnInit`; Ivy does
+  not, so this had been silently broken since Angular 8 and `calibrate()` never
+  fired on image load.
+- The node registry is now typed (`FB_CONFIG: FbNodeTypes`, each settings object
+  `FbNodeSettings`). It was supplied via `useValue`, which Angular types as `any`,
+  so nothing was checked. Typing it immediately caught two workers declaring
+  `sockets` as a *required* constructor parameter while the engine passes the
+  optional `state.sockets` — and neither used it.
+
+### Still open
+
+- §3.4 manual change detection, §3.6 percentage positioning, §3.7 the bounded
+  fixpoint loop — Stage 3.
+- The library builds in **full** rather than partial compilation mode, because
+  `FlowBasedComponent` ↔ `NodeComponent` are mutually recursive and remote scoping
+  exists only in full mode. Costs Angular-linker compatibility; the fix is
+  structural and belongs with Stage 3/4.
+- `getWorker()` still claims to always return a worker.
+- `XxlFlow` / `XxlFlowUnitState` / `FbNodeState` are still three overlapping
+  shapes, and `XxlConnection.from/to` still unions a node id with an
+  `HTMLElement` — Stage 2.
+- `ng lint` reports 0 errors but ~270 warnings, concentrated in four families
+  (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,
+  `no-empty-function`) that Stages 2–3 remove.
+- `ContextMenuComponent` is declared but used in no template — dead.

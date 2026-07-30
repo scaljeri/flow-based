@@ -1,8 +1,8 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
-export const STATS_SETTINGS = {
+export const STATS_SETTINGS: FbNodeSettings = {
   title: 'Statistics',
   config: { columnWidth: 1 },
   sockets: [
@@ -46,7 +46,10 @@ export class StatsWorker implements FbNodeWorker {
   private updatedSubject = new Subject<StatsDistribution>();
   public updated$ = this.updatedSubject.asObservable();
 
-  constructor(private config: any, private sockets: XxlSocket[]) {
+  // `sockets` was an unused constructor parameter property. It also declared the
+  // parameter as required while the engine passes `state.sockets`, which is
+  // optional — a mismatch the untyped registry hid.
+  constructor(private config: any) {
     this.initialize();
   }
 

@@ -1,3 +1,4 @@
+import { FbNodeTypes } from '@scaljeri/flow-based';
 import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.component';
 import { RANDOM_NUMBER_SETTINGS, RandomNumbersWorker } from './workers/random-numbers';
 import { StatsComponent } from './nodes/stats/stats.component';
@@ -18,7 +19,7 @@ import { ZoomCanvasComponent } from './nodes/zoom-canvas/zoom-canvas.component';
 import { CanvasComponent } from './nodes/canvas/canvas.component';
 import { CANVAS_SETTINGS, CanvasWorker } from './workers/canvas';
 
-export const FB_CONFIG = {
+export const FB_CONFIG: FbNodeTypes = {
   'random-numbers': {component: RandomNumbersComponent, settings: RANDOM_NUMBER_SETTINGS, worker: RandomNumbersWorker},
   'stats': {component: StatsComponent, settings: STATS_SETTINGS, worker: StatsWorker},
   'basic-graph': {component: BasicGraphComponent, settings: BASIC_GRAPH_CONFIG, worker: BasicGraphWorker},

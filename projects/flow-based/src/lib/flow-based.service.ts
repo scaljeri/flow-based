@@ -11,8 +11,7 @@ import type { FlowBasedComponent } from './flow-based.component';
 import { Flow } from './utils/flow';
 import { SocketService } from './socket.service';
 import { deepClone } from './utils/deep-clone';
-
-let uniqueId = Date.now();
+import { IdGenerator } from './utils/id-generator';
 
 export interface ExternalEvent {
   type: string;
@@ -33,6 +32,12 @@ export class FlowBasedService {
   public flow!: Flow;
   private flowStack: FlowBasedComponent[] = [];
   private nodeListeners: Record<string, { id: number, callback: FbNodeEventCallback }[]> = {};
+  /*
+   * One id source, shared with Flow. There used to be two independent
+   * timestamp-seeded generators — one here, one in Flow — which could collide
+   * with each other as well as with themselves (docs/AUDIT.md §3.8).
+   */
+  private readonly ids = new IdGenerator();
 
   constructor(private socketService: SocketService,
               @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeTypes,
@@ -72,10 +77,14 @@ export class FlowBasedService {
   }
 
   getUniqueId(): number {
-    return ++uniqueId;
+    return this.ids.create();
   }
 
   initialize(state: FbNodeState): void {
+    // Seed from the incoming flow before minting anything, so a loaded flow's
+    // existing ids are never reissued.
+    this.ids.observeFlow(state);
+
     if (!state.children) {
       state.id = this.getUniqueId();
       state.children = [];
@@ -83,7 +92,7 @@ export class FlowBasedService {
     }
 
     this.socketService.reset();
-    this.flow = new Flow(this.flowTypes, this.helpers).initialize(state);
+    this.flow = new Flow(this.flowTypes, this.helpers, this.ids).initialize(state);
   }
 
   getWorker(id: number): FbNodeWorker {

@@ -52,13 +52,20 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.connection) {
+    /*
+     * This guarded on `changes.connection` — an input that does not exist; the
+     * input is `connections`. The branch was therefore dead, so `this.rect` was
+     * measured once in ngOnInit and never again, and every line rendered offset
+     * from its sockets whenever the SVG's own position changed
+     * (docs/AUDIT.md §3.5).
+     */
+    if (changes['connections']) {
       this.rect = this.element.nativeElement.getBoundingClientRect();
       this.controlPoints = {};
-    } else {
-      if (!this.to && !this.from) {
-        this.pointer = null;
-      }
+    }
+
+    if (!this.to && !this.from) {
+      this.pointer = null;
     }
   }
 
@@ -114,8 +121,16 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       return this.dFromElements(connection);
     } else {
 
-      const start = this.socketService.getSocket(connection.out!).comp.position;
-      const end = (this.socketService.getSocket(connection.in!) || {comp: {position: start}} as any).comp.position;
+      // The `in` socket was guarded with a fallback but the `out` socket was
+      // dereferenced directly, so a socket not yet registered threw during load.
+      const startDetails = this.socketService.getSocket(connection.out!);
+
+      if (!startDetails) {
+        return '';
+      }
+
+      const start = startDetails.comp.position;
+      const end = (this.socketService.getSocket(connection.in!) ?? startDetails).comp.position;
 
       if (!start || !start.x || !end || !end.x) {
         return '';

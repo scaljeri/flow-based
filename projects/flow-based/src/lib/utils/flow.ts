@@ -7,6 +7,7 @@ import {
   FbNodeState, XxlSocket
 } from '../flow-based';
 import { FlowWorker } from './flow-worker';
+import { IdGenerator } from './id-generator';
 
 interface Node {
   state: FbNodeState;
@@ -24,14 +25,16 @@ export class Flow {
   private nodes: FbKeyValues<Node> = {};
   private connections: FbKeyValues<NodeConnection> = {};
   private sockets: FbKeyValues<number> = {};
-  private uniqueIdCount = 0;
 
   constructor(private flowTypes: FbNodeTypes,
-              private helpers?: FbNodeHelpers) {
+              private helpers?: FbNodeHelpers,
+              private ids: IdGenerator = new IdGenerator()) {
   }
 
   initialize(flow: FbNodeState): Flow {
     this.state = flow;
+    // Seed the id counter past everything already in the loaded flow.
+    this.ids.observeFlow(flow);
     this.nodes[flow.id!] = {state: flow, parentId: null};
 
     const connections = flow.connections!,
@@ -113,6 +116,10 @@ export class Flow {
     const nodeId = this.sockets[socket.id!],
       node = this.getNode(nodeId);
 
+    if (!node) {
+      return;
+    }
+
     node.state.sockets = node.state.sockets!.filter(s => s.id !== socket.id);
 
     const keys = Object.keys(this.connections);
@@ -124,9 +131,19 @@ export class Flow {
         this.connections[key].state.connections =
           this.connections[key].state.connections!.filter(item => item.id !== connection.id);
         delete this.connections[key];
-        this.workers[connection.to as number].removeStream(connection);
+
+        // Guarded, like removeConnection: a node type with neither a worker nor
+        // isFlow has no worker at all, and this threw a bare TypeError on it.
+        const worker = this.workers[connection.to as number];
+
+        if (worker && worker.removeStream) {
+          worker.removeStream(connection);
+        }
       }
     }
+
+    // The socket is gone from its node, so it must go from the index too.
+    delete this.sockets[socket.id!];
 
     if (doRebuild) {
       this.rebuildNodeConnections();
@@ -142,22 +159,46 @@ export class Flow {
 
   removeNode(id: number, doRebuild = true): void {
     const node = this.getNode(id);
-    const parentNode = this.getNode(node.parentId!);
 
+    if (!node) {
+      return;
+    }
+
+    // Depth-first, so a composite node's children release their own workers and
+    // sockets before the parent goes.
     if (node.state.children) {
       for (let i = node.state.children.length - 1; i >= 0; i--) {
         this.removeNode(node.state.children[i].id!, false);
       }
     }
 
-    parentNode.state.children = parentNode.state.children!.filter(child => child.id !== id);
-    delete this.nodes[id];
+    const parentNode = this.getNode(node.parentId!);
 
-    parentNode.state.connections!.forEach((c: XxlConnection) => {
-      if (c.from === id || c.to === id) {
-        this.removeConnection(c, parentNode.state, false);
-      }
+    if (parentNode) {
+      parentNode.state.children = parentNode.state.children!.filter(child => child.id !== id);
+
+      // Iterate a copy: removeConnection reassigns state.connections.
+      [...(parentNode.state.connections ?? [])].forEach((c: XxlConnection) => {
+        if (c.from === id || c.to === id) {
+          this.removeConnection(c, parentNode.state, false);
+        }
+      });
+    }
+
+    // A composite node owns its own connection list, which nothing used to clean.
+    [...(node.state.connections ?? [])].forEach((c: XxlConnection) => {
+      this.removeConnection(c, node.state, false);
     });
+
+    /*
+     * Release the node's resources. Previously only `this.nodes[id]` was deleted:
+     * the worker stayed in the registry and was never destroyed, so a deleted
+     * random-numbers node kept its interval running and its stream emitting
+     * forever, and the socket index grew without bound (docs/AUDIT.md §3.3).
+     */
+    this.destroyWorker(id);
+    (node.state.sockets ?? []).forEach(socket => delete this.sockets[socket.id!]);
+    delete this.nodes[id];
 
     if (doRebuild) {
       this.rebuildNodeConnections();
@@ -165,25 +206,42 @@ export class Flow {
   }
 
   destroy(): void {
-    Object.keys(this.workers).forEach(k => this.workers[k].destroy());
+    Object.keys(this.workers).forEach(key => this.destroyWorker(Number(key)));
   }
 
-  getNode(id: number): Node {
+  private destroyWorker(id: number): void {
+    const worker = this.workers[id];
+
+    if (worker) {
+      worker.destroy();
+      delete this.workers[id];
+    }
+  }
+
+  /*
+   * These return `undefined` for an unknown id rather than pretending otherwise.
+   * They used to be typed as always-present and dereferenced through `!`, so a
+   * connection referencing a removed node or an unregistered socket produced a
+   * bare TypeError from deep inside the engine (docs/AUDIT.md §3.9).
+   */
+  getNode(id: number): Node | undefined {
     return this.nodes[id];
   }
 
-  getSocket(id: number): XxlSocket {
-    const node = this.getNode(this.sockets[id]);
-
-    return node!.state.sockets!.filter(s => s.id === id)[0];
+  getSocket(id: number): XxlSocket | undefined {
+    return this.getNode(this.sockets[id])?.state.sockets?.find(s => s.id === id);
   }
 
   addSocket(socket: XxlSocket, nodeId: number): void {
-    const state = this.getNode(nodeId).state;
+    const node = this.getNode(nodeId);
+
+    if (!node) {
+      return;
+    }
 
     if (!socket.id) {
       socket.id = this.uniqueId;
-      state.sockets = [socket, ...state.sockets!];
+      node.state.sockets = [socket, ...node.state.sockets!];
     }
 
     this.sockets[socket.id!] = nodeId;
@@ -225,6 +283,11 @@ export class Flow {
       outSocket = this.getSocket(connection.out as number),
       inSocket = this.getSocket(connection.in as number);
 
+    // A stale connection can outlive the node or socket it points at.
+    if (!from || !to || !outSocket || !inSocket) {
+      return false;
+    }
+
     if (from.state.children && !outSocket.format) {
       outSocket.format = inSocket.format;
       return !!outSocket.format;
@@ -243,7 +306,7 @@ export class Flow {
   }
 
   get uniqueId(): number {
-    return Date.now() + ++this.uniqueIdCount;
+    return this.ids.create();
   }
 
   private createWorker(state: FbNodeState): void {
@@ -260,11 +323,11 @@ export class Flow {
   private connectWorkers(connection: XxlConnection): void {
     const fromWorker = this.getWorker(connection.from as number);
     const toWorker = this.getWorker(connection.to as number);
+    const outSocket = this.getSocket(connection.out!);
+    const inSocket = this.getSocket(connection.in!);
 
-    if (toWorker && fromWorker) {
-      const stream = fromWorker.getStream(this.getSocket(connection!.out!))!;
-
-      toWorker.setStream(stream, this.getSocket(connection.in!), connection);
+    if (toWorker && fromWorker && outSocket && inSocket) {
+      toWorker.setStream(fromWorker.getStream(outSocket), inSocket, connection);
     }
   }
 }

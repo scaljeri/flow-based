@@ -136,7 +136,13 @@ export class ZoomCanvasComponent implements OnInit, AfterViewInit {
   }
 
   getTitle(): string {
-    return 'Fractal: ' + this.label ? this.label : 'none';
+    /*
+     * Was `'Fractal: ' + this.label ? this.label : 'none'`, which parses as
+     * `('Fractal: ' + this.label) ? ... : ...`. The left side is a non-empty
+     * string and therefore always truthy, so this returned the bare label and
+     * never rendered the prefix or 'none'.
+     */
+    return `Fractal: ${this.label || 'none'}`;
   }
 
   get zoom(): string {

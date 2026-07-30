@@ -1,6 +1,7 @@
+import { FbNodeSettings } from '@scaljeri/flow-based';
 import { TapWorker } from './tap';
 
-export const BASIC_GRAPH_CONFIG = {
+export const BASIC_GRAPH_CONFIG: FbNodeSettings = {
   title: 'Basic Graph',
   sockets: [
     {

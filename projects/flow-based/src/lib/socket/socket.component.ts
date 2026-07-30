@@ -93,7 +93,10 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    this.subscription.unsubscribe();
+    this.subscription?.unsubscribe();
+    clearTimeout(this.hoverTimeoutId);
+    // Deregister, or the service keeps a reference to this destroyed component.
+    this.service.removeSocket(this.id);
   }
 
   @HostListener('pointerdown', ['$event'])

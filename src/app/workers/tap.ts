@@ -1,7 +1,7 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
-export const TAP_SETTINGS = {
+export const TAP_SETTINGS: FbNodeSettings = {
   title: 'Tap',
   config: {expanded: false},
   sockets: [

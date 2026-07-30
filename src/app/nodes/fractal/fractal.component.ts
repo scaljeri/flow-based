@@ -11,9 +11,14 @@ import { FractalsWorker } from '../../workers/fractals';
 export class FractalComponent implements OnInit {
   private state: FbNodeState;
   private worker!: FractalsWorker;
+  /*
+   * Only fractals that AVAILABLE_FRACTALS actually implements. 'Koch Snowflake'
+   * (id 'snowflake') was offered here but has no entry there, so selecting it
+   * threw on `AVAILABLE_FRACTALS[selected].dimensions`. Re-add it here once an
+   * implementation exists.
+   */
   fractals = [
     {name: 'Mandelbrot', id: 'mandelbrot'},
-    {name: 'Koch Snowflake', id: 'snowflake'},
     {name: 'Julia set', id: 'julia'}
   ];
 

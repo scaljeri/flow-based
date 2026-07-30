@@ -1,8 +1,8 @@
-import { FbKeyValues, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlFlowUnitState, XxlSocket } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subject, Subscription, zip } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-export const MERGE_STREAMS_SETTINGS = {
+export const MERGE_STREAMS_SETTINGS: FbNodeSettings = {
   title: 'Merge streams',
   sockets: [
     {

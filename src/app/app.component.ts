@@ -35,7 +35,15 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.selectionService.selection$.subscribe(type => {
-      this.activeOverlay!.dispose();
+      /*
+       * Clear the handle as well as disposing. The backdropClick path nulls it
+       * but this one did not, so a later Escape took the `else if
+       * (this.activeOverlay)` branch and disposed an already-disposed ref instead
+       * of firing triggerEvent('blur').
+       */
+      this.activeOverlay?.dispose();
+      this.activeOverlay = null;
+
       this.flowService.add(type);
     });
 

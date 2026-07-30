@@ -30,6 +30,16 @@ export class SocketService {
     this.sockets[id] = sd;
   }
 
+  /*
+   * addSocket() had no counterpart, so destroyed SocketComponents stayed in this
+   * map forever, pointing at detached DOM. clearPosition() then walked all of
+   * them — including the dead ones — on every single node move
+   * (docs/AUDIT.md §3.3).
+   */
+  removeSocket(id: number): void {
+    delete this.sockets[id];
+  }
+
   getSocket(id: number): SocketDetails {
     return this.sockets[id];
   }

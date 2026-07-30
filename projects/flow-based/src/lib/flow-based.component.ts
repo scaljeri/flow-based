@@ -104,8 +104,13 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     });
   }
 
-  ngOnChanges(obj: SimpleChanges): void {
-    if (this.root) {
+  ngOnChanges(changes: SimpleChanges): void {
+    /*
+     * Gated on `state`. This used to fire for ANY input change — including
+     * `active` and `type` — rebuilding the whole graph and silently discarding
+     * the previous Flow's workers without destroying them (docs/AUDIT.md §3.2).
+     */
+    if (this.root && changes['state']) {
       this.flowService.initialize(this.state);
     }
   }

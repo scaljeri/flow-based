@@ -1,7 +1,7 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
-export const CUSTOM_CODE_SETTINGS = {
+export const CUSTOM_CODE_SETTINGS: FbNodeSettings = {
   title: 'Custom code',
   config: {func: '// const out = new Subject();\n// function(val) {\nout.next(val)'},
   sockets: [
@@ -58,7 +58,7 @@ export class CustomCodeWorker implements FbNodeWorker {
   }
 
   removeStream(connection: XxlConnection): void {
-    this.subscriptions[connection.id].unsubscribe();
+    this.subscriptions[connection.id]?.unsubscribe();
 
     delete this.subscriptions[connection.id];
   }
@@ -72,11 +72,19 @@ export class CustomCodeWorker implements FbNodeWorker {
     this.compileError = this.runtimeError = null;
 
     const inputFunc = `return function(val) { ${funcStr} }`;
+
     try {
       this.func = new Function('out', inputFunc)(this.subject);
     } catch (err) {
       console.error(err);
       this.compileError = toError(err);
+
+      /*
+       * Bail out. Falling through to the initial call below invoked a function
+       * that was never built, and the resulting TypeError was recorded as
+       * `runtimeError` — masking the actual compile error the user needed to see.
+       */
+      return;
     }
 
     try {

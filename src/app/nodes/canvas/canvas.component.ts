@@ -75,7 +75,9 @@ export class CanvasComponent implements OnInit, AfterViewInit {
         if (item.type === 'curve') {
           this.drawCurve(item);
         } else if (item.type === 'image-data') {
-          this.ctx.putImageData(input, 0, 0);
+          // Was `putImageData(input, ...)` — the whole instruction array rather
+          // than this instruction's payload.
+          this.ctx.putImageData(item.data, 0, 0);
         } else if (item.type === 'text') {
           this.drawText(item);
         }

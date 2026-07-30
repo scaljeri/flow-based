@@ -1,8 +1,8 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 import { IDimensions, IZoomable } from '../app.models';
 
-export const ZOOM_CANVAS_SETTINGS = {
+export const ZOOM_CANVAS_SETTINGS: FbNodeSettings = {
   title: 'Zoomable canvas',
   config: {expanded: false},
   sockets: [

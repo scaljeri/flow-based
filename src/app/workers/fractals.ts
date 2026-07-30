@@ -1,4 +1,4 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { FbWebWorker } from './webworker';
 import * as Mandelbrot from './fractals/mandelbrot';
@@ -54,7 +54,7 @@ export interface FractalsConfig {
   selected: string;
 }
 
-export const FRACTALS_SETTINGS = {
+export const FRACTALS_SETTINGS: FbNodeSettings = {
   title: 'Fractals',
   config: {
     selected: 'mandelbrot'
@@ -81,8 +81,9 @@ export class FractalsWorker implements FbNodeWorker {
   private x?: number;
   private y?: number;
 
-  constructor(private config: FractalsConfig,
-              private sockets: XxlSocket[]) {
+  // `sockets` was an unused constructor parameter property, declared required
+  // while the engine passes the optional `state.sockets`.
+  constructor(private config: FractalsConfig) {
     this.setFractal(config.selected);
   }
 

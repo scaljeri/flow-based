@@ -1,7 +1,7 @@
-import { FbKeyValues, XxlConnection, XxlSocket, FbNodeWorker } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
 import { Observable, Subject } from 'rxjs';
 
-export const RANDOM_NUMBER_SETTINGS = {
+export const RANDOM_NUMBER_SETTINGS: FbNodeSettings = {
   title: 'Random number generator',
   config: {
     min: 0,
@@ -96,11 +96,15 @@ export class RandomNumbersWorker implements FbNodeWorker {
   }
 
   get integer(): boolean {
-    return this.config.integers;
+    // `config.integer`, matching the key RANDOM_NUMBER_SETTINGS actually
+    // declares. Reading `config.integers` meant a fresh node saw `undefined`, so
+    // the "Integers only" checkbox always started unchecked and values started
+    // non-integer, contradicting the declared default of `true`.
+    return this.config.integer;
   }
 
   set integer(val: boolean) {
-    this.config.integers = val;
+    this.config.integer = val;
   }
 
   connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
