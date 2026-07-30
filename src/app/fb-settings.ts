@@ -1,4 +1,4 @@
-import { FbNodeTypes } from '@scaljeri/flow-based';
+import { FbNodeTypes, nodeMount } from '@scaljeri/flow-based';
 import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.component';
 import { RANDOM_NUMBER_SETTINGS, RandomNumbersWorker } from './workers/random-numbers';
 import { StatsComponent } from './nodes/stats/stats.component';
@@ -9,6 +9,7 @@ import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.compo
 import { MERGE_STREAMS_SETTINGS, MergeStreamsWorker } from './workers/merge-streams';
 import { TapComponent } from './nodes/tap/tap.component';
 import { TAP_SETTINGS, TapWorker } from './workers/tap';
+import { METER_SETTINGS, meterNode } from './nodes/meter/meter.node';
 import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
 import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
 import { CUSTOM_CODE_SETTINGS, CustomCodeWorker } from './workers/custom-code';
@@ -29,7 +30,13 @@ export const FB_CONFIG: FbNodeTypes = {
   'fractals': {component: FractalComponent, settings: FRACTALS_SETTINGS, worker: FractalsWorker},
   'zoomcanvas': {component: ZoomCanvasComponent, settings: ZOOM_CANVAS_SETTINGS, worker: ZoomCanvasWorker},
   'canvas': {component: CanvasComponent, settings: CANVAS_SETTINGS, worker: CanvasWorker},
-  'flow': {component: DefaultFlowComponent, settings: {title: 'Composite Unit', isFlow: true}}
+  'flow': {component: DefaultFlowComponent, settings: {title: 'Composite Unit', isFlow: true}},
+
+  /*
+   * A node type with no framework in it — plain DOM against FbNodeApi, sitting
+   * in the same registry as the Angular ones. See docs/NODE-AUTHORING.md.
+   */
+  'meter': {component: nodeMount(meterNode), settings: METER_SETTINGS, worker: TapWorker}
 };
 
 export const FB_SOCKET_PALETTE = {

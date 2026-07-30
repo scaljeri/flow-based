@@ -664,15 +664,32 @@ plainly existed. One build now, everything waiting on it.
   remote scoping exists only in full mode. The cycle went with `NodeComponent`,
   and with it the Angular-linker incompatibility.
 
+## Stage 5 — editor features, and proving the extension point
+
+Multi-selection (shift-click and marquee), group dragging, copy/paste/duplicate,
+delete, align and distribute, with the usual keyboard shortcuts. The graph work
+is in the core, so it is unit-tested without a browser and a React or Vue shell
+inherits it.
+
+`docs/NODE-AUTHORING.md` documents the extension point, and
+`src/app/nodes/meter/meter.node.ts` demonstrates it: a node type written in plain
+DOM against `FbNodeApi`, registered beside the Angular ones with `nodeMount()`,
+running in the Angular demo. That turns "a node can ship as its own npm package"
+into something the test suite checks. It also exercises the light-DOM decision
+from Stage 4b — the node has no component and therefore no scoped styles, so it
+is styled by the app's global stylesheet, which a shadow root would have blocked.
+
+The fractal worker is now a real module worker. Rewriting it surfaced two bugs in
+the promise wrapper: every `run()` leaked a `message` listener, and with two
+computations in flight the first reply resolved both promises — one caller got
+the other's image.
+
 ### Still open
 - `ng lint` reports 0 errors but ~265 warnings, concentrated in four families
   (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,
   `no-empty-function`) that Stages 3–4 remove. `config: any` is the big one: node
   configs are untyped by design today, and giving `FbNodeType` a generic config
   parameter is the real fix.
-- The fractal worker still builds itself by stringifying a class
-  (`Function.prototype.toString`), which depends on bundler output. A real worker
-  module is Stage 5.
 - `FlowBasedService` is still a root singleton holding one `Flow` and a flow
   stack, so two independent editors on one page would still fight (§3.2). Making
   it component-scoped belongs with the Stage 3 rework.

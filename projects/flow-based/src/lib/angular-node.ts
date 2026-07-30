@@ -1,6 +1,6 @@
 import { ApplicationRef, EnvironmentInjector, Injector, Type, createComponent } from '@angular/core';
 import { FbNodeMount, FbNodeTypes as FbCoreNodeTypes } from '@scaljeri/flow-based-core';
-import { FbNodeTypes } from './flow-based';
+import { FbNodeTypes, isMountedNode } from './flow-based';
 import { NodeService } from './node/node-service';
 
 /**
@@ -68,7 +68,11 @@ export function angularNodeTypes(
   for (const [name, type] of Object.entries(types)) {
     mounted[name] = {
       ...type,
-      component: angularNodeMount(type.component, environmentInjector),
+      // Already a mount function: it needs nothing from Angular, so it goes
+      // through untouched.
+      component: isMountedNode(type.component)
+        ? type.component.mount
+        : angularNodeMount(type.component, environmentInjector),
     };
   }
 

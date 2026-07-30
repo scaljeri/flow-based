@@ -1,6 +1,7 @@
 import { InjectionToken, Type } from '@angular/core';
 import {
   FbNodeHelpers,
+  FbNodeMount,
   FbNodeState,
   FbNodeType,
   FbNodeTypes as FbCoreNodeTypes,
@@ -23,9 +24,32 @@ export * from '@scaljeri/flow-based-core';
    Angular-specific narrowing
    ========================================================================== */
 
-/** In an Angular app a node type is drawn by an Angular component. */
-export type FbAngularNodeType = FbNodeType<Type<unknown>>;
-export type FbNodeTypes = FbCoreNodeTypes<Type<unknown>>;
+/**
+ * A node type is drawn by an Angular component, or by anything at all.
+ *
+ * The second option is the point of the mount contract: a node needs an editor,
+ * not a framework. `nodeMount()` wraps a plain FbNodeMount so it can sit in the
+ * same registry as Angular components — and wraps it EXPLICITLY rather than
+ * having the adapter guess, because an Angular component and a mount function
+ * are both just functions and telling them apart means reading Angular's private
+ * compiled metadata.
+ */
+export interface FbMountedNode {
+  readonly mount: FbNodeMount;
+}
+
+export function nodeMount(mount: FbNodeMount): FbMountedNode {
+  return { mount };
+}
+
+export function isMountedNode(component: unknown): component is FbMountedNode {
+  return typeof component === 'object' && component !== null && 'mount' in component;
+}
+
+export type FbNodeComponent = Type<unknown> | FbMountedNode;
+
+export type FbAngularNodeType = FbNodeType<FbNodeComponent>;
+export type FbNodeTypes = FbCoreNodeTypes<FbNodeComponent>;
 
 /* ==========================================================================
    Injection tokens

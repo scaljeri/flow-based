@@ -87,6 +87,9 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
    */
   readonly zoomPercent = signal(100);
 
+  /** How many nodes are selected, for a toolbar to show or hide itself. */
+  readonly selectionCount = signal(0);
+
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -112,6 +115,10 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
     this.unsubscribe = this.editor.changes.subscribe(change => {
       if (change.kind === 'viewport') {
         this.zoomPercent.set(this.editor.viewport.zoomPercent());
+      }
+
+      if (change.kind === 'selection' || change.kind === 'structure') {
+        this.selectionCount.set(this.editor.selection.size);
       }
     });
 

@@ -353,3 +353,39 @@ test('toggles the JSON view, which is the serialisable flow state', async ({ pag
   expect(Array.isArray(parsed.flow.children)).toBe(true);
   expect(Array.isArray(parsed.flow.connections)).toBe(true);
 });
+
+test('mounts a node type that has no framework in it, styled by a plain stylesheet', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', err => errors.push(err.message));
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const before = await page.locator('fb-node-box').count();
+
+  await page.locator('mat-toolbar button.add').click();
+  await page.getByText('Meter', { exact: true }).click();
+
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+
+  /*
+   * The Meter is plain DOM against FbNodeApi — no Angular, no Lit — registered
+   * beside the Angular node types through `nodeMount()`. If it renders here, a
+   * node type really can ship as its own package depending only on
+   * @scaljeri/flow-based-core.
+   */
+  const meter = page.locator('.fb-meter');
+  await expect(meter).toHaveCount(1);
+  await expect(meter.locator('.fb-meter-value')).toBeVisible();
+
+  /*
+   * And it is styled by the app's GLOBAL stylesheet, which is the load-bearing
+   * part: this node has no component and therefore no scoped styles, so if node
+   * content were mounted inside a shadow root — as it was — a plain `.fb-meter`
+   * rule could not reach it and would fail silently.
+   */
+  const trackHeight = await page.locator('.fb-meter-track').evaluate(el => getComputedStyle(el).height);
+  expect(trackHeight).toBe('6px');
+
+  expect(errors).toEqual([]);
+});
