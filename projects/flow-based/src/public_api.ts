@@ -43,3 +43,5 @@ export * from './lib/utils/flow';
 export * from './lib/utils/flow-worker';
 export * from './lib/utils/deep-clone';
 export * from './lib/utils/id-generator';
+export * from './lib/utils/serialization';
+export * from './lib/utils/history.service';

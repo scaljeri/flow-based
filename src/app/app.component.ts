@@ -1,5 +1,12 @@
 import { Component, HostListener, OnInit } from '@angular/core';
-import { FbNodeState, FlowBasedService } from '@scaljeri/flow-based';
+import {
+  FbHistoryService,
+  FbNodeState,
+  FbPropagationReport,
+  FlowBasedService,
+  deserializeFlowFromJson,
+  serializeFlowToJson,
+} from '@scaljeri/flow-based';
 import * as data from './fixtures';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
@@ -21,9 +28,11 @@ export class AppComponent implements OnInit {
   activeOverlay: OverlayRef | null = null;
   showJson = false;
   flow: FbNodeState = data.basic as FbNodeState;
+  loadError: string | null = null;
 
   constructor(private selectionService: ComponentSelectionService,
               private flowService: FlowBasedService,
+              public history: FbHistoryService,
               private overlay: Overlay) {
   }
 
@@ -40,14 +49,128 @@ export class AppComponent implements OnInit {
 
       this.flowService.add(type);
     });
+  }
 
-    // const worker = new Worker('fractals-worker.js');
-    // worker.onmessage = (event) => {
-    //   const { output } = event.data;
-    //   console.log('output=' + output);
-    // };
-    //
-    // worker.postMessage(9);
+  /* ----------------------------------------------------------------------
+     Undo / redo
+     ----------------------------------------------------------------------
+     Reassigning `flow` is all that is needed: FlowBasedComponent.ngOnChanges is
+     gated on the `state` input, and the history service hands back a fresh
+     object, so the graph is rebuilt from the snapshot.
+   */
+
+  undo(): void {
+    const restored = this.history.undo(this.flow);
+
+    if (restored) {
+      this.flow = restored;
+    }
+  }
+
+  redo(): void {
+    const restored = this.history.redo(this.flow);
+
+    if (restored) {
+      this.flow = restored;
+    }
+  }
+
+  @HostListener('document:keydown.control.z', ['$event'])
+  @HostListener('document:keydown.meta.z', ['$event'])
+  onUndoKey(event: Event): void {
+    event.preventDefault();
+    this.undo();
+  }
+
+  @HostListener('document:keydown.control.shift.z', ['$event'])
+  @HostListener('document:keydown.meta.shift.z', ['$event'])
+  onRedoKey(event: Event): void {
+    event.preventDefault();
+    this.redo();
+  }
+
+  /* ----------------------------------------------------------------------
+     Save / load
+     ---------------------------------------------------------------------- */
+
+  save(): void {
+    const json = serializeFlowToJson(this.flow);
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = 'flow.json';
+    link.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  async onLoad(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const restored = deserializeFlowFromJson(await file.text());
+
+      this.history.capture(this.flow);
+      this.flow = restored;
+      this.loadError = null;
+    } catch (err) {
+      // Surfaced in the toolbar rather than only in the console.
+      this.loadError = (err as Error).message;
+    } finally {
+      // Allow re-selecting the same file.
+      input.value = '';
+    }
+  }
+
+  /* ----------------------------------------------------------------------
+     Validation
+     ----------------------------------------------------------------------
+     Flow.lastPropagation exists so problems can be shown in the UI instead of
+     being whispered to the console, which is what the old fixpoint loop did.
+   */
+
+  get validation(): FbPropagationReport | null {
+    return this.flowService.flow?.lastPropagation ?? null;
+  }
+
+  get problemCount(): number {
+    const report = this.validation;
+
+    if (!report) {
+      return 0;
+    }
+
+    return report.unresolvedSocketIds.length + report.cycles.length + (report.converged ? 0 : 1);
+  }
+
+  get validationDetail(): string {
+    const report = this.validation;
+
+    if (!report) {
+      return '';
+    }
+
+    const parts: string[] = [];
+
+    if (!report.converged) {
+      parts.push('socket formats did not settle');
+    }
+
+    if (report.unresolvedSocketIds.length) {
+      parts.push(`${report.unresolvedSocketIds.length} socket(s) without a format`);
+    }
+
+    if (report.cycles.length) {
+      parts.push(`${report.cycles.length} cycle(s): ${report.cycles.map(c => c.join(' → ')).join(', ')}`);
+    }
+
+    return parts.join('; ');
   }
 
   openModal(): void {
@@ -78,12 +201,10 @@ export class AppComponent implements OnInit {
     this.showJson = !this.showJson;
   }
 
-  onUpdate(): void {
-    console.log('updated');
+  get flowJson(): string {
+    return serializeFlowToJson(this.flow);
   }
 
-  // Angular types `$event` as the base Event for key-modified bindings, and the
-  // event was never used here anyway.
   @HostListener('document:keydown.escape')
   escape(): void {
     if (this.showJson) {

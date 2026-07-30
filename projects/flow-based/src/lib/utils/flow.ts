@@ -68,6 +68,11 @@ export class Flow {
     return this;
   }
 
+  /** The root node/flow this instance was initialised with. */
+  get rootState(): FbNodeState {
+    return this.state;
+  }
+
   getWorker(id: number): FbNodeWorker | undefined {
     return this.workers[id];
   }

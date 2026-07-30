@@ -1,18 +1,51 @@
 <mat-toolbar [color]="'primary'">
   <span>Flow based programming</span>
+
   <div class="button-wrapper">
-    <button mat-button (click)="openModal()" class="add">Add</button>
-    <button mat-button (click)="showJSON()" class="btn btn-primary json" class="json">{{showJson ? 'Flow' :
-      'JSON'}}
+    <button type="button" mat-button (click)="openModal()" class="add">Add</button>
+
+    <button type="button" mat-button class="undo" (click)="undo()"
+            [disabled]="!history.canUndo()" matTooltip="Undo (Ctrl+Z)">
+      <mat-icon>undo</mat-icon>
     </button>
+
+    <button type="button" mat-button class="redo" (click)="redo()"
+            [disabled]="!history.canRedo()" matTooltip="Redo (Ctrl+Shift+Z)">
+      <mat-icon>redo</mat-icon>
+    </button>
+
+    <button type="button" mat-button class="save" (click)="save()" matTooltip="Download this flow as JSON">
+      <mat-icon>download</mat-icon>
+    </button>
+
+    <button type="button" mat-button class="load" (click)="fileInput.click()" matTooltip="Load a flow from JSON">
+      <mat-icon>upload</mat-icon>
+    </button>
+    <input #fileInput type="file" accept="application/json,.json" class="file-input"
+           (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
+
+    <!--
+      Validation surface. The engine reports unresolved socket formats and graph
+      cycles through Flow.lastPropagation; previously the only signal was a
+      console.warn that said nothing about which sockets were wrong.
+    -->
+    <button type="button" mat-button class="problems" *ngIf="problemCount > 0"
+            [matTooltip]="validationDetail">
+      <mat-icon>warning</mat-icon>
+      {{problemCount}}
+    </button>
+
+    <button type="button" mat-button (click)="showJSON()" class="json">{{showJson ? 'Flow' : 'JSON'}}</button>
   </div>
 </mat-toolbar>
+
+<p *ngIf="loadError" class="load-error" role="alert">Could not load that flow — {{loadError}}</p>
 
 <main>
   <fb-flow *ngIf="!showJson" [flow]="flow"></fb-flow>
 
   <article *ngIf="showJson" class="flow-as-json">
-    <pre>{{flow | json}}</pre>
+    <!-- The versioned envelope, i.e. exactly what the download writes. -->
+    <pre>{{flowJson}}</pre>
   </article>
 </main>
-

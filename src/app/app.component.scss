@@ -97,3 +97,15 @@ main {
 //    margin-top: 5px;
 //  }
 //}
+
+// The file picker is driven by the toolbar's upload button.
+.file-input {
+  display: none;
+}
+
+.load-error {
+  background-color: var(--mat-sys-error-container, #ffdad6);
+  color: var(--mat-sys-on-error-container, #410002);
+  margin: 0;
+  padding: 8px 16px;
+}

@@ -254,7 +254,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   onDragStart(event: PointerEvent, state: FbNodeState): void {
-    // const index = this.state.children.indexOf(state);
+    // Snapshot once per drag. Capturing on pointermove would push a history entry
+    // per frame.
+    this.flowService.captureHistory();
   }
 
   onDragEnd(event: PointerEvent, state: FbNodeState): void {

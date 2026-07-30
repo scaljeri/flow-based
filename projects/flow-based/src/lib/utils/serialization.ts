@@ -1,0 +1,135 @@
+import { FbNodeState } from '../flow-based';
+
+/**
+ * Version of the persisted flow format.
+ *
+ * 1 — the shape the project has always written: a recursive FbNodeState with
+ *     `position` as percentages of the graph plane. Files saved before versioning
+ *     existed carry no `version` field and are read as 1, because the shape did
+ *     not change when the viewport was introduced (see FbViewportService).
+ */
+export const FB_FLOW_FORMAT_VERSION = 1;
+
+export interface FbSerializedFlow {
+  version: number;
+  flow: FbNodeState;
+}
+
+export class FbFlowFormatError extends Error {
+  constructor(message: string) {
+    super(`[flow-based] ${message}`);
+    this.name = 'FbFlowFormatError';
+  }
+}
+
+/**
+ * Migrations from an older version to the next one, keyed by the version being
+ * upgraded FROM. Empty today; the mechanism exists so that the first real format
+ * change does not have to invent it, and so old files never silently
+ * misinterpret.
+ */
+const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {};
+
+export function serializeFlow(flow: FbNodeState): FbSerializedFlow {
+  return { version: FB_FLOW_FORMAT_VERSION, flow: structuredClone(flow) };
+}
+
+export function serializeFlowToJson(flow: FbNodeState, pretty = true): string {
+  return JSON.stringify(serializeFlow(flow), null, pretty ? 2 : undefined);
+}
+
+/**
+ * Read a persisted flow, migrating it forward if needed.
+ *
+ * Accepts both the versioned envelope and a bare FbNodeState, which is what every
+ * file written before this existed looks like.
+ */
+export function deserializeFlow(input: unknown): FbNodeState {
+  if (input === null || typeof input !== 'object') {
+    throw new FbFlowFormatError('Flow must be an object.');
+  }
+
+  const record = input as Record<string, unknown>;
+  const envelope = typeof record['version'] === 'number' && typeof record['flow'] === 'object';
+
+  let version = envelope ? (record['version'] as number) : FB_FLOW_FORMAT_VERSION;
+  let flow = (envelope ? record['flow'] : record) as FbNodeState;
+
+  if (!Number.isInteger(version) || version < 1) {
+    throw new FbFlowFormatError(`Unsupported flow version: ${String(version)}`);
+  }
+
+  if (version > FB_FLOW_FORMAT_VERSION) {
+    throw new FbFlowFormatError(
+      `Flow was saved by a newer version of the library (format ${version}, this build reads ${FB_FLOW_FORMAT_VERSION}).`,
+    );
+  }
+
+  assertFlowShape(flow);
+
+  flow = structuredClone(flow);
+
+  while (version < FB_FLOW_FORMAT_VERSION) {
+    const migrate = MIGRATIONS[version];
+
+    if (!migrate) {
+      throw new FbFlowFormatError(`No migration from flow format ${version} to ${version + 1}.`);
+    }
+
+    flow = migrate(flow);
+    version++;
+  }
+
+  return flow;
+}
+
+export function deserializeFlowFromJson(json: string): FbNodeState {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(json);
+  } catch (err) {
+    throw new FbFlowFormatError(`Flow is not valid JSON: ${(err as Error).message}`);
+  }
+
+  return deserializeFlow(parsed);
+}
+
+/**
+ * Enough validation to fail with a useful message instead of a TypeError from
+ * somewhere inside the engine. Deliberately shallow: this checks the structure
+ * the engine indexes on, not every optional field.
+ */
+function assertFlowShape(flow: FbNodeState, path = 'flow'): void {
+  if (flow === null || typeof flow !== 'object') {
+    throw new FbFlowFormatError(`${path} must be an object.`);
+  }
+
+  if (typeof flow.type !== 'string' || flow.type === '') {
+    throw new FbFlowFormatError(`${path}.type must be a non-empty string.`);
+  }
+
+  if (flow.sockets !== undefined && !Array.isArray(flow.sockets)) {
+    throw new FbFlowFormatError(`${path}.sockets must be an array when present.`);
+  }
+
+  if (flow.connections !== undefined) {
+    if (!Array.isArray(flow.connections)) {
+      throw new FbFlowFormatError(`${path}.connections must be an array when present.`);
+    }
+
+    flow.connections.forEach((connection, i) => {
+      if (typeof connection?.id !== 'number') {
+        throw new FbFlowFormatError(`${path}.connections[${i}].id must be a number.`);
+      }
+    });
+  }
+
+  if (flow.children !== undefined) {
+    if (!Array.isArray(flow.children)) {
+      throw new FbFlowFormatError(`${path}.children must be an array when present.`);
+    }
+
+    flow.children.forEach((child, i) => assertFlowShape(child, `${path}.children[${i}]`));
+  }
+}

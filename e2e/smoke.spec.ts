@@ -190,6 +190,51 @@ test('keeps connections attached to their sockets through zoom and pan', async (
   expect(errors).toEqual([]);
 });
 
+/**
+ * Undo/redo round-trip. Worth an e2e test rather than only a unit test because
+ * restoring works by reassigning the `state` input, which rebuilds the entire
+ * graph — workers, sockets and connections — from a JSON snapshot. That path
+ * touches everything Stage 1 fixed about resource release.
+ */
+test('undoes and redoes a node deletion', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', err => errors.push(err.message));
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.goto('/');
+  await expect(page.locator('fb-node').first()).toBeVisible();
+
+  const undo = page.locator('mat-toolbar button.undo');
+  const redo = page.locator('mat-toolbar button.redo');
+
+  // Nothing has happened yet, so there is nothing to undo.
+  await expect(undo).toBeDisabled();
+  await expect(redo).toBeDisabled();
+
+  const before = await page.locator('fb-node').count();
+  const socketsBefore = await page.locator('fb-socket').count();
+
+  await page.locator('fb-node footer button:has(mat-icon:text-is("delete_forever"))').first()
+    .click({ force: true });
+  await expect(page.locator('fb-node')).toHaveCount(before - 1);
+  await expect(undo).toBeEnabled();
+
+  await undo.click();
+  await expect(page.locator('fb-node')).toHaveCount(before);
+  // The restored node's sockets must come back with it, and be re-registered —
+  // otherwise its connections would render as empty paths.
+  await expect(page.locator('fb-socket')).toHaveCount(socketsBefore);
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  await expect(redo).toBeEnabled();
+  await redo.click();
+  await expect(page.locator('fb-node')).toHaveCount(before - 1);
+
+  expect(errors).toEqual([]);
+});
+
 test('toggles the JSON view, which is the serialisable flow state', async ({ page }) => {
   await page.goto('/');
 
@@ -198,8 +243,10 @@ test('toggles the JSON view, which is the serialisable flow state', async ({ pag
   const json = page.locator('article.flow-as-json pre');
   await expect(json).toBeVisible();
 
-  // Must be parseable, and must carry the recursive shape the engine relies on.
+  // The view now shows the versioned envelope, i.e. exactly what Save writes.
   const parsed = JSON.parse((await json.textContent()) ?? '');
-  expect(Array.isArray(parsed.children)).toBe(true);
-  expect(Array.isArray(parsed.connections)).toBe(true);
+  expect(parsed.version).toBe(1);
+  // ...wrapping the recursive shape the engine relies on.
+  expect(Array.isArray(parsed.flow.children)).toBe(true);
+  expect(Array.isArray(parsed.flow.connections)).toBe(true);
 });

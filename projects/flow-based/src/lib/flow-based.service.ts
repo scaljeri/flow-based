@@ -6,6 +6,7 @@ import { Flow } from './utils/flow';
 import { SocketService } from './socket.service';
 import { deepClone } from './utils/deep-clone';
 import { IdGenerator } from './utils/id-generator';
+import { FbHistoryService } from './utils/history.service';
 
 export interface ExternalEvent {
   type: string;
@@ -34,8 +35,19 @@ export class FlowBasedService {
   private readonly ids = new IdGenerator();
 
   constructor(private socketService: SocketService,
+              private history: FbHistoryService,
               @Inject(FB_NODE_TYPES) private flowTypes: FbNodeTypes,
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
+  }
+
+  /**
+   * Snapshot the current flow as an undo point. Must be called BEFORE a mutation,
+   * because the engine edits state in place.
+   */
+  captureHistory(): void {
+    if (this.flow) {
+      this.history.capture(this.flow.rootState);
+    }
   }
 
   nodeMoved(id: number): void {
@@ -55,6 +67,8 @@ export class FlowBasedService {
   }
 
   addConnection(connection: FbConnection): void {
+    this.captureHistory();
+
     if (!connection.id) {
       connection.id = this.getUniqueId();
     }
@@ -95,6 +109,8 @@ export class FlowBasedService {
   }
 
   add(flowType: string): FbNodeState {
+    this.captureHistory();
+
     const {settings} = this.flowTypes[flowType];
 
     const state = {
@@ -157,6 +173,8 @@ export class FlowBasedService {
   }
 
   delete(state: FbNodeState): void {
+    this.captureHistory();
+
     this.flow.removeNode(state.id!);
     this.currentFlow.updateChildren();
 
@@ -168,6 +186,8 @@ export class FlowBasedService {
   }
 
   removeSocket(socket: FbSocket): void {
+    this.captureHistory();
+
     this.flow.removeSocket(socket);
 
     this.flowStack.forEach(flow => {
