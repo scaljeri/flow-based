@@ -184,6 +184,40 @@
           }
         }
       }
+    },
+    "@scaljeri/flow-based-lit": {
+      "projectType": "library",
+      "root": "projects/flow-based-lit",
+      "sourceRoot": "projects/flow-based-lit/src",
+      "prefix": "fb",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-lit/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-lit/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-lit/tsconfig.spec.json"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-lit/**/*.ts"
+            ]
+          }
+        }
+      }
     }
   }
 }

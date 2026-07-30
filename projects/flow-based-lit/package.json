@@ -1,0 +1,20 @@
+{
+  "name": "@scaljeri/flow-based-lit",
+  "version": "0.1.0",
+  "description": "Web-component editor shell for flow-based, built on Lit over @scaljeri/flow-based-core.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scaljeri/flow-based"
+  },
+  "keywords": ["flow-based-programming", "fbp", "web-components", "lit", "node-editor"],
+  "sideEffects": ["**/*.js"],
+  "peerDependencies": {
+    "lit": "^3.0.0",
+    "rxjs": "^6.5.3 || ^7.4.0",
+    "@scaljeri/flow-based-core": "^0.1.0"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  }
+}

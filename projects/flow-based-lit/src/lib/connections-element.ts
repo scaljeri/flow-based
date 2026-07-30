@@ -1,0 +1,243 @@
+import { LitElement, PropertyValues, css, html, svg, nothing } from 'lit';
+import { FbAnyConnection, FbConnection, FbPosition, derivative, gradient, normal } from '@scaljeri/flow-based-core';
+import { FbEditor } from './editor';
+
+/**
+ * The connection layer.
+ *
+ * Every point it draws is computed from the graph via FbGeometry — it never
+ * measures the DOM. That is what makes the curves correct at any zoom without
+ * dividing by a scale factor, and testable without a browser.
+ */
+export class FbConnectionsElement extends LitElement {
+  static override properties = {
+    editor: { attribute: false },
+  };
+
+  static override styles = css`
+    :host {
+      inset: 0;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    svg {
+      height: 100%;
+      width: 100%;
+    }
+
+    path.connection {
+      fill: none;
+      pointer-events: stroke;
+      stroke-linecap: round;
+      stroke-width: 3px;
+    }
+
+    path.connection:not(.pointer-path):hover {
+      cursor: pointer;
+      stroke: var(--fb-active-color, #fa0);
+      stroke-width: 5px;
+    }
+
+    path.arrow {
+      fill: #fff;
+      pointer-events: none;
+      stroke: none;
+    }
+
+    path.pointer-path {
+      pointer-events: none;
+    }
+  `;
+
+  declare editor: FbEditor;
+
+  private unsubscribe?: () => void;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.subscribe();
+  }
+
+  override disconnectedCallback(): void {
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
+    super.disconnectedCallback();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('editor')) {
+      this.subscribe();
+    }
+  }
+
+  private subscribe(): void {
+    this.unsubscribe?.();
+    this.unsubscribe = this.editor?.changes.subscribe(() => this.requestUpdate());
+  }
+
+  protected override render() {
+    if (!this.editor?.flow) {
+      return nothing;
+    }
+
+    return html`
+      <svg xmlns="http://www.w3.org/2000/svg">
+        ${this.editor.connections.map(connection => this.renderConnection(connection))}
+        ${this.renderPending()}
+      </svg>
+    `;
+  }
+
+  private renderConnection(connection: FbConnection) {
+    const points = this.controlPoints(connection);
+
+    if (!points) {
+      return nothing;
+    }
+
+    const id = `fb-grad-${connection.id}`;
+
+    return svg`
+      <defs>
+        <linearGradient id=${id}>
+          <stop offset="0%" stop-color=${this.socketColour(connection.out)}></stop>
+          <stop offset="100%" stop-color=${this.socketColour(connection.in)}></stop>
+        </linearGradient>
+      </defs>
+      <path class="connection"
+            d=${this.pathOf(points)}
+            stroke=${`url(#${id})`}
+            @pointerdown=${(e: PointerEvent) => this.onLineClick(e, connection)}></path>
+      <path class="arrow" d="M0 5 L 5 0 L0 -5z" transform=${this.arrowOf(points)}></path>
+    `;
+  }
+
+  private renderPending() {
+    const { pending, pointer } = this.editor;
+
+    if (!pending || !pointer) {
+      return nothing;
+    }
+
+    const node = this.editor.nodeById(pending.nodeId);
+
+    if (!node) {
+      return nothing;
+    }
+
+    const anchor = this.editor.geometry.socketPosition(node, pending.socket, this.editor.viewport.planeSize);
+
+    if (!anchor) {
+      return nothing;
+    }
+
+    // Draw out-to-in, whichever end the user grabbed.
+    const points = pending.socket.type === 'out'
+      ? this.curve(anchor, pointer)
+      : this.curve(pointer, anchor);
+
+    return svg`
+      <path class="connection pointer-path"
+            d=${this.pathOf(points)}
+            stroke=${this.colourOf(pending.socket.format)}
+            stroke-width="5"></path>
+    `;
+  }
+
+  private onLineClick(event: PointerEvent, connection: FbAnyConnection): void {
+    event.stopPropagation();
+    this.dispatchEvent(new CustomEvent('line-click', { detail: connection, bubbles: true, composed: true }));
+  }
+
+  private controlPoints(connection: FbConnection): FbPosition[] | null {
+    const { geometry, viewport } = this.editor;
+    const plane = viewport.planeSize;
+
+    const fromNode = this.editor.nodeById(connection.from);
+    const toNode = this.editor.nodeById(connection.to);
+
+    if (!fromNode || !toNode) {
+      return null;
+    }
+
+    const out = fromNode.sockets?.find(s => s.id === connection.out);
+    const inn = toNode.sockets?.find(s => s.id === connection.in);
+
+    if (!out || !inn) {
+      return null;
+    }
+
+    const start = geometry.socketPosition(fromNode, out, plane);
+    const end = geometry.socketPosition(toNode, inn, plane);
+
+    // Undefined until both nodes have been measured, which is a real state on
+    // the first frame. Drawing anyway would peg the line to the plane origin.
+    if (!start || !end) {
+      return null;
+    }
+
+    return this.curve(start, end);
+  }
+
+  /** Horizontal-ish cubic, mirroring the original editor's shape. */
+  private curve(start: FbPosition, end: FbPosition): FbPosition[] {
+    const cx1 = Math.round(start.x + Math.abs(start.x - end.x) / 2);
+    const cx2 = Math.round(end.x - Math.abs(start.x - end.x) / 2);
+
+    let cy1 = start.y;
+    let cy2 = end.y;
+
+    // Doubling back: bow the curve vertically so it does not fold onto itself.
+    if (end.x < start.x) {
+      cy1 = start.y + (end.y - start.y) / 2;
+      cy2 = end.y - (end.y - start.y) / 2;
+    }
+
+    return [start, { x: cx1, y: cy1 }, { x: cx2, y: cy2 }, end];
+  }
+
+  private pathOf(p: FbPosition[]): string {
+    return `M ${p[0].x} ${p[0].y - 0.0001} C ${p[1].x} ${p[1].y} ${p[2].x} ${p[2].y} ${p[3].x} ${p[3].y}`;
+  }
+
+  private arrowOf(points: FbPosition[]): string {
+    const { x, y } = normal(0.5, points);
+    const der = derivative(0.5, points);
+    let deg = (Math.atan(gradient(der)) * 180) / Math.PI;
+
+    if (der.x < 0) {
+      deg += 180;
+    }
+
+    return `translate(${x}, ${y}) rotate(${deg})`;
+  }
+
+  private socketColour(socketId: number | undefined): string {
+    if (socketId === undefined) {
+      return '#fff';
+    }
+
+    for (const node of this.editor.children) {
+      const socket = node.sockets?.find(s => s.id === socketId);
+
+      if (socket) {
+        return this.colourOf(socket.format, socket.color);
+      }
+    }
+
+    return '#fff';
+  }
+
+  private colourOf(format: string | null | undefined, explicit?: string): string {
+    return explicit || (format ? this.editor.socketColors[format] : undefined) || '#fff';
+  }
+}
+
+customElements.define('fb-connections', FbConnectionsElement);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'fb-connections': FbConnectionsElement;
+  }
+}

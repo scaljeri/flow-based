@@ -1,8 +1,6 @@
 import { Injectable, OnDestroy, computed, signal } from '@angular/core';
 import { FbPosition, FbSize, FbViewport } from '@scaljeri/flow-based-core';
 
-export { FB_ZOOM_MAX, FB_ZOOM_MIN } from '@scaljeri/flow-based-core';
-
 /**
  * Angular face of {@link FbViewport}.
  *
@@ -80,5 +78,3 @@ export class FbViewportService implements OnDestroy {
     this.unsubscribe();
   }
 }
-
-export type { FbSize };

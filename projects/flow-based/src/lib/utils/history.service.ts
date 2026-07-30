@@ -1,8 +1,6 @@
 import { Injectable, OnDestroy, computed, signal } from '@angular/core';
 import { FbHistory, FbNodeState } from '@scaljeri/flow-based-core';
 
-export { FB_HISTORY_LIMIT } from '@scaljeri/flow-based-core';
-
 /**
  * Angular face of {@link FbHistory}.
  *

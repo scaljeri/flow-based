@@ -23,6 +23,9 @@
       ],
       "@scaljeri/flow-based-core": [
         "./dist/flow-based-core"
+      ],
+      "@scaljeri/flow-based-lit": [
+        "./dist/flow-based-lit"
       ]
     }
   },
@@ -48,6 +51,9 @@
     },
     {
       "path": "./projects/flow-based-core/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/flow-based-lit/tsconfig.lib.json"
     },
     {
       "path": "./projects/flow-based-core/tsconfig.spec.json"

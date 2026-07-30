@@ -8,6 +8,26 @@ import { expect, test } from '@playwright/test';
  * APIs this code used, and much of the rendering is driven by manual
  * change detection, so "it builds" says very little.
  */
+
+/**
+ * Wait until the editor has actually settled.
+ *
+ * Node sizes arrive from ResizeObservers, and connection geometry is derived from
+ * them, so for the first few frames a node exists but has no measured size and its
+ * curves have no path. Interacting during that window is racy — the view is still
+ * re-rendering underneath the click. Readiness is therefore "every connection has
+ * real geometry", which is a property of the app rather than a sleep.
+ */
+async function waitUntilReady(page: import('@playwright/test').Page): Promise<void> {
+  await expect(page.locator('fb-node').first()).toBeVisible();
+
+  await expect.poll(
+    () => page.locator('fb-connection-lines svg path.connection')
+      .evaluateAll(els => els.length > 0 && els.every(el => (el.getAttribute('d') ?? '').startsWith('M'))),
+    { timeout: 15_000 },
+  ).toBe(true);
+}
+
 test('renders the flow editor and draws connections, with no console errors', async ({ page }) => {
   const errors: string[] = [];
 
@@ -58,7 +78,7 @@ test('deletes a node and its connections without errors', async ({ page }) => {
   });
 
   await page.goto('/');
-  await expect(page.locator('fb-node').first()).toBeVisible();
+  await waitUntilReady(page);
 
   const before = await page.locator('fb-node').count();
   const socketsBefore = await page.locator('fb-socket').count();
@@ -97,7 +117,7 @@ test('opens the node-selection overlay from the toolbar', async ({ page }) => {
 
 test('filters the node palette and adds the match with Enter', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('fb-node').first()).toBeVisible();
+  await waitUntilReady(page);
 
   const before = await page.locator('fb-node').count();
 
@@ -180,7 +200,7 @@ test('keeps connections attached to their sockets through zoom and pan', async (
   });
 
   await page.goto('/');
-  await expect(page.locator('fb-node').first()).toBeVisible();
+  await waitUntilReady(page);
 
   const zoomIn = page.locator('.viewport-controls button[aria-label="Zoom in"]');
   const zoomOut = page.locator('.viewport-controls button[aria-label="Zoom out"]');
@@ -234,7 +254,7 @@ test('undoes and redoes a node deletion', async ({ page }) => {
   });
 
   await page.goto('/');
-  await expect(page.locator('fb-node').first()).toBeVisible();
+  await waitUntilReady(page);
 
   const undo = page.locator('mat-toolbar button.undo');
   const redo = page.locator('mat-toolbar button.redo');
@@ -283,7 +303,7 @@ test('drags a node and its connections follow', async ({ page }) => {
   });
 
   await page.goto('/');
-  await expect(page.locator('fb-node').first()).toBeVisible();
+  await waitUntilReady(page);
   expect(await worstEndpointError(page)).toBeLessThan(1);
 
   // A small collapsed node is easiest to grab without hitting inner controls.

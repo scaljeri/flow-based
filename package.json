@@ -16,7 +16,10 @@
     "e2e": "playwright test",
     "ngh": "npm run build:demo -- --base-href \"https://scaljeri.github.io/flow-based/\" && ngh --dir=dist/demo/browser",
     "build:core": "ng build @scaljeri/flow-based-core",
-    "test:core": "ng test @scaljeri/flow-based-core"
+    "test:core": "ng test @scaljeri/flow-based-core",
+    "build:lit": "npm run build:core && ng build @scaljeri/flow-based-lit",
+    "build:lit-demo": "npm run build:lit && node scripts/build-lit-demo.mjs",
+    "serve:lit-demo": "node scripts/serve-static.mjs dist/lit-demo 4400"
   },
   "dependencies": {
     "@angular/cdk": "^22.1.0",
@@ -32,6 +35,7 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.43.7",
     "google-charts": "^2.0.0",
+    "lit": "^3.3.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.8.1",
     "zone.js": "~0.15.1"

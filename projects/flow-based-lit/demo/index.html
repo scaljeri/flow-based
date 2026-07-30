@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>flow-based — web-component shell</title>
+  <style>
+    body { background:#000; color:#eee; font:14px system-ui; margin:0; }
+    header { align-items:center; background:#3f51b5; display:flex; gap:12px; padding:8px 12px; }
+    #app { height: calc(100vh - 45px); }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Lit shell</strong>
+    <button id="add">Add</button>
+    <button id="undo">Undo</button>
+    <button id="zoom-out">−</button>
+    <button id="reset">reset</button>
+    <span id="zoom">100%</span>
+    <button id="zoom-in">+</button>
+    <span>nodes: <span id="nodes">0</span></span>
+  </header>
+  <div id="app"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
