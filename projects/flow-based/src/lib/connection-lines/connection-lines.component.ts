@@ -6,7 +6,7 @@ import {
   EventEmitter, Inject,
   Input,
   OnChanges,
-  OnInit, Optional,
+  Optional,
   Output, SimpleChanges
 } from '@angular/core';
 import {
@@ -19,6 +19,7 @@ import {
 } from '../flow-based';
 import * as bezier from './bezier';
 import { SocketService } from '../socket.service';
+import { FbViewportService } from '../viewport/viewport.service';
 
 @Component({
   selector: 'fb-connection-lines',
@@ -27,7 +28,7 @@ import { SocketService } from '../socket.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
-export class ConnectionLinesComponent implements OnInit, OnChanges {
+export class ConnectionLinesComponent implements OnChanges {
   /*
    * Draws both kinds of line: graph edges (FbConnection, socket to socket) and
    * the element-to-element lines a node type may render internally
@@ -40,7 +41,10 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   @Input() set pointerMoved(event: PointerEvent) {
     if (event) {
-      this.pointer = {x: event.pageX, y: event.pageY};
+      // clientX/clientY, not pageX/pageY: socket positions come from
+      // getBoundingClientRect, which is client space. The two only agreed while
+      // the page was unscrolled.
+      this.pointer = {x: event.clientX, y: event.clientY};
     } else {
       this.pointer = null;
     }
@@ -51,28 +55,44 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   pointer: FbPosition | null = null;
   controlPoints: { [key: number]: FbPosition[] } = {};
   lines: string[] = [];
-  private rect!: DOMRect;
 
   constructor(private element: ElementRef,
               private viewRef: ChangeDetectorRef,
               private socketService: SocketService,
+              @Optional() private viewport: FbViewportService | null,
               @Optional() @Inject(FB_SOCKET_COLORS) private colors: FbSocketColors | null) {
   }
 
-  ngOnInit() {
-    this.rect = this.element.nativeElement.getBoundingClientRect();
+  /**
+   * Client-space point to this SVG's own coordinate space.
+   *
+   * The SVG lives inside the zoomed plane, so CSS already scales whatever is
+   * drawn. Socket positions, however, come from getBoundingClientRect and are
+   * therefore *already* scaled — dividing by the zoom is what stops the transform
+   * being applied twice.
+   *
+   * The rect is re-read per call because pan and zoom move it and there is no
+   * change-detection signal for that. Cheap enough at demo scale (transforms do
+   * not trigger layout), and it goes away once geometry is derived from graph
+   * coordinates instead of measured.
+   */
+  private toPlane(clientX: number, clientY: number): FbPosition {
+    const rect: DOMRect = this.element.nativeElement.getBoundingClientRect();
+    const zoom = this.viewport?.zoom() ?? 1;
+
+    return {x: (clientX - rect.left) / zoom, y: (clientY - rect.top) / zoom};
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     /*
-     * This guarded on `changes.connection` — an input that does not exist; the
-     * input is `connections`. The branch was therefore dead, so `this.rect` was
-     * measured once in ngOnInit and never again, and every line rendered offset
-     * from its sockets whenever the SVG's own position changed
-     * (docs/AUDIT.md §3.5).
+     * The cached `rect` this used to maintain is gone: it was measured once in
+     * ngOnInit and only re-measured in a branch guarded on `changes.connection` —
+     * an input that does not exist (the input is `connections`), so the branch was
+     * dead and every line rendered offset from its sockets once the SVG moved
+     * (docs/AUDIT.md §3.5). toPlane() now reads the rect where it is used, which is
+     * both correct under pan/zoom and impossible to leave stale.
      */
     if (changes['connections']) {
-      this.rect = this.element.nativeElement.getBoundingClientRect();
       this.controlPoints = {};
     }
 
@@ -93,17 +113,20 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
       return '';
     }
 
-    const start = anchor.comp.position;
+    const socket = anchor.comp.position;
     let output = '';
 
-    if (this.from && this.pointer) {
-      output = this.computeD(0,
-        start.x - this.rect.left, start.y - this.rect.top,
-        this.pointer.x - this.rect.left, this.pointer.y - this.rect.top);
-    } else if (this.to && this.pointer) {
-      output = this.computeD(0,
-        this.pointer.x - this.rect.left, this.pointer.y - this.rect.top,
-        start.x - this.rect.left, start.y - this.rect.top);
+    if (!this.pointer) {
+      return output;
+    }
+
+    const start = this.toPlane(socket.x, socket.y);
+    const cursor = this.toPlane(this.pointer.x, this.pointer.y);
+
+    if (this.from) {
+      output = this.computeD(0, start.x, start.y, cursor.x, cursor.y);
+    } else if (this.to) {
+      output = this.computeD(0, cursor.x, cursor.y, start.x, start.y);
     }
 
     return output;
@@ -171,10 +194,12 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
         return '';
       }
 
-      const x1 = start.x - this.rect.left;
-      const y1 = start.y - this.rect.top;
-      const x2 = end.x - this.rect.left;
-      const y2 = end.y - this.rect.top;
+      const p1 = this.toPlane(start.x, start.y);
+      const p2 = this.toPlane(end.x, end.y);
+      const x1 = p1.x;
+      const y1 = p1.y;
+      const x2 = p2.x;
+      const y2 = p2.y;
 
       cx1 = Math.round(x1 + Math.abs(x1 - x2) / 2);
       cx2 = Math.round(x2 - Math.abs(x1 - x2) / 2);
@@ -201,13 +226,10 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     const fromRect = connection.from.getBoundingClientRect(),
       toRect = connection.to.getBoundingClientRect();
 
-    const x1 = fromRect.left - this.rect.left + fromRect.width / 2;
-    const y1 = fromRect.top - this.rect.top + fromRect.height / 2;
+    const from = this.toPlane(fromRect.left + fromRect.width / 2, fromRect.top + fromRect.height / 2);
+    const to = this.toPlane(toRect.left + toRect.width / 2, toRect.top + toRect.height / 2);
 
-    const x2 = toRect.left - this.rect.left + toRect.width / 2;
-    const y2 = toRect.top - this.rect.top + toRect.height / 2;
-
-    return this.computeD(connection.id, x1, y1, x2, y2);
+    return this.computeD(connection.id, from.x, from.y, to.x, to.y);
   }
 
   private computeD(id: number, fromX: number, fromY: number, toX: number, toY: number): string {

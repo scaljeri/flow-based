@@ -95,6 +95,101 @@ test('opens the node-selection overlay from the toolbar', async ({ page }) => {
   await expect(page.locator('.cdk-overlay-container fb-component-selection')).toBeVisible();
 });
 
+/**
+ * Zoom and pan, checking the invariant that actually matters: every connection
+ * path must START exactly on a socket centre, measured in the SVG's own
+ * coordinate space, at every zoom level.
+ *
+ * The failure this guards against is subtle. The SVG lives inside the zoomed
+ * plane, so CSS already scales its contents, while socket positions come from
+ * getBoundingClientRect and are therefore already scaled. Forget to divide by the
+ * zoom and the transform is applied twice — the lines still look like plausible
+ * curves, but drift further from their sockets the more you zoom.
+ */
+async function worstEndpointError(page: import('@playwright/test').Page): Promise<number> {
+  return page.evaluate(() => {
+    const svg = document.querySelector('fb-connection-lines svg');
+    if (!svg) return Number.NaN;
+
+    const svgRect = svg.getBoundingClientRect();
+    const scale = svgRect.width / (svg as SVGGraphicsElement & { clientWidth: number }).clientWidth || 1;
+
+    const sockets = [...document.querySelectorAll('fb-socket')].map(el => {
+      const r = el.getBoundingClientRect();
+      return {
+        x: (r.left + r.width / 2 - svgRect.left) / scale,
+        y: (r.top + r.height / 2 - svgRect.top) / scale,
+      };
+    });
+
+    let worst = 0;
+    for (const path of document.querySelectorAll('fb-connection-lines svg path.connection')) {
+      const m = (path.getAttribute('d') ?? '').match(/^M\s*([-\d.]+)\s+([-\d.]+)/);
+      if (!m) continue;
+
+      const px = parseFloat(m[1]);
+      const py = parseFloat(m[2]);
+      let nearest = Infinity;
+
+      for (const s of sockets) {
+        nearest = Math.min(nearest, Math.hypot(px - s.x, py - s.y));
+      }
+
+      worst = Math.max(worst, nearest);
+    }
+
+    return worst;
+  });
+}
+
+test('keeps connections attached to their sockets through zoom and pan', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', err => errors.push(err.message));
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.goto('/');
+  await expect(page.locator('fb-node').first()).toBeVisible();
+
+  const zoomIn = page.locator('.viewport-controls button[aria-label="Zoom in"]');
+  const zoomOut = page.locator('.viewport-controls button[aria-label="Zoom out"]');
+  const level = page.locator('.viewport-controls .zoom-level');
+
+  // 1px of slack; the path builder deliberately offsets the start y by 0.0001.
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  await zoomIn.click();
+  await zoomIn.click();
+  await expect(level).toHaveText(/14[34]%/);
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  for (let i = 0; i < 4; i++) {
+    await zoomOut.click();
+  }
+  await expect(level).toHaveText(/6\d%/);
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  // Wheel zooms at the cursor.
+  await page.mouse.move(1100, 700);
+  await page.mouse.wheel(0, -400);
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  // Dragging empty canvas pans.
+  await page.mouse.move(1450, 900);
+  await page.mouse.down();
+  await page.mouse.move(1250, 780, { steps: 8 });
+  await page.mouse.up();
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  // Reset returns to 100%.
+  await level.click();
+  await expect(level).toHaveText('100%');
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  expect(errors).toEqual([]);
+});
+
 test('toggles the JSON view, which is the serialisable flow state', async ({ page }) => {
   await page.goto('/');
 

@@ -1,13 +1,25 @@
-<article *ngIf="active" fbMovableArea #dragArea>
-  <fb-connection-lines
-    [connections]="state.connections!"
-    [pointerMoved]="pointerMove"
-    [from]="activeSocketFrom"
-    [to]="activeSocketTo"
-    (lineClick)="removeConnection($event)"></fb-connection-lines>
+<div class="viewport" *ngIf="active">
+  <!--
+    The plane holds the graph. Node positions are percentages OF THIS PLANE, whose
+    size is captured once from the container, so a container resize translates the
+    graph rather than distorting it. Zoom and pan are a single CSS transform on
+    this element, with transform-origin at 0 0 to match FbViewportService's maths.
+  -->
+  <article class="plane"
+           fbMovableArea
+           #dragArea
+           [style.width.px]="viewport.planeSize().width || null"
+           [style.height.px]="viewport.planeSize().height || null"
+           [style.transform]="viewport.transform()">
+    <fb-connection-lines
+      [connections]="state.connections!"
+      [pointerMoved]="pointerMove"
+      [from]="activeSocketFrom"
+      [to]="activeSocketTo"
+      (lineClick)="removeConnection($event)"></fb-connection-lines>
 
-  <ng-container *ngFor="let child of state.children; index as i">
-    <fb-node #node
+    <ng-container *ngFor="let child of state.children; index as i">
+      <fb-node #node
                class="block"
                fbMovable
                [(position)]="child.position"
@@ -18,6 +30,7 @@
                [state]="child"
                (noDrag)="entryClicked(i)"
                [class.is-moving]="movingNode === child.id">
-    </fb-node>
-  </ng-container>
-</article>
+      </fb-node>
+    </ng-container>
+  </article>
+</div>

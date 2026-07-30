@@ -1,1 +1,21 @@
-<fb-flow-based [state]="flow"></fb-flow-based>
+<fb-flow-based #editor [state]="flow"></fb-flow-based>
+
+<!--
+  Viewport controls live in the app, not the library: the library exposes
+  FbViewportService plus the zoom/pan gestures and leaves the chrome to the host.
+  Wheel zooms at the cursor; dragging the background pans.
+-->
+<div class="viewport-controls fb-drag-ignore">
+  <button type="button" mat-mini-fab color="primary" (click)="editor.zoomOut()" aria-label="Zoom out">
+    <mat-icon>remove</mat-icon>
+  </button>
+
+  <button type="button" mat-button class="zoom-level" (click)="editor.resetView()"
+          [attr.aria-label]="'Reset view, currently ' + editor.viewport.zoomPercent() + ' percent'">
+    {{editor.viewport.zoomPercent()}}%
+  </button>
+
+  <button type="button" mat-mini-fab color="primary" (click)="editor.zoomIn()" aria-label="Zoom in">
+    <mat-icon>add</mat-icon>
+  </button>
+</div>

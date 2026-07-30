@@ -30,6 +30,9 @@ export * from './lib/connection-lines/connection-lines.component';
 export * from './lib/pipes/socket-in.pipe';
 export * from './lib/pipes/socket-out.pipe';
 
+// Viewport (zoom / pan)
+export * from './lib/viewport/viewport.service';
+
 // Drag and drop
 export * from './lib/drag-drop/draggable/draggable.directive';
 export * from './lib/drag-drop/movable/movable.directive';

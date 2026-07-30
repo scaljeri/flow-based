@@ -1,6 +1,7 @@
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, forwardRef, HostBinding, HostListener, Input, OnChanges, OnDestroy, OnInit, Optional, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { FbAnyConnection, FbConnection, FbNodeState, FbSocketEvent, isElementConnection } from './flow-based';
+import { FbAnyConnection, FbConnection, FbNodeState, FbPosition, FbSocketEvent, isElementConnection } from './flow-based';
+import { FbViewportService } from './viewport/viewport.service';
 import { FlowBasedService } from './flow-based.service';
 import { SocketService } from './socket.service';
 import { filter } from 'rxjs/operators';
@@ -12,7 +13,12 @@ import { Subscription } from 'rxjs';
   templateUrl: './flow-based.component.html',
   styleUrls: ['./flow-based.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}],
+  providers: [
+    {provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true},
+    // Component-scoped, so a nested flow gets its own viewport rather than
+    // sharing the root's zoom and pan.
+    FbViewportService,
+  ],
   standalone: false,
 })
 export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterViewInit, ControlValueAccessor {
@@ -35,12 +41,114 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   lastSocketEvent!: FbSocketEvent;
   movingNode!: number;
 
+  /** Zoom and pan for this surface. Public so a host app can drive it. */
+  private panPointerId: number | null = null;
+  private panFrom: FbPosition | null = null;
+
   constructor(
     private element: ElementRef,
     private cdr: ChangeDetectorRef,
     public flowService: FlowBasedService,
     public socketService: SocketService,
+    public viewport: FbViewportService,
     @Optional() private nodeService: NodeService) {
+  }
+
+  /* ----------------------------------------------------------------------
+     Zoom and pan
+     ---------------------------------------------------------------------- */
+
+  @HostListener('wheel', ['$event'])
+  onWheel(event: WheelEvent): void {
+    // Only the root surface zooms; a nested flow is a node's contents.
+    if (!this.root) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.viewport.zoomAt(event.deltaY < 0 ? 1.1 : 1 / 1.1, this.toLocal(event));
+    this.afterViewportChange();
+  }
+
+  zoomIn(): void {
+    this.zoomAroundCentre(1.2);
+  }
+
+  zoomOut(): void {
+    this.zoomAroundCentre(1 / 1.2);
+  }
+
+  resetView(): void {
+    this.viewport.reset();
+    this.afterViewportChange();
+  }
+
+  private zoomAroundCentre(factor: number): void {
+    const rect = this.viewportRect();
+
+    this.viewport.zoomAt(factor, {x: rect.width / 2, y: rect.height / 2});
+    this.afterViewportChange();
+  }
+
+  private startPan(event: PointerEvent): void {
+    if (!this.root) {
+      return;
+    }
+
+    this.panPointerId = event.pointerId;
+    this.panFrom = {x: event.clientX, y: event.clientY};
+  }
+
+  @HostListener('document:pointermove', ['$event'])
+  onPanMove(event: PointerEvent): void {
+    if (this.panPointerId === null || event.pointerId !== this.panPointerId || !this.panFrom) {
+      return;
+    }
+
+    this.viewport.panBy(event.clientX - this.panFrom.x, event.clientY - this.panFrom.y);
+    this.panFrom = {x: event.clientX, y: event.clientY};
+    this.afterViewportChange();
+  }
+
+  @HostListener('document:pointerup')
+  @HostListener('document:pointercancel')
+  onPanEnd(): void {
+    this.panPointerId = null;
+    this.panFrom = null;
+  }
+
+  private viewportRect(): DOMRect {
+    const el = this.element.nativeElement.querySelector('.viewport') ?? this.element.nativeElement;
+
+    return el.getBoundingClientRect();
+  }
+
+  private toLocal(event: { clientX: number; clientY: number }): FbPosition {
+    const rect = this.viewportRect();
+
+    return {x: event.clientX - rect.left, y: event.clientY - rect.top};
+  }
+
+  /*
+   * Socket positions are cached client-space rects, so they go stale the moment the
+   * plane is transformed. Invalidating here keeps it ordered and synchronous; the
+   * signals rewrite makes geometry derived and removes the need entirely.
+   */
+  private afterViewportChange(): void {
+    this.socketService.clearPosition();
+    this.cdr.detectChanges();
+  }
+
+  private capturePlaneSize(): void {
+    if (!this.root) {
+      return;
+    }
+
+    const {width, height} = this.viewportRect();
+
+    this.viewport.setPlaneSize(width, height);
   }
 
   @HostListener('pointermove', ['$event'])
@@ -59,6 +167,9 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
     if (shouldPropagate) {
       this.clicked.next(event);
+      // Reaching the host means the press missed every node (they stop
+      // propagation), so it is a background drag: pan.
+      this.startPan(event);
     }
   }
 
@@ -195,6 +306,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   ngAfterViewInit(): void {
+    this.capturePlaneSize();
     this.repaint();
   }
 

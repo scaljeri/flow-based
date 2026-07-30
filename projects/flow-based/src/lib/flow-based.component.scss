@@ -23,9 +23,24 @@
     }
   }
 
-  > [fbmovablearea] {
+  > .viewport {
     @include fb-size(100%);
+    overflow: hidden;
+    position: relative;
+    // Panning and pinch handling are ours, not the browser's.
+    touch-action: none;
   }
+}
+
+.plane {
+  // Defaults until the size is captured from the container; see the template.
+  @include fb-size(100%);
+  left: 0;
+  position: absolute;
+  top: 0;
+  // Must match FbViewportService.zoomAt's assumption.
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 fb-connection-lines {

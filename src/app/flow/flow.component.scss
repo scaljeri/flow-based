@@ -2,3 +2,20 @@
   flex: 1;
   position: relative;
 }
+
+.viewport-controls {
+  align-items: center;
+  bottom: 16px;
+  display: flex;
+  gap: 8px;
+  left: 16px;
+  position: absolute;
+  // Above the nodes, which sit at z-index 2-5.
+  z-index: 20;
+
+  .zoom-level {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    min-width: 64px;
+  }
+}
