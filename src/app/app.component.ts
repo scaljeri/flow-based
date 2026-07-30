@@ -136,7 +136,9 @@ export class AppComponent implements OnInit {
    */
 
   get validation(): FbPropagationReport | null {
-    return this.flowService.flow?.lastPropagation ?? null;
+    // A signal, so the badge appears when the engine finds a problem rather than
+    // when the user next clicks something.
+    return this.flowService.propagation();
   }
 
   get problemCount(): number {

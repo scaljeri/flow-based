@@ -1,5 +1,15 @@
 import { LitElement, PropertyValues, css, html, svg, nothing } from 'lit';
-import { FbAnyConnection, FbConnection, FbPosition, derivative, gradient, normal } from '@scaljeri/flow-based-core';
+import {
+  FbAnyConnection,
+  FbConnection,
+  FbPosition,
+  derivative,
+  gradient,
+  normal,
+  orthogonalRoute,
+  roundedPath,
+  routeMidpoint,
+} from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
 import { guard } from 'lit/directives/guard.js';
 import { FbEditor, FbEditorChange } from './editor';
@@ -132,16 +142,17 @@ export class FbConnectionsElement extends LitElement {
 
     return `${fp.x},${fp.y},${fs?.width},${fs?.height},${tp.x},${tp.y},${ts?.width},${ts?.height},`
       + `${connection.out},${connection.in},${plane.width},${plane.height},`
-      + `${from.sockets?.length},${to.sockets?.length}`;
+      + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing}`;
   }
 
   private renderConnection(connection: FbConnection) {
-    const points = this.controlPoints(connection);
+    const ends = this.endpoints(connection);
 
-    if (!points) {
+    if (!ends) {
       return nothing;
     }
 
+    const route = this.route(ends.start, ends.end);
     const id = `fb-grad-${connection.id}`;
 
     return svg`
@@ -152,11 +163,34 @@ export class FbConnectionsElement extends LitElement {
         </linearGradient>
       </defs>
       <path class="connection"
-            d=${this.pathOf(points)}
+            d=${route.d}
             stroke=${`url(#${id})`}
             @pointerdown=${(e: PointerEvent) => this.onLineClick(e, connection)}></path>
-      <path class="arrow" d="M0 5 L 5 0 L0 -5z" transform=${this.arrowOf(points)}></path>
+      <path class="arrow" d="M0 5 L 5 0 L0 -5z" transform=${route.arrow}></path>
     `;
+  }
+
+  /**
+   * One place that turns two endpoints into a drawable path.
+   *
+   * Both routings produce a `d` and an arrow transform, so nothing downstream —
+   * the pending line, the arrow, the click target — needs to know which is in
+   * use. Branching at each of those instead is how the two shapes drift apart.
+   */
+  private route(start: FbPosition, end: FbPosition): { d: string; arrow: string } {
+    if (this.editor.routing === 'orthogonal') {
+      const points = orthogonalRoute(start, end);
+      const mid = routeMidpoint(points);
+
+      return {
+        d: roundedPath(points),
+        arrow: `translate(${mid.x}, ${mid.y}) rotate(${mid.degrees})`,
+      };
+    }
+
+    const points = this.curve(start, end);
+
+    return { d: this.pathOf(points), arrow: this.arrowOf(points) };
   }
 
   private renderPending() {
@@ -179,13 +213,13 @@ export class FbConnectionsElement extends LitElement {
     }
 
     // Draw out-to-in, whichever end the user grabbed.
-    const points = pending.socket.type === 'out'
-      ? this.curve(anchor, pointer)
-      : this.curve(pointer, anchor);
+    const route = pending.socket.type === 'out'
+      ? this.route(anchor, pointer)
+      : this.route(pointer, anchor);
 
     return svg`
       <path class="connection pointer-path"
-            d=${this.pathOf(points)}
+            d=${route.d}
             stroke=${this.colourOf(pending.socket.format)}
             stroke-width="5"></path>
     `;
@@ -196,7 +230,7 @@ export class FbConnectionsElement extends LitElement {
     this.dispatchEvent(new CustomEvent('line-click', { detail: connection, bubbles: true, composed: true }));
   }
 
-  private controlPoints(connection: FbConnection): FbPosition[] | null {
+  private endpoints(connection: FbConnection): { start: FbPosition; end: FbPosition } | null {
     const { geometry, viewport } = this.editor;
     const plane = viewport.planeSize;
 
@@ -223,7 +257,7 @@ export class FbConnectionsElement extends LitElement {
       return null;
     }
 
-    return this.curve(start, end);
+    return { start, end };
   }
 
   /** Horizontal-ish cubic, mirroring the original editor's shape. */

@@ -8,6 +8,7 @@ import {
   Inject,
   Input,
   OnChanges,
+  HostListener,
   OnDestroy,
   Optional,
   signal,
@@ -15,7 +16,7 @@ import {
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
-import { FbAlignment, FbNodeState, FbSocketColors } from '@scaljeri/flow-based-core';
+import { FbAlignment, FbNodeState, FbRouting, FbSocketColors } from '@scaljeri/flow-based-core';
 // Imported for the side effect as well as the types: this registers
 // <fb-flow-canvas> and friends with the custom-element registry.
 import { FbEditor, FbFlowCanvasElement } from '@scaljeri/flow-based-lit';
@@ -67,6 +68,18 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
 
   @Output() stateChanged = new EventEmitter<boolean>();
 
+  /*
+   * The editor a toolbar acts on is the one the user last touched, not the one
+   * constructed last. With two editors on a page that was the difference between
+   * "Add" landing where you are looking and landing somewhere else — and it was
+   * decided by template order, which no user can see.
+   */
+  @HostListener('pointerdown')
+  @HostListener('focusin')
+  onActivate(): void {
+    this.flowService.activate(this.editor);
+  }
+
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<FbFlowCanvasElement>;
 
   /**
@@ -89,6 +102,9 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
 
   /** How many nodes are selected, for a toolbar to show or hide itself. */
   readonly selectionCount = signal(0);
+
+  /** How connections are drawn, for a toolbar to reflect. */
+  readonly routing = signal<FbRouting>('curved');
 
   private readonly unsubscribe: () => void;
 
@@ -119,6 +135,10 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
 
       if (change.kind === 'selection' || change.kind === 'structure') {
         this.selectionCount.set(this.editor.selection.size);
+      }
+
+      if (change.kind === 'connections') {
+        this.routing.set(this.editor.routing);
       }
     });
 
@@ -191,6 +211,14 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
 
   distribute(axis: 'x' | 'y'): void {
     this.editor.distributeSelection(axis);
+  }
+
+  setRouting(routing: FbRouting): void {
+    this.editor.setRouting(routing);
+  }
+
+  toggleRouting(): void {
+    this.setRouting(this.editor.routing === 'curved' ? 'orthogonal' : 'curved');
   }
 
   get id(): number {

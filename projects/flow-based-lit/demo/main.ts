@@ -180,6 +180,13 @@ document.getElementById('reset')!.addEventListener('click', () => canvas.resetVi
 document.getElementById('add')!.addEventListener('click', () => editor.addNode('sink'));
 document.getElementById('undo')!.addEventListener('click', () => editor.undo());
 
+const routingButton = document.getElementById('routing');
+
+routingButton?.addEventListener('click', () => {
+  editor.setRouting(editor.routing === 'curved' ? 'orthogonal' : 'curved');
+  routingButton.textContent = editor.routing === 'curved' ? 'Straight' : 'Curved';
+});
+
 editor.changes.subscribe(() => {
   document.getElementById('zoom')!.textContent = `${editor.viewport.zoomPercent()}%`;
   document.getElementById('nodes')!.textContent = String(editor.children.length);

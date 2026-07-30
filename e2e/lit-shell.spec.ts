@@ -523,3 +523,42 @@ test('Delete removes every selected node and the connections that touched them',
   expect(await page.evaluate(() => window.fbEditor.connections.length)).toBe(0);
   expect(await selectedIds(page)).toEqual([]);
 });
+
+test('routes connections orthogonally on request, and keeps them on their sockets', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const curved = await connectionPaths(page);
+  // A cubic: one C command, no L or Q.
+  expect(curved.every(d => d.includes('C'))).toBe(true);
+
+  await page.locator('#routing').click();
+
+  const orthogonal = await connectionPaths(page);
+  expect(orthogonal).toHaveLength(curved.length);
+
+  /*
+   * Straight legs with rounded corners: lines and quadratics, never a cubic.
+   * Asserting the shape rather than a screenshot means this catches a route that
+   * silently falls back to a curve.
+   */
+  expect(orthogonal.every(d => d.includes('L'))).toBe(true);
+  expect(orthogonal.some(d => d.includes('Q'))).toBe(true);
+  expect(orthogonal.every(d => !d.includes('C'))).toBe(true);
+
+  // Same invariant as every other routing: the ends land on the sockets.
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+
+  // And the first leg leaves horizontally, so it reads as leaving the socket.
+  const leavesFlat = await page.evaluate(() => {
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+    const conn = root.querySelector('fb-connections');
+
+    return [...(conn?.shadowRoot?.querySelectorAll('path.connection') ?? [])].every(p => {
+      const m = (p.getAttribute('d') ?? '').match(/^M\s*([-\d.]+)\s+([-\d.]+)\s+L\s*([-\d.]+)\s+([-\d.]+)/);
+
+      return !m || Math.abs(parseFloat(m[2]) - parseFloat(m[4])) < 0.5;
+    });
+  });
+  expect(leavesFlat).toBe(true);
+});

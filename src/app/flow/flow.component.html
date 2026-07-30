@@ -55,4 +55,10 @@
   <button type="button" mat-mini-fab color="primary" (click)="editor.zoomIn()" aria-label="Zoom in">
     <mat-icon>add</mat-icon>
   </button>
+
+  <button type="button" mat-mini-fab class="routing" (click)="editor.toggleRouting()"
+          [matTooltip]="editor.routing() === 'curved' ? 'Straight connections' : 'Curved connections'"
+          [attr.aria-label]="editor.routing() === 'curved' ? 'Straight connections' : 'Curved connections'">
+    <mat-icon>{{editor.routing() === 'curved' ? 'turn_sharp_right' : 'gesture'}}</mat-icon>
+  </button>
 </div>

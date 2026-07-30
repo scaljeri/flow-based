@@ -1,6 +1,7 @@
 import {
   FbAlignment,
   FbClipboard,
+  FbRouting,
   FbConnection,
   FbEmitter,
   FbGeometry,
@@ -57,6 +58,8 @@ export interface FbEditorOptions {
   types: FbNodeTypes<FbNodeMount>;
   helpers?: FbNodeHelpers;
   socketColors?: Record<string, string>;
+  /** How connections are drawn; see FbRouting. Defaults to 'curved'. */
+  routing?: FbRouting;
   /**
    * Undo stack to use instead of a private one.
    *
@@ -89,6 +92,9 @@ export class FbEditor {
   readonly types: FbNodeTypes<FbNodeMount>;
   readonly socketColors: Record<string, string>;
 
+  /** How connections are drawn. A view concern: nothing in the JSON changes. */
+  routing: FbRouting;
+
   flow!: Flow;
   state!: FbNodeState;
 
@@ -115,6 +121,7 @@ export class FbEditor {
     this.history = options.history ?? new FbHistory();
     this.helpers = options.helpers;
     this.socketColors = options.socketColors ?? {};
+    this.routing = options.routing ?? 'curved';
 
     this.geometry.changes.subscribe(nodeId => this.changes.emit({ kind: 'geometry', nodeId }));
     this.viewport.changes.subscribe(() => this.changes.emit({ kind: 'viewport' }));
@@ -159,6 +166,15 @@ export class FbEditor {
 
   get connections(): FbConnection[] {
     return this.state?.connections ?? [];
+  }
+
+  setRouting(routing: FbRouting): void {
+    if (this.routing === routing) {
+      return;
+    }
+
+    this.routing = routing;
+    this.changes.emit({ kind: 'connections' });
   }
 
   nodeById(id: number): FbNodeState | undefined {

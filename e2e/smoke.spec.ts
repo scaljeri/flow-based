@@ -389,3 +389,20 @@ test('mounts a node type that has no framework in it, styled by a plain styleshe
 
   expect(errors).toEqual([]);
 });
+
+test('shows the validation badge on load, without waiting for an interaction', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  /*
+   * The engine propagates socket formats during load, long before anything the
+   * user does. When the graph's signal layer was replaced by the shell's plain
+   * emitter, this badge became a getter that nothing marked dirty — so it only
+   * appeared once the user happened to click something unrelated, which is worse
+   * than having no badge at all. Deliberately asserted with NO interaction first.
+   */
+  const badge = page.locator('mat-toolbar button.problems');
+
+  await expect(badge).toBeVisible();
+  await expect(badge).toContainText(/\d+/);
+});

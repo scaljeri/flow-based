@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { FbNodeEventCallback, FbNodeState, FbNodeWorker, FbSocket, Flow } from '@scaljeri/flow-based-core';
+import { Injectable, signal } from '@angular/core';
+import { FbNodeEventCallback, FbNodeState, FbNodeWorker, FbPropagationReport, FbSocket, Flow } from '@scaljeri/flow-based-core';
 import { FbEditor } from '@scaljeri/flow-based-lit';
 
 export interface ExternalEvent {
@@ -26,6 +26,18 @@ export interface ExternalEvent {
 })
 export class FlowBasedService {
   private readonly editors: FbEditor[] = [];
+  private unsubscribe?: () => void;
+
+  /**
+   * The active editor's last propagation report, as a signal.
+   *
+   * A getter reading `flow.lastPropagation` is not enough, and stopped being
+   * enough when the signal layer was replaced by the shell's plain emitter: the
+   * engine finishes propagating during load, long before anything marks a
+   * toolbar dirty, so a validation badge only appeared once the user happened to
+   * click something unrelated. Which is worse than not having one.
+   */
+  readonly propagation = signal<FbPropagationReport | null>(null);
 
   /** The editor currently on screen, if one is. */
   get editor(): FbEditor | undefined {
@@ -36,8 +48,22 @@ export class FlowBasedService {
     return this.editor?.flow;
   }
 
+  /**
+   * Make an editor the current one.
+   *
+   * Idempotent, and it MOVES an editor already known rather than pushing a
+   * duplicate: this is called on every press, so a stack that grew per click
+   * would leak an entry per interaction and hand `deactivate` the wrong one to
+   * remove.
+   */
   activate(editor: FbEditor): void {
+    if (this.editors[0] === editor) {
+      return;
+    }
+
+    this.deactivate(editor);
     this.editors.unshift(editor);
+    this.watch(editor);
   }
 
   deactivate(editor: FbEditor): void {
@@ -46,6 +72,29 @@ export class FlowBasedService {
     if (index !== -1) {
       this.editors.splice(index, 1);
     }
+
+    if (this.editors[0]) {
+      this.watch(this.editors[0]);
+    } else {
+      this.unsubscribe?.();
+      this.unsubscribe = undefined;
+      this.propagation.set(null);
+    }
+  }
+
+  /** Mirror one editor's validation state into a signal templates can read. */
+  private watch(editor: FbEditor): void {
+    this.unsubscribe?.();
+
+    const publish = (): void => this.propagation.set(editor.flow?.lastPropagation ?? null);
+
+    this.unsubscribe = editor.changes.subscribe(change => {
+      if (change.kind === 'structure' || change.kind === 'connections' || change.kind === 'formats') {
+        publish();
+      }
+    });
+
+    publish();
   }
 
   /* ----------------------------------------------------------------------
