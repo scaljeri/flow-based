@@ -1,64 +1,79 @@
-export class FbWebWorker<T> {
+/**
+ * A promise-shaped handle on a worker.
+ *
+ * Two things changed from the version this replaces, and both were latent bugs
+ * rather than tidying:
+ *
+ * 1. It no longer builds the worker by stringifying a class into a Blob. That
+ *    depended on the bundler's exact output for code the compiler never saw as a
+ *    worker, and the ES5 -> ES2022 move broke it outright. Callers now hand over a
+ *    factory that creates a real module worker.
+ * 2. Replies are correlated by id. Every `run()` used to add a `message` listener
+ *    and never remove it, so listeners accumulated for the lifetime of the node —
+ *    and with two computations in flight, the first reply resolved BOTH promises,
+ *    giving one caller the other's image.
+ */
+export class FbWebWorker<TRequest, TResponse> {
   // Created lazily on the first run(), so it really can be absent.
   private worker?: Worker;
+  private nextId = 1;
+  private readonly pending = new Map<number, {
+    resolve: (value: TResponse) => void;
+    reject: (reason: unknown) => void;
+  }>();
 
-  constructor(private workerClazz: any) {}
+  constructor(private readonly create: () => Worker) {}
 
-  run(data: any): Promise<T> {
-    const promise: Promise<T> = this.createPromiseForWorker(data);
+  run(request: TRequest): Promise<TResponse> {
+    const worker = this.worker ??= this.attach(this.create());
+    const id = this.nextId++;
 
-    return promise;
+    return new Promise<TResponse>((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      worker.postMessage({ ...request, id });
+    });
   }
 
   terminate(): void {
     this.worker?.terminate();
+    this.worker = undefined;
+
+    // Anything still waiting will never be answered; say so rather than leaving
+    // callers holding a promise that can only hang.
+    for (const { reject } of this.pending.values()) {
+      reject(new Error('Worker terminated'));
+    }
+
+    this.pending.clear();
   }
 
-  private build(): string {
-    const clazz = this.workerClazz['FractalClazz'];
+  private attach(worker: Worker): Worker {
+    worker.addEventListener('message', ({ data }: MessageEvent<{ id: number; error?: string }>) => {
+      const entry = this.pending.get(data.id);
 
-    /*
-     * This stringifies a class and re-evaluates it inside a worker, which the
-     * ES5 -> ES2022 target change broke in two ways at once:
-     *
-     * 1. Under ES5, `toString()` produced `function FractalClazz(...)` and the
-     *    methods were separate, ENUMERABLE `FractalClazz.prototype.x = ...`
-     *    assignments, so `Object.keys(prototype)` found them. A native class
-     *    keeps its methods inside the class body and makes them
-     *    non-enumerable, so that reassembly step now yields nothing and is not
-     *    needed — the methods are already in the emitted text.
-     * 2. The bundler drops the class name, so `toString()` returns an ANONYMOUS
-     *    `class { ... }`. Emitted as a statement that is a SyntaxError
-     *    ("Unexpected token '{'"), which killed the worker before it ran.
-     *
-     * Binding the result to a const keeps it an expression — valid whether or
-     * not the class is named — and gives the message handler a stable name.
-     *
-     * This whole approach is fragile: it depends on the exact output of the
-     * bundler for code that is never type-checked as a worker. The real fix is a
-     * dedicated worker module (`new Worker(new URL('./x.worker', import.meta.url),
-     * {type: 'module'})`), which is Stage 5 work — see docs/AUDIT.md.
-     */
-    const webWorkerTemplate = `
-      const FractalClazz = ${clazz.toString()};
+      if (!entry) {
+        return;
+      }
 
-      self.addEventListener('message', function (e) {
-        postMessage(new FractalClazz(e.data).compute());
-      });
-    `;
+      this.pending.delete(data.id);
 
-    const blob = new Blob([webWorkerTemplate], { type: 'text/javascript' });
-
-    return URL.createObjectURL(blob);
-  }
-
-  private createPromiseForWorker(data: any): Promise<T> {
-    const worker = this.worker ??= new Worker(this.build());
-
-    return new Promise<T>((resolve, reject) => {
-      worker.addEventListener('message', event => resolve(event.data));
-      worker.addEventListener('error', reject);
-      worker.postMessage(data);
+      if (data.error) {
+        entry.reject(new Error(data.error));
+      } else {
+        entry.resolve(data as TResponse);
+      }
     });
+
+    worker.addEventListener('error', event => {
+      // A worker-level error is not tied to one message, so fail everything
+      // outstanding rather than leaving promises pending forever.
+      for (const { reject } of this.pending.values()) {
+        reject(event);
+      }
+
+      this.pending.clear();
+    });
+
+    return worker;
   }
 }
