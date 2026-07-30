@@ -1,5 +1,5 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { XXL_FLOW_TYPES, FbNodeTypes } from '@scaljeri/flow-based';
+import { FB_NODE_TYPES, FbNodeTypes } from '@scaljeri/flow-based';
 import { ComponentSelectionService } from '../../component-selection.service';
 
 @Component({
@@ -12,7 +12,7 @@ export class ComponentSelectionComponent implements OnInit {
   flowKeys: string[] = [];
 
   constructor(private selectionService: ComponentSelectionService,
-              @Inject(XXL_FLOW_TYPES) public flowTypes: FbNodeTypes) {
+              @Inject(FB_NODE_TYPES) public flowTypes: FbNodeTypes) {
   }
 
   ngOnInit() {

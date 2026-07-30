@@ -1,9 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, forwardRef, HostBinding, HostListener, Input, OnChanges, OnDestroy, OnInit, Optional, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import {
-  XxlFlow,
-  XxlFlowUnitState, XxlConnection, XxlSocketEvent, FbNodeState
-} from './flow-based';
+import { FbAnyConnection, FbConnection, FbNodeState, FbSocketEvent, isElementConnection } from './flow-based';
 import { FlowBasedService } from './flow-based.service';
 import { SocketService } from './socket.service';
 import { filter } from 'rxjs/operators';
@@ -11,7 +8,7 @@ import { NodeService } from './node/node-service';
 import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'xxl-flow-based',
+  selector: 'fb-flow-based',
   templateUrl: './flow-based.component.html',
   styleUrls: ['./flow-based.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,7 +32,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   pointerMove!: PointerEvent;
   activeSocketFrom: number | null = null;
   activeSocketTo: number | null = null;
-  lastSocketEvent!: XxlSocketEvent;
+  lastSocketEvent!: FbSocketEvent;
   movingNode!: number;
 
   constructor(
@@ -80,7 +77,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
     this.subscription = this.socketService.socketClicked$.pipe(
       filter(e => !e || e.scope === this.id)
-    ).subscribe((event: XxlSocketEvent | null) => {
+    ).subscribe((event: FbSocketEvent | null) => {
       if (event) {
         if (event.socket.type === 'out') {
           this.activeSocketFrom = event.socket.id!;
@@ -145,24 +142,29 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     // this.cdr.detectChanges();
   }
 
-  onDragStart(event: PointerEvent, state: XxlFlowUnitState): void {
+  onDragStart(event: PointerEvent, state: FbNodeState): void {
     // const index = this.state.children.indexOf(state);
   }
 
-  onDragEnd(event: PointerEvent, state: XxlFlowUnitState): void {
+  onDragEnd(event: PointerEvent, state: FbNodeState): void {
     this.state.children = [...this.state.children!.filter(child => child !== state), state];
   }
 
-  nodeAdded(nodeState: XxlFlowUnitState): void {
+  nodeAdded(nodeState: FbNodeState): void {
     this.cdr.detectChanges();
   }
 
   entryClicked(index: number): void {
   }
 
-  removeConnection(connection: XxlConnection): void {
+  removeConnection(connection: FbAnyConnection): void {
+    // Element-to-element lines are a node's own decoration, not graph edges, so
+    // there is nothing in the Flow to remove for them.
+    if (isElementConnection(connection)) {
+      return;
+    }
+
     this.flowService.flow.removeConnection(connection, this.state);
-    // this.cdr.detectChanges();
   }
 
   // repaintConnections(): void {
@@ -179,7 +181,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   registerOnTouched(): void {
   }
 
-  writeValue(state: XxlFlow): void {
+  writeValue(state: FbNodeState): void {
     // this.state = state;
     // this.createInjector();
   }
@@ -196,8 +198,8 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
     this.repaint();
   }
 
-  private buildConnection(a: XxlSocketEvent, b: XxlSocketEvent): XxlConnection {
-    const conn = {} as XxlConnection;
+  private buildConnection(a: FbSocketEvent, b: FbSocketEvent): FbConnection {
+    const conn = {} as FbConnection;
 
     if (a.socket.type === 'out') {
       conn.from = a.parentId;

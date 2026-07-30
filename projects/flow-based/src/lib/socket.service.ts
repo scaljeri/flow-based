@@ -1,19 +1,19 @@
 import { Injectable } from '@angular/core';
-import { FbKeyValues, SocketDetails, XxlSocketEvent } from './flow-based';
+import { FbKeyValues, FbSocketDetails, FbSocketEvent } from './flow-based';
 import { Subject } from 'rxjs';
 
 @Injectable({providedIn: 'root'})
 export class SocketService {
-  private socketClicked = new Subject<XxlSocketEvent | null>();
+  private socketClicked = new Subject<FbSocketEvent | null>();
   public socketClicked$ = this.socketClicked.asObservable();
 
-  public sockets: FbKeyValues<SocketDetails> = {};
-  private lastEvent: XxlSocketEvent | null = null;
+  public sockets: FbKeyValues<FbSocketDetails> = {};
+  private lastEvent: FbSocketEvent | null = null;
 
   constructor() {
   }
 
-  onSocketClick(event: XxlSocketEvent | null): void {
+  onSocketClick(event: FbSocketEvent | null): void {
     this.lastEvent = event;
     this.socketClicked.next(event);
   }
@@ -26,7 +26,7 @@ export class SocketService {
     this.lastEvent = null;
   }
 
-  addSocket(id: number, sd: SocketDetails): void {
+  addSocket(id: number, sd: FbSocketDetails): void {
     this.sockets[id] = sd;
   }
 
@@ -40,13 +40,15 @@ export class SocketService {
     delete this.sockets[id];
   }
 
-  getSocket(id: number): SocketDetails {
+  // Undefined until the socket's component has registered itself in
+  // ngAfterViewInit, which is a real window during initial render.
+  getSocket(id: number): FbSocketDetails | undefined {
     return this.sockets[id];
   }
 
   clearPosition(id?: number): void {
     Object.keys(this.sockets).map(k => this.sockets[k])
-      .filter((s: SocketDetails) => !id || s.parentId === id)
+      .filter((s: FbSocketDetails) => !id || s.parentId === id)
       .forEach(s => {
         s.comp.resetPosition();
       });

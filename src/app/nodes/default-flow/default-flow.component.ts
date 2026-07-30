@@ -1,5 +1,5 @@
 import { Component, HostBinding, Input, OnDestroy, OnInit } from '@angular/core';
-import { FbNodeWorker, NodeService, XxlSocket } from '@scaljeri/flow-based';
+import { FbNodeWorker, NodeService, FbSocket } from '@scaljeri/flow-based';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AddSocketComponent, DialogAction } from './add-socket/add-socket.component';
 import { Subscription } from 'rxjs';
@@ -12,7 +12,9 @@ import { Subscription } from 'rxjs';
 })
 export class DefaultFlowComponent implements OnInit, OnDestroy {
   @Input() title = '';
-  private worker!: FbNodeWorker;
+  // A composite node always gets the built-in FlowWorker, but the accessor is
+  // honestly optional now, so mirror that rather than asserting.
+  private worker?: FbNodeWorker;
   // Only ever used by the commented-out click handling below, so genuinely absent.
   private clickSubscription?: Subscription;
   private dialogRef: MatDialogRef<AddSocketComponent> | null = null;
@@ -61,7 +63,7 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
     this.isActive = false;
   }
 
-  openDialog(socket: Partial<XxlSocket>): void {
+  openDialog(socket: Partial<FbSocket>): void {
     this.dialogRef = this.dialog.open(AddSocketComponent, {
       panelClass: 'add-socket-dialog',
       width: '400px',
@@ -86,7 +88,7 @@ export class DefaultFlowComponent implements OnInit, OnDestroy {
     //   }
     // });
     //
-    // this.dialogRef.afterClosed().subscribe((updates: XxlSocket[] = []) => {
+    // this.dialogRef.afterClosed().subscribe((updates: FbSocket[] = []) => {
     //   (this.service.state.sockets || []).filter(socket => {
     //     if (socket.type === type && !updates.some(update => update.id === socket.id)) {
     //       this.service.socketRemoved(socket);

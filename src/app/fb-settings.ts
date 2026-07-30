@@ -32,7 +32,7 @@ export const FB_CONFIG: FbNodeTypes = {
   'flow': {component: DefaultFlowComponent, settings: {title: 'Composite Unit', isFlow: true}}
 };
 
-export const XXL_SOCKET_COLORS = {
+export const FB_SOCKET_PALETTE = {
   'number': '#025d04',
   'worker': '#c1a',
   'dimension': '#bebebe',

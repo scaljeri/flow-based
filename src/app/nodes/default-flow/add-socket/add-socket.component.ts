@@ -1,11 +1,11 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { XxlSocket } from '@scaljeri/flow-based';
+import { FbSocket } from '@scaljeri/flow-based';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 export interface DialogAction {
   action: 'delete' | 'edit' | 'create';
-  socket?: XxlSocket;
+  socket?: FbSocket;
 }
 @Component({
   standalone: false,
@@ -19,7 +19,7 @@ export class AddSocketComponent implements OnInit {
 
   constructor(private fb: FormBuilder,
               public dialogRef: MatDialogRef<AddSocketComponent>,
-              @Inject(MAT_DIALOG_DATA) public socket: Partial<XxlSocket>) {
+              @Inject(MAT_DIALOG_DATA) public socket: Partial<FbSocket>) {
   }
 
   ngOnInit() {

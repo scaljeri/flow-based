@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlFlowUnitState, XxlSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbNodeState, FbSocket } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subject, Subscription, zip } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -25,12 +25,12 @@ export class MergeStreamsWorker implements FbNodeWorker {
   private subscription?: Subscription;
   private subject = new ReplaySubject<number>(1);
 
-  private streams$: { [s: string]: Observable<{ value: number, connection: XxlConnection }> } = {};
+  private streams$: { [s: string]: Observable<{ value: number, connection: FbConnection }> } = {};
   public streamValues: { [key: string]: number[] } = {};
   public outputValue = 0;
   private valuesSubject = new Subject<any>();
 
-  constructor(private state: XxlFlowUnitState) {
+  constructor(private state: FbNodeState) {
   }
 
   destroy(): void {
@@ -47,11 +47,11 @@ export class MergeStreamsWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
-  getSockets(): XxlSocket[] {
+  getSockets(): FbSocket[] {
     return this.state.sockets || this.state.config.sockets;
   }
 
-  removeStream(connection: XxlConnection): void { /* not used */
+  removeStream(connection: FbConnection): void { /* not used */
     delete this.streams$[connection.id];
 
     this.createStream();
@@ -97,7 +97,7 @@ export class MergeStreamsWorker implements FbNodeWorker {
       });
   }
 
-  setStream(stream: Observable<number>, socket: XxlSocket, connection: XxlConnection): void {
+  setStream(stream: Observable<number>, socket: FbSocket, connection: FbConnection): void {
     this.streams$[connection.id] = stream.pipe(map(v => ({value: v, connection})));
     this.createStream();
   }
@@ -106,7 +106,7 @@ export class MergeStreamsWorker implements FbNodeWorker {
     return this.state.title;
   }
 
-  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+  connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {
 
   }
 }

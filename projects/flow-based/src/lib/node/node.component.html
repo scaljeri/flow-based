@@ -1,31 +1,31 @@
 <section class="component">
   <ng-container *ngIf="isFlow() && isFullSize">
-    <xxl-flow-based #flow [state]="state" [active]="true" [root]="false" (clicked)="onClick($event)"></xxl-flow-based>
+    <fb-flow-based #flow [state]="state" [active]="true" [root]="false" (clicked)="onClick($event)"></fb-flow-based>
   </ng-container>
 
-  <xxl-connection-lines *ngIf="!!service.connections"
+  <fb-connection-lines *ngIf="!!service.connections"
                         [connections]="service.connections"
-                        [class.is-dark]="isFlow()" class="tmp-lines"></xxl-connection-lines>
+                        [class.is-dark]="isFlow()" class="tmp-lines"></fb-connection-lines>
 
-  <ng-container *xxlDynamicComponent="state"></ng-container>
+  <ng-container *fbDynamicComponent="state"></ng-container>
 
   <section class="sockets sockets-in" [class.is-disabled]="isFullSize && !isFlow()">
-    <xxl-socket *ngFor="let socket of sockets | socketIn"
+    <fb-socket *ngFor="let socket of sockets | socketIn"
                 [state]="socket"
                 [scope]="getScope()"
                 [invert]="isInverted()"
                 [parent]="id"
                 [attr.data-socket-id]="socket.id"
-                class="socket"></xxl-socket>
+                class="socket"></fb-socket>
   </section>
 
   <section class="sockets sockets-out" [class.is-disabled]="isFullSize && !isFlow()">
-    <xxl-socket *ngFor="let socket of sockets | socketOut"
+    <fb-socket *ngFor="let socket of sockets | socketOut"
                 [state]="socket"
                 [scope]="getScope()"
                 [invert]="isInverted()"
                 [parent]="id"
-                class="socket"></xxl-socket>
+                class="socket"></fb-socket>
   </section>
 
   <ng-container *ngIf="isLabel">

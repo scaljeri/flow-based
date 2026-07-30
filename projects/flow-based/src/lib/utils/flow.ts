@@ -1,10 +1,10 @@
 import {
   FbKeyValues,
-  XxlConnection,
+  FbConnection,
   FbNodeTypes,
   FbNodeWorker,
   FbNodeHelpers,
-  FbNodeState, XxlSocket
+  FbNodeState, FbSocket
 } from '../flow-based';
 import { FlowWorker } from './flow-worker';
 import { IdGenerator } from './id-generator';
@@ -15,7 +15,7 @@ interface Node {
 }
 
 interface NodeConnection {
-  connection: XxlConnection;
+  connection: FbConnection;
   state: FbNodeState;
 }
 
@@ -61,11 +61,11 @@ export class Flow {
     return this;
   }
 
-  getWorker(id: number): FbNodeWorker {
+  getWorker(id: number): FbNodeWorker | undefined {
     return this.workers[id];
   }
 
-  addConnection(state: FbNodeState, connection: XxlConnection): void {
+  addConnection(state: FbNodeState, connection: FbConnection): void {
     state.connections = [connection, ...state.connections!];
     this.connections[connection.id] = {connection, state};
     this.connectWorkers(connection);
@@ -99,7 +99,7 @@ export class Flow {
     }
   }
 
-  removeConnection(connection: XxlConnection, state: FbNodeState, doRebuild = true): void {
+  removeConnection(connection: FbConnection, state: FbNodeState, doRebuild = true): void {
     const worker = this.workers[connection.to as number];
     if (worker && worker.removeStream) {
       worker.removeStream(connection);
@@ -112,7 +112,7 @@ export class Flow {
     }
   }
 
-  removeSocket(socket: XxlSocket, doRebuild = true): void {
+  removeSocket(socket: FbSocket, doRebuild = true): void {
     const nodeId = this.sockets[socket.id!],
       node = this.getNode(nodeId);
 
@@ -178,7 +178,7 @@ export class Flow {
       parentNode.state.children = parentNode.state.children!.filter(child => child.id !== id);
 
       // Iterate a copy: removeConnection reassigns state.connections.
-      [...(parentNode.state.connections ?? [])].forEach((c: XxlConnection) => {
+      [...(parentNode.state.connections ?? [])].forEach((c: FbConnection) => {
         if (c.from === id || c.to === id) {
           this.removeConnection(c, parentNode.state, false);
         }
@@ -186,7 +186,7 @@ export class Flow {
     }
 
     // A composite node owns its own connection list, which nothing used to clean.
-    [...(node.state.connections ?? [])].forEach((c: XxlConnection) => {
+    [...(node.state.connections ?? [])].forEach((c: FbConnection) => {
       this.removeConnection(c, node.state, false);
     });
 
@@ -228,11 +228,11 @@ export class Flow {
     return this.nodes[id];
   }
 
-  getSocket(id: number): XxlSocket | undefined {
+  getSocket(id: number): FbSocket | undefined {
     return this.getNode(this.sockets[id])?.state.sockets?.find(s => s.id === id);
   }
 
-  addSocket(socket: XxlSocket, nodeId: number): void {
+  addSocket(socket: FbSocket, nodeId: number): void {
     const node = this.getNode(nodeId);
 
     if (!node) {
@@ -277,7 +277,7 @@ export class Flow {
     return false;
   }
 
-  private connect(connection: XxlConnection): boolean {
+  private connect(connection: FbConnection): boolean {
     const from = this.getNode(connection.from as number),
       to = this.getNode(connection.to as number),
       outSocket = this.getSocket(connection.out as number),
@@ -320,7 +320,7 @@ export class Flow {
     }
   }
 
-  private connectWorkers(connection: XxlConnection): void {
+  private connectWorkers(connection: FbConnection): void {
     const fromWorker = this.getWorker(connection.from as number);
     const toWorker = this.getWorker(connection.to as number);
     const outSocket = this.getSocket(connection.out!);

@@ -1,7 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { MergeStreamsWorker } from '../../workers/merge-streams';
 import { FormBuilder } from '@angular/forms';
-import { NodeService, XxlFlowUnitState } from '@scaljeri/flow-based';
+import { NodeService, FbNodeState } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -11,7 +11,7 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./merge-streams.component.scss']
 })
 export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
-  state: XxlFlowUnitState;
+  state: FbNodeState;
   worker!: MergeStreamsWorker;
   isActive = false;
   value = '';
@@ -71,15 +71,26 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
 
     setTimeout(() => {
       this.inputs.forEach((s, i) => {
-        const socketId = s.nativeElement.dataset.socketId;
+        // `dataset.socketId` is a string; the socket registry is keyed by id, so
+        // convert rather than relying on JS object keys coercing.
+        const socketId = Number(s.nativeElement.dataset.socketId);
         const sd = this.service.getSocket(socketId);
+
+        // A socket component that has not registered yet has nothing to draw to.
+        if (!sd) {
+          return;
+        }
 
         this.service.addConnection(sd.comp.element.nativeElement, this.inputs.toArray()[i].nativeElement);
         this.service.addConnection(this.inputs.toArray()[i].nativeElement, this.output.nativeElement);
       });
 
       const outSocket = this.state.sockets!.filter(s => s.type === 'out')[0];
-      this.service.addConnection(this.output.nativeElement, this.service.getSocket(outSocket.id!).comp.element.nativeElement);
+      const outDetails = outSocket ? this.service.getSocket(outSocket.id!) : undefined;
+
+      if (outDetails) {
+        this.service.addConnection(this.output.nativeElement, outDetails.comp.element.nativeElement);
+      }
 
       // this.cdr.detectChanges();
     });

@@ -92,7 +92,7 @@ $socket-size: 14px;
   text-align: center;
   transform: translateX(-50%);
   white-space: nowrap;
-  @include fb-position(absolute, $xxl-gutter-size 0 0 50%);
+  @include fb-position(absolute, $fb-gutter-size 0 0 50%);
 
   &::placeholder {
     color: #fff;
@@ -109,11 +109,11 @@ input.title {
   z-index: 3;
 }
 
-xxl-flow-based {
+fb-flow-based {
   @include fb-position(absolute, 0px 0px 0px 0px);
 }
 
-xxl-connection-lines {
+fb-connection-lines {
   background-color: transparent;
   pointer-events: none;
   z-index: 2;
@@ -134,7 +134,7 @@ xxl-connection-lines {
   justify-content: center;
   overflow: hidden;
   padding: 1px;
-  @include xxl-size(100%);
+  @include fb-size(100%);
 }
 
 .add-socket {
@@ -147,7 +147,7 @@ xxl-connection-lines {
   outline: none;
   position: absolute;
   @include fb-position(absolute, 10px 0 0 30px);
-  @include xxl-size(40px);
+  @include fb-size(40px);
 
   &:active {
     top: 11px;

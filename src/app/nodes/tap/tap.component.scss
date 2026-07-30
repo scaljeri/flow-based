@@ -33,7 +33,7 @@ section {
   display: flex;
   flex-direction: column;
   width: 500px;
-  @include xxl-size(500px, 450px);
+  @include fb-size(500px, 450px);
 
   footer {
     display: flex;
@@ -65,7 +65,7 @@ article {
 
   .current {
     padding: 8px;
-    @include xxl-size(100%, 150px);
+    @include fb-size(100%, 150px);
 
     // This card deliberately runs a tighter 8px inset than the Material default. In v7 that was a
     // single `padding` override on `.mat-card`; in v22 the padding lives on the header/content

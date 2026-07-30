@@ -21,7 +21,7 @@ test('renders the flow editor and draws connections, with no console errors', as
   await page.goto('/');
 
   // The editor shell mounted.
-  await expect(page.locator('xxl-flow-based').first()).toBeVisible();
+  await expect(page.locator('fb-flow-based').first()).toBeVisible();
 
   // The fixture's nodes rendered.
   const nodes = page.locator('fb-node');
@@ -29,11 +29,11 @@ test('renders the flow editor and draws connections, with no console errors', as
   expect(await nodes.count()).toBeGreaterThan(1);
 
   // Sockets registered (they are what connection geometry is measured from).
-  expect(await page.locator('xxl-socket').count()).toBeGreaterThan(1);
+  expect(await page.locator('fb-socket').count()).toBeGreaterThan(1);
 
   // Connections are SVG paths with a non-empty `d`; an empty `d` means the
   // socket-position lookup failed, which is the classic symptom here.
-  const paths = page.locator('xxl-connection-lines svg path.connection');
+  const paths = page.locator('fb-connection-lines svg path.connection');
   expect(await paths.count()).toBeGreaterThan(0);
 
   const ds = await paths.evaluateAll(els => els.map(el => el.getAttribute('d') ?? ''));
@@ -61,7 +61,7 @@ test('deletes a node and its connections without errors', async ({ page }) => {
   await expect(page.locator('fb-node').first()).toBeVisible();
 
   const before = await page.locator('fb-node').count();
-  const socketsBefore = await page.locator('xxl-socket').count();
+  const socketsBefore = await page.locator('fb-socket').count();
   expect(before).toBeGreaterThan(1);
 
   // The delete control lives in the expanded node's footer.
@@ -71,11 +71,11 @@ test('deletes a node and its connections without errors', async ({ page }) => {
   await expect(page.locator('fb-node')).toHaveCount(before - 1);
 
   // Its sockets must go with it, and the survivors must still be drawn.
-  expect(await page.locator('xxl-socket').count()).toBeLessThan(socketsBefore);
+  expect(await page.locator('fb-socket').count()).toBeLessThan(socketsBefore);
   await expect(page.locator('fb-node').first()).toBeVisible();
 
   const ds = await page
-    .locator('xxl-connection-lines svg path.connection')
+    .locator('fb-connection-lines svg path.connection')
     .evaluateAll(els => els.map(el => el.getAttribute('d') ?? ''));
   // No surviving connection may render an empty path: that is the symptom of a
   // socket lookup failing after removal.

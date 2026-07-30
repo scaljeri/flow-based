@@ -1,20 +1,20 @@
 import { Directive, Inject, Input, OnChanges, ViewContainerRef } from '@angular/core';
 import { ReplaySubject } from 'rxjs';
-import { FbNodeState, FbNodeTypes, XXL_FLOW_TYPES } from './flow-based';
+import { FbNodeState, FbNodeTypes, FB_NODE_TYPES } from './flow-based';
 
 @Directive({
-  selector: '[xxlDynamicComponent]',
+  selector: '[fbDynamicComponent]',
   standalone: false,
 })
 export class DynamicComponentDirective<T = unknown> implements OnChanges {
    
-  @Input('xxlDynamicComponent') state!: FbNodeState;
+  @Input('fbDynamicComponent') state!: FbNodeState;
 
   instance!: T;
   instance$ = new ReplaySubject<T>(1);
 
   constructor(
-    @Inject(XXL_FLOW_TYPES) public flowTypes: FbNodeTypes,
+    @Inject(FB_NODE_TYPES) public flowTypes: FbNodeTypes,
     private viewContainer: ViewContainerRef,
   ) {}
 

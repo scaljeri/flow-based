@@ -2,7 +2,7 @@ import { Directive, EventEmitter, HostBinding, HostListener, Output } from '@ang
 import { fromEvent, Subscription } from 'rxjs';
 
 @Directive({
-  selector: '[xxlDraggable]',
+  selector: '[fbDraggable]',
   standalone: false,
 })
 export class DraggableDirective {

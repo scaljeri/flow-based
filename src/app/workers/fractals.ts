@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { FbWebWorker } from './webworker';
 import * as Mandelbrot from './fractals/mandelbrot';
@@ -143,11 +143,11 @@ export class FractalsWorker implements FbNodeWorker {
     Object.keys(this.subscriptions).forEach(key => this.subscriptions[key].unsubscribe());
   }
 
-  getStream(socket: XxlSocket): Observable<any> {
+  getStream(socket: FbSocket): Observable<any> {
     return this.subjects.asObservable();
   }
 
-  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
+  setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe((dim: IDimensions) => {
       if (this.webWorker && dim) {
         if (dim.x && dim.y) {
@@ -163,13 +163,13 @@ export class FractalsWorker implements FbNodeWorker {
     });
   }
 
-  removeStream(connection: XxlConnection): void {
+  removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id].unsubscribe();
 
     delete this.subscriptions[connection.id];
   }
 
-  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+  connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {
 
   }
 

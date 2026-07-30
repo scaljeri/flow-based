@@ -1,5 +1,5 @@
 @use 'utils/utils' as *;
 
 canvas {
-  @include xxl-size(400px);
+  @include fb-size(400px);
 }

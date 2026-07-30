@@ -31,7 +31,7 @@ mat-toolbar {
   filter: brightness(20%);
   z-index: -2;
   @include fb-position(absolute, 0px 0px 0px 0px);
-  @include xxl-size(100%);
+  @include fb-size(100%);
 }
 
 fb-thunder {
@@ -50,7 +50,7 @@ fb-thunder {
 //  position: relative;
 //
 //  .buttons {
-//    @include xxl-position(absolute, 0 0 0 16px);
+//    @include fb-position(absolute, 0 0 0 16px);
 //
 //    button + button {
 //      margin-left: 10px;
@@ -66,7 +66,7 @@ main {
   display: flex;
   flex: 1;
 
-  xxl-flow-based {
+  fb-flow-based {
     // border: 3px solid lightgray;
     border-radius: 3px;
   }

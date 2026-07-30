@@ -494,6 +494,37 @@ Also fixed, found by the strict-mode pass:
   `sockets` as a *required* constructor parameter while the engine passes the
   optional `state.sockets` — and neither used it.
 
+### Stage 2 — public API and naming (done)
+
+- **The `Xxl*` → `Fb*` rename is finished.** `FbPosition`, `FbSocket`,
+  `FbSocketType`, `FbSocketEvent`, `FbSocketDetails`, `FbConnection`,
+  `FbSocketBuilderService`, `FB_NODE_TYPES`. The old names remain as
+  `@deprecated` type aliases so 0.0.x consumers still compile; `XXL_FLOW_TYPES`
+  is an alias for the new token, so DI keeps working either way.
+- Element selectors and directive attributes follow: `fb-flow-based`,
+  `fb-socket`, `fb-connection-lines`, `fbMovable`, `fbMovableArea`,
+  `fbDraggable`, `fbDynamicComponent`. SCSS identifiers too (`fb-size`,
+  `$fb-gutter-size`). This *is* a breaking change for anyone with the old tags in
+  a template — unavoidable, and the point of doing it before 1.0.
+- **`XxlConnection`'s `number | HTMLElement` union is split** (§3.9). `FbConnection`
+  is a graph edge with `from`/`to` as node ids; `FbElementConnection` is the
+  element-to-element line a node draws internally, which never enters the graph.
+  `FbAnyConnection` plus an `isElementConnection()` type guard replaces the
+  `typeof x === 'object'` checks and `as HTMLElement` casts. `strictTemplates`
+  immediately caught two templates reading `.in`/`.out` off the union.
+- **`XxlFlow` and `XxlFlowUnitState` are gone** as distinct shapes — both were
+  subsets of `FbNodeState`, which is now the single recursive node/flow type.
+- `XxlDriver`, `FlowBasedServiceHelper`, `XxlWorkerService`, `ConnectionDetails`
+  and `XXL_FLOW_UNIT_STATE` deleted — all unused, and the last one actively
+  harmful (see Stage 0).
+- `ContextMenuComponent` deleted: declared in the module, used in no template.
+- **`getWorker()` and `getSocket()` now admit they can miss.** Typing them honestly
+  surfaced three real crash sites in the demo that the `!` assertions had been
+  hiding — `default-flow` assigning a possibly-absent worker, and two places in
+  `merge-streams` dereferencing an unregistered socket while drawing its internal
+  wiring. `merge-streams` was also passing `dataset.socketId` (a string) to a
+  numeric lookup, which only worked because JS object keys coerce.
+
 ### Still open
 
 - §3.4 manual change detection, §3.6 percentage positioning, §3.7 the bounded
@@ -502,11 +533,14 @@ Also fixed, found by the strict-mode pass:
   `FlowBasedComponent` ↔ `NodeComponent` are mutually recursive and remote scoping
   exists only in full mode. Costs Angular-linker compatibility; the fix is
   structural and belongs with Stage 3/4.
-- `getWorker()` still claims to always return a worker.
-- `XxlFlow` / `XxlFlowUnitState` / `FbNodeState` are still three overlapping
-  shapes, and `XxlConnection.from/to` still unions a node id with an
-  `HTMLElement` — Stage 2.
-- `ng lint` reports 0 errors but ~270 warnings, concentrated in four families
+- `ng lint` reports 0 errors but ~265 warnings, concentrated in four families
   (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,
-  `no-empty-function`) that Stages 2–3 remove.
-- `ContextMenuComponent` is declared but used in no template — dead.
+  `no-empty-function`) that Stages 3–4 remove. `config: any` is the big one: node
+  configs are untyped by design today, and giving `FbNodeType` a generic config
+  parameter is the real fix.
+- The fractal worker still builds itself by stringifying a class
+  (`Function.prototype.toString`), which depends on bundler output. A real worker
+  module is Stage 5.
+- `FlowBasedService` is still a root singleton holding one `Flow` and a flow
+  stack, so two independent editors on one page would still fight (§3.2). Making
+  it component-scoped belongs with the Stage 3 rework.

@@ -18,12 +18,6 @@ import { ComponentSelectionService } from './component-selection.service';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  // isContextMenu = false;
-  // contextMenuState = false;
-
-  // menuX: number;
-  // menuY: number;
-
   activeOverlay: OverlayRef | null = null;
   showJson = false;
   flow: FbNodeState = data.basic as FbNodeState;

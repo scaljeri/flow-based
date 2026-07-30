@@ -9,20 +9,32 @@ import {
   OnInit, Optional,
   Output, SimpleChanges
 } from '@angular/core';
-import { FB_SOCKET_COLORS, FbSocketColors, XxlConnection, XxlPosition } from '../flow-based';
+import {
+  FB_SOCKET_COLORS,
+  FbAnyConnection,
+  FbElementConnection,
+  FbPosition,
+  FbSocketColors,
+  isElementConnection,
+} from '../flow-based';
 import * as bezier from './bezier';
 import { SocketService } from '../socket.service';
 
 @Component({
-  selector: 'xxl-connection-lines',
+  selector: 'fb-connection-lines',
   templateUrl: './connection-lines.component.html',
   styleUrls: ['./connection-lines.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
 export class ConnectionLinesComponent implements OnInit, OnChanges {
-  // `FbNodeState.connections` is optional, so default rather than assert.
-  @Input() connections: XxlConnection[] = [];
+  /*
+   * Draws both kinds of line: graph edges (FbConnection, socket to socket) and
+   * the element-to-element lines a node type may render internally
+   * (FbElementConnection). Defaulted rather than asserted because
+   * `FbNodeState.connections` is optional.
+   */
+  @Input() connections: FbAnyConnection[] = [];
   @Input() from: number | null = null;
   @Input() to: number | null = null;
 
@@ -34,10 +46,10 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     }
   }
 
-  @Output() lineClick = new EventEmitter<XxlConnection>();
+  @Output() lineClick = new EventEmitter<FbAnyConnection>();
 
-  pointer: XxlPosition | null = null;
-  controlPoints: { [key: number]: XxlPosition[] } = {};
+  pointer: FbPosition | null = null;
+  controlPoints: { [key: number]: FbPosition[] } = {};
   lines: string[] = [];
   private rect!: DOMRect;
 
@@ -69,13 +81,19 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     }
   }
 
-  onClick(event: PointerEvent, connection: XxlConnection): void {
+  onClick(event: PointerEvent, connection: FbAnyConnection): void {
     event.stopPropagation();
     this.lineClick.next(connection);
   }
 
   pointerPath(): string {
-    const start = this.socketService.getSocket((this.from || this.to)!).comp.position;
+    const anchor = this.socketService.getSocket((this.from || this.to)!);
+
+    if (!anchor) {
+      return '';
+    }
+
+    const start = anchor.comp.position;
     let output = '';
 
     if (this.from && this.pointer) {
@@ -92,7 +110,11 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   }
 
   pointerColor(): string {
-    const socket = this.socketService.getSocket((this.from || this.to)!).comp.state;
+    const socket = this.socketService.getSocket((this.from || this.to)!)?.comp.state;
+
+    if (!socket) {
+      return '#fff';
+    }
 
     return socket.color || (this.colors && this.colors[socket.format!]) || '#fff';
   }
@@ -114,10 +136,23 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     return this.stopColorStart(connId);
   }
 
-  d(connection: XxlConnection): string {
+  /*
+   * Gradient stops, narrowing here rather than in the template: an element-to-
+   * element line has no sockets to take a colour from, so it is drawn plain.
+   */
+  gradientFrom(connection: FbAnyConnection): string {
+    return isElementConnection(connection) ? '#fff' : this.stopColorStart(connection.out);
+  }
+
+  gradientTo(connection: FbAnyConnection): string {
+    return isElementConnection(connection) ? '#fff' : this.stopColorEnd(connection.in);
+  }
+
+  d(connection: FbAnyConnection): string {
     let cx1, cx2, cy1, cy2;
 
-    if (typeof connection.from === 'object') {
+    // Narrowed via a type guard, so neither branch needs a cast.
+    if (isElementConnection(connection)) {
       return this.dFromElements(connection);
     } else {
 
@@ -162,9 +197,9 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     }
   }
 
-  dFromElements(connection: XxlConnection): string {
-    const fromRect = (connection.from as HTMLElement).getBoundingClientRect(),
-      toRect = (connection.to as HTMLElement).getBoundingClientRect();
+  dFromElements(connection: FbElementConnection): string {
+    const fromRect = connection.from.getBoundingClientRect(),
+      toRect = connection.to.getBoundingClientRect();
 
     const x1 = fromRect.left - this.rect.left + fromRect.width / 2;
     const y1 = fromRect.top - this.rect.top + fromRect.height / 2;
@@ -201,7 +236,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     return `M ${x1} ${y1 - .0001} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
   }
 
-  arrow(connection: XxlConnection): string {
+  arrow(connection: FbAnyConnection): string {
     const points = this.controlPoints[connection.id];
 
     if (!points) {

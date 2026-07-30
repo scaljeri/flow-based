@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { FbNodeEventCallback, FlowBasedService } from '../flow-based.service';
-import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
+import { FbElementConnection, FbNodeState, FbNodeWorker, FbSocket, FbSocketDetails } from '../flow-based';
 import { SocketService } from '../socket.service';
 import { Subject } from 'rxjs';
 // Type-only: NodeComponent provides this service, so an emitted import would
@@ -13,8 +13,14 @@ Primary service for custom nodes to communicate with the framework
 
 @Injectable()
 export class NodeService {
-  public connections?: XxlConnection[];
-  public state!: XxlFlowUnitState;
+  /*
+   * Element-to-element lines a node type draws inside itself (see
+   * addConnection). These are NOT graph edges — they never enter the Flow — which
+   * is why they have their own type instead of overloading FbConnection.from/to
+   * with `number | HTMLElement`.
+   */
+  public connections?: FbElementConnection[];
+  public state!: FbNodeState;
 
   private nodeClicked = new Subject<PointerEvent>();
   public nodeClicked$ = this.nodeClicked.asObservable();
@@ -40,7 +46,7 @@ export class NodeService {
     this.flowService.unregister(this.id, type);
   }
 
-  connectNode(node: NodeComponent, state: XxlFlowUnitState): void {
+  connectNode(node: NodeComponent, state: FbNodeState): void {
     this.state = state;
     this.nodeComponent = node;
   }
@@ -85,7 +91,7 @@ export class NodeService {
     });
   }
 
-  addSocket(socket: XxlSocket): void {
+  addSocket(socket: FbSocket): void {
     this.flowService.flow.addSocket(socket, this.id);
 
     setTimeout(() => {
@@ -94,23 +100,28 @@ export class NodeService {
     });
   }
 
-  getSocket(id: number): SocketDetails {
+  getSocket(id: number): FbSocketDetails | undefined {
     return this.socketService.getSocket(id);
   }
 
-  getSockets(): SocketDetails[] {
-    return (this.state.sockets || []).reduce((sockets, socket: XxlSocket) => {
-      sockets.push(this.getSocket(socket.id!));
+  /** Only sockets whose components have registered; see getSocket. */
+  getSockets(): FbSocketDetails[] {
+    return (this.state.sockets || []).reduce((sockets, socket: FbSocket) => {
+      const details = this.getSocket(socket.id!);
+
+      if (details) {
+        sockets.push(details);
+      }
 
       return sockets;
-    }, [] as SocketDetails[]);
+    }, [] as FbSocketDetails[]);
   }
 
-  get worker(): FbNodeWorker {
+  get worker(): FbNodeWorker | undefined {
     return this.flowService.getWorker(this.id);
   }
 
-  socketRemoved(socket: XxlSocket): void {
+  socketRemoved(socket: FbSocket): void {
     this.flowService.removeSocket(socket);
   }
 

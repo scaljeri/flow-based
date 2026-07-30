@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
-import { XXL_FLOW_TYPES } from './flow-based';
+import { FB_NODE_TYPES } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
 import { DraggableDirective } from './drag-drop/draggable/draggable.directive';
 import { MovableDirective } from './drag-drop/movable/movable.directive';
@@ -34,7 +34,7 @@ import { SocketComponent } from './socket/socket.component';
   exports: [FlowBasedComponent, SocketInPipe, SocketOutPipe],
   providers: [
     {
-      provide: XXL_FLOW_TYPES,
+      provide: FB_NODE_TYPES,
       useValue: {}
     }]
 })

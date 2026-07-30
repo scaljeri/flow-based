@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 
 export const CUSTOM_CODE_SETTINGS: FbNodeSettings = {
@@ -46,7 +46,7 @@ export class CustomCodeWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
-  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
+  setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe((val: any) => {
       try {
         this.func(val);
@@ -57,13 +57,13 @@ export class CustomCodeWorker implements FbNodeWorker {
     });
   }
 
-  removeStream(connection: XxlConnection): void {
+  removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
 
     delete this.subscriptions[connection.id];
   }
 
-  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+  connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {
 
   }
 

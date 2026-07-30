@@ -11,7 +11,7 @@ fb-normal-node {
 
   &.is-fullscreen {
     .chart {
-      @include xxl-size(100%);
+      @include fb-size(100%);
     }
   }
 }

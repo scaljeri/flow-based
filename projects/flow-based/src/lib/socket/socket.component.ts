@@ -8,26 +8,26 @@ import {
   HostListener,
   Input, OnDestroy, Output
 } from '@angular/core';
-import { XxlPosition, XxlSocket, XxlSocketEvent } from '../flow-based';
+import { FbPosition, FbSocket, FbSocketEvent } from '../flow-based';
 import { Subscription } from 'rxjs';
 import { NodeService } from '../node/node-service';
 import { SocketService } from '../socket.service';
 
 @Component({
-  selector: 'xxl-socket',
+  selector: 'fb-socket',
   templateUrl: './socket.component.html',
   styleUrls: ['./socket.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false,
 })
 export class SocketComponent implements OnDestroy, AfterViewInit {
-  @Input() state!: XxlSocket;
+  @Input() state!: FbSocket;
   @Input() scope!: number;
   @Input() invert!: boolean;
   @Input() parent!: number;
-  @Output() clicked = new EventEmitter<XxlSocketEvent>();
+  @Output() clicked = new EventEmitter<FbSocketEvent>();
   private subscription!: Subscription;
-  private _position: XxlPosition | null = null;
+  private _position: FbPosition | null = null;
   private hover = false;
   private hoverTimeoutId?: ReturnType<typeof setTimeout>;
 
@@ -44,7 +44,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
     return 'socket-' + (this.state ? this.getType() : '');
   }
 
-  get position(): XxlPosition {
+  get position(): FbPosition {
     if (!this._position) {
       const rect = this.element.nativeElement.getBoundingClientRect();
 
@@ -72,7 +72,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
       scope: this.scope
     });
 
-    this.subscription = this.service.socketClicked$.subscribe((event: XxlSocketEvent | null) => {
+    this.subscription = this.service.socketClicked$.subscribe((event: FbSocketEvent | null) => {
       this.active = false;
       this.isAccepting = null;
 

@@ -1,5 +1,5 @@
 import { Observable, Subject, Subscription } from 'rxjs';
-import { XxlConnection, XxlSocket, FbNodeWorker, FbNodeState } from '../flow-based';
+import { FbConnection, FbSocket, FbNodeWorker, FbNodeState } from '../flow-based';
 
 export class FlowWorker implements FbNodeWorker {
   private subjects: { [key: number]: Subject<any> } = {};
@@ -8,7 +8,7 @@ export class FlowWorker implements FbNodeWorker {
   constructor(private state: FbNodeState) {
   }
 
-  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
+  setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     const id = connection.to === this.state.id ? connection.in : connection.out;
 
     this.subscriptions[id!] = stream.subscribe(val => {
@@ -21,7 +21,7 @@ export class FlowWorker implements FbNodeWorker {
     console.log('FlowWorker: destroy');
   }
 
-  getStream(socket: XxlSocket): Observable<any> {
+  getStream(socket: FbSocket): Observable<any> {
     return this.getSubject(socket.id!).asObservable();
   }
 
@@ -33,7 +33,7 @@ export class FlowWorker implements FbNodeWorker {
     return this.subjects[socketId];
   }
 
-  removeStream(connection: XxlConnection): void {
+  removeStream(connection: FbConnection): void {
     const id = connection.to === this.state.id ? connection.in : connection.out;
 
     if (this.subscriptions[id!]) { // TODO: Is if needed
@@ -45,7 +45,7 @@ export class FlowWorker implements FbNodeWorker {
   A Socket always has one format
   Update socket type based on remote socket.
    */
-  // connected(conn: XxlConnection, localSocket: XxlSocket, remoteSocket: XxlSocket, sockets: FbKeyValues<XxlSocket>): boolean {
+  // connected(conn: FbConnection, localSocket: FbSocket, remoteSocket: FbSocket, sockets: FbKeyValues<FbSocket>): boolean {
   //   if (remoteSocket.format && remoteSocket.format !== localSocket.format) {
   //     localSocket.format = remoteSocket.format;
   //     return true;

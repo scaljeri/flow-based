@@ -10,7 +10,7 @@ export interface Boundaries {
 }
 
 @Directive({
-  selector: '[xxlMovableArea]',
+  selector: '[fbMovableArea]',
   standalone: false,
 })
 export class MovableAreaDirective implements OnDestroy, AfterContentInit {

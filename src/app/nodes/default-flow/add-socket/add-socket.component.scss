@@ -13,11 +13,11 @@ mat-toolbar {
 form {
   display: flex;
   flex-direction: column;
-  margin: $xxl-gutter-size;
+  margin: $fb-gutter-size;
 
   footer {
     display: flex;
     justify-content: space-between;
-    margin-top: 2 * $xxl-gutter-size;
+    margin-top: 2 * $fb-gutter-size;
   }
 }

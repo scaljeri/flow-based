@@ -1,5 +1,5 @@
 import { Component, ElementRef, HostBinding, OnInit, ViewChild } from '@angular/core';
-import { NodeService, XxlSocket } from '@scaljeri/flow-based';
+import { NodeService, FbSocket } from '@scaljeri/flow-based';
 import { BasicGraphWorker } from '../../workers/basic-graph';
 import { GoogleCharts } from 'google-charts';
 import { GoogleChart, GoogleChartDataTable, GoogleChartDataView } from '../../app.models';
@@ -82,13 +82,13 @@ export class BasicGraphComponent implements OnInit {
     // TODO
   }
 
-  connected(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  connected(localSocket: FbSocket, removeSocket: FbSocket): void {
   }
 
-  getFormat(socket: XxlSocket): string {
+  getFormat(socket: FbSocket): string {
     return '';
   }
 
-  disconnect(localSocket: XxlSocket, removeSocket: XxlSocket): void {
+  disconnect(localSocket: FbSocket, removeSocket: FbSocket): void {
   }
 }

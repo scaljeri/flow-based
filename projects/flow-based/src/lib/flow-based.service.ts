@@ -1,11 +1,5 @@
 import { Inject, Injectable, Optional } from '@angular/core';
-import {
-  XXL_FLOW_TYPES,
-  XxlConnection,
-  FbNodeTypes,
-  XxlFlowUnitState,
-  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbNodeState, XxlSocket
-} from './flow-based';
+import { FB_NODE_TYPES, FbConnection, FbNodeTypes, FbNodeState, FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbSocket } from './flow-based';
 // Type-only: FlowBasedComponent injects this service (NG3003 cycle otherwise).
 import type { FlowBasedComponent } from './flow-based.component';
 import { Flow } from './utils/flow';
@@ -40,7 +34,7 @@ export class FlowBasedService {
   private readonly ids = new IdGenerator();
 
   constructor(private socketService: SocketService,
-              @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeTypes,
+              @Inject(FB_NODE_TYPES) private flowTypes: FbNodeTypes,
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
   }
 
@@ -60,7 +54,7 @@ export class FlowBasedService {
     state.children = [...state.children!.filter(node => node.id !== nodeState.id), nodeState];
   }
 
-  addConnection(connection: XxlConnection): void {
+  addConnection(connection: FbConnection): void {
     if (!connection.id) {
       connection.id = this.getUniqueId();
     }
@@ -95,11 +89,12 @@ export class FlowBasedService {
     this.flow = new Flow(this.flowTypes, this.helpers, this.ids).initialize(state);
   }
 
-  getWorker(id: number): FbNodeWorker {
+  // May be undefined: a node type with neither a worker nor isFlow has none.
+  getWorker(id: number): FbNodeWorker | undefined {
     return this.flow.getWorker(id);
   }
 
-  add(flowType: string): XxlFlowUnitState {
+  add(flowType: string): FbNodeState {
     const {settings} = this.flowTypes[flowType];
 
     const state = {
@@ -117,7 +112,7 @@ export class FlowBasedService {
     return state;
   }
 
-  prepareSockets(sockets: XxlSocket[] = []): XxlSocket[] {
+  prepareSockets(sockets: FbSocket[] = []): FbSocket[] {
     return sockets.map(s => {
       return Object.assign({id: this.getUniqueId()}, s);
     });
@@ -172,7 +167,7 @@ export class FlowBasedService {
     this.flow.destroy();
   }
 
-  removeSocket(socket: XxlSocket): void {
+  removeSocket(socket: FbSocket): void {
     this.flow.removeSocket(socket);
 
     this.flowStack.forEach(flow => {

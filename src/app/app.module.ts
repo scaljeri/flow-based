@@ -3,11 +3,10 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
-import { ContextMenuComponent } from './context-menu/context-menu.component';
 import { TapComponent } from './nodes/tap/tap.component';
 import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
 import { FlowComponent } from './flow/flow.component';
-import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, XXL_FLOW_TYPES } from '@scaljeri/flow-based';
+import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
 
 /*
@@ -35,7 +34,7 @@ import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.co
 import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
 import { AddSocketComponent } from './nodes/default-flow/add-socket/add-socket.component';
 import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
-import { FB_CONFIG, XXL_SOCKET_COLORS } from './fb-settings';
+import { FB_CONFIG, FB_SOCKET_PALETTE } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
 import { StatsComponent } from './nodes/stats/stats.component';
 import { NormalNodeComponent } from './components/normal-node/normal-node.component';
@@ -50,7 +49,6 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
   declarations: [
     AppComponent,
     AddSocketComponent,
-    ContextMenuComponent,
     RandomNumbersComponent,
     TapComponent,
     DefaultFlowComponent,
@@ -104,14 +102,14 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
     {provide: MAT_DIALOG_DEFAULT_OPTIONS, useValue: {hasBackdrop: true}},
     {provide: OverlayContainer, useClass: FullscreenOverlayContainer},
     {
-      provide: XXL_FLOW_TYPES,
+      provide: FB_NODE_TYPES,
       useValue: FB_CONFIG
     }, {
       provide: FB_NODE_HELPERS,
       useValue: NODE_HELPERS
     }, {
       provide: FB_SOCKET_COLORS,
-      useValue: XXL_SOCKET_COLORS as FbSocketColors
+      useValue: FB_SOCKET_PALETTE as FbSocketColors
     }
   ],
   /*

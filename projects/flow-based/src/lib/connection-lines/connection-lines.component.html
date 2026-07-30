@@ -3,8 +3,8 @@
   <ng-container *ngFor="let connection of connections">
     <defs>
       <linearGradient id="{{connection.id}}">
-        <stop offset="0%" [attr.stop-color]="stopColorStart(connection.out)"/>
-        <stop offset="100%" [attr.stop-color]="stopColorEnd(connection.in)"/>
+        <stop offset="0%" [attr.stop-color]="gradientFrom(connection)"/>
+        <stop offset="100%" [attr.stop-color]="gradientTo(connection)"/>
       </linearGradient>
     </defs>
 

@@ -1,19 +1,19 @@
 import { Injectable } from '@angular/core';
-import { XxlSocket, XxlSocketType } from './flow-based';
+import { FbSocket, FbSocketType } from './flow-based';
 
 @Injectable({
   providedIn: 'root'
 })
-export class XxlSocketBuilderService {
-  static SOCKET_IN = 'in' as XxlSocketType;
-  static SOCKET_OUT = 'out' as XxlSocketType;
+export class FbSocketBuilderService {
+  static SOCKET_IN = 'in' as FbSocketType;
+  static SOCKET_OUT = 'out' as FbSocketType;
 
   constructor() { }
 
-  static create(type: XxlSocketType): XxlSocket {
+  static create(type: FbSocketType): FbSocket {
     return {
       type,
       id: Date.now()
-    } as XxlSocket;
+    } as FbSocket;
   }
 }

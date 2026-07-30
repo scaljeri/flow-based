@@ -13,7 +13,7 @@
 
 fb-normal-node {
   &:not(.is-active) {
-    @include xxl-size(72px);
+    @include fb-size(72px);
 
     .expanded {
       display: none;

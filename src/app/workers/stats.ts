@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './utils/gauss';
 
@@ -33,7 +33,7 @@ export interface StatsDistribution {
 }
 
 export class StatsWorker implements FbNodeWorker {
-  // Keyed by XxlSocket.aux, so this needs an index signature, not a literal type.
+  // Keyed by FbSocket.aux, so this needs an index signature, not a literal type.
   private subjects: Record<string, Subject<any>> = {min: new Subject<any>(), max: new Subject<any>()};
   private subscriptions: Subscription[] = [];
 
@@ -56,18 +56,18 @@ export class StatsWorker implements FbNodeWorker {
   destroy(): void {
   }
 
-  getStream(socket: XxlSocket): Observable<any> {
+  getStream(socket: FbSocket): Observable<any> {
     return this.subjects[socket.aux!].asObservable();
   }
 
-  // getSockets(): XxlSocket[] {
+  // getSockets(): FbSocket[] {
   //   return this.state.config.sockets;
   // }
 
   initialize(): void {
   }
 
-  removeStream(connection: XxlConnection): void { /* not used */
+  removeStream(connection: FbConnection): void { /* not used */
     this.subscriptions[connection.id].unsubscribe();
     delete this.subscriptions[connection.id];
   }
@@ -79,7 +79,7 @@ export class StatsWorker implements FbNodeWorker {
   }
 
   // INPUT
-  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
+  setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     // TODO: Refactor
     this.subscriptions[connection.id] = stream.subscribe(val => {
       if (this.columnWidth === 0) {
@@ -144,7 +144,7 @@ export class StatsWorker implements FbNodeWorker {
     this.reset();
   }
 
-  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+  connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {
 
   }
 }

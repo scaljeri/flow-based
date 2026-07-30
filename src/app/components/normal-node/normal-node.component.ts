@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, EventEmitter, HostBinding, Input, OnInit, Output } from '@angular/core';
-import { NodeService, XxlFlowUnitState } from '@scaljeri/flow-based';
+import { NodeService, FbNodeState } from '@scaljeri/flow-based';
 import { filter } from 'rxjs/operators';
 
 @Component({
@@ -9,7 +9,7 @@ import { filter } from 'rxjs/operators';
   styleUrls: ['./normal-node.component.scss']
 })
 export class NormalNodeComponent implements OnInit {
-  private state: XxlFlowUnitState;
+  private state: FbNodeState;
   private lastClicked = 0;
 
   isEditing = false;

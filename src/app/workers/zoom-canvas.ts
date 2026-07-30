@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 import { IDimensions, IZoomable } from '../app.models';
 
@@ -33,7 +33,7 @@ export class ZoomCanvasWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
-  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {
+  setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe((data: IZoomable) => {
       if (data) {
         this.imageData.next(data);
@@ -41,7 +41,7 @@ export class ZoomCanvasWorker implements FbNodeWorker {
     });
   }
 
-  removeStream(connection: XxlConnection): void {
+  removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id].unsubscribe();
 
     delete this.subscriptions[connection.id];
@@ -55,7 +55,7 @@ export class ZoomCanvasWorker implements FbNodeWorker {
     this.subject.next(data);
   }
 
-  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+  connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {
 
   }
 }

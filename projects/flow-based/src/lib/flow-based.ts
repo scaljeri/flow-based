@@ -4,18 +4,22 @@ import { Observable } from 'rxjs';
 // would create a cycle the AOT compiler rejects (NG3003).
 import type { SocketComponent } from './socket/socket.component';
 
-export const XXL_FLOW_TYPES = new InjectionToken<FbNodeTypes>('xxl-flow-types');
+/* ==========================================================================
+   Injection tokens
+   ========================================================================== */
 
-/**
- * @deprecated No longer provided by anything, and never injected by anything
- * either. Supplying it required giving each dynamically created node a custom
- * injector, which replaced the element-injector chain and broke `@Host()`
- * lookups of {@link NodeService}. Get node state from `NodeService.state`.
- * Scheduled for removal.
- */
-export const XXL_FLOW_UNIT_STATE = new InjectionToken<FbNodeState>('xxl-flow-unit-state');
+/** The node-type registry: maps a node `type` string to its component + worker. */
+export const FB_NODE_TYPES = new InjectionToken<FbNodeTypes>('fb-node-types');
+
+/** Optional hooks letting an app customise socket-format negotiation. */
 export const FB_NODE_HELPERS = new InjectionToken<FbNodeHelpers>('fb-node-helpers');
+
+/** Optional map from socket `format` to the colour its connections are drawn in. */
 export const FB_SOCKET_COLORS = new InjectionToken<FbSocketColors>('fb-socket-colors');
+
+/* ==========================================================================
+   Core shapes
+   ========================================================================== */
 
 /**
  * Keyed map used throughout the engine. The index signature is `string` because
@@ -27,13 +31,85 @@ export interface FbKeyValues<T> {
   [key: string]: T;
 }
 
+export interface FbPosition {
+  x: number;
+  y: number;
+}
+
+export type FbSocketType = 'in' | 'out';
+
+export interface FbSocket {
+  type: FbSocketType;
+  id?: number;
+  color?: string;
+  name?: string;
+  /** The data type carried by this socket. `null` means "not yet negotiated". */
+  format?: string | null;
+  position?: number;
+  description?: string;
+  aux?: string;
+}
+
+/**
+ * A connection between two sockets on two nodes — the graph's edge type, and the
+ * only kind the engine knows about.
+ */
+export interface FbConnection {
+  id: number;
+  from: number;
+  to: number;
+  in?: number;
+  out?: number;
+}
+
+/**
+ * A line drawn directly between two DOM elements, used by node types that render
+ * their own internal wiring (see `NodeService.addConnection`). It carries no
+ * sockets and never enters the graph.
+ *
+ * This used to be the same type as {@link FbConnection}, whose `from`/`to` were
+ * `number | HTMLElement` — a union of a domain id and a DOM node in one field,
+ * forcing casts throughout the engine (docs/AUDIT.md §3.9).
+ */
+export interface FbElementConnection {
+  id: number;
+  from: HTMLElement;
+  to: HTMLElement;
+}
+
+/** Anything the connection renderer can draw. */
+export type FbAnyConnection = FbConnection | FbElementConnection;
+
+export function isElementConnection(connection: FbAnyConnection): connection is FbElementConnection {
+  return typeof connection.from === 'object';
+}
+
+/**
+ * The recursive node shape, and the whole persisted format: a flow is just a node
+ * that has `children` and `connections`. This is what gets exported as JSON.
+ */
+export interface FbNodeState {
+  type: string;
+  id?: number;
+  config?: any;
+  title?: string;
+  position?: FbPosition;
+  sockets?: FbSocket[];
+  connections?: FbConnection[];
+  children?: FbNodeState[];
+}
+
+/* ==========================================================================
+   Node types and workers
+   ========================================================================== */
+
 /** A worker is registered as a class and instantiated by the engine. */
-export type FbNodeWorkerCtor = new (config?: any, sockets?: XxlSocket[]) => FbNodeWorker;
+export type FbNodeWorkerCtor = new (config?: any, sockets?: FbSocket[]) => FbNodeWorker;
 
 export interface FbNodeSettings {
   title: string;
   config?: any;
-  sockets?: XxlSocket[];
+  sockets?: FbSocket[];
   isFlow?: boolean;
 }
 
@@ -50,93 +126,75 @@ export type FbNodeTypes = FbKeyValues<FbNodeType>;
 export interface FbNodeHelpers {
   resetSockets(node: FbNodeState): void;
 
-  connect(outSocket: XxlSocket, inSocket: XxlSocket, fromNode: FbNodeState, toNode: FbNodeState): boolean;
+  connect(outSocket: FbSocket, inSocket: FbSocket, fromNode: FbNodeState, toNode: FbNodeState): boolean;
 }
 
 /** Describes the class doing the actual work. */
 export interface FbNodeWorker {
-  getStream(socket?: XxlSocket): Observable<any>;
+  getStream(socket?: FbSocket): Observable<any>;
 
-  setStream(stream: Observable<any>, socket: XxlSocket, connection?: XxlConnection): void;
+  setStream(stream: Observable<any>, socket: FbSocket, connection?: FbConnection): void;
 
-  removeStream(connection?: XxlConnection): void;
+  removeStream(connection?: FbConnection): void;
 
   destroy(): void;
 }
 
-export interface XxlPosition {
-  x: number;
-  y: number;
-}
+/* ==========================================================================
+   View-layer shapes
+   ========================================================================== */
 
-export interface XxlFlowUnitState {
-  type: string;
-  id?: number;
-  config?: any;
-  title?: string;
-  position?: XxlPosition;
-  sockets?: XxlSocket[];
-}
-
-export interface XxlFlow extends Partial<XxlFlowUnitState> {
-  connections: XxlConnection[];
-  children: FbNodeState[];
-}
-
-export interface FbNodeState {
-  type: string;
-  id?: number;
-  config?: any;
-  title?: string;
-  position?: XxlPosition;
-  sockets?: XxlSocket[];
-  connections?: XxlConnection[];
-  children?: FbNodeState[];
-}
-
-export interface XxlConnection {
-  from: number | HTMLElement;
-  to: number | HTMLElement;
-  in?: number;
-  out?: number;
-  id: number;
-}
-
-export type XxlSocketType = 'in' | 'out';
-
-export interface XxlSocket {
-  type: XxlSocketType;
-  id?: number;
-  color?: string;
-  name?: string;
-  format?: string | null;
-  position?: number;
-  description?: string;
-  aux?: string;
-}
-
-export interface XxlSocketEvent {
-  socket: XxlSocket;
+export interface FbSocketEvent {
+  socket: FbSocket;
   parentId: number;
   scope: number;
   event: PointerEvent;
 }
 
-export interface SocketDetails {
-  state: XxlSocket;
+/** A registered socket component, plus where it sits in the graph. */
+export interface FbSocketDetails {
+  state: FbSocket;
   element: HTMLElement;
   comp: SocketComponent;
   parentId: number;
   scope: number;
 }
 
-export interface ConnectionDetails {
-  connection: XxlConnection;
-  sockets: { [key: number]: XxlSocket };
-}
-
-export interface XxlWorkerService {
-  create(id: number, type: string): FbNodeWorker;
-}
-
 export type FbSocketColors = Record<string, string>;
+
+/* ==========================================================================
+   Deprecated aliases
+   --------------------------------------------------------------------------
+   The library was mid-rename from Xxl* to Fb* and shipped both. These keep
+   0.0.x consumers compiling; they will be removed in a future release.
+   ========================================================================== */
+
+/** @deprecated Use {@link FB_NODE_TYPES}. */
+export const XXL_FLOW_TYPES = FB_NODE_TYPES;
+
+/** @deprecated Use {@link FbPosition}. */
+export type XxlPosition = FbPosition;
+
+/** @deprecated Use {@link FbSocket}. */
+export type XxlSocket = FbSocket;
+
+/** @deprecated Use {@link FbSocketType}. */
+export type XxlSocketType = FbSocketType;
+
+/** @deprecated Use {@link FbSocketEvent}. */
+export type XxlSocketEvent = FbSocketEvent;
+
+/** @deprecated Use {@link FbSocketDetails}. */
+export type SocketDetails = FbSocketDetails;
+
+/**
+ * @deprecated Use {@link FbConnection} for graph edges, or
+ * {@link FbElementConnection} for element-to-element lines.
+ */
+export type XxlConnection = FbConnection;
+
+/** @deprecated Use {@link FbNodeState}; it is the same shape, recursively. */
+export type XxlFlowUnitState = FbNodeState;
+
+/** @deprecated Use {@link FbNodeState}. */
+export type XxlFlow = FbNodeState;

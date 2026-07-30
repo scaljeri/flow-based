@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, XxlConnection, XxlSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
 import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_SETTINGS: FbNodeSettings = {
@@ -48,10 +48,10 @@ export class RandomNumbersWorker implements FbNodeWorker {
 
   }
 
-  removeStream(connection: XxlConnection): void { /* not used */
+  removeStream(connection: FbConnection): void { /* not used */
   }
 
-  setStream(stream: Observable<any>, socket: XxlSocket, connection: XxlConnection): void {  /* not used */
+  setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {  /* not used */
   }
 
   get start(): number {
@@ -107,7 +107,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
     this.config.integer = val;
   }
 
-  connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+  connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {
 
   }
 }

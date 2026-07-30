@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { NodeService, XxlFlowUnitState } from '@scaljeri/flow-based';
+import { NodeService, FbNodeState } from '@scaljeri/flow-based';
 import { StatsDistribution, StatsWorker } from '../../workers/stats';
 import { GoogleCharts } from 'google-charts';
 import { GoogleChart } from '../../app.models';
@@ -13,7 +13,7 @@ import { GoogleChart } from '../../app.models';
 })
 export class StatsComponent implements OnInit, OnDestroy {
   public worker!: StatsWorker;
-  private state: XxlFlowUnitState;
+  private state: FbNodeState;
   public isEditing = false;
   public data: number[][] = [];
   // The `#distribution` div lives inside <fb-normal-node>'s content, which is

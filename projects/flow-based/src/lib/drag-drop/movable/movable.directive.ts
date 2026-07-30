@@ -1,16 +1,16 @@
 import { Directive, ElementRef, EventEmitter, HostBinding, HostListener, Input, Output } from '@angular/core';
 import { DraggableDirective } from '../draggable/draggable.directive';
-import { XxlPosition } from '../../flow-based';
+import { FbPosition } from '../../flow-based';
 
 @Directive({
-  selector: '[xxlMovable]',
+  selector: '[fbMovable]',
   standalone: false,
 })
 export class MovableDirective extends DraggableDirective {
   // Optional because `FbNodeState.position` is optional: a node added without an
   // explicit position renders at 0,0 until first dragged.
-  @Input() position?: XxlPosition;
-  @Output() positionChange = new EventEmitter<XxlPosition>();
+  @Input() position?: FbPosition;
+  @Output() positionChange = new EventEmitter<FbPosition>();
 
   private parentWidth = 0;
   private parentHeight = 0;
@@ -25,7 +25,7 @@ export class MovableDirective extends DraggableDirective {
     return this.position ? this.position.x : 0;
   }
 
-  private startPosition: XxlPosition = { x: 0, y: 0 };
+  private startPosition: FbPosition = { x: 0, y: 0 };
 
   constructor(public element: ElementRef) {
     super();

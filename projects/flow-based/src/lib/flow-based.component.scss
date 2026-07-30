@@ -5,7 +5,7 @@
   background-color: transparent;
   border-radius: 13px;
   display: inline-flex;
-  @include xxl-size(100%);
+  @include fb-size(100%);
 
   .active-socket-in {
     --socket-in-disabled: #900;
@@ -23,12 +23,12 @@
     }
   }
 
-  > [xxlmovablearea] {
-    @include xxl-size(100%);
+  > [fbmovablearea] {
+    @include fb-size(100%);
   }
 }
 
-xxl-connection-lines {
+fb-connection-lines {
   @include fb-position(absolute, 0px 0px 0px 0px);
 }
 

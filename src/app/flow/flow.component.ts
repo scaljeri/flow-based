@@ -10,9 +10,9 @@ import { FbNodeState } from '@scaljeri/flow-based';
 })
 export class FlowComponent implements OnInit {
   /*
-   * FbNodeState, not XxlFlow. XxlFlow extends Partial<XxlFlowUnitState>, so its
+   * FbNodeState, not FbNodeState. FbNodeState extends Partial<FbNodeState>, so its
    * `type` is optional and it is not assignable to FlowBasedComponent's `state`.
-   * FbNodeState is the canonical recursive node/flow shape; XxlFlow is a legacy
+   * FbNodeState is the canonical recursive node/flow shape; FbNodeState is a legacy
    * near-duplicate slated for removal (docs/AUDIT.md 3.9).
    */
   @Input() flow!: FbNodeState;

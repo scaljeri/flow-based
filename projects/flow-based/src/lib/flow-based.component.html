@@ -1,15 +1,15 @@
-<article *ngIf="active" xxlMovableArea #dragArea>
-  <xxl-connection-lines
+<article *ngIf="active" fbMovableArea #dragArea>
+  <fb-connection-lines
     [connections]="state.connections!"
     [pointerMoved]="pointerMove"
     [from]="activeSocketFrom"
     [to]="activeSocketTo"
-    (lineClick)="removeConnection($event)"></xxl-connection-lines>
+    (lineClick)="removeConnection($event)"></fb-connection-lines>
 
   <ng-container *ngFor="let child of state.children; index as i">
     <fb-node #node
                class="block"
-               xxlMovable
+               fbMovable
                [(position)]="child.position"
                (updated)="reset()"
                (dragStart)="onDragStart($event, child)"

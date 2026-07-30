@@ -20,7 +20,7 @@ export class BasicGraphWorker extends TapWorker {
     return this.history;
   }
 
-  // connect(conn: XxlConnection, sockets: FbKeyValues<XxlSocket>): void {
+  // connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {
   //
   // }
 }

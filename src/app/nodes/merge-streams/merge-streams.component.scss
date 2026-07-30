@@ -2,7 +2,7 @@
 
 :host {
   display: block;
-  @include xxl-size(100%);
+  @include fb-size(100%);
 }
 
 fb-normal-node {
@@ -70,7 +70,7 @@ mat-card {
 .output {
   display: flex;
   margin-left: 100px;
-  @include xxl-size(200px, 150px);
+  @include fb-size(200px, 150px);
 
   mat-card-content {
     font-size: 30px;

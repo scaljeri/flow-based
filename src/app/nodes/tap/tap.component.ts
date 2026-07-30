@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, HostBinding, OnDestroy, OnInit } from '@angular/core';
-import { NodeService, XxlSocket } from '@scaljeri/flow-based';
+import { NodeService, FbSocket } from '@scaljeri/flow-based';
 import { TapWorker } from '../../workers/tap';
 import { Subscription } from 'rxjs';
 
@@ -11,7 +11,7 @@ import { Subscription } from 'rxjs';
 })
 export class TapComponent implements OnInit, OnDestroy {
   public worker!: TapWorker;
-  public sockets: XxlSocket[] = [];
+  public sockets: FbSocket[] = [];
   private subscriptions: Subscription[] = [];
 
   @HostBinding('class.is-active') isActive = false;

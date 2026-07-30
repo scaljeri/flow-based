@@ -1,4 +1,4 @@
-import { FbNodeState, XxlSocket } from '@scaljeri/flow-based';
+import { FbNodeState, FbSocket } from '@scaljeri/flow-based';
 
 // Only resetPosition socket which do not have initially a format
 export const NODE_HELPERS = {
@@ -8,7 +8,7 @@ export const NODE_HELPERS = {
     }
   },
 
-  connect(outSocket: XxlSocket, inSocket: XxlSocket, fromNode: FbNodeState, toNode: FbNodeState): boolean {
+  connect(outSocket: FbSocket, inSocket: FbSocket, fromNode: FbNodeState, toNode: FbNodeState): boolean {
     let didChange = false;
 
     // TODO: Get format from tab -> flow

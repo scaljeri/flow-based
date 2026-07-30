@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, Inject, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { FB_SOCKET_COLORS, FbNodeState, NodeService, SocketDetails, XxlSocket } from '@scaljeri/flow-based';
+import { FB_SOCKET_COLORS, FbNodeState, NodeService, FbSocketDetails, FbSocket } from '@scaljeri/flow-based';
 
 @Component({
   standalone: false,
@@ -9,14 +9,14 @@ import { FB_SOCKET_COLORS, FbNodeState, NodeService, SocketDetails, XxlSocket } 
   styleUrls: ['./edit-node.component.scss']
 })
 export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
-  sockets: XxlSocket[] = [];
+  sockets: FbSocket[] = [];
   state!: FbNodeState;
 
   @Input() deleteSocket = true;
 
   @ViewChildren('action', {read: ElementRef}) refs!: QueryList<ElementRef>;
   private connections: { [key: number]: number } = {};
-  public socketDetails: SocketDetails[] = [];
+  public socketDetails: FbSocketDetails[] = [];
 
   constructor(private element: ElementRef,
               private fb: FormBuilder,
@@ -27,7 +27,7 @@ export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.state = this.service.state;
     this.socketDetails = this.service.getSockets();
-    this.sockets = this.socketDetails.reduce((output: XxlSocket[], sd: SocketDetails) => {
+    this.sockets = this.socketDetails.reduce((output: FbSocket[], sd: FbSocketDetails) => {
       output.push(sd.state);
 
       return output;
@@ -54,11 +54,11 @@ export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  getSocketColor(socket: XxlSocket): string {
+  getSocketColor(socket: FbSocket): string {
     return socket.color || this.socketColors[socket.format!] || '#ffffff';
   }
 
-  setSocketColor(color: string, socket: XxlSocket): void {
+  setSocketColor(color: string, socket: FbSocket): void {
     socket.color = color;
   }
 
@@ -66,7 +66,7 @@ export class EditNodeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.service.removeConnections();
   }
 
-  onDelete(socket: XxlSocket, index: number): void {
+  onDelete(socket: FbSocket, index: number): void {
     // this.data.sockets = this.data.sockets.filter(s => s.id !== socket.id);
     // this.data.service.removeConnection(this.connections[`edit-${index}`]);
   }

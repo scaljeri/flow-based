@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { DynamicComponentDirective } from '../dynamic-component.directive';
 import { FlowBasedService } from '../flow-based.service';
-import { XxlSocket, FbNodeState } from '../flow-based';
+import { FbSocket, FbNodeState } from '../flow-based';
 import { MovableDirective } from '../drag-drop/movable/movable.directive';
 import { NodeService } from './node-service';
 import { SocketService } from '../socket.service';
@@ -30,7 +30,7 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() scope!: number;
   @HostBinding('class.is-fullsize') isFullSize = false;
 
-  @Output() socketClick = new EventEmitter<XxlSocket>();
+  @Output() socketClick = new EventEmitter<FbSocket>();
   @Output() updated = new EventEmitter<void>();
   @ViewChild(DynamicComponentDirective) ref!: DynamicComponentDirective<unknown>;
   @ViewChildren(SocketComponent) sockRefs!: QueryList<SocketComponent>;
@@ -98,11 +98,11 @@ export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  get sockets(): XxlSocket[] {
+  get sockets(): FbSocket[] {
     return this.state.sockets || [];
   }
 
-  set sockets(sockets: XxlSocket[]) {
+  set sockets(sockets: FbSocket[]) {
     this.state.sockets = sockets;
   }
 
