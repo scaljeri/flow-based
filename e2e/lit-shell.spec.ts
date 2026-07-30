@@ -91,13 +91,25 @@ test('renders nodes, mounted content and connections with no Angular present', a
 
   expect(await nodeCount(page)).toBe(3);
 
-  // Each node type mounted its own content through the FbNodeMount contract —
-  // two plain elements and one that draws to a canvas.
+  /*
+   * Each node type mounted its own content through the FbNodeMount contract —
+   * two plain elements and one that draws to a canvas.
+   *
+   * Read from the node's LIGHT DOM, and asserted to be slotted into the shell's
+   * chrome. That placement is load-bearing rather than incidental: a component
+   * framework puts its stylesheets in `document.head`, which cannot reach into a
+   * shadow root, so content mounted there would render unstyled.
+   */
   const mounted = await page.evaluate(() => {
     const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
 
-    return [...root.querySelectorAll('fb-node-box')]
-      .map(n => n.shadowRoot!.querySelector('.content')!.firstElementChild?.className ?? '');
+    return [...root.querySelectorAll('fb-node-box')].map(n => {
+      const host = n.querySelector('.fb-node-content');
+      const slot = n.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+      const isSlotted = slot.assignedElements().includes(host!);
+
+      return isSlotted ? host!.firstElementChild?.className ?? '' : 'not-slotted';
+    });
   });
   expect(mounted.filter(c => c === 'box-node')).toHaveLength(2);
   expect(mounted.filter(c => c === 'canvas-node')).toHaveLength(1);
@@ -226,8 +238,10 @@ test('renders the same flow as a document, with live nodes as figures', async ({
   await expect(page.locator('fb-flow-canvas')).toHaveCount(0);
 
   const doc = await page.evaluate(() => {
-    const root = document.querySelector('fb-flow-document')!.shadowRoot!;
-    const figures = [...root.querySelectorAll('.figure-body')];
+    const host = document.querySelector('fb-flow-document')!;
+    const root = host.shadowRoot!;
+    // A figure is mounted when its slot has been assigned a light-DOM host.
+    const figures = [...root.querySelectorAll<HTMLSlotElement>('.figure-body slot')];
 
     return {
       title: root.querySelector('h1')?.textContent ?? '',
@@ -235,9 +249,9 @@ test('renders the same flow as a document, with live nodes as figures', async ({
       paragraphs: root.querySelectorAll('p').length,
       figures: figures.length,
       // Each figure mounted real content through FbNodeMount.
-      mounted: figures.filter(f => f.firstElementChild).length,
-      // ...including the node that draws to a canvas.
-      canvases: root.querySelectorAll('canvas').length,
+      mounted: figures.filter(f => f.assignedElements()[0]?.firstElementChild).length,
+      // ...including the node that draws to a canvas. In the light DOM, as above.
+      canvases: host.querySelectorAll('canvas').length,
       floats: [...root.querySelectorAll('figure')].map(f => f.className),
     };
   });

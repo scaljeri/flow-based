@@ -2,7 +2,7 @@ import { Inject, Injectable, Optional } from '@angular/core';
 import { FB_NODE_TYPES, FbConnection, FbNodeTypes, FbNodeState, FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbSocket } from './flow-based';
 // Type-only: FlowBasedComponent injects this service (NG3003 cycle otherwise).
 import type { FlowBasedComponent } from './flow-based.component';
-import { Flow } from '@scaljeri/flow-based-core';
+import { FbNodeEventCallback, Flow } from '@scaljeri/flow-based-core';
 import { SocketService } from './socket.service';
 import { deepClone } from '@scaljeri/flow-based-core';
 import { IdGenerator } from '@scaljeri/flow-based-core';
@@ -15,11 +15,6 @@ export interface ExternalEvent {
   nodeId: number;
 }
 
-/**
- * Listener registered by a node to receive framework events. Returning a falsy
- * value makes the listener one-shot: `triggerEvent` drops it after invoking it.
- */
-export type FbNodeEventCallback = (payload?: any) => boolean | void;
 
 @Injectable({
   providedIn: 'root'

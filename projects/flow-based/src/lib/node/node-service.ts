@@ -1,6 +1,6 @@
 import { Injectable, Injector, afterNextRender } from '@angular/core';
-import { FbNodeEventCallback, FlowBasedService } from '../flow-based.service';
-import { FbElementConnection, FbNodeState, FbNodeWorker, FbSocket, FbSocketDetails } from '../flow-based';
+import { FlowBasedService } from '../flow-based.service';
+import { FbElementConnection, FbNodeEventCallback, FbNodeState, FbNodeWorker, FbSocket, FbSocketDetails } from '../flow-based';
 import { SocketService } from '../socket.service';
 import { Subject } from 'rxjs';
 // Type-only: NodeComponent provides this service, so an emitted import would

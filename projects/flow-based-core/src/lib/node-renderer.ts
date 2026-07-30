@@ -1,3 +1,4 @@
+import { FbNodeEventCallback } from './node-events';
 import { FbNodeState, FbNodeWorker, FbSocket } from './types';
 
 /**
@@ -18,6 +19,11 @@ export interface FbNodeApi {
   /** Expand or collapse this node. */
   setMaxSize(isMax: boolean): void;
 
+  isMaxSize(): boolean;
+
+  /** Show or hide the shell's title, for content that draws its own. */
+  setLabelVisible(visible: boolean): void;
+
   /** Remove this node from the flow. */
   deleteSelf(): void;
 
@@ -25,13 +31,42 @@ export interface FbNodeApi {
 
   removeSocket(socket: FbSocket): void;
 
+  /**
+   * The shell's dot for one of this node's sockets.
+   *
+   * Content that wires itself to its own sockets — an editor showing which input
+   * feeds which field — needs to point at something, and the dot belongs to the
+   * shell. Returns `undefined` before the socket is rendered.
+   */
+  socketElement(socketId: number): HTMLElement | undefined;
+
   /** Re-measure after the content changed size in a way ResizeObserver misses. */
   calibrate(): void;
 
   /** Listen for framework events addressed to this node (`blur`, and so on). */
-  register(callback: (payload?: any) => boolean | void, type?: string): void;
+  register(callback: FbNodeEventCallback, type?: string): void;
 
   unregister(type?: string): void;
+
+  /** Called when this node is clicked. Returns an unsubscribe function. */
+  onClick(listener: (event: PointerEvent) => void): () => void;
+
+  /**
+   * Draw a line between two elements *inside* this node, and return its id.
+   *
+   * These are the node's own decoration, not graph edges: they never enter the
+   * Flow, are never serialised, and connect DOM elements rather than sockets.
+   * The shell draws them because it owns the layer that can sit above the
+   * content without the content having to manage an SVG of its own.
+   */
+  wire(from: Element, to: Element): number;
+
+  unwire(id: number): void;
+
+  clearWiring(): void;
+
+  /** Redraw the wiring after the content moved something. */
+  refreshWiring(): void;
 }
 
 export interface FbNodeContext {

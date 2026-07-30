@@ -97,6 +97,8 @@ export class FbFlowDocumentElement extends LitElement {
 
   /** One mounted node instance per figure, so they can be torn down. */
   private readonly handles = new Map<number, FbNodeHandle>();
+  /** Light-DOM host per figure, assigned to that figure's slot. */
+  private readonly hosts = new Map<number, HTMLElement>();
   private unsubscribe?: () => void;
 
   override connectedCallback(): void {
@@ -130,7 +132,12 @@ export class FbFlowDocumentElement extends LitElement {
       handle.destroy();
     }
 
+    for (const host of this.hosts.values()) {
+      host.remove();
+    }
+
     this.handles.clear();
+    this.hosts.clear();
   }
 
   /**
@@ -138,11 +145,11 @@ export class FbFlowDocumentElement extends LitElement {
    * Re-mounting on every render would restart the fractals on each keystroke.
    */
   private mountFigures(): void {
-    const hosts = [...this.renderRoot.querySelectorAll<HTMLElement>('.figure-body')];
+    const slots = [...this.renderRoot.querySelectorAll<HTMLSlotElement>('.figure-body slot')];
     const live = new Set<number>();
 
-    for (const host of hosts) {
-      const nodeId = Number(host.dataset['nodeId']);
+    for (const slot of slots) {
+      const nodeId = Number(slot.name.slice('fig-'.length));
       live.add(nodeId);
 
       if (this.handles.has(nodeId)) {
@@ -156,6 +163,19 @@ export class FbFlowDocumentElement extends LitElement {
         continue;
       }
 
+      /*
+       * Mounted into a light-DOM child assigned to the figure's slot, not into
+       * the shadow root — see FbNodeElement.mountContent(). A component
+       * framework's stylesheets live in `document.head` and cannot reach into a
+       * shadow root, so an Angular figure mounted there would render unstyled.
+       */
+      const host = document.createElement('div');
+
+      host.slot = slot.name;
+      host.className = 'fb-node-content';
+      this.appendChild(host);
+      this.hosts.set(nodeId, host);
+
       this.handles.set(nodeId, mount(host, { api: this.readingApi(node) }));
     }
 
@@ -163,6 +183,8 @@ export class FbFlowDocumentElement extends LitElement {
       if (!live.has(nodeId)) {
         handle.destroy();
         this.handles.delete(nodeId);
+        this.hosts.get(nodeId)?.remove();
+        this.hosts.delete(nodeId);
       }
     }
   }
@@ -186,12 +208,21 @@ export class FbFlowDocumentElement extends LitElement {
         return node.id === undefined ? undefined : editor.flow.getWorker(node.id);
       },
       setMaxSize: () => undefined,
+      isMaxSize: () => false,
+      setLabelVisible: () => undefined,
       deleteSelf: () => undefined,
       addSocket: () => undefined,
       removeSocket: () => undefined,
+      // A document has no sockets to point at, and no layer to draw wires on.
+      socketElement: () => undefined,
       calibrate: () => undefined,
       register: () => undefined,
       unregister: () => undefined,
+      onClick: () => () => undefined,
+      wire: () => 0,
+      unwire: () => undefined,
+      clearWiring: () => undefined,
+      refreshWiring: () => undefined,
     };
   }
 
@@ -237,7 +268,7 @@ export class FbFlowDocumentElement extends LitElement {
 
     return html`
       <figure class="float-${float}" style=${width}>
-        <div class="figure-body" data-node-id=${String(block.nodeId)}></div>
+        <div class="figure-body"><slot name="fig-${block.nodeId}"></slot></div>
         ${block.caption ? html`<figcaption>${block.caption}</figcaption>` : nothing}
       </figure>
     `;

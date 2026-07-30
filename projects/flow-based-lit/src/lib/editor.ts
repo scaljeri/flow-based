@@ -3,6 +3,7 @@ import {
   FbEmitter,
   FbGeometry,
   FbHistory,
+  FbNodeEvents,
   FbNodeHelpers,
   FbNodeMount,
   FbNodeState,
@@ -66,6 +67,9 @@ export class FbEditor {
   readonly history = new FbHistory();
   readonly changes = new FbEmitter<FbEditorChange>();
 
+  /** Messages between the shell and node content — not graph changes. */
+  readonly events = new FbNodeEvents();
+
   readonly types: FbNodeTypes<FbNodeMount>;
   readonly socketColors: Record<string, string>;
 
@@ -123,6 +127,22 @@ export class FbEditor {
   nodeById(id: number): FbNodeState | undefined {
     return this.flow?.getNode(id)?.state;
   }
+
+  /**
+   * The stacking order for a node the user just touched.
+   *
+   * The obvious implementation is to move the node to the end of `children` so it
+   * paints last, which is what the Angular shell did. Here that would be a bug:
+   * the nodes are keyed custom elements, so reordering them MOVES them in the DOM,
+   * and moving a custom element disconnects and reconnects it — tearing down and
+   * re-mounting its content. Clicking a node would restart whatever it was
+   * computing. A z-index costs nothing and touches no state.
+   */
+  nextZ(): number {
+    return ++this.topZ;
+  }
+
+  private topZ = 10;
 
   /* ----------------------------------------------------------------------
      Mutations — each snapshots history first, because the engine edits in place

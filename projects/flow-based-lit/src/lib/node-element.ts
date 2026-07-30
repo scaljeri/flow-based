@@ -37,8 +37,31 @@ export class FbNodeElement extends LitElement {
       position: relative;
     }
 
-    .content {
+    /*
+     * Node content is SLOTTED, so it lives in the light DOM rather than in this
+     * shadow root — see mountContent(). A slot renders its assigned nodes in
+     * place, so the layout is the same either way.
+     */
+    slot {
       display: block;
+    }
+
+    /* Lines a node draws between its own elements; purely decorative. */
+    .wires {
+      height: 100%;
+      left: 0;
+      overflow: visible;
+      pointer-events: none;
+      position: absolute;
+      top: 0;
+      width: 100%;
+      z-index: 20;
+    }
+
+    .wires path {
+      fill: none;
+      stroke: var(--fb-wire-color, #fff);
+      stroke-width: 2;
     }
 
     .title {
@@ -98,6 +121,14 @@ export class FbNodeElement extends LitElement {
   private unsubscribe?: () => void;
   private dragPointerId: number | null = null;
   private dragFrom: { x: number; y: number } | null = null;
+  private dragMoved = false;
+
+  /** Light-DOM host for the node's content; see mountContent(). */
+  private contentHost?: HTMLElement;
+  private showLabel = true;
+  private readonly clickListeners = new Set<(event: PointerEvent) => void>();
+  private readonly wires = new Map<number, { from: Element; to: Element }>();
+  private nextWireId = 1;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -117,8 +148,7 @@ export class FbNodeElement extends LitElement {
 
   override disconnectedCallback(): void {
     this.unsubscribe?.();
-    this.handle?.destroy();
-    this.handle = undefined;
+    this.unmountContent();
     this.observer?.disconnect();
     this.observer = undefined;
     super.disconnectedCallback();
@@ -131,12 +161,12 @@ export class FbNodeElement extends LitElement {
 
   protected override updated(changed: PropertyValues<this>): void {
     if (changed.has('state') && changed.get('state')) {
-      this.handle?.destroy();
-      this.handle = undefined;
+      this.unmountContent();
       this.mountContent();
     }
 
     this.applyPosition();
+    this.drawWires();
   }
 
   /**
@@ -171,15 +201,47 @@ export class FbNodeElement extends LitElement {
      Content
      ---------------------------------------------------------------------- */
 
+  /**
+   * Mount the node's content into a LIGHT-DOM child, which the shadow root slots.
+   *
+   * Not into the shadow root, which is where it used to go and is the obvious
+   * place. Component frameworks put their stylesheets in `document.head`, and a
+   * shadow root is exactly what those cannot cross — an Angular or Vue node would
+   * render with none of its own styles. Slotting keeps the shell's chrome
+   * encapsulated while leaving node content in the document, where a node author's
+   * CSS behaves the way they wrote it.
+   */
   private mountContent(): void {
-    const host = this.renderRoot.querySelector<HTMLElement>('.content');
     const mount = this.editor?.types[this.state.type]?.component;
 
-    if (!host || typeof mount !== 'function') {
+    if (typeof mount !== 'function') {
       return;
     }
 
-    this.handle = mount(host, { api: this.api() });
+    if (!this.contentHost) {
+      this.contentHost = document.createElement('div');
+      this.contentHost.className = 'fb-node-content';
+      this.contentHost.style.display = 'block';
+    }
+
+    // Re-appended rather than assumed present: a re-mount after the element moved
+    // in the DOM has to put the host back.
+    this.appendChild(this.contentHost);
+    this.handle = mount(this.contentHost, { api: this.api() });
+  }
+
+  private unmountContent(): void {
+    this.handle?.destroy();
+    this.handle = undefined;
+    this.wires.clear();
+    this.clickListeners.clear();
+
+    if (this.state?.id !== undefined) {
+      this.editor?.events.unregisterAll(this.state.id);
+    }
+
+    // Anything the content left behind goes with it; the host itself is reused.
+    this.contentHost?.replaceChildren();
   }
 
   /** The framework-agnostic handle a node's content is given. */
@@ -198,19 +260,100 @@ export class FbNodeElement extends LitElement {
         this.toggleAttribute('expanded', isMax);
         this.requestUpdate();
       },
+      isMaxSize: () => this.hasAttribute('expanded'),
+      setLabelVisible: (visible: boolean) => {
+        this.showLabel = visible;
+        this.requestUpdate();
+      },
       deleteSelf: () => editor.removeNode(state.id!),
       addSocket: (socket: FbSocket) => {
         editor.flow.addSocket(socket, state.id!);
       },
       removeSocket: (socket: FbSocket) => editor.flow.removeSocket(socket),
+      socketElement: (socketId: number) =>
+        this.renderRoot.querySelector<HTMLElement>(`[data-socket-id="${socketId}"]`) ?? undefined,
       calibrate: () => this.measure(),
-      register: (callback, type) => {
-        // Node-addressed events are an editor concern; kept minimal here.
-        void callback;
-        void type;
+      register: (callback, type) => editor.events.register(state.id!, callback, type),
+      unregister: type => editor.events.unregister(state.id!, type),
+      onClick: listener => {
+        this.clickListeners.add(listener);
+
+        return () => this.clickListeners.delete(listener);
       },
-      unregister: () => undefined,
+      wire: (from, to) => {
+        const id = this.nextWireId++;
+
+        this.wires.set(id, { from, to });
+        this.drawWires();
+
+        return id;
+      },
+      unwire: id => {
+        this.wires.delete(id);
+        this.drawWires();
+      },
+      clearWiring: () => {
+        this.wires.clear();
+        this.drawWires();
+      },
+      refreshWiring: () => this.drawWires(),
     };
+  }
+
+  /* ----------------------------------------------------------------------
+     Wiring
+     ---------------------------------------------------------------------- */
+
+  /**
+   * Redraw the node's internal lines.
+   *
+   * Imperative rather than part of `render()` on purpose: the endpoints are
+   * elements the *content* owns, so their positions are only knowable after the
+   * content has laid out. Reading them during render would draw to where they
+   * were before the update.
+   *
+   * Measured, not computed — unlike socket geometry, which the model derives.
+   * There is nothing to derive from here: these join two arbitrary elements
+   * whose positions only the browser knows.
+   */
+  private drawWires(): void {
+    const layer = this.renderRoot.querySelector<SVGSVGElement>('.wires');
+
+    if (!layer) {
+      return;
+    }
+
+    if (this.wires.size === 0) {
+      layer.replaceChildren();
+
+      return;
+    }
+
+    const origin = this.getBoundingClientRect();
+    // The plane is scaled, so client rects are too; work in unscaled pixels.
+    const zoom = this.editor?.viewport.zoom || 1;
+
+    const centre = (el: Element) => {
+      const rect = el.getBoundingClientRect();
+
+      return {
+        x: (rect.left + rect.width / 2 - origin.left) / zoom,
+        y: (rect.top + rect.height / 2 - origin.top) / zoom,
+      };
+    };
+
+    const paths = [...this.wires.values()].map(({ from, to }) => {
+      const a = centre(from);
+      const b = centre(to);
+      const bend = Math.max(20, Math.abs(b.x - a.x) / 2);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M${a.x},${a.y} C${a.x + bend},${a.y} ${b.x - bend},${b.y} ${b.x},${b.y}`);
+
+      return path;
+    });
+
+    layer.replaceChildren(...paths);
   }
 
   /* ----------------------------------------------------------------------
@@ -255,7 +398,12 @@ export class FbNodeElement extends LitElement {
 
     this.dragPointerId = event.pointerId;
     this.dragFrom = { x: event.clientX, y: event.clientY };
+    this.dragMoved = false;
     this.editor.captureBeforeDrag();
+
+    // Paint on top from the press, not after the drag: a click that never moves
+    // should still raise the node.
+    this.style.zIndex = String(this.editor.nextZ());
 
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -267,6 +415,7 @@ export class FbNodeElement extends LitElement {
       return;
     }
 
+    this.dragMoved = true;
     this.toggleAttribute('dragging', true);
 
     const plane = this.editor.viewport.planeSize;
@@ -294,7 +443,20 @@ export class FbNodeElement extends LitElement {
     this.editor.geometry.changes.emit(undefined);
   };
 
-  private onPointerUp = (): void => {
+  private onPointerUp = (event: PointerEvent): void => {
+    /*
+     * A press that never moved is a click on the node. Distinguishing them here
+     * rather than listening for `click` is what stops a drag that happens to end
+     * over the node from opening whatever the content does on click.
+     */
+    if (this.dragPointerId !== null && !this.dragMoved) {
+      this.editor.cancelPending();
+
+      for (const listener of [...this.clickListeners]) {
+        listener(event);
+      }
+    }
+
     this.dragPointerId = null;
     this.dragFrom = null;
     this.toggleAttribute('dragging', false);
@@ -313,11 +475,15 @@ export class FbNodeElement extends LitElement {
 
     return html`
       <div class="box" @pointerdown=${this.onPointerDown}>
-        <div class="content"></div>
+        <slot></slot>
+
+        <svg class="wires"></svg>
 
         ${sockets.map(s => this.renderSocket(s))}
 
-        ${this.state?.title ? html`<span class="title">${this.state.title}</span>` : nothing}
+        ${this.showLabel && this.state?.title
+          ? html`<span class="title">${this.state.title}</span>`
+          : nothing}
       </div>
     `;
   }

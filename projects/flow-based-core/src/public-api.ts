@@ -19,5 +19,6 @@ export * from './lib/bezier';
 export * from './lib/viewport';
 export * from './lib/history';
 export * from './lib/geometry';
+export * from './lib/node-events';
 export * from './lib/node-renderer';
 export * from './lib/document';
