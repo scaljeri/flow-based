@@ -41,6 +41,11 @@ export class FbNodeElement extends LitElement {
       z-index: 5;
     }
 
+    :host([selected]) .box {
+      border-color: var(--fb-selected-color, #bada55);
+      box-shadow: 0 0 0 2px var(--fb-selected-color, #bada55);
+    }
+
     /* Expanded: fill the surface rather than grow in place. */
     :host([expanded]) {
       --fb-socket-size: 42px;
@@ -203,7 +208,21 @@ export class FbNodeElement extends LitElement {
     }
 
     this.applyPosition();
+    this.applySelected();
     this.drawWires();
+  }
+
+  /**
+   * Reflect selection as an attribute rather than re-rendering.
+   *
+   * Selecting is a whole-graph event — a marquee can touch every node — so
+   * routing it through a render would cost one per node per drag frame, which is
+   * exactly the cost that was measured away. An attribute is a style change.
+   */
+  private applySelected(): void {
+    if (this.state?.id !== undefined) {
+      this.toggleAttribute('selected', this.editor.isSelected(this.state.id));
+    }
   }
 
   /**
@@ -223,9 +242,27 @@ export class FbNodeElement extends LitElement {
         this.requestUpdate();
         break;
 
+      case 'selection':
+        this.applySelected();
+        break;
+
       case 'geometry':
         if (change.nodeId === this.state?.id) {
           this.requestUpdate();
+        } else if (
+          change.nodeId === undefined
+          && this.editor.selection.size > 1
+          && this.editor.isSelected(this.state.id!)
+        ) {
+          /*
+           * A bulk move of the SELECTION — a group drag, or an alignment.
+           *
+           * Restricted to selected nodes deliberately. Repositioning every node
+           * on every bulk change is the obvious version and it cost 6x: a
+           * one-node drag emits this each frame, so 400 nodes meant 400 style
+           * writes and a layout per frame, for 399 nodes that had not moved.
+           */
+          this.applyPosition();
         }
         break;
 
@@ -434,6 +471,20 @@ export class FbNodeElement extends LitElement {
     // Stop the canvas treating this as a background press, which would pan.
     event.stopPropagation();
 
+    /*
+     * Select before dragging, so a drag moves what the user can see is selected.
+     * A plain press on an already-selected node keeps the selection, which is
+     * what makes dragging a group work — replacing it would drag one node out of
+     * its own group.
+     */
+    const id = this.state.id!;
+
+    if (event.shiftKey) {
+      this.editor.select(id, true);
+    } else if (!this.editor.isSelected(id)) {
+      this.editor.select(id);
+    }
+
     this.dragPointerId = event.pointerId;
     this.dragFrom = { x: event.clientX, y: event.clientY };
     this.dragMoved = false;
@@ -468,9 +519,19 @@ export class FbNodeElement extends LitElement {
     const dx = ((event.clientX - this.dragFrom.x) / zoom / plane.width) * 100;
     const dy = ((event.clientY - this.dragFrom.y) / zoom / plane.height) * 100;
 
+    this.dragFrom = { x: event.clientX, y: event.clientY };
+
+    if (this.editor.isSelected(this.state.id!) && this.editor.selection.size > 1) {
+      // Dragging one of several moves them all, and each element applies its own
+      // new position when it is told the geometry moved.
+      this.editor.moveSelectionBy(dx, dy);
+      this.applyPosition();
+
+      return;
+    }
+
     const current = this.state.position ?? { x: 0, y: 0 };
     this.state.position = { x: current.x + dx, y: current.y + dy };
-    this.dragFrom = { x: event.clientX, y: event.clientY };
 
     this.applyPosition();
     /*

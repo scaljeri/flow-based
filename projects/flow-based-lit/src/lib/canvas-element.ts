@@ -28,6 +28,25 @@ export class FbFlowCanvasElement extends LitElement {
       width: 100%;
     }
 
+    /*
+     * Focusable, because the keyboard shortcuts belong to THIS editor. Listening
+     * on window would be easier and wrong: two editors on a page would both act
+     * on every Delete, and a Delete meant for a text field elsewhere would remove
+     * nodes.
+     */
+    :host(:focus) {
+      outline: none;
+    }
+
+    .marquee {
+      background: var(--fb-selected-color, #bada55);
+      border: 1px solid var(--fb-selected-color, #bada55);
+      opacity: 0.25;
+      pointer-events: none;
+      position: absolute;
+      z-index: 40;
+    }
+
     .plane {
       height: 100%;
       left: 0;
@@ -46,12 +65,26 @@ export class FbFlowCanvasElement extends LitElement {
   private panPointerId: number | null = null;
   private panFrom: FbPosition | null = null;
 
+  /** Marquee, in plane coordinates, while a box-select is being dragged. */
+  private marqueeFrom: FbPosition | null = null;
+  private marquee: { x: number; y: number; width: number; height: number } | null = null;
+  private marqueeAdditive = false;
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.subscribe();
+
+    // Focusable so the shortcuts below reach this editor and only this editor.
+    // Not overridden if a host app set its own tab order.
+    if (!this.hasAttribute('tabindex')) {
+      this.tabIndex = 0;
+    }
+
+    this.addEventListener('keydown', this.onKeyDown);
   }
 
   override disconnectedCallback(): void {
+    this.removeEventListener('keydown', this.onKeyDown);
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     super.disconnectedCallback();
@@ -97,9 +130,29 @@ export class FbFlowCanvasElement extends LitElement {
 
   private onPointerDown = (event: PointerEvent): void => {
     // Reaching here means the press missed every node and socket — they stop
-    // propagation — so it is a background press: cancel any pending connection
-    // and start panning.
+    // propagation — so it is a background press.
     this.editor.cancelPending();
+    this.focus();
+
+    /*
+     * Shift starts a marquee; a plain drag still pans.
+     *
+     * The other way round is what Figma does, but panning is the more frequent
+     * gesture in a node editor and it is the one this shell already had — making
+     * the common gesture the one that needs a modifier trades an everyday cost
+     * for an occasional one.
+     */
+    if (event.shiftKey) {
+      this.marqueeAdditive = event.ctrlKey || event.metaKey;
+      this.marqueeFrom = this.editor.viewport.toPlane(this.toLocal(event));
+      this.marquee = { ...this.marqueeFrom, width: 0, height: 0 };
+      this.panPointerId = event.pointerId;
+      this.requestUpdate();
+
+      return;
+    }
+
+    this.editor.clearSelection();
 
     this.panPointerId = event.pointerId;
     this.panFrom = { x: event.clientX, y: event.clientY };
@@ -110,7 +163,28 @@ export class FbFlowCanvasElement extends LitElement {
       this.editor.setPointer(this.editor.viewport.toPlane(this.toLocal(event)));
     }
 
-    if (this.panPointerId === null || event.pointerId !== this.panPointerId || !this.panFrom) {
+    if (this.panPointerId === null || event.pointerId !== this.panPointerId) {
+      return;
+    }
+
+    if (this.marqueeFrom) {
+      const to = this.editor.viewport.toPlane(this.toLocal(event));
+
+      this.marquee = {
+        x: Math.min(this.marqueeFrom.x, to.x),
+        y: Math.min(this.marqueeFrom.y, to.y),
+        width: Math.abs(to.x - this.marqueeFrom.x),
+        height: Math.abs(to.y - this.marqueeFrom.y),
+      };
+
+      // Live, so the user can see what the box has caught before letting go.
+      this.editor.selectWithin(this.marquee, this.marqueeAdditive);
+      this.requestUpdate();
+
+      return;
+    }
+
+    if (!this.panFrom) {
       return;
     }
 
@@ -121,6 +195,65 @@ export class FbFlowCanvasElement extends LitElement {
   private onPointerUp = (): void => {
     this.panPointerId = null;
     this.panFrom = null;
+
+    if (this.marqueeFrom) {
+      this.marqueeFrom = null;
+      this.marquee = null;
+      this.requestUpdate();
+    }
+  };
+
+  /**
+   * Editing shortcuts.
+   *
+   * Bound to this element rather than the document, which is why the host is
+   * focusable: these act on one editor's selection, and a Delete pressed in a
+   * form somewhere else on the page must not delete nodes.
+   */
+  private onKeyDown = (event: KeyboardEvent): void => {
+    const control = event.ctrlKey || event.metaKey;
+
+    switch (true) {
+      case event.key === 'Delete' || event.key === 'Backspace':
+        this.editor.removeSelection();
+        break;
+
+      case control && event.key.toLowerCase() === 'a':
+        this.editor.selectAll();
+        break;
+
+      case control && event.key.toLowerCase() === 'c':
+        this.editor.copySelection();
+        break;
+
+      case control && event.key.toLowerCase() === 'v':
+        this.editor.paste();
+        break;
+
+      case control && event.key.toLowerCase() === 'd':
+        this.editor.duplicateSelection();
+        break;
+
+      case control && event.shiftKey && event.key.toLowerCase() === 'z':
+        this.editor.redo();
+        break;
+
+      case control && event.key.toLowerCase() === 'z':
+        this.editor.undo();
+        break;
+
+      case event.key === 'Escape':
+        this.editor.cancelPending();
+        this.editor.clearSelection();
+        break;
+
+      default:
+        return;
+    }
+
+    // Only reached when something was handled, so browser defaults — Backspace
+    // navigating back, Ctrl+A selecting the page — are suppressed only then.
+    event.preventDefault();
   };
 
   private toLocal(event: { clientX: number; clientY: number }): FbPosition {
@@ -198,6 +331,11 @@ export class FbFlowCanvasElement extends LitElement {
         @pointerup=${this.onPointerUp}
         @pointercancel=${this.onPointerUp}
         @line-click=${this.onLineClick}>
+        ${this.marquee
+          ? html`<div
+              class="marquee"
+              style=${`left:${this.marquee.x}px;top:${this.marquee.y}px;width:${this.marquee.width}px;height:${this.marquee.height}px`}></div>`
+          : nothing}
         <fb-connections .editor=${this.editor}></fb-connections>
 
         <slot></slot>

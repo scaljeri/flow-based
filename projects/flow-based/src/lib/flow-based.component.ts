@@ -15,7 +15,7 @@ import {
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
-import { FbNodeState, FbSocketColors } from '@scaljeri/flow-based-core';
+import { FbAlignment, FbNodeState, FbSocketColors } from '@scaljeri/flow-based-core';
 // Imported for the side effect as well as the types: this registers
 // <fb-flow-canvas> and friends with the custom-element registry.
 import { FbEditor, FbFlowCanvasElement } from '@scaljeri/flow-based-lit';
@@ -148,6 +148,42 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
 
   resetView(): void {
     this.canvasRef.nativeElement.resetView();
+  }
+
+  /* ----------------------------------------------------------------------
+     Selection — delegated for the same reason as the viewport
+     ---------------------------------------------------------------------- */
+
+  selectAll(): void {
+    this.editor.selectAll();
+  }
+
+  clearSelection(): void {
+    this.editor.clearSelection();
+  }
+
+  removeSelection(): void {
+    this.editor.removeSelection();
+  }
+
+  copySelection(): void {
+    this.editor.copySelection();
+  }
+
+  paste(): void {
+    this.editor.paste();
+  }
+
+  duplicateSelection(): void {
+    this.editor.duplicateSelection();
+  }
+
+  align(alignment: FbAlignment): void {
+    this.editor.alignSelection(alignment);
+  }
+
+  distribute(axis: 'x' | 'y'): void {
+    this.editor.distributeSelection(axis);
   }
 
   get id(): number {

@@ -203,9 +203,10 @@ test('undoes an added node', async ({ page }) => {
 
 declare global {
   interface Window {
-    fbEditor: import('@scaljeri/flow-based-core').FbNodeState extends never ? never : {
+    fbEditor: {
       children: import('@scaljeri/flow-based-core').FbNodeState[];
       connections: import('@scaljeri/flow-based-core').FbConnection[];
+      selection: Set<number>;
     };
   }
 }
@@ -288,11 +289,22 @@ test('switches back from document to flow without losing the graph', async ({ pa
  * and impossible to notice by looking — the editor stays correct, it just gets
  * slower as graphs grow. So the invariant is asserted rather than assumed.
  */
-test('a drag does not cost work proportional to the size of the graph', async ({ page }) => {
-  await page.goto(`${HARNESS}?nodes=200`);
+/**
+ * Cost per drag frame, at a given graph size.
+ *
+ * Returns the per-update time AND how many nodes re-rendered, because the two
+ * fail differently: a lost guard shows up as time, a lost subscription boundary
+ * shows up as renders.
+ */
+async function dragCost(page: Page, nodes: number): Promise<{
+  nodes: number;
+  nodeRenders: number;
+  msPerUpdate: number;
+}> {
+  await page.goto(`${HARNESS}?nodes=${nodes}`);
   await expect(canvas(page)).toBeVisible();
 
-  const result = await page.evaluate(async () => {
+  return page.evaluate(async () => {
     const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
     const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')] as (HTMLElement & {
       update?: (c: unknown) => void;
@@ -331,14 +343,183 @@ test('a drag does not cost work proportional to the size of the graph', async ({
       msPerUpdate: (performance.now() - start) / FRAMES,
     };
   });
+}
 
-  expect(result.nodes).toBe(200);
+test('a drag does not cost work proportional to the size of the graph', async ({ page }) => {
+  const small = await dragCost(page, 100);
+  const large = await dragCost(page, 400);
+
+  expect(small.nodes).toBe(100);
+  expect(large.nodes).toBe(400);
 
   // Moving one node re-renders none of them: a node's markup cannot depend on
   // where a different node sits.
-  expect(result.nodeRenders).toBe(0);
+  expect(small.nodeRenders).toBe(0);
+  expect(large.nodeRenders).toBe(0);
 
-  // Generous, because CI machines vary — but it was 4.3 ms before the curves were
-  // guarded, so a regression to rebuilding everything would blow straight past it.
-  expect(result.msPerUpdate).toBeLessThan(3);
+  /*
+   * The claim is about SCALING, so measure scaling.
+   *
+   * This asserted an absolute millisecond budget, which fails under load on a
+   * shared machine and says nothing about the property it is named for — the
+   * suite runs two workers in parallel, and that alone was enough to trip it. A
+   * ratio cancels whatever else the machine is doing: four times the graph cost
+   * 2.6x per frame before the curves were guarded, and should now cost roughly
+   * the same regardless of size.
+   */
+  expect(large.msPerUpdate).toBeLessThan(small.msPerUpdate * 2 + 1);
+});
+
+/* ==========================================================================
+   Selection, and acting on several nodes at once
+   ========================================================================== */
+
+/** Centre of a node box, in page coordinates. */
+async function nodeCentre(page: Page, index: number): Promise<{ x: number; y: number }> {
+  return page.evaluate(i => {
+    const node = document.querySelectorAll('fb-flow-canvas fb-node-box')[i] as HTMLElement;
+    const r = node.getBoundingClientRect();
+
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }, index);
+}
+
+async function selectedIds(page: Page): Promise<number[]> {
+  return page.evaluate(() => [...window.fbEditor.selection].sort((a, b) => a - b));
+}
+
+test('shift-click adds to the selection and a plain click replaces it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const first = await nodeCentre(page, 0);
+  const second = await nodeCentre(page, 1);
+
+  await page.mouse.click(first.x, first.y);
+  expect(await selectedIds(page)).toEqual([10]);
+
+  await page.keyboard.down('Shift');
+  await page.mouse.click(second.x, second.y);
+  await page.keyboard.up('Shift');
+  expect(await selectedIds(page)).toEqual([10, 20]);
+
+  // Shift again on the same node toggles it back off.
+  await page.keyboard.down('Shift');
+  await page.mouse.click(second.x, second.y);
+  await page.keyboard.up('Shift');
+  expect(await selectedIds(page)).toEqual([10]);
+
+  // Plain click elsewhere replaces rather than adds.
+  await page.mouse.click(second.x, second.y);
+  expect(await selectedIds(page)).toEqual([20]);
+});
+
+test('a marquee selects what it touches, not only what it encloses', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const node = await nodeCentre(page, 0);
+
+  /*
+   * Dragged from empty space so the box only just clips the node's corner. A
+   * marquee that required full enclosure would select nothing here — which is
+   * why the model intersects.
+   */
+  // Anchored to the surface itself: an offset from the node put the start
+  // off-screen, and the page's own toolbar occupies the top-left of the window.
+  const surface = (await canvas(page).boundingBox())!;
+
+  await page.keyboard.down('Shift');
+  await page.mouse.move(surface.x + 4, surface.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(node.x - 4, node.y - 4, { steps: 12 });
+  await page.mouse.up();
+  await page.keyboard.up('Shift');
+
+  expect(await selectedIds(page)).toContain(10);
+  // The marquee is gone once released.
+  expect(await page.locator('fb-flow-canvas .marquee').count()).toBe(0);
+});
+
+test('dragging one of several selected nodes moves them all, and the lines follow', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const first = await nodeCentre(page, 0);
+  const second = await nodeCentre(page, 1);
+
+  await page.mouse.click(first.x, first.y);
+  await page.keyboard.down('Shift');
+  await page.mouse.click(second.x, second.y);
+  await page.keyboard.up('Shift');
+
+  const before = await page.evaluate(() =>
+    window.fbEditor.children.slice(0, 2).map(n => ({ x: n.position!.x, y: n.position!.y })));
+
+  await page.mouse.move(first.x, first.y);
+  await page.mouse.down();
+  await page.mouse.move(first.x + 120, first.y + 60, { steps: 10 });
+  await page.mouse.up();
+
+  const after = await page.evaluate(() =>
+    window.fbEditor.children.slice(0, 2).map(n => ({ x: n.position!.x, y: n.position!.y })));
+
+  // Both moved, by the same amount: this is a group drag, not two separate ones.
+  const deltas = after.map((p, i) => ({ x: p.x - before[i].x, y: p.y - before[i].y }));
+  expect(deltas[0].x).toBeGreaterThan(0);
+  expect(deltas[1].x).toBeCloseTo(deltas[0].x, 6);
+  expect(deltas[1].y).toBeCloseTo(deltas[0].y, 6);
+
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+});
+
+test('copy and paste produces independent nodes, and undo removes them', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await nodeCount(page);
+  const first = await nodeCentre(page, 0);
+
+  await page.mouse.click(first.x, first.y);
+  await page.keyboard.press('Control+c');
+  await page.keyboard.press('Control+v');
+
+  expect(await nodeCount(page)).toBe(before + 1);
+
+  const state = await page.evaluate(() => ({
+    ids: window.fbEditor.children.map(n => n.id!),
+    socketIds: window.fbEditor.children.flatMap(n => (n.sockets ?? []).map(s => s.id!)),
+    selection: [...window.fbEditor.selection],
+  }));
+
+  // Nothing may share an id with what it was copied from.
+  expect(new Set(state.ids).size).toBe(state.ids.length);
+  expect(new Set(state.socketIds).size).toBe(state.socketIds.length);
+  // What was pasted is selected, so it can be dragged away immediately.
+  expect(state.selection).toHaveLength(1);
+  expect(state.selection[0]).not.toBe(10);
+
+  await page.keyboard.press('Control+z');
+  expect(await nodeCount(page)).toBe(before);
+});
+
+test('Delete removes every selected node and the connections that touched them', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await nodeCount(page);
+  const first = await nodeCentre(page, 0);
+  const second = await nodeCentre(page, 1);
+
+  await page.mouse.click(first.x, first.y);
+  await page.keyboard.down('Shift');
+  await page.mouse.click(second.x, second.y);
+  await page.keyboard.up('Shift');
+
+  await page.keyboard.press('Delete');
+
+  expect(await nodeCount(page)).toBe(before - 2);
+  // Node 10 fed both others, so removing it and 20 leaves no connections at all.
+  expect(await page.evaluate(() => window.fbEditor.connections.length)).toBe(0);
+  expect(await selectedIds(page)).toEqual([]);
 });

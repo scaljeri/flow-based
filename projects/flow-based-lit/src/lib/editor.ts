@@ -1,4 +1,6 @@
 import {
+  FbAlignment,
+  FbClipboard,
   FbConnection,
   FbEmitter,
   FbGeometry,
@@ -10,9 +12,14 @@ import {
   FbNodeTypes,
   FbPosition,
   FbSocket,
+  FbSize,
   FbViewport,
   Flow,
   IdGenerator,
+  alignNodes,
+  copyNodes,
+  distributeNodes,
+  pasteNodes,
 } from '@scaljeri/flow-based-core';
 
 /**
@@ -34,7 +41,9 @@ export interface FbEditorChange {
     | 'viewport'
     | 'history'
     /** The pending connection, or the pointer while one is being drawn. */
-    | 'interaction';
+    | 'interaction'
+    /** Which nodes are selected. */
+    | 'selection';
   nodeId?: number;
 }
 
@@ -83,6 +92,15 @@ export class FbEditor {
   flow!: Flow;
   state!: FbNodeState;
 
+  /**
+   * The selected nodes, by id.
+   *
+   * A set rather than a list: selection is membership, and every question asked
+   * of it — is this node selected, drag everything selected — is a membership
+   * test or an iteration, never an ordering.
+   */
+  readonly selection = new Set<number>();
+
   /** The socket awaiting a partner, if a connection is being drawn. */
   pending: FbPendingSocket | null = null;
   /** Free end of the pending connection, in plane coordinates. */
@@ -121,6 +139,17 @@ export class FbEditor {
 
     this.pending = null;
     this.pointer = null;
+
+    // Drop anything selected that the reloaded flow does not contain — an undo
+    // can remove the very nodes that were selected.
+    const live = new Set(this.children.map(node => node.id));
+
+    for (const id of [...this.selection]) {
+      if (!live.has(id)) {
+        this.selection.delete(id);
+      }
+    }
+
     this.changes.emit({ kind: 'structure' });
   }
 
@@ -151,6 +180,192 @@ export class FbEditor {
   }
 
   private topZ = 10;
+
+  /* ----------------------------------------------------------------------
+     Selection
+     ---------------------------------------------------------------------- */
+
+  isSelected(id: number): boolean {
+    return this.selection.has(id);
+  }
+
+  /** Select a node. `additive` toggles it and leaves the rest alone. */
+  select(id: number, additive = false): void {
+    if (!additive) {
+      if (this.selection.size === 1 && this.selection.has(id)) {
+        return;
+      }
+
+      this.selection.clear();
+      this.selection.add(id);
+    } else if (!this.selection.delete(id)) {
+      this.selection.add(id);
+    }
+
+    this.changes.emit({ kind: 'selection' });
+  }
+
+  selectAll(): void {
+    for (const node of this.children) {
+      if (node.id !== undefined) {
+        this.selection.add(node.id);
+      }
+    }
+
+    this.changes.emit({ kind: 'selection' });
+  }
+
+  clearSelection(): void {
+    if (this.selection.size === 0) {
+      // Every background click would otherwise wake every node.
+      return;
+    }
+
+    this.selection.clear();
+    this.changes.emit({ kind: 'selection' });
+  }
+
+  /**
+   * Select every node that intersects a rectangle, in plane coordinates.
+   *
+   * Intersects rather than contains: a marquee that only selects what it fully
+   * encloses makes large nodes practically unselectable, since the box would
+   * have to be dragged around the whole thing.
+   */
+  selectWithin(rect: { x: number; y: number; width: number; height: number }, additive = false): void {
+    if (!additive) {
+      this.selection.clear();
+    }
+
+    const plane = this.viewport.planeSize;
+
+    for (const node of this.children) {
+      if (node.id === undefined) {
+        continue;
+      }
+
+      const origin = this.geometry.nodeOrigin(node, plane);
+      const size: FbSize = this.geometry.getNodeSize(node.id) ?? { width: 0, height: 0 };
+
+      const hits = origin.x < rect.x + rect.width
+        && origin.x + size.width > rect.x
+        && origin.y < rect.y + rect.height
+        && origin.y + size.height > rect.y;
+
+      if (hits) {
+        this.selection.add(node.id);
+      }
+    }
+
+    this.changes.emit({ kind: 'selection' });
+  }
+
+  /** The selected nodes, in the flow's own order. */
+  selectedNodes(): FbNodeState[] {
+    return this.children.filter(node => node.id !== undefined && this.selection.has(node.id));
+  }
+
+  /* ----------------------------------------------------------------------
+     Acting on the selection
+     ---------------------------------------------------------------------- */
+
+  removeSelection(): void {
+    if (this.selection.size === 0) {
+      return;
+    }
+
+    this.history.capture(this.state);
+
+    for (const id of [...this.selection]) {
+      this.flow.removeNode(id);
+      this.geometry.forgetNode(id);
+      this.events.unregisterAll(id);
+    }
+
+    this.selection.clear();
+    this.changes.emit({ kind: 'selection' });
+  }
+
+  /** Move every selected node, in plane percentages. Used by a multi-node drag. */
+  moveSelectionBy(dx: number, dy: number): void {
+    for (const node of this.selectedNodes()) {
+      const position = node.position ?? { x: 0, y: 0 };
+
+      node.position = { x: position.x + dx, y: position.y + dy };
+    }
+
+    // A position change, not a size change: nodes ignore it, lines redraw.
+    this.geometry.changes.emit(undefined);
+  }
+
+  copySelection(): FbClipboard | null {
+    if (this.selection.size === 0) {
+      return null;
+    }
+
+    this.clipboard = copyNodes(this.state, this.selection);
+
+    return this.clipboard;
+  }
+
+  /** Paste the last copy, and select what was pasted so it can be moved at once. */
+  paste(): void {
+    if (!this.clipboard?.nodes.length) {
+      return;
+    }
+
+    this.history.capture(this.state);
+
+    const pasted = pasteNodes(this.state, this.clipboard, this.ids);
+
+    this.selection.clear();
+
+    for (const node of pasted) {
+      this.selection.add(node.id!);
+    }
+
+    // Rebuilt rather than nudged: the engine has to build workers and sockets
+    // for the new nodes, and propagate formats through the new connections.
+    this.load(this.state);
+    this.changes.emit({ kind: 'selection' });
+  }
+
+  /** Copy and paste in one step, without disturbing the clipboard. */
+  duplicateSelection(): void {
+    const kept = this.clipboard;
+
+    if (this.copySelection()) {
+      this.paste();
+    }
+
+    this.clipboard = kept ?? this.clipboard;
+  }
+
+  alignSelection(alignment: FbAlignment): void {
+    const nodes = this.selectedNodes();
+
+    if (nodes.length < 2) {
+      return;
+    }
+
+    this.history.capture(this.state);
+    alignNodes(nodes, alignment);
+    this.geometry.changes.emit(undefined);
+  }
+
+  distributeSelection(axis: 'x' | 'y'): void {
+    const nodes = this.selectedNodes();
+
+    if (nodes.length < 3) {
+      return;
+    }
+
+    this.history.capture(this.state);
+    distributeNodes(nodes, axis);
+    this.geometry.changes.emit(undefined);
+  }
+
+  private clipboard: FbClipboard | null = null;
 
   /* ----------------------------------------------------------------------
      Mutations — each snapshots history first, because the engine edits in place
@@ -184,6 +399,7 @@ export class FbEditor {
     this.history.capture(this.state);
     this.flow.removeNode(id);
     this.geometry.forgetNode(id);
+    this.selection.delete(id);
   }
 
   removeConnection(connection: FbConnection): void {

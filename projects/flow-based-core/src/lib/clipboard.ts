@@ -1,0 +1,157 @@
+import { IdGenerator } from './id-generator';
+import { FbConnection, FbNodeState, FbPosition } from './types';
+
+/**
+ * A copied piece of a flow: some nodes, and the connections between them.
+ *
+ * Deliberately a plain object with no live references into the flow it came
+ * from — it is a deep clone, so pasting twice yields two independent subgraphs
+ * and copying then deleting the original still works.
+ */
+export interface FbClipboard {
+  nodes: FbNodeState[];
+  connections: FbConnection[];
+}
+
+/**
+ * Copy a set of nodes out of a flow.
+ *
+ * Only connections with BOTH ends inside the selection come along. A connection
+ * to a node that was not copied has nowhere to land on paste, and silently
+ * reattaching it to the original would make paste destructive.
+ */
+export function copyNodes(flow: FbNodeState, nodeIds: Iterable<number>): FbClipboard {
+  const wanted = new Set(nodeIds);
+  const nodes = (flow.children ?? []).filter(node => node.id !== undefined && wanted.has(node.id));
+  const present = new Set(nodes.map(node => node.id));
+
+  const connections = (flow.connections ?? []).filter(
+    connection => present.has(connection.from) && present.has(connection.to),
+  );
+
+  return {
+    nodes: structuredClone(nodes),
+    connections: structuredClone(connections),
+  };
+}
+
+/**
+ * Paste a clipboard into a flow, offset so it does not land exactly on top of
+ * what it was copied from.
+ *
+ * Every id is reissued — nodes, sockets and connections — and the connections
+ * are rewritten to point at the new ones. Reusing ids would produce a flow with
+ * duplicates, where "the node with id 7" is ambiguous and the engine's lookups
+ * return whichever it finds first.
+ *
+ * Returns the new nodes, so a caller can select what it just pasted.
+ */
+export function pasteNodes(
+  flow: FbNodeState,
+  clipboard: FbClipboard,
+  ids: IdGenerator,
+  offset: FbPosition = { x: 2, y: 2 },
+): FbNodeState[] {
+  const nodeIds = new Map<number, number>();
+  const socketIds = new Map<number, number>();
+
+  const nodes = structuredClone(clipboard.nodes).map(node => {
+    const previous = node.id!;
+
+    node.id = ids.create();
+    nodeIds.set(previous, node.id);
+
+    node.position = {
+      x: (node.position?.x ?? 0) + offset.x,
+      y: (node.position?.y ?? 0) + offset.y,
+    };
+
+    node.sockets = (node.sockets ?? []).map(socket => {
+      const id = ids.create();
+
+      socketIds.set(socket.id!, id);
+
+      return { ...socket, id };
+    });
+
+    return node;
+  });
+
+  const connections = structuredClone(clipboard.connections)
+    .map(connection => ({
+      ...connection,
+      id: ids.create(),
+      from: nodeIds.get(connection.from)!,
+      to: nodeIds.get(connection.to)!,
+      out: socketIds.get(connection.out!)!,
+      in: socketIds.get(connection.in!)!,
+    }))
+    // A clipboard from an older flow could name sockets that no longer exist;
+    // dropping those beats pasting a connection to nothing.
+    .filter(connection => connection.out !== undefined && connection.in !== undefined);
+
+  flow.children = [...(flow.children ?? []), ...nodes];
+  flow.connections = [...(flow.connections ?? []), ...connections];
+
+  return nodes;
+}
+
+/** How nodes can be lined up. */
+export type FbAlignment = 'left' | 'right' | 'top' | 'bottom' | 'centre-x' | 'centre-y';
+
+/**
+ * Line up nodes on one edge.
+ *
+ * Positions are percentages of the plane, and this aligns on those rather than
+ * on rendered pixels: nodes are different sizes, so aligning their left EDGES in
+ * pixels and aligning their positions are different operations. The position is
+ * what the JSON stores and what a reader would expect to become equal.
+ */
+export function alignNodes(nodes: FbNodeState[], alignment: FbAlignment): void {
+  if (nodes.length < 2) {
+    return;
+  }
+
+  const xs = nodes.map(node => node.position?.x ?? 0);
+  const ys = nodes.map(node => node.position?.y ?? 0);
+
+  const target = {
+    left: Math.min(...xs),
+    right: Math.max(...xs),
+    top: Math.min(...ys),
+    bottom: Math.max(...ys),
+    'centre-x': xs.reduce((a, b) => a + b, 0) / xs.length,
+    'centre-y': ys.reduce((a, b) => a + b, 0) / ys.length,
+  }[alignment];
+
+  const axis = alignment === 'top' || alignment === 'bottom' || alignment === 'centre-y' ? 'y' : 'x';
+
+  for (const node of nodes) {
+    node.position = { x: node.position?.x ?? 0, y: node.position?.y ?? 0, [axis]: target } as FbPosition;
+  }
+}
+
+/**
+ * Space nodes evenly between the two outermost, along one axis.
+ *
+ * The endpoints stay put — distributing is about the gaps between things, and
+ * moving the ends would move the whole group.
+ */
+export function distributeNodes(nodes: FbNodeState[], axis: 'x' | 'y'): void {
+  if (nodes.length < 3) {
+    return;
+  }
+
+  const sorted = [...nodes].sort((a, b) => (a.position?.[axis] ?? 0) - (b.position?.[axis] ?? 0));
+  const first = sorted[0].position?.[axis] ?? 0;
+  const last = sorted[sorted.length - 1].position?.[axis] ?? 0;
+  const step = (last - first) / (sorted.length - 1);
+
+  sorted.forEach((node, index) => {
+    node.position = {
+      x: node.position?.x ?? 0,
+      y: node.position?.y ?? 0,
+      [axis]: first + step * index,
+    } as FbPosition;
+  });
+}
