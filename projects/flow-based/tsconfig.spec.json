@@ -2,16 +2,12 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../out-tsc/spec",
-    "types": [
-      "jasmine",
-      "node"
-    ]
+    "types": ["vitest/globals"]
   },
-  "files": [
-    "src/test.ts"
-  ],
-  "include": [
-    "**/*.spec.ts",
-    "**/*.d.ts"
-  ]
+  /*
+   * All sources, not just specs: the library's components are `standalone: false`,
+   * so FlowBasedModule has to be in the program for their template scope to
+   * resolve. With only `*.spec.ts` here, every component binding fails NG8002.
+   */
+  "include": ["src/**/*.ts"]
 }

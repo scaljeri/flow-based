@@ -1,6 +1,6 @@
 import { XxlPosition } from '../flow-based';
 
-function factorial(n): number {
+function factorial(n: number): number {
   return !(n > 1) ? 1 : factorial(n - 1) * n;
 }
 
@@ -8,11 +8,11 @@ function round(num: number): number {
   return Math.round(num * 100) / 100;
 }
 
-function bezierValue(n: number, u: number, i: number, v: number) {
+function bezierValue(n: number, u: number, i: number, v: number): number {
   return Math.pow(u, i) * Math.pow(1 - u, n - i) * v;
 }
 
-function binomialCoefficient(n, i): number {
+function binomialCoefficient(n: number, i: number): number {
   return factorial(n) / (factorial(i) * factorial(n - i));
 }
 

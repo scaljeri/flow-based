@@ -1,26 +1,37 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": "./",
-    "outDir": "./dist/out-tsc",
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
+    /* Explicit, though TypeScript 6 already defaults `strict` to true. */
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    /* The engine is built on index-signature maps (FbKeyValues<T>); dot access
+       on those is idiomatic here, so this rule stays off. */
+    "noPropertyAccessFromIndexSignature": false,
+    "skipLibCheck": true,
+    "isolatedModules": true,
     "experimentalDecorators": true,
-    "strictNullChecks": true,
-    "target": "es5",
-    "typeRoots": [
-      "node_modules/@types"
-    ],
-    "lib": [
-      "es2017",
-      "dom"
-    ],
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve",
     "paths": {
-      "@scaljeri/flow-based": [
-        "projects/flow-based/"
-      ]
+      "@scaljeri/flow-based": ["./dist/flow-based"]
     }
-  }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.spec.json" },
+    { "path": "./projects/flow-based/tsconfig.lib.json" },
+    { "path": "./projects/flow-based/tsconfig.spec.json" }
+  ]
 }

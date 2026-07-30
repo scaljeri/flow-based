@@ -2,11 +2,12 @@ import { Inject, Injectable, Optional } from '@angular/core';
 import {
   XXL_FLOW_TYPES,
   XxlConnection,
-  FbNodeType,
+  FbNodeTypes,
   XxlFlowUnitState,
-  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbKeyValues, FbNodeState, XxlSocket, ConnectionDetails, XxlSocketEvent
+  FbNodeWorker, FB_NODE_HELPERS, FbNodeHelpers, FbNodeState, XxlSocket
 } from './flow-based';
-import { FlowBasedComponent } from './flow-based.component';
+// Type-only: FlowBasedComponent injects this service (NG3003 cycle otherwise).
+import type { FlowBasedComponent } from './flow-based.component';
 import { Flow } from './utils/flow';
 import { SocketService } from './socket.service';
 import { deepClone } from './utils/deep-clone';
@@ -19,16 +20,22 @@ export interface ExternalEvent {
   nodeId: number;
 }
 
+/**
+ * Listener registered by a node to receive framework events. Returning a falsy
+ * value makes the listener one-shot: `triggerEvent` drops it after invoking it.
+ */
+export type FbNodeEventCallback = (payload?: any) => boolean | void;
+
 @Injectable({
   providedIn: 'root'
 })
 export class FlowBasedService {
-  public flow: Flow;
+  public flow!: Flow;
   private flowStack: FlowBasedComponent[] = [];
-  private nodeListeners: Record<string, { id: number, callback: (any) => boolean | void }[]> = {};
+  private nodeListeners: Record<string, { id: number, callback: FbNodeEventCallback }[]> = {};
 
   constructor(private socketService: SocketService,
-              @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeType,
+              @Inject(XXL_FLOW_TYPES) private flowTypes: FbNodeTypes,
               @Optional() @Inject(FB_NODE_HELPERS) private helpers: FbNodeHelpers) {
   }
 
@@ -37,7 +44,7 @@ export class FlowBasedService {
     this.currentFlow.repaintConnections();
   }
 
-  nodeClicked(nodeState): void {
+  nodeClicked(nodeState: FbNodeState): void {
     this.socketService.outsideClick();
     const state = this.currentFlow.state;
 
@@ -120,7 +127,7 @@ export class FlowBasedService {
     this.flowStack.shift();
   }
 
-  triggerEvent(type, payload?: any): void {
+  triggerEvent(type: string, payload?: any): void {
     const listeners = this.nodeListeners[type];
 
     if (listeners && listeners.length > 0) {
@@ -130,12 +137,12 @@ export class FlowBasedService {
     }
   }
 
-  register(id: number, callback: (any) => boolean | void, type: string = '__default__'): void {
+  register(id: number, callback: FbNodeEventCallback, type: string = '__default__'): void {
     this.nodeListeners[type] = this.nodeListeners[type] || [];
     this.nodeListeners[type].unshift({id, callback});
   }
 
-  unregister(id, type: string = '__default__'): void {
+  unregister(id: number, type: string = '__default__'): void {
     if (this.nodeListeners[type]) {
       this.nodeListeners[type] = this.nodeListeners[type].filter(listener => listener.id !== id);
     }

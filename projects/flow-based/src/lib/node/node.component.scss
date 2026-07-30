@@ -1,5 +1,5 @@
-@import '../utils/utils';
-@import '../utils/variables';
+@use '../utils/utils' as *;
+@use '../utils/variables' as *;
 
 $border-width: 3px;
 $border-color: darkray;

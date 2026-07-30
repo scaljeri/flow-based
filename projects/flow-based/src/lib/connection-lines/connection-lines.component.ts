@@ -17,12 +17,14 @@ import { SocketService } from '../socket.service';
   selector: 'xxl-connection-lines',
   templateUrl: './connection-lines.component.html',
   styleUrls: ['./connection-lines.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class ConnectionLinesComponent implements OnInit, OnChanges {
-  @Input() connections: XxlConnection[];
-  @Input() from: number;
-  @Input() to: number;
+  // `FbNodeState.connections` is optional, so default rather than assert.
+  @Input() connections: XxlConnection[] = [];
+  @Input() from: number | null = null;
+  @Input() to: number | null = null;
 
   @Input() set pointerMoved(event: PointerEvent) {
     if (event) {
@@ -34,15 +36,15 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
 
   @Output() lineClick = new EventEmitter<XxlConnection>();
 
-  pointer: XxlPosition | null;
+  pointer: XxlPosition | null = null;
   controlPoints: { [key: number]: XxlPosition[] } = {};
   lines: string[] = [];
-  private rect;
+  private rect!: DOMRect;
 
   constructor(private element: ElementRef,
               private viewRef: ChangeDetectorRef,
               private socketService: SocketService,
-              @Optional() @Inject(FB_SOCKET_COLORS) private colors: FbSocketColors) {
+              @Optional() @Inject(FB_SOCKET_COLORS) private colors: FbSocketColors | null) {
   }
 
   ngOnInit() {
@@ -52,7 +54,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes.connection) {
       this.rect = this.element.nativeElement.getBoundingClientRect();
-      this.controlPoints = [];
+      this.controlPoints = {};
     } else {
       if (!this.to && !this.from) {
         this.pointer = null;
@@ -66,7 +68,7 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   }
 
   pointerPath(): string {
-    const start = this.socketService.getSocket(this.from || this.to).comp.position;
+    const start = this.socketService.getSocket((this.from || this.to)!).comp.position;
     let output = '';
 
     if (this.from && this.pointer) {
@@ -83,22 +85,25 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
   }
 
   pointerColor(): string {
-    const socket = this.socketService.getSocket(this.from || this.to).comp.state;
+    const socket = this.socketService.getSocket((this.from || this.to)!).comp.state;
 
     return socket.color || (this.colors && this.colors[socket.format!]) || '#fff';
   }
 
-  stopColorStart(connId): string {
-    const socketDetails = this.socketService.getSocket(connId);
+  stopColorStart(connId: number | undefined): string {
+    const socketDetails = connId === undefined ? undefined : this.socketService.getSocket(connId);
 
     if (!socketDetails) {
       return '#ffffff';
     }
 
-    return socketDetails.comp.state.color || this.colors[socketDetails.comp.state.format!] || '#fff';
+    // `colors` is @Optional(); pointerColor() already guarded it, this did not.
+    return socketDetails.comp.state.color
+      || (this.colors && this.colors[socketDetails.comp.state.format!])
+      || '#fff';
   }
 
-  stopColorEnd(connId): string {
+  stopColorEnd(connId: number | undefined): string {
     return this.stopColorStart(connId);
   }
 
@@ -176,7 +181,8 @@ export class ConnectionLinesComponent implements OnInit, OnChanges {
     return this.valuesToD(fromX, fromY, toX, toY, cx1, cy1, cx2, cy2);
   }
 
-  private valuesToD(x1, y1, x2, y2, cx1, cy1, cx2, cy2): string {
+  private valuesToD(x1: number, y1: number, x2: number, y2: number,
+                    cx1: number, cy1: number, cx2: number, cy2: number): string {
     return `M ${x1} ${y1 - .0001} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`;
   }
 

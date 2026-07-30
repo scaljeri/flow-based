@@ -5,7 +5,7 @@ import {
   EventEmitter,
   HostBinding, HostListener,
   Input,
-  OnChanges, OnDestroy,
+  OnDestroy,
   OnInit, Output, QueryList,
   ViewChild, ViewChildren,
 } from '@angular/core';
@@ -18,39 +18,28 @@ import { SocketService } from '../socket.service';
 import { SocketComponent } from '../socket/socket.component';
 import { Subscription } from 'rxjs';
 
-declare global {
-  interface Window {
-    ResizeObserver: any;
-  }
-}
-
 @Component({
   selector: 'fb-node',
   templateUrl: './node.component.html',
   styleUrls: ['./node.component.scss'],
-  // changeDetection: ChangeDetectionStrategy.OnPush,
-  // viewProviders: [Flowservice]
-  providers: [NodeService]
-  // viewProviders: [{
-  //   provide: XXL_FLOW_UNIT_SERVICE, useClass: XxlFlowservice
-  // }]
+  providers: [NodeService],
+  standalone: false,
 })
-export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
-  @Input() state: FbNodeState;
-  @Input() scope: number;
+export class NodeComponent implements OnInit, AfterViewInit, OnDestroy {
+  @Input() state!: FbNodeState;
+  @Input() scope!: number;
   @HostBinding('class.is-fullsize') isFullSize = false;
 
   @Output() socketClick = new EventEmitter<XxlSocket>();
   @Output() updated = new EventEmitter<void>();
-  @ViewChild(DynamicComponentDirective) ref: DynamicComponentDirective<any>;
-  @ViewChildren(SocketComponent) sockRefs: QueryList<SocketComponent>;
+  @ViewChild(DynamicComponentDirective) ref!: DynamicComponentDirective<unknown>;
+  @ViewChildren(SocketComponent) sockRefs!: QueryList<SocketComponent>;
 
-  private observer;
-  private posChangedSub: Subscription;
+  private observer?: ResizeObserver;
+  private posChangedSub!: Subscription;
   public isLabel = true;
 
-  constructor(private viewRef: ChangeDetectorRef,
-              private element: ElementRef,
+  constructor(private element: ElementRef,
               private cdr: ChangeDetectorRef,
               private flowService: FlowBasedService,
               public service: NodeService,
@@ -66,7 +55,7 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
       this.flowService.nodeMoved(this.id);
     });
 
-    this.observer = new window.ResizeObserver(() => {
+    this.observer = new ResizeObserver(() => {
       // TODO
       // this.wrapper.update();
       // this.flowService.updateConnection();
@@ -74,9 +63,10 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
     this.observer.observe(this.element.nativeElement);
   }
 
+  // `noDrag` is a custom output, so Angular types `$event` as the base Event.
   @HostListener('noDrag', ['$event'])
-  onClick(e: PointerEvent): void {
-    this.service.nodeIsClicked(e);
+  onClick(e: Event): void {
+    this.service.nodeIsClicked(e as PointerEvent);
   }
 
   getScope(): number {
@@ -95,10 +85,11 @@ export class NodeComponent implements OnInit, OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.posChangedSub.unsubscribe();
+    this.observer?.disconnect();
     this.service.unregisterAll();
   }
 
-  setMaxSize(isMax): void {
+  setMaxSize(isMax: boolean): void {
     this.isFullSize = isMax;
     this.cdr.markForCheck();
   }

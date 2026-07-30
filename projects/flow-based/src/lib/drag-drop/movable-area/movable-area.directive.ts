@@ -10,14 +10,15 @@ export interface Boundaries {
 }
 
 @Directive({
-  selector: '[xxlMovableArea]'
+  selector: '[xxlMovableArea]',
+  standalone: false,
 })
 export class MovableAreaDirective implements OnDestroy, AfterContentInit {
-  @ContentChildren(MovableDirective) movables: QueryList<MovableDirective>;
+  @ContentChildren(MovableDirective) movables!: QueryList<MovableDirective>;
 
-  private boundaries: Boundaries;
+  private boundaries!: Boundaries;
   private subscriptions: Subscription[] = [];
-  private mainSub: Subscription;
+  private mainSub!: Subscription;
 
   constructor(private element: ElementRef) {
   }
@@ -58,10 +59,17 @@ export class MovableAreaDirective implements OnDestroy, AfterContentInit {
   }
 
   private maintainBoundaries(movable: MovableDirective): void {
-    movable.position.x = Math.max(this.boundaries.minX, movable.position.x);
-    movable.position.x = Math.min(this.boundaries.maxX, movable.position.x);
-    movable.position.y = Math.max(this.boundaries.minY, movable.position.y);
-    movable.position.y = Math.min(this.boundaries.maxY, movable.position.y);
+    const position = movable.position;
+
+    // A movable that has never been positioned has nothing to clamp.
+    if (!position) {
+      return;
+    }
+
+    position.x = Math.max(this.boundaries.minX, position.x);
+    position.x = Math.min(this.boundaries.maxX, position.x);
+    position.y = Math.max(this.boundaries.minY, position.y);
+    position.y = Math.min(this.boundaries.maxY, position.y);
 
     movable.update();
   }

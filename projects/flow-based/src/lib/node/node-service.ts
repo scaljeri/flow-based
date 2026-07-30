@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
-import { FlowBasedService } from '../flow-based.service';
+import { FbNodeEventCallback, FlowBasedService } from '../flow-based.service';
 import { SocketDetails, XxlConnection, XxlFlowUnitState, XxlSocket, FbNodeWorker } from '../flow-based';
 import { SocketService } from '../socket.service';
 import { Subject } from 'rxjs';
-import { NodeComponent } from './node.component';
+// Type-only: NodeComponent provides this service, so an emitted import would
+// create a cycle the AOT compiler rejects (NG3003).
+import type { NodeComponent } from './node.component';
 
 /*
 Primary service for custom nodes to communicate with the framework
@@ -11,14 +13,14 @@ Primary service for custom nodes to communicate with the framework
 
 @Injectable()
 export class NodeService {
-  public connections: XxlConnection[];
-  public state: XxlFlowUnitState;
+  public connections?: XxlConnection[];
+  public state!: XxlFlowUnitState;
 
   private nodeClicked = new Subject<PointerEvent>();
   public nodeClicked$ = this.nodeClicked.asObservable();
 
-  private nodeComponent: NodeComponent;
-  private doubleClick: () => void;
+  private nodeComponent!: NodeComponent;
+  private doubleClick?: () => void;
   private thresholdClicks = 300;
   private lastClicked = 0;
 
@@ -26,7 +28,7 @@ export class NodeService {
               private socketService: SocketService) {
   }
 
-  register(callback: (ExternalEvent) => boolean | void, type?: string): void {
+  register(callback: FbNodeEventCallback, type?: string): void {
     this.flowService.register(this.id, callback, type);
   }
 
@@ -51,7 +53,6 @@ export class NodeService {
   nodeIsClicked(e: PointerEvent): void {
     this.nodeClicked.next(e);
     this.flowService.nodeClicked(this.state);
-    console.log('clicked');
 
     if (Date.now() - this.lastClicked < this.thresholdClicks) {
       if (this.doubleClick) {

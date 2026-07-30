@@ -2,7 +2,8 @@ import { Directive, EventEmitter, HostBinding, HostListener, Output } from '@ang
 import { fromEvent, Subscription } from 'rxjs';
 
 @Directive({
-  selector: '[xxlDraggable]'
+  selector: '[xxlDraggable]',
+  standalone: false,
 })
 export class DraggableDirective {
   @Output() dragStart = new EventEmitter<PointerEvent>();
@@ -13,12 +14,12 @@ export class DraggableDirective {
   @HostBinding('class.draggable') draggable = true;
   pointerId?: number;
 
-  private dragState;
+  private dragState: PointerEvent | null = null;
   private isDragging = false;
-  private pointerMoveSubscription: Subscription;
+  private pointerMoveSubscription?: Subscription;
 
-  @HostListener('pointerdown', ['$event']) onPointerDown(event) {
-    if (!event.target.closest('.fb-drag-ignore')) {
+  @HostListener('pointerdown', ['$event']) onPointerDown(event: PointerEvent): void {
+    if (!(event.target as Element | null)?.closest('.fb-drag-ignore')) {
       event.stopPropagation();
 
       if (event.button !== 0) {
@@ -29,19 +30,19 @@ export class DraggableDirective {
 
       this.dragState = event;
 
-      this.pointerMoveSubscription = fromEvent(document, 'pointermove')
+      this.pointerMoveSubscription = fromEvent<PointerEvent>(document, 'pointermove')
         .subscribe(e => this.onPointerMove(e));
     }
   }
 
   @HostListener('document:pointerup', ['$event'])
   @HostListener('document:pointercancel', ['$event'])
-  onPointerUp(event) {
+  onPointerUp(event: PointerEvent): void {
     if (this.pointerMoveSubscription) {
       this.pointerMoveSubscription.unsubscribe();
     }
 
-    if (this.isDragging && event.timeStamp - this.dragState.timeStamp > 200) {
+    if (this.isDragging && this.dragState && event.timeStamp - this.dragState.timeStamp > 200) {
       this.dragEnd.emit(event);
     } else if (this.dragState) {
       this.noDrag.emit(event);
@@ -51,7 +52,7 @@ export class DraggableDirective {
     this.isDragging = false;
   }
 
-  onPointerMove(event) {
+  onPointerMove(event: PointerEvent): void {
     if (!this.dragState || event.pointerId !== this.pointerId) {
       return;
     }
@@ -59,7 +60,7 @@ export class DraggableDirective {
     if (!this.isDragging) {
       this.dragStart.emit(this.dragState);
 
-        this.isDragging = true;
+      this.isDragging = true;
     }
 
     this.dragMove.emit(event);

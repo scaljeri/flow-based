@@ -3,7 +3,8 @@ import { XxlSocketBuilderService } from '../socket-builder.service';
 import { XxlSocket } from '../flow-based';
 
 @Pipe({
-  name: 'socketIn'
+  name: 'socketIn',
+  standalone: false,
 })
 export class SocketInPipe implements PipeTransform {
 

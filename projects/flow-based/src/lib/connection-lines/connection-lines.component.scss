@@ -1,4 +1,4 @@
-@import '../utils/_variables';
+@use '../utils/variables' as *;
 
 svg {
   fill: none;

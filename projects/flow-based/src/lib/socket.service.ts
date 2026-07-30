@@ -8,7 +8,7 @@ export class SocketService {
   public socketClicked$ = this.socketClicked.asObservable();
 
   public sockets: FbKeyValues<SocketDetails> = {};
-  private lastEvent: XxlSocketEvent | null;
+  private lastEvent: XxlSocketEvent | null = null;
 
   constructor() {
   }

@@ -1,7 +1,7 @@
 import {
   FbKeyValues,
   XxlConnection,
-  FbNodeType,
+  FbNodeTypes,
   FbNodeWorker,
   FbNodeHelpers,
   FbNodeState, XxlSocket
@@ -20,13 +20,13 @@ interface NodeConnection {
 
 export class Flow {
   private workers: FbKeyValues<FbNodeWorker> = {};
-  private state: FbNodeState;
+  private state!: FbNodeState;
   private nodes: FbKeyValues<Node> = {};
   private connections: FbKeyValues<NodeConnection> = {};
   private sockets: FbKeyValues<number> = {};
   private uniqueIdCount = 0;
 
-  constructor(private flowTypes: FbNodeType,
+  constructor(private flowTypes: FbNodeTypes,
               private helpers?: FbNodeHelpers) {
   }
 
@@ -116,7 +116,7 @@ export class Flow {
 
       if (connection.in === socket.id || connection.out === socket.id) {
         this.connections[key].state.connections =
-          this.connections[key].state.connections.filter(item => item.id !== connection.id);
+          this.connections[key].state.connections!.filter(item => item.id !== connection.id);
         delete this.connections[key];
         this.workers[connection.to as number].removeStream(connection);
       }

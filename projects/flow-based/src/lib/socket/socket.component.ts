@@ -17,21 +17,22 @@ import { SocketService } from '../socket.service';
   selector: 'xxl-socket',
   templateUrl: './socket.component.html',
   styleUrls: ['./socket.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: false,
 })
 export class SocketComponent implements OnDestroy, AfterViewInit {
-  @Input() state: XxlSocket;
-  @Input() scope: number;
-  @Input() invert: boolean;
-  @Input() parent: number;
+  @Input() state!: XxlSocket;
+  @Input() scope!: number;
+  @Input() invert!: boolean;
+  @Input() parent!: number;
   @Output() clicked = new EventEmitter<XxlSocketEvent>();
-  private subscription: Subscription;
-  private _position: XxlPosition | null;
+  private subscription!: Subscription;
+  private _position: XxlPosition | null = null;
   private hover = false;
-  private hoverTimeoutId: number;
+  private hoverTimeoutId?: ReturnType<typeof setTimeout>;
 
   @HostBinding('class.is-active') active = false;
-  @HostBinding('class.is-accepting') isAccepting: boolean | null;
+  @HostBinding('class.is-accepting') isAccepting: boolean | null = null;
 
   @HostBinding('class.is-disabled')
   get isDisabled(): boolean {
@@ -71,7 +72,7 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
       scope: this.scope
     });
 
-    this.subscription = this.service.socketClicked$.subscribe((event: XxlSocketEvent) => {
+    this.subscription = this.service.socketClicked$.subscribe((event: XxlSocketEvent | null) => {
       this.active = false;
       this.isAccepting = null;
 
@@ -110,12 +111,12 @@ export class SocketComponent implements OnDestroy, AfterViewInit {
 
   @HostListener('mouseenter', ['$event'])
   @HostListener('mouseleave', ['$event'])
-  onMouseEnter(event): void {
+  onMouseEnter(event: MouseEvent): void {
     this.hover = event.type === 'mouseenter';
   }
 
-  @HostListener('mousemove', ['$event'])
-  onMouseMove(event): void {
+  @HostListener('mousemove')
+  onMouseMove(): void {
     clearTimeout(this.hoverTimeoutId);
     //
     // this.hoverTimeoutId = setTimeout(() => {

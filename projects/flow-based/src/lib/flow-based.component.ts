@@ -22,27 +22,28 @@ import { Subscription } from 'rxjs';
   templateUrl: './flow-based.component.html',
   styleUrls: ['./flow-based.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}]
+  providers: [{provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FlowBasedComponent), multi: true}],
+  standalone: false,
 })
 export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterViewInit, ControlValueAccessor {
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
-  @Input() @HostBinding('class.type') type: string;
-  @Input() state: FbNodeState;
+  @Input() @HostBinding('class.type') type!: string;
+  @Input() state!: FbNodeState;
 
   @Output() activeChanged = new EventEmitter<boolean>();
   @Output() stateChanged = new EventEmitter<boolean>();
   @Output() clicked = new EventEmitter<PointerEvent>();
-  @ViewChild('dragArea') area: ElementRef;
+  @ViewChild('dragArea') area!: ElementRef;
 
-  private subscription: Subscription;
+  private subscription!: Subscription;
 
-  onChange: (state: any) => void;
-  pointerMove: PointerEvent;
-  activeSocketFrom: number | null;
-  activeSocketTo: number | null;
-  lastSocketEvent: XxlSocketEvent;
-  movingNode: number;
+  onChange!: (state: any) => void;
+  pointerMove!: PointerEvent;
+  activeSocketFrom: number | null = null;
+  activeSocketTo: number | null = null;
+  lastSocketEvent!: XxlSocketEvent;
+  movingNode!: number;
 
   constructor(
     private element: ElementRef,
@@ -53,14 +54,14 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
   }
 
   @HostListener('pointermove', ['$event'])
-  updatePointer(event): void {
+  updatePointer(event: PointerEvent): void {
     if (this.activeSocketFrom || this.activeSocketTo) {
       this.pointerMove = event;
     }
   }
 
   @HostListener('pointerdown', ['$event'])
-  onClick(event): void {
+  onClick(event: PointerEvent): void {
     event.stopPropagation();
 
     const shouldPropagate = !this.activeSocketFrom && !this.activeSocketTo;
@@ -86,7 +87,7 @@ export class FlowBasedComponent implements OnInit, OnChanges, OnDestroy, AfterVi
 
     this.subscription = this.socketService.socketClicked$.pipe(
       filter(e => !e || e.scope === this.id)
-    ).subscribe((event: XxlSocketEvent) => {
+    ).subscribe((event: XxlSocketEvent | null) => {
       if (event) {
         if (event.socket.type === 'out') {
           this.activeSocketFrom = event.socket.id!;

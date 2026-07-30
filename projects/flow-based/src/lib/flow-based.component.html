@@ -1,6 +1,6 @@
 <article *ngIf="active" xxlMovableArea #dragArea>
   <xxl-connection-lines
-    [connections]="state.connections"
+    [connections]="state.connections!"
     [pointerMoved]="pointerMove"
     [from]="activeSocketFrom"
     [to]="activeSocketTo"
@@ -14,7 +14,7 @@
                (updated)="reset()"
                (dragStart)="onDragStart($event, child)"
                (dragEnd)="onDragEnd($event, child)"
-               [scope]="state.id"
+               [scope]="state.id!"
                [state]="child"
                (noDrag)="entryClicked(i)"
                [class.is-moving]="movingNode === child.id">

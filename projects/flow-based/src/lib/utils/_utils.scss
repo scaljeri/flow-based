@@ -1,41 +1,45 @@
+@use 'sass:list';
+@use 'sass:math';
+@use 'sass:meta';
+
 @mixin fb-position($position: relative, $coordinates: 0 0 0 0) {
-  @if type-of($position) == list {
+  @if meta.type-of($position) == list {
     $coordinates: $position;
     $position: relative;
   }
 
-  $top: nth($coordinates, 1);
-  $right: nth($coordinates, 2);
-  $bottom: nth($coordinates, 3);
-  $left: nth($coordinates, 4);
+  $top: list.nth($coordinates, 1);
+  $right: list.nth($coordinates, 2);
+  $bottom: list.nth($coordinates, 3);
+  $left: list.nth($coordinates, 4);
 
   position: $position;
 
   // Top
   @if $top == auto {
     top: $top;
-  } @else if not(unitless($top)) {
+  } @else if not math.is-unitless($top) {
     top: $top;
   }
 
   // Right
   @if $right == auto {
     right: $right;
-  } @else if not(unitless($right)) {
+  } @else if not math.is-unitless($right) {
     right: $right;
   }
 
   // Bottom
   @if $bottom == auto {
     bottom: $bottom;
-  } @else if not(unitless($bottom)) {
+  } @else if not math.is-unitless($bottom) {
     bottom: $bottom;
   }
 
   // Left
   @if $left == auto {
     left: $left;
-  } @else if not(unitless($left)) {
+  } @else if not math.is-unitless($left) {
     left: $left;
   }
 }

@@ -1,5 +1,5 @@
-@import './utils/utils';
-@import './utils/variables';
+@use './utils/utils' as *;
+@use './utils/variables' as *;
 
 :host {
   background-color: transparent;

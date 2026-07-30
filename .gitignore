@@ -4,6 +4,16 @@
 /dist
 /tmp
 /out-tsc
+/bazel-out
+
+# Angular CLI build cache
+/.angular/cache
+.angular/
+
+# test output
+/test-results
+/playwright-report
+/blob-report
 
 # dependencies
 /node_modules
