@@ -57,6 +57,42 @@ const canvasNode: FbNodeMount = (host, { api }) => {
   ctx.fillText(api.state.title ?? '', 6, 14);
 
   return {
+    /*
+     * This node type's own setting, contributed to the shell's settings panel
+     * rather than drawn as a config screen of its own.
+     */
+    mountSettings(host) {
+      const label = document.createElement('label');
+
+      label.textContent = 'Wave colour';
+
+      const input = document.createElement('input');
+
+      input.type = 'color';
+      input.value = '#4caf50';
+
+      const redraw = () => {
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, 160, 120);
+        ctx.strokeStyle = input.value;
+        ctx.beginPath();
+
+        for (let x = 0; x < 160; x++) {
+          ctx.lineTo(x, 60 + Math.sin(x / 12) * 40);
+        }
+
+        ctx.stroke();
+      };
+
+      input.addEventListener('input', redraw);
+      label.appendChild(input);
+      host.appendChild(label);
+
+      return () => {
+        input.removeEventListener('input', redraw);
+        label.remove();
+      };
+    },
     destroy() {
       canvas.remove();
     },

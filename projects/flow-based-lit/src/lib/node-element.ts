@@ -33,8 +33,13 @@ const ICON_OPEN = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_GROW = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4v6M4 4l6 6M14 20h6v-6M20 20l-6-6"/></svg>`;
 
+/*
+ * Sliders rather than a cog. A cog is the conventional symbol and the wrong one
+ * here: at 13px its teeth collapse into a blob that reads as an asterisk. Three
+ * horizontal lines with knobs stay legible at any size this button will ever be.
+ */
 const ICON_CONFIG = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-  stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>`;
+  stroke-linecap="round"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="8" cy="7" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="17" r="2" fill="currentColor"/></svg>`;
 
 const ICON_SHRINK = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h6V4M10 10L4 4M20 14h-6v6M14 14l6 6"/></svg>`;
@@ -318,6 +323,7 @@ export class FbNodeElement extends LitElement {
   private mountedFor?: FbNodeState;
   private showLabel = true;
   private configOpen = false;
+  private settingsTeardown?: () => void;
   private readonly clickListeners = new Set<(event: PointerEvent) => void>();
   private readonly wires = new Map<number, { from: Element; to: Element }>();
   private nextWireId = 1;
@@ -365,7 +371,32 @@ export class FbNodeElement extends LitElement {
     this.applyPosition();
     this.applySelected();
     this.setAttribute('view', this.view);
+    this.mountOwnSettings();
     this.drawWires();
+  }
+
+  /**
+   * Let the node type fill the panel's own section.
+   *
+   * Mounted after the panel renders, because the host element only exists then,
+   * and torn down when the panel closes so a node type's settings do not keep
+   * running behind a closed panel.
+   */
+  private mountOwnSettings(): void {
+    const host = this.renderRoot.querySelector<HTMLElement>('.config .own');
+
+    if (!host) {
+      this.settingsTeardown?.();
+      this.settingsTeardown = undefined;
+
+      return;
+    }
+
+    if (this.settingsTeardown || !this.handle?.mountSettings) {
+      return;
+    }
+
+    this.settingsTeardown = this.handle.mountSettings(host) ?? (() => undefined);
   }
 
   private get settings() {
@@ -489,6 +520,8 @@ export class FbNodeElement extends LitElement {
   }
 
   private unmountContent(): void {
+    this.settingsTeardown?.();
+    this.settingsTeardown = undefined;
     this.handle?.destroy();
     this.handle = undefined;
     this.mountedFor = undefined;
@@ -854,6 +887,12 @@ export class FbNodeElement extends LitElement {
 
   private toggleConfig(): void {
     this.configOpen = !this.configOpen;
+
+    if (!this.configOpen) {
+      this.settingsTeardown?.();
+      this.settingsTeardown = undefined;
+    }
+
     this.requestUpdate();
   }
 

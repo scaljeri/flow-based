@@ -98,6 +98,18 @@ export interface FbNodeHandle {
   /** Optional: called when the node's state changed underneath the content. */
   update?(): void;
 
+  /**
+   * Optional: this node type's own settings, for the shell's settings panel.
+   *
+   * The panel already edits what every node has — title, sockets, colours —
+   * because that is model. Anything beyond it belongs to the type: which fractal
+   * to draw, what range to generate. Contributing it here keeps one panel and one
+   * way in, instead of every node type growing a config screen of its own.
+   *
+   * Return a teardown function if there is anything to release.
+   */
+  mountSettings?(host: HTMLElement): (() => void) | void;
+
   destroy(): void;
 }
 

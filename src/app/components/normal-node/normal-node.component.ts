@@ -12,7 +12,6 @@ export class NormalNodeComponent implements OnInit {
   private state: FbNodeState;
   private lastClicked = 0;
 
-  isEditing = false;
 
   @Input() fullscreen = false;
   @Input() deleteSocket = false;
@@ -86,29 +85,8 @@ export class NormalNodeComponent implements OnInit {
     this.service.deleteSelf();
   }
 
-  onEdit(): void {
-    this.isEditing = true;
-
-    this.isFullscreen = true;
-    if (!this.fullscreen) {
-      this.service.setMaxSize(true);
-    }
-
-    this.service.closeOnBlur(() => this.onClose());
-    this.edit.emit(true);
-  }
-
   onClose(): void {
-    if (this.isEditing) {
-      this.isEditing = false;
-      this.edit.emit(false);
-
-      if (!this.fullscreen) {
-        this.isFullscreen = false;
-        this.service.setMaxSize(false);
-        this.maxSize.emit(false);
-      }
-    } else {
+    {
       this.service.unregisterAll();
       this.service.state.config.expanded = this.isActive = false;
       this.service.showLabel();

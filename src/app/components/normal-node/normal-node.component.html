@@ -1,20 +1,17 @@
-<ng-container *ngIf="!isEditing">
-  <header *ngIf="isActive">
-    <mat-toolbar color="primary">
-      <h1>{{title}}</h1>
+<!--
+  No edit branch and no pencil.
+  Title, sockets and socket colours are model, and the shell's own settings panel
+  edits them for every node type — including ones this app never sees. Keeping a
+  second, app-local editor beside it would mean two ways to do the same thing,
+  disagreeing the moment either changed.
+-->
+<header *ngIf="isActive">
+  <mat-toolbar color="primary">
+    <h1>{{title}}</h1>
+  </mat-toolbar>
+</header>
 
-      <button mat-mini-fab color="primary" (click)="onEdit()">
-        <mat-icon>edit</mat-icon>
-      </button>
-    </mat-toolbar>
-  </header>
-
-  <ng-content></ng-content>
-</ng-container>
-
-<ng-container *ngIf="isEditing">
-  <fb-edit-node [deleteSocket]="deleteSocket"></fb-edit-node>
-</ng-container>
+<ng-content></ng-content>
 
 <footer *ngIf="isActive">
   <button mat-button color="warn" (click)="onDelete()">
