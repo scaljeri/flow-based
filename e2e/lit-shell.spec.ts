@@ -870,11 +870,26 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
 
-    node.shadowRoot!.querySelectorAll<HTMLButtonElement>('dialog.config .add button')[1].click();
+    // The out column's own add button; in and out are separate columns because
+    // that is which edge of the node they appear on.
+    node.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .socket-out .add-socket')!.click();
   });
 
   expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')!.sockets!.length))
     .toBe(before + 1);
+
+  /*
+   * And it is DRAWN. Adding to the model is not the same as appearing on the
+   * node, and the engine bug this uncovered did exactly that — registered the
+   * socket without ever putting it where the node could render it.
+   */
+  const drawn = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
+
+    return node.shadowRoot!.querySelectorAll('.socket').length;
+  });
+  expect(drawn).toBe(before + 1);
 
   /*
    * Editor shortcuts must not fire while typing in the dialog. Delete is an

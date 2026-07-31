@@ -211,11 +211,40 @@ export class FbNodeElement extends LitElement {
       text-transform: uppercase;
     }
 
+    .sockets {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr 1fr;
+      margin-top: 4px;
+    }
+
+    /* The out column reads right-to-left, mirroring the node's own two edges. */
+    .socket-out {
+      text-align: right;
+    }
+
+    .socket-out .socket-row {
+      flex-direction: row-reverse;
+    }
+
+    .none {
+      margin: 0 0 6px;
+      opacity: 0.45;
+    }
+
     .socket-row {
       align-items: center;
       display: flex;
-      gap: 6px;
+      gap: 4px;
       margin-bottom: 6px;
+    }
+
+    .socket-row input[type='text'] {
+      min-width: 0;
+    }
+
+    .add-socket {
+      white-space: nowrap;
     }
 
     .socket-row input[type='color'] {
@@ -228,7 +257,7 @@ export class FbNodeElement extends LitElement {
     }
 
     .socket-row button,
-    .config .add button {
+    .config .add-socket {
       background: rgba(255, 255, 255, 0.12);
       border: none;
       border-radius: 4px;
@@ -1011,12 +1040,14 @@ export class FbNodeElement extends LitElement {
             @input=${(e: Event) => this.editor.setTitle(state.id!, (e.target as HTMLInputElement).value)}>
         </label>
 
-        <h4>Sockets</h4>
-        ${sockets.map(socket => this.renderSocketRow(socket))}
-
-        <div class="add">
-          <button type="button" @click=${() => this.editor.addSocket(state.id!, 'in')}>+ in</button>
-          <button type="button" @click=${() => this.editor.addSocket(state.id!, 'out')}>+ out</button>
+        <!--
+          Two columns, in on the left and out on the right, because that is where
+          they are on the node. A single list ordered by whatever the array
+          happens to hold makes the reader work out which side each one is on.
+        -->
+        <div class="sockets">
+          ${this.renderSocketColumn('in', state.id!, sockets)}
+          ${this.renderSocketColumn('out', state.id!, sockets)}
         </div>
 
         <div class="own"></div>
@@ -1024,10 +1055,25 @@ export class FbNodeElement extends LitElement {
     `;
   }
 
+  private renderSocketColumn(type: 'in' | 'out', nodeId: number, sockets: FbSocket[]) {
+    const mine = sockets.filter(socket => socket.type === type);
+
+    return html`
+      <section class="socket-column socket-${type}">
+        <h4>${type === 'in' ? 'In' : 'Out'}</h4>
+        ${mine.length
+          ? mine.map(socket => this.renderSocketRow(socket))
+          : html`<p class="none">none</p>`}
+        <button type="button" class="add-socket" @click=${() => this.editor.addSocket(nodeId, type)}>
+          + add ${type}
+        </button>
+      </section>
+    `;
+  }
+
   private renderSocketRow(socket: FbSocket) {
     return html`
       <div class="socket-row">
-        <span title=${socket.type}>${socket.type === 'in' ? '\u2192' : '\u2190'}</span>
         <input
           type="text"
           .value=${socket.name ?? ''}
