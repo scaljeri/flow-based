@@ -990,3 +990,54 @@ test('drags sockets into order, and the node redraws them in that order', async 
 
   expect(topToBottom).toEqual(ids);
 });
+
+test('pinches to zoom, so the surface is reachable without a mouse', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const zoom = () => page.evaluate(() =>
+    (window.fbEditor as unknown as { viewport: { zoomPercent(): number } }).viewport.zoomPercent());
+
+  /*
+   * Two fingers, dispatched as pointer events. The surface sets
+   * `touch-action: none` so it can drag and pan, which also turns off the
+   * browser's own pinch — handing that back is not optional on a phone, where
+   * the alternative is two small buttons and a graph that does not fit.
+   *
+   * The first pointerdown goes to the CANVAS: nodes stop pointerdown from
+   * bubbling, and the handler listens in the capture phase precisely so a pinch
+   * starting on a node is still seen.
+   */
+  const pinch = (from: number, to: number) => page.evaluate(([a, b]) => {
+    const surface = document.querySelector('fb-flow-canvas')!;
+    const down = (id: number, x: number) => surface.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: id, clientX: x, clientY: 300, bubbles: true, composed: true }));
+    const move = (id: number, x: number) => window.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: id, clientX: x, clientY: 300, bubbles: true }));
+    const up = (id: number, x: number) => window.dispatchEvent(
+      new PointerEvent('pointerup', { pointerId: id, clientX: x, clientY: 300, bubbles: true }));
+
+    const id1 = Math.round(a) * 10 + 1;
+    const id2 = Math.round(a) * 10 + 2;
+
+    down(id1, 300 - a / 2);
+    down(id2, 300 + a / 2);
+
+    for (let step = 1; step <= 8; step++) {
+      const width = a + ((b - a) * step) / 8;
+
+      move(id1, 300 - width / 2);
+      move(id2, 300 + width / 2);
+    }
+
+    up(id1, 300 - b / 2);
+    up(id2, 300 + b / 2);
+  }, [from, to]);
+
+  await pinch(60, 220);
+  const spread = await zoom();
+  expect(spread).toBeGreaterThan(150);
+
+  await pinch(220, 60);
+  expect(await zoom()).toBeLessThan(spread);
+});

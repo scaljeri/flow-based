@@ -104,6 +104,18 @@ export class FbFlowCanvasElement extends LitElement {
   private panPointerId: number | null = null;
   private panFrom: FbPosition | null = null;
 
+  /**
+   * Every pointer currently down on this surface, by id.
+   *
+   * Tracked in the CAPTURE phase, so it sees presses that nodes and sockets stop
+   * from bubbling. Without that a pinch starting on a node would be invisible
+   * here, which on a touch screen is most of them.
+   */
+  private readonly pointers = new Map<number, FbPosition>();
+  /** Distance between two fingers at the last move, for pinch zoom. */
+  private pinchDistance = 0;
+  private pinchCentre: FbPosition | null = null;
+
   /** Marquee, in plane coordinates, while a box-select is being dragged. */
   private marqueeFrom: FbPosition | null = null;
   private marquee: { x: number; y: number; width: number; height: number } | null = null;
@@ -120,10 +132,24 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     this.addEventListener('keydown', this.onKeyDown);
+
+    /*
+     * Capture, so a pinch is seen even when the first finger landed on a node.
+     * Nodes stop pointerdown from bubbling so the canvas does not also pan, and
+     * on a touch screen that would otherwise disable pinch almost everywhere.
+     */
+    this.addEventListener('pointerdown', this.onPointerTracked, { capture: true });
+    window.addEventListener('pointermove', this.onPinchMove);
+    window.addEventListener('pointerup', this.onPointerReleased);
+    window.addEventListener('pointercancel', this.onPointerReleased);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('keydown', this.onKeyDown);
+    this.removeEventListener('pointerdown', this.onPointerTracked, { capture: true });
+    window.removeEventListener('pointermove', this.onPinchMove);
+    window.removeEventListener('pointerup', this.onPointerReleased);
+    window.removeEventListener('pointercancel', this.onPointerReleased);
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     super.disconnectedCallback();
@@ -161,6 +187,63 @@ export class FbFlowCanvasElement extends LitElement {
   /* ----------------------------------------------------------------------
      Zoom and pan
      ---------------------------------------------------------------------- */
+
+  /* ----------------------------------------------------------------------
+     Pinch to zoom
+     ----------------------------------------------------------------------
+     The surface sets `touch-action: none` so it can drag and pan, which also
+     turns off the browser's own pinch. Handing that back is not optional on a
+     phone: without it the only way to zoom is a pair of buttons, and a graph
+     that does not fit is simply unreachable.
+   */
+
+  private onPointerTracked = (event: PointerEvent): void => {
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (this.pointers.size === 2) {
+      const [a, b] = [...this.pointers.values()];
+
+      this.pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+      this.pinchCentre = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+  };
+
+  private onPinchMove = (event: PointerEvent): void => {
+    if (!this.pointers.has(event.pointerId)) {
+      return;
+    }
+
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (this.pointers.size !== 2 || !this.pinchCentre) {
+      return;
+    }
+
+    const [a, b] = [...this.pointers.values()];
+    const distance = Math.hypot(a.x - b.x, a.y - b.y);
+    const centre = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+
+    // Below a pixel the ratio is mostly noise and the anchor jitters.
+    if (this.pinchDistance > 1 && Math.abs(distance - this.pinchDistance) > 0.5) {
+      this.editor.viewport.zoomAt(distance / this.pinchDistance, this.toLocal({ clientX: centre.x, clientY: centre.y }));
+    }
+
+    // Two fingers moving together pan, which is the same gesture users expect
+    // from a map and costs nothing to support once both are being tracked.
+    this.editor.viewport.panBy(centre.x - this.pinchCentre.x, centre.y - this.pinchCentre.y);
+
+    this.pinchDistance = distance;
+    this.pinchCentre = centre;
+  };
+
+  private onPointerReleased = (event: PointerEvent): void => {
+    this.pointers.delete(event.pointerId);
+
+    if (this.pointers.size < 2) {
+      this.pinchCentre = null;
+      this.pinchDistance = 0;
+    }
+  };
 
   private onWheel = (event: WheelEvent): void => {
     event.preventDefault();
@@ -203,6 +286,12 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     if (this.panPointerId === null || event.pointerId !== this.panPointerId) {
+      return;
+    }
+
+    // A pinch already moves the viewport; letting the first finger also pan
+    // makes the surface run away under the gesture.
+    if (this.pointers.size > 1) {
       return;
     }
 
