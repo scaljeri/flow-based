@@ -13,6 +13,7 @@ import {
   FbNodeTypes,
   FbPosition,
   FbSocket,
+  FbNodeView,
   FbSize,
   FbViewport,
   Flow,
@@ -21,6 +22,7 @@ import {
   copyNodes,
   distributeNodes,
   pasteNodes,
+  supportedViews,
 } from '@scaljeri/flow-based-core';
 
 /**
@@ -96,7 +98,21 @@ export class FbEditor {
   routing: FbRouting;
 
   flow!: Flow;
+
+  /**
+   * The flow being viewed — the root, or a composite node the user has entered.
+   *
+   * Separate from {@link root} because entering a composite changes what the
+   * canvas draws, not what the document IS. Undo, serialisation and the engine
+   * all work on the root; only the view moves.
+   */
   state!: FbNodeState;
+
+  /** The whole flow, whatever is currently on screen. */
+  root!: FbNodeState;
+
+  /** Ancestors of `state`, outermost first. Empty at the root. */
+  private readonly ancestors: FbNodeState[] = [];
 
   /**
    * The selected nodes, by id.
@@ -139,7 +155,9 @@ export class FbEditor {
       state.connections = [];
     }
 
+    this.root = state;
     this.state = state;
+    this.ancestors.length = 0;
     this.flow = new Flow(this.types, this.helpers, this.ids);
     this.unbind = this.flow.changes.subscribe(kind => this.changes.emit({ kind }));
     this.flow.initialize(state);
@@ -175,6 +193,93 @@ export class FbEditor {
 
     this.routing = routing;
     this.changes.emit({ kind: 'connections' });
+  }
+
+  /* ----------------------------------------------------------------------
+     Entering a composite node
+     ---------------------------------------------------------------------- */
+
+  /** The trail from the root to the flow on screen, for a breadcrumb. */
+  get path(): FbNodeState[] {
+    return [...this.ancestors, this.state];
+  }
+
+  get canLeave(): boolean {
+    return this.ancestors.length > 0;
+  }
+
+  /**
+   * Show a composite node's own graph.
+   *
+   * This is what `large` means for a flow node, and it is navigation rather than
+   * a size: one editor moves to a different flow. The alternative — mounting an
+   * editor inside a node — is what the previous implementation did, and nesting
+   * shells is where its viewport, its socket registry and its change detection
+   * all went wrong.
+   */
+  enter(nodeId: number): void {
+    const node = this.nodeById(nodeId);
+
+    if (!node?.children) {
+      return;
+    }
+
+    this.ancestors.push(this.state);
+    this.state = node;
+    this.selection.clear();
+    this.cancelPending();
+    this.changes.emit({ kind: 'structure' });
+  }
+
+  leave(): void {
+    const parent = this.ancestors.pop();
+
+    if (!parent) {
+      return;
+    }
+
+    this.state = parent;
+    this.selection.clear();
+    this.cancelPending();
+    this.changes.emit({ kind: 'structure' });
+  }
+
+  /** Jump to a level in `path`; 0 is the root. */
+  goTo(depth: number): void {
+    while (this.ancestors.length > depth) {
+      this.leave();
+    }
+  }
+
+  /* ----------------------------------------------------------------------
+     Views
+     ---------------------------------------------------------------------- */
+
+  setView(nodeId: number, view: FbNodeView): void {
+    const node = this.nodeById(nodeId);
+
+    if (!node) {
+      return;
+    }
+
+    const supported = supportedViews(this.types[node.type]?.settings);
+
+    if (!supported.includes(view) || node.view === view) {
+      return;
+    }
+
+    node.view = view;
+    this.changes.emit({ kind: 'structure', nodeId });
+  }
+
+  /**
+   * The node currently taking the whole surface, if any.
+   *
+   * The canvas asks, because a large node suspends zoom and pan: panning behind
+   * something that covers the surface moves a graph the user cannot see.
+   */
+  get largeNode(): FbNodeState | undefined {
+    return this.children.find(node => node.view === 'large' && !node.children);
   }
 
   nodeById(id: number): FbNodeState | undefined {
@@ -290,7 +395,7 @@ export class FbEditor {
       return;
     }
 
-    this.history.capture(this.state);
+    this.history.capture(this.root);
 
     for (const id of [...this.selection]) {
       this.flow.removeNode(id);
@@ -330,7 +435,7 @@ export class FbEditor {
       return;
     }
 
-    this.history.capture(this.state);
+    this.history.capture(this.root);
 
     const pasted = pasteNodes(this.state, this.clipboard, this.ids);
 
@@ -364,7 +469,7 @@ export class FbEditor {
       return;
     }
 
-    this.history.capture(this.state);
+    this.history.capture(this.root);
     alignNodes(nodes, alignment);
     this.geometry.changes.emit(undefined);
   }
@@ -376,7 +481,7 @@ export class FbEditor {
       return;
     }
 
-    this.history.capture(this.state);
+    this.history.capture(this.root);
     distributeNodes(nodes, axis);
     this.geometry.changes.emit(undefined);
   }
@@ -394,7 +499,7 @@ export class FbEditor {
       return undefined;
     }
 
-    this.history.capture(this.state);
+    this.history.capture(this.root);
 
     const { settings } = entry;
     const node: FbNodeState = {
@@ -412,24 +517,24 @@ export class FbEditor {
   }
 
   removeNode(id: number): void {
-    this.history.capture(this.state);
+    this.history.capture(this.root);
     this.flow.removeNode(id);
     this.geometry.forgetNode(id);
     this.selection.delete(id);
   }
 
   removeConnection(connection: FbConnection): void {
-    this.history.capture(this.state);
+    this.history.capture(this.root);
     this.flow.removeConnection(connection, this.state);
   }
 
   /** Snapshot before a drag; one entry per drag, not per pointermove. */
   captureBeforeDrag(): void {
-    this.history.capture(this.state);
+    this.history.capture(this.root);
   }
 
   undo(): void {
-    const restored = this.history.undo(this.state);
+    const restored = this.history.undo(this.root);
 
     if (restored) {
       this.load(restored);
@@ -437,7 +542,7 @@ export class FbEditor {
   }
 
   redo(): void {
-    const restored = this.history.redo(this.state);
+    const restored = this.history.redo(this.root);
 
     if (restored) {
       this.load(restored);
@@ -465,7 +570,7 @@ export class FbEditor {
     const connection = this.buildConnection(this.pending, { socket, nodeId });
 
     if (connection) {
-      this.history.capture(this.state);
+      this.history.capture(this.root);
       connection.id = this.ids.create();
       this.flow.addConnection(this.state, connection);
     }

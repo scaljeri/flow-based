@@ -295,6 +295,11 @@ export class FbFlowDocumentElement extends LitElement {
       get worker() {
         return node.id === undefined ? undefined : editor.flow.getWorker(node.id);
       },
+      // A document is for reading: the node is shown at the size the figure
+      // gives it, and nothing here can change that.
+      view: 'medium' as const,
+      supportedViews: ['medium'] as const,
+      setView: () => undefined,
       setMaxSize: () => undefined,
       isMaxSize: () => false,
       setLabelVisible: () => undefined,

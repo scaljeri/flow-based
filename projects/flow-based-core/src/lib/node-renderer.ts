@@ -1,4 +1,5 @@
 import { FbNodeEventCallback } from './node-events';
+import { FbNodeView } from './views';
 import { FbNodeState, FbNodeWorker, FbSocket } from './types';
 
 /**
@@ -16,9 +17,22 @@ export interface FbNodeApi {
   /** The worker computing this node, if its type declares one. */
   readonly worker: FbNodeWorker | undefined;
 
-  /** Expand or collapse this node. */
+  /** How much room this node has: small, medium or large. */
+  readonly view: FbNodeView;
+
+  /** The views this node's type can render, smallest first. */
+  readonly supportedViews: readonly FbNodeView[];
+
+  /** Ask for a view. Ignored if the type does not support it. */
+  setView(view: FbNodeView): void;
+
+  /**
+   * @deprecated Use {@link setView}. `true` means the largest supported view and
+   * `false` the smallest, which is what a boolean could express.
+   */
   setMaxSize(isMax: boolean): void;
 
+  /** @deprecated Use {@link view}. True for anything above `small`. */
   isMaxSize(): boolean;
 
   /** Show or hide the shell's title, for content that draws its own. */

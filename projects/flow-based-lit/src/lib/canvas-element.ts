@@ -38,6 +38,39 @@ export class FbFlowCanvasElement extends LitElement {
       outline: none;
     }
 
+    /*
+     * Breadcrumb, shown only inside a composite. It is the way back out, so it
+     * sits above the plane rather than in it — it must not pan away.
+     */
+    .crumbs {
+      background: rgba(0, 0, 0, 0.55);
+      border-radius: 16px;
+      color: #fff;
+      display: flex;
+      font: 12px system-ui, sans-serif;
+      gap: 4px;
+      left: 12px;
+      padding: 5px 10px;
+      position: absolute;
+      top: 12px;
+      z-index: 60;
+    }
+
+    .crumbs button {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      padding: 0;
+      text-decoration: underline;
+    }
+
+    .crumbs span[aria-current] {
+      opacity: 0.7;
+      text-decoration: none;
+    }
+
     .marquee {
       background: var(--fb-selected-color, #bada55);
       border: 1px solid var(--fb-selected-color, #bada55);
@@ -45,6 +78,12 @@ export class FbFlowCanvasElement extends LitElement {
       pointer-events: none;
       position: absolute;
       z-index: 40;
+    }
+
+    /* Nothing behind a node that has taken the surface. */
+    .plane[data-large='true'] > fb-connections,
+    .plane[data-large='true'] ::slotted(fb-node-box:not([view='large'])) {
+      display: none;
     }
 
     .plane {
@@ -299,6 +338,26 @@ export class FbFlowCanvasElement extends LitElement {
    * where a node author's CSS behaves the way they wrote it, while the slot keeps
    * them inside the zoom/pan transform.
    */
+  /** The way back out of a composite. Absent at the root, where there is none. */
+  private renderCrumbs() {
+    const path = this.editor.path;
+
+    if (path.length < 2) {
+      return nothing;
+    }
+
+    return html`
+      <nav class="crumbs" aria-label="Flow">
+        ${path.map((node, depth) => html`
+          ${depth > 0 ? html`<span aria-hidden="true">\u203a</span>` : nothing}
+          ${depth === path.length - 1
+            ? html`<span aria-current="true">${node.title ?? node.type}</span>`
+            : html`<button type="button" @click=${() => this.editor.goTo(depth)}>${node.title ?? node.type}</button>`}
+        `)}
+      </nav>
+    `;
+  }
+
   private renderNodes(): void {
     render(
       repeat(
@@ -321,10 +380,21 @@ export class FbFlowCanvasElement extends LitElement {
     const { viewport } = this.editor;
     const plane = viewport.planeSize;
 
+    /*
+     * Zoom and pan are suspended while a node has the surface to itself.
+     * Panning behind something that covers the whole editor moves a graph the
+     * user cannot see, and the transform would scale the large node with it —
+     * "large" means the surface, not the surface times the current zoom.
+     */
+    const large = this.editor.largeNode;
+    const transform = large ? 'none' : viewport.transform();
+
     return html`
+      ${this.renderCrumbs()}
       <div
         class="plane"
-        style=${this.planeStyle(plane.width, plane.height, viewport.transform())}
+        data-large=${large ? 'true' : 'false'}
+        style=${this.planeStyle(plane.width, plane.height, transform)}
         @wheel=${this.onWheel}
         @pointerdown=${this.onPointerDown}
         @pointermove=${this.onPointerMove}

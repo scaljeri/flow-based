@@ -1,5 +1,5 @@
 import { Observable, Subject } from 'rxjs';
-import { FbNodeApi, FbNodeEventCallback, FbNodeState, FbNodeWorker, FbSocket } from '@scaljeri/flow-based-core';
+import { FbNodeApi, FbNodeEventCallback, FbNodeState, FbNodeView, FbNodeWorker, FbSocket } from '@scaljeri/flow-based-core';
 import { FbSocketDetails } from '../flow-based';
 
 /*
@@ -51,6 +51,25 @@ export class NodeService {
      Size and chrome
      ---------------------------------------------------------------------- */
 
+  /** How much room this node has: small, medium or large. */
+  get view(): FbNodeView {
+    return this.api.view;
+  }
+
+  /** The views this node's type declares; see FbNodeSettings.views. */
+  get supportedViews(): readonly FbNodeView[] {
+    return this.api.supportedViews;
+  }
+
+  setView(view: FbNodeView): void {
+    this.api.setView(view);
+    this.api.calibrate();
+  }
+
+  /**
+   * @deprecated Use {@link setView}. `true` is the largest supported view and
+   * `false` the smallest — which is all a boolean could ever say.
+   */
   setMaxSize(isMax: boolean): void {
     this.api.setMaxSize(isMax);
     this.api.calibrate();

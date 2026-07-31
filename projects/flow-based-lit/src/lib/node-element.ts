@@ -1,5 +1,15 @@
-import { LitElement, PropertyValues, css, html, nothing } from 'lit';
-import { FbNodeApi, FbNodeHandle, FbNodeState, FbSocket } from '@scaljeri/flow-based-core';
+import { LitElement, PropertyValues, css, html, nothing, svg } from 'lit';
+import {
+  FbNodeApi,
+  FbNodeHandle,
+  FbNodeState,
+  FbNodeView,
+  FbSocket,
+  previewChild,
+  stepView,
+  supportedViews,
+  viewOf,
+} from '@scaljeri/flow-based-core';
 import { FbEditor, FbEditorChange } from './editor';
 
 /**
@@ -11,6 +21,21 @@ import { FbEditor, FbEditorChange } from './editor';
  * findable and cacheable. Now FbGeometry computes them from the graph, so a
  * socket is purely visual and the whole registry disappears.
  */
+/*
+ * The view controls, drawn here rather than pulled from an icon font: this
+ * element is framework-free and has no stylesheet from the host app to rely on.
+ * Outward arrows mean bigger, inward mean smaller, and the square opens a node
+ * that is currently at rest.
+ */
+const ICON_OPEN = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>`;
+
+const ICON_GROW = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4v6M4 4l6 6M14 20h6v-6M20 20l-6-6"/></svg>`;
+
+const ICON_SHRINK = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h6V4M10 10L4 4M20 14h-6v6M14 14l6 6"/></svg>`;
+
 export class FbNodeElement extends LitElement {
   static override properties = {
     editor: { attribute: false },
@@ -46,8 +71,8 @@ export class FbNodeElement extends LitElement {
       box-shadow: 0 0 0 2px var(--fb-selected-color, #bada55);
     }
 
-    /* Expanded: fill the surface rather than grow in place. */
-    :host([expanded]) {
+    /* Large: the node has the editor surface to itself. */
+    :host([view='large']) {
       --fb-socket-size: 42px;
 
       cursor: default;
@@ -55,11 +80,48 @@ export class FbNodeElement extends LitElement {
       left: 0 !important;
       position: relative;
       top: 0 !important;
+      width: 100%;
       z-index: 50;
     }
 
-    :host([expanded]) .box {
+    :host([view='large']) .box {
       height: 100%;
+      width: 100%;
+    }
+
+    /* Controls for stepping between views. */
+    .views {
+      display: flex;
+      gap: 2px;
+      position: absolute;
+      right: 3px;
+      top: 3px;
+      z-index: 40;
+    }
+
+    .views button {
+      align-items: center;
+      background: rgba(0, 0, 0, 0.45);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      height: 20px;
+      justify-content: center;
+      opacity: 0.55;
+      padding: 0;
+      width: 20px;
+    }
+
+    .views button:hover,
+    .views button:focus-visible {
+      opacity: 1;
+    }
+
+    .views svg {
+      height: 13px;
+      width: 13px;
     }
 
     .box {
@@ -167,6 +229,8 @@ export class FbNodeElement extends LitElement {
 
   /** Light-DOM host for the node's content; see mountContent(). */
   private contentHost?: HTMLElement;
+  /** Whose content is mounted; see contentSource(). */
+  private mountedFor?: FbNodeState;
   private showLabel = true;
   private readonly clickListeners = new Set<(event: PointerEvent) => void>();
   private readonly wires = new Map<number, { from: Element; to: Element }>();
@@ -205,11 +269,25 @@ export class FbNodeElement extends LitElement {
     if (changed.has('state') && changed.get('state')) {
       this.unmountContent();
       this.mountContent();
+    } else if (this.mountedFor && this.mountedFor !== this.contentSource()) {
+      // A composite shows one of its children until it is large enough to show
+      // its graph, so the view decides WHAT is mounted, not just how big it is.
+      this.unmountContent();
+      this.mountContent();
     }
 
     this.applyPosition();
     this.applySelected();
+    this.setAttribute('view', this.view);
     this.drawWires();
+  }
+
+  private get settings() {
+    return this.editor?.types[this.state?.type]?.settings;
+  }
+
+  private get view(): FbNodeView {
+    return viewOf(this.state, this.settings);
   }
 
   /**
@@ -285,10 +363,29 @@ export class FbNodeElement extends LitElement {
    * encapsulated while leaving node content in the document, where a node author's
    * CSS behaves the way they wrote it.
    */
-  private mountContent(): void {
-    const mount = this.editor?.types[this.state.type]?.component;
+  /**
+   * Whose content this node draws.
+   *
+   * Its own, except for a composite that is not large: a flow node has to look
+   * like something at small and medium, and the honest answer is one of the
+   * things it contains. Returns the node whose type supplies the mount function,
+   * so a change of view can be detected as a change of source.
+   */
+  private contentSource(): FbNodeState | undefined {
+    if (this.state?.children && this.view !== 'large') {
+      return previewChild(this.state);
+    }
 
-    if (typeof mount !== 'function') {
+    return this.state;
+  }
+
+  private mountContent(): void {
+    const source = this.contentSource();
+    const mount = source && this.editor?.types[source.type]?.component;
+
+    if (!source || typeof mount !== 'function') {
+      this.mountedFor = source;
+
       return;
     }
 
@@ -301,12 +398,14 @@ export class FbNodeElement extends LitElement {
     // Re-appended rather than assumed present: a re-mount after the element moved
     // in the DOM has to put the host back.
     this.appendChild(this.contentHost);
-    this.handle = mount(this.contentHost, { api: this.api() });
+    this.mountedFor = source;
+    this.handle = mount(this.contentHost, { api: this.api(source) });
   }
 
   private unmountContent(): void {
     this.handle?.destroy();
     this.handle = undefined;
+    this.mountedFor = undefined;
     this.wires.clear();
     this.clickListeners.clear();
 
@@ -319,9 +418,11 @@ export class FbNodeElement extends LitElement {
   }
 
   /** The framework-agnostic handle a node's content is given. */
-  private api(): FbNodeApi {
+  private api(source: FbNodeState = this.state): FbNodeApi {
     const editor = this.editor;
-    const state = this.state;
+    // The PREVIEW child when a composite is showing one, so its content reads
+    // its own state and its own worker rather than the composite's.
+    const state = source;
 
     return {
       get state() {
@@ -330,11 +431,21 @@ export class FbNodeElement extends LitElement {
       get worker() {
         return state.id === undefined ? undefined : editor.flow.getWorker(state.id);
       },
-      setMaxSize: (isMax: boolean) => {
-        this.toggleAttribute('expanded', isMax);
-        this.requestUpdate();
+      get view() {
+        return viewOf(state, editor.types[state.type]?.settings);
       },
-      isMaxSize: () => this.hasAttribute('expanded'),
+      get supportedViews() {
+        return supportedViews(editor.types[state.type]?.settings);
+      },
+      setView: (view: FbNodeView) => this.requestView(view),
+      // Kept for node types written against the boolean: the largest supported
+      // view, or the smallest.
+      setMaxSize: (isMax: boolean) => {
+        const views = supportedViews(this.settings);
+
+        this.requestView(isMax ? views[views.length - 1] : views[0]);
+      },
+      isMaxSize: () => this.view !== 'small',
       setLabelVisible: (visible: boolean) => {
         this.showLabel = visible;
         this.requestUpdate();
@@ -574,6 +685,8 @@ export class FbNodeElement extends LitElement {
 
     return html`
       <div class="box" @pointerdown=${this.onPointerDown}>
+        ${this.renderViewControls()}
+
         <slot></slot>
 
         <svg class="wires"></svg>
@@ -584,6 +697,60 @@ export class FbNodeElement extends LitElement {
       </div>
 
       ${sockets.map(s => this.renderSocket(s))}
+    `;
+  }
+
+  /**
+   * Step this node's view, or enter it when it is a composite going large.
+   *
+   * A composite's large view is its graph, and showing that is navigation rather
+   * than a size — the editor moves to the child flow instead of the node growing
+   * to hold an editor of its own.
+   */
+  private requestView(view: FbNodeView): void {
+    const id = this.state?.id;
+
+    if (id === undefined) {
+      return;
+    }
+
+    if (view === 'large' && this.state.children) {
+      this.editor.enter(id);
+
+      return;
+    }
+
+    this.editor.setView(id, view);
+  }
+
+  private renderViewControls() {
+    const current = this.view;
+    const bigger = stepView(current, 1, this.settings);
+    const smaller = stepView(current, -1, this.settings);
+
+    if (!bigger && !smaller) {
+      return nothing;
+    }
+
+    return html`
+      <div class="views fb-drag-ignore">
+        ${smaller
+          ? html`<button
+              type="button"
+              title=${`Show smaller (${smaller})`}
+              aria-label=${`Show smaller (${smaller})`}
+              @pointerdown=${(e: Event) => e.stopPropagation()}
+              @click=${() => this.requestView(smaller)}>${ICON_SHRINK}</button>`
+          : nothing}
+        ${bigger
+          ? html`<button
+              type="button"
+              title=${`Show larger (${bigger})`}
+              aria-label=${`Show larger (${bigger})`}
+              @pointerdown=${(e: Event) => e.stopPropagation()}
+              @click=${() => this.requestView(bigger)}>${bigger === 'medium' ? ICON_OPEN : ICON_GROW}</button>`
+          : nothing}
+      </div>
     `;
   }
 

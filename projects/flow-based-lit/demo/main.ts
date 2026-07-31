@@ -74,7 +74,20 @@ const types: FbNodeTypes<FbNodeMount> = {
   },
   scope: {
     component: canvasNode,
-    settings: { title: 'Scope', sockets: [{ type: 'in', format: 'number' }] },
+    // Opts into the large view: a plot is worth the whole surface.
+    settings: {
+      title: 'Scope',
+      sockets: [{ type: 'in', format: 'number' }],
+      views: ['small', 'medium', 'large'],
+    },
+  },
+  /*
+   * A composite. It draws one of its children until it is large, at which point
+   * the editor enters it and you see the graph itself.
+   */
+  group: {
+    component: boxNode('#455a64', 'Group'),
+    settings: { title: 'Group', isFlow: true },
   },
   /*
    * Written in React, in an editor that has never heard of React. Nothing here
@@ -126,6 +139,29 @@ editor.load({
     { id: 1001, from: 10, to: 30, out: 100, in: 300 },
   ],
 });
+
+/*
+ * `?composite=1` adds a composite node.
+ *
+ * Kept out of the default fixture on purpose: the other tests assert node counts
+ * against this graph, and a demo fixture that grows with every feature makes
+ * every one of them a count that has to be maintained rather than an assertion
+ * about behaviour.
+ */
+if (new URLSearchParams(location.search).has('composite')) {
+  editor.state.children!.splice(2, 0, {
+    id: 50, type: 'group', title: 'Group', position: { x: 8, y: 60 },
+    sockets: [{ id: 500, type: 'in' }],
+    config: { preview: 52 },
+    children: [
+    { id: 51, type: 'source', title: 'Inner source', position: { x: 10, y: 20 }, sockets: [{ id: 510, type: 'out', format: 'number' }] },
+    { id: 52, type: 'scope', title: 'Inner scope', position: { x: 45, y: 40 }, sockets: [{ id: 520, type: 'in', format: 'number' }] },
+    ],
+    connections: [{ id: 1500, from: 51, to: 52, out: 510, in: 520 }],
+  });
+
+  editor.load(editor.state);
+}
 
 /*
  * `?nodes=N` builds a large flow for benchmarking. Real editors get big, and the
