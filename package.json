@@ -20,7 +20,8 @@
     "build:lit": "npm run build:core && ng build @scaljeri/flow-based-lit",
     "build:lit-demo": "npm run build:lit && node scripts/build-lit-demo.mjs",
     "serve:lit-demo": "node scripts/serve-static.mjs dist/lit-demo 4400",
-    "build:e2e": "npm run build:lib && node scripts/build-lit-demo.mjs"
+    "build:e2e": "npm run build:lib && node scripts/build-lit-demo.mjs",
+    "deploy": "npm run build:lib && ng build flow-based-demo --base-href /fbp/ && node scripts/deploy.mjs dist/demo/browser fbp"
   },
   "dependencies": {
     "@angular/cdk": "^22.1.0",
