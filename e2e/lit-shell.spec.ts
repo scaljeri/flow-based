@@ -714,7 +714,7 @@ async function stepView(page: Page, title: string, direction: 'grow' | 'shrink')
   await page.evaluate(([t, d]) => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
-    const buttons = node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.views button');
+    const buttons = node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.views button.step');
 
     (d === 'grow' ? buttons[buttons.length - 1] : buttons[0]).click();
   }, [title, direction]);
@@ -731,7 +731,7 @@ test('steps a node through small, medium and large', async ({ page }) => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Scope')!;
 
-    return node.shadowRoot!.querySelectorAll('.views button').length;
+    return node.shadowRoot!.querySelectorAll('.views button.step').length;
   });
   expect(controls).toBe(1);
 
@@ -767,7 +767,7 @@ test('a node only offers the views its type declares', async ({ page }) => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
 
-    return node.shadowRoot!.querySelectorAll('.views button').length;
+    return node.shadowRoot!.querySelectorAll('.views button.step').length;
   });
 
   // Shrink only: there is no large view to offer, so no control claims there is.
@@ -812,4 +812,68 @@ test('a composite shows a child until it is large, then becomes the flow itself'
   // The way back out.
   await page.locator('fb-flow-canvas .crumbs button').first().click();
   expect((await viewsOf(page)).map(v => v.split(':')[1])).toContain('Group');
+});
+
+test('edits a node\'s title and sockets from the shell, not from the host app', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const openConfig = () => page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.views button.config-toggle')!.click();
+  });
+
+  await openConfig();
+
+  const panel = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const config = node.shadowRoot!.querySelector('.config') as HTMLElement | null;
+
+    return {
+      present: !!config,
+      visible: (config?.getBoundingClientRect().height ?? 0) > 0,
+      title: config?.querySelector<HTMLInputElement>('input[type=text]')?.value,
+      rows: config?.querySelectorAll('.socket-row').length,
+    };
+  });
+
+  /*
+   * Title and sockets are MODEL — the JSON holds them and the engine reads
+   * them — so editing them belongs to the editor. It used to live in the demo
+   * app, which meant every consumer of the library had to rebuild it.
+   */
+  expect(panel).toMatchObject({ present: true, visible: true, title: 'Sink', rows: 1 });
+
+  // Typing goes straight through to the state that gets serialised.
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const input = node.shadowRoot!.querySelector<HTMLInputElement>('.config input[type=text]')!;
+
+    input.value = 'Output';
+    input.dispatchEvent(new Event('input'));
+  });
+
+  expect(await page.evaluate(() => window.fbEditor.children.map(c => c.title))).toContain('Output');
+
+  // Adding a socket goes through the engine, so a new dot appears on the node.
+  const before = await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')!.sockets!.length);
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
+
+    node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.config .add button')[1].click();
+  });
+
+  expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')!.sockets!.length))
+    .toBe(before + 1);
+
+  // Undo covers it: editing settings is a change to the document like any other.
+  await page.evaluate(() => (window.fbEditor as unknown as { undo(): void }).undo());
+  expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')?.sockets!.length ?? 0))
+    .toBe(before);
 });

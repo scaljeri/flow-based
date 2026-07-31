@@ -13,6 +13,7 @@ import {
   FbNodeTypes,
   FbPosition,
   FbSocket,
+  FbSocketType,
   FbNodeView,
   FbSize,
   FbViewport,
@@ -301,6 +302,60 @@ export class FbEditor {
   }
 
   private topZ = 10;
+
+  /* ----------------------------------------------------------------------
+     Editing a node's own settings
+     ----------------------------------------------------------------------
+     Title, sockets and socket colours are model, not chrome: they live in the
+     JSON and the engine reads them. Editing them therefore belongs to the
+     editor rather than to whichever app happens to be hosting it — which is
+     where it used to live, so every consumer had to rebuild it.
+   */
+
+  setTitle(nodeId: number, title: string): void {
+    const node = this.nodeById(nodeId);
+
+    if (!node || node.title === title) {
+      return;
+    }
+
+    this.history.capture(this.root);
+    node.title = title;
+    this.changes.emit({ kind: 'structure', nodeId });
+  }
+
+  addSocket(nodeId: number, type: FbSocketType): FbSocket | undefined {
+    const node = this.nodeById(nodeId);
+
+    if (!node) {
+      return undefined;
+    }
+
+    this.history.capture(this.root);
+
+    const socket: FbSocket = { id: this.ids.create(), type };
+
+    this.flow.addSocket(socket, nodeId);
+
+    return socket;
+  }
+
+  removeSocket(socket: FbSocket): void {
+    this.history.capture(this.root);
+    this.flow.removeSocket(socket);
+  }
+
+  /**
+   * Change a socket in place.
+   *
+   * `format` is deliberately NOT settable here: it is negotiated by the engine
+   * from what a socket is connected to, and a value typed into a form would be
+   * overwritten by the next propagation without explanation.
+   */
+  updateSocket(socket: FbSocket, patch: { name?: string; color?: string }): void {
+    Object.assign(socket, patch);
+    this.changes.emit({ kind: 'sockets' });
+  }
 
   /* ----------------------------------------------------------------------
      Selection

@@ -263,12 +263,27 @@ export class Flow {
       return;
     }
 
+    /*
+     * This does two jobs — adding a new socket, and registering one that is
+     * already on the node during initialize — and it used to tell them apart by
+     * whether the caller had set an id. That made "add a socket you already gave
+     * an id" silently register it without ever putting it on the node, which is
+     * exactly what a caller that mints its own ids does.
+     *
+     * Identity is the honest test: a socket already in the list is being
+     * registered, anything else is being added.
+     */
     if (!socket.id) {
       socket.id = this.uniqueId;
-      node.state.sockets = [socket, ...node.state.sockets!];
     }
 
-    this.sockets[socket.id!] = nodeId;
+    const sockets = node.state.sockets ?? [];
+
+    if (!sockets.includes(socket)) {
+      node.state.sockets = [socket, ...sockets];
+    }
+
+    this.sockets[socket.id] = nodeId;
 
     this.changes.emit('sockets');
   }

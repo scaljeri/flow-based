@@ -33,6 +33,9 @@ const ICON_OPEN = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_GROW = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4v6M4 4l6 6M14 20h6v-6M20 20l-6-6"/></svg>`;
 
+const ICON_CONFIG = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>`;
+
 const ICON_SHRINK = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h6V4M10 10L4 4M20 14h-6v6M14 14l6 6"/></svg>`;
 
@@ -122,6 +125,88 @@ export class FbNodeElement extends LitElement {
     .views svg {
       height: 13px;
       width: 13px;
+    }
+
+    /*
+     * The settings panel. Title, sockets and socket colours are MODEL — the JSON
+     * holds them and the engine reads them — so editing them belongs to the
+     * editor rather than to whichever app is hosting it.
+     */
+    .config {
+      background: var(--fb-node-background, rgba(0, 0, 0, 0.85));
+      box-sizing: border-box;
+      color: #fff;
+      display: block;
+      font: 12px system-ui, sans-serif;
+      max-height: 320px;
+      min-width: 240px;
+      overflow: auto;
+      padding: 26px 10px 10px;
+    }
+
+    .config label {
+      display: block;
+      margin-bottom: 8px;
+      opacity: 0.7;
+    }
+
+    .config input[type='text'] {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      box-sizing: border-box;
+      color: #fff;
+      font: inherit;
+      padding: 4px 6px;
+      width: 100%;
+    }
+
+    .config h4 {
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      margin: 12px 0 6px;
+      opacity: 0.6;
+      text-transform: uppercase;
+    }
+
+    .socket-row {
+      align-items: center;
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .socket-row input[type='color'] {
+      background: none;
+      border: none;
+      block-size: 22px;
+      cursor: pointer;
+      inline-size: 26px;
+      padding: 0;
+    }
+
+    .socket-row button,
+    .config .add button {
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      padding: 3px 8px;
+    }
+
+    .config .add {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    /* Whatever the node type contributes for its own settings. */
+    .config .own:not(:empty) {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      margin-top: 12px;
+      padding-top: 10px;
     }
 
     .box {
@@ -232,6 +317,7 @@ export class FbNodeElement extends LitElement {
   /** Whose content is mounted; see contentSource(). */
   private mountedFor?: FbNodeState;
   private showLabel = true;
+  private configOpen = false;
   private readonly clickListeners = new Set<(event: PointerEvent) => void>();
   private readonly wires = new Map<number, { from: Element; to: Element }>();
   private nextWireId = 1;
@@ -687,6 +773,8 @@ export class FbNodeElement extends LitElement {
       <div class="box" @pointerdown=${this.onPointerDown}>
         ${this.renderViewControls()}
 
+        ${this.configOpen ? this.renderConfig() : nothing}
+
         <slot></slot>
 
         <svg class="wires"></svg>
@@ -734,9 +822,18 @@ export class FbNodeElement extends LitElement {
 
     return html`
       <div class="views fb-drag-ignore">
+        <button
+          type="button"
+          class="config-toggle"
+          title="Settings"
+          aria-label="Settings"
+          aria-pressed=${this.configOpen ? 'true' : 'false'}
+          @pointerdown=${(e: Event) => e.stopPropagation()}
+          @click=${() => this.toggleConfig()}>${ICON_CONFIG}</button>
         ${smaller
           ? html`<button
               type="button"
+              class="step"
               title=${`Show smaller (${smaller})`}
               aria-label=${`Show smaller (${smaller})`}
               @pointerdown=${(e: Event) => e.stopPropagation()}
@@ -745,11 +842,71 @@ export class FbNodeElement extends LitElement {
         ${bigger
           ? html`<button
               type="button"
+              class="step"
               title=${`Show larger (${bigger})`}
               aria-label=${`Show larger (${bigger})`}
               @pointerdown=${(e: Event) => e.stopPropagation()}
               @click=${() => this.requestView(bigger)}>${bigger === 'medium' ? ICON_OPEN : ICON_GROW}</button>`
           : nothing}
+      </div>
+    `;
+  }
+
+  private toggleConfig(): void {
+    this.configOpen = !this.configOpen;
+    this.requestUpdate();
+  }
+
+  /**
+   * The node's own settings.
+   *
+   * Deliberately generic: it edits `title` and the sockets, which every node has
+   * because they are part of the model rather than of any node type. A type with
+   * settings of its own contributes them through `mountSettings` on the handle it
+   * returned, so there is one panel and one way in rather than a config screen
+   * per node type.
+   */
+  private renderConfig() {
+    const state = this.state;
+    const sockets = state.sockets ?? [];
+
+    return html`
+      <div class="config fb-drag-ignore" @pointerdown=${(e: Event) => e.stopPropagation()}>
+        <label>
+          Title
+          <input
+            type="text"
+            .value=${state.title ?? ''}
+            @input=${(e: Event) => this.editor.setTitle(state.id!, (e.target as HTMLInputElement).value)}>
+        </label>
+
+        <h4>Sockets</h4>
+        ${sockets.map(socket => this.renderSocketRow(socket))}
+
+        <div class="add">
+          <button type="button" @click=${() => this.editor.addSocket(state.id!, 'in')}>+ in</button>
+          <button type="button" @click=${() => this.editor.addSocket(state.id!, 'out')}>+ out</button>
+        </div>
+
+        <div class="own"></div>
+      </div>
+    `;
+  }
+
+  private renderSocketRow(socket: FbSocket) {
+    return html`
+      <div class="socket-row">
+        <span title=${socket.type}>${socket.type === 'in' ? '\u2192' : '\u2190'}</span>
+        <input
+          type="text"
+          .value=${socket.name ?? ''}
+          placeholder=${socket.format ?? 'name'}
+          @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>
+        <input
+          type="color"
+          .value=${socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? '#999999'}
+          @input=${(e: Event) => this.editor.updateSocket(socket, { color: (e.target as HTMLInputElement).value })}>
+        <button type="button" title="Remove socket" @click=${() => this.editor.removeSocket(socket)}>\u00d7</button>
       </div>
     `;
   }

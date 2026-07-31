@@ -653,3 +653,32 @@ describe('id generation (AUDIT.md §3.8)', () => {
     expect(flow.getSocket(socket.id)).toBe(socket);
   });
 });
+
+describe('Flow.addSocket', () => {
+  it('adds a socket that already carries an id', () => {
+    /*
+     * The method also registers sockets initialize() found on the node, and it
+     * used to tell the two apart by whether an id was set — so a caller that
+     * mints its own ids got its socket registered in the lookup but never added
+     * to the node. Nothing failed; the socket simply did not appear.
+     */
+    const { root, a } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const before = a.sockets.length;
+
+    flow.addSocket({ id: 987654, type: 'out' } as any, a.id);
+
+    expect(a.sockets).toHaveLength(before + 1);
+    expect(a.sockets.some((s: any) => s.id === 987654)).toBe(true);
+  });
+
+  it('does not duplicate a socket it is only registering', () => {
+    const { root, a } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+    const before = a.sockets.length;
+
+    flow.addSocket(a.sockets[0], a.id);
+
+    expect(a.sockets).toHaveLength(before);
+  });
+});
