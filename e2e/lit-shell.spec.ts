@@ -830,11 +830,15 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
   const panel = await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
-    const config = node.shadowRoot!.querySelector('.config') as HTMLElement | null;
+    const config = node.shadowRoot!.querySelector('dialog.config') as HTMLDialogElement | null;
 
     return {
       present: !!config,
-      visible: (config?.getBoundingClientRect().height ?? 0) > 0,
+      // A MODAL dialog, so the browser puts it in the top layer. Nodes overlap,
+      // and an inline panel is clipped by its own node and covered by whatever
+      // paints after it — which no z-index can fix once a sibling establishes a
+      // stacking context of its own.
+      visible: !!config?.open && (config.getBoundingClientRect().height ?? 0) > 0,
       title: config?.querySelector<HTMLInputElement>('input[type=text]')?.value,
       rows: config?.querySelectorAll('.socket-row').length,
     };
@@ -851,7 +855,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
   await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
-    const input = node.shadowRoot!.querySelector<HTMLInputElement>('.config input[type=text]')!;
+    const input = node.shadowRoot!.querySelector<HTMLInputElement>('dialog.config input[type=text]')!;
 
     input.value = 'Output';
     input.dispatchEvent(new Event('input'));
@@ -866,11 +870,39 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
 
-    node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.config .add button')[1].click();
+    node.shadowRoot!.querySelectorAll<HTMLButtonElement>('dialog.config .add button')[1].click();
   });
 
   expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')!.sockets!.length))
     .toBe(before + 1);
+
+  /*
+   * Editor shortcuts must not fire while typing in the dialog. Delete is an
+   * unmodified single key, so without this it deletes the very node being
+   * configured.
+   */
+  const nodesBefore = await page.evaluate(() => window.fbEditor.children.length);
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
+
+    node.shadowRoot!.querySelector<HTMLInputElement>('dialog.config input[type=text]')!.focus();
+  });
+  await page.keyboard.press('Delete');
+  expect(await page.evaluate(() => window.fbEditor.children.length)).toBe(nodesBefore);
+
+  // Escape closes it, and it can be opened again — the dialog's own `open` is
+  // the state, so a close the browser performed cannot desynchronise it.
+  await page.keyboard.press('Escape');
+
+  const closed = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
+
+    return node.shadowRoot!.querySelector<HTMLDialogElement>('dialog.config')?.open ?? false;
+  });
+  expect(closed).toBe(false);
 
   // Undo covers it: editing settings is a change to the document like any other.
   await page.evaluate(() => (window.fbEditor as unknown as { undo(): void }).undo());

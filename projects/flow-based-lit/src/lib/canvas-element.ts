@@ -250,6 +250,20 @@ export class FbFlowCanvasElement extends LitElement {
    * form somewhere else on the page must not delete nodes.
    */
   private onKeyDown = (event: KeyboardEvent): void => {
+    /*
+     * Never while typing.
+     *
+     * These shortcuts are unmodified single keys, so a Delete pressed in a
+     * settings field would delete the node being configured and Ctrl+A would
+     * select every node instead of the text. The settings dialog stops keydown
+     * before it reaches here; this covers anything a node type renders itself.
+     */
+    const target = event.composedPath()[0] as HTMLElement | undefined;
+
+    if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) {
+      return;
+    }
+
     const control = event.ctrlKey || event.metaKey;
 
     switch (true) {

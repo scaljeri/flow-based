@@ -137,16 +137,53 @@ export class FbNodeElement extends LitElement {
      * holds them and the engine reads them — so editing them belongs to the
      * editor rather than to whichever app is hosting it.
      */
+    /*
+     * A modal <dialog>, so it lands in the document's top layer.
+     *
+     * Nodes overlap, and an inline panel is clipped by its own node and covered
+     * by whatever is painted after it. The top layer escapes overflow, z-index
+     * and stacking contexts entirely — which no amount of z-index on an inline
+     * panel can do once a sibling establishes its own context.
+     */
     .config {
-      background: var(--fb-node-background, rgba(0, 0, 0, 0.85));
+      background: var(--fb-node-background, rgba(0, 0, 0, 0.9));
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
       box-sizing: border-box;
       color: #fff;
-      display: block;
       font: 12px system-ui, sans-serif;
-      max-height: 320px;
-      min-width: 240px;
+      max-height: 80vh;
+      max-width: 90vw;
       overflow: auto;
-      padding: 26px 10px 10px;
+      padding: 16px;
+      width: 320px;
+    }
+
+    .config::backdrop {
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .config header {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .config header strong {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .config header button {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px 6px;
     }
 
     .config label {
@@ -371,6 +408,7 @@ export class FbNodeElement extends LitElement {
     this.applyPosition();
     this.applySelected();
     this.setAttribute('view', this.view);
+    this.syncDialog();
     this.mountOwnSettings();
     this.drawWires();
   }
@@ -383,7 +421,7 @@ export class FbNodeElement extends LitElement {
    * running behind a closed panel.
    */
   private mountOwnSettings(): void {
-    const host = this.renderRoot.querySelector<HTMLElement>('.config .own');
+    const host = this.configOpen ? this.renderRoot.querySelector<HTMLElement>('.config .own') : null;
 
     if (!host) {
       this.settingsTeardown?.();
@@ -806,8 +844,6 @@ export class FbNodeElement extends LitElement {
       <div class="box" @pointerdown=${this.onPointerDown}>
         ${this.renderViewControls()}
 
-        ${this.configOpen ? this.renderConfig() : nothing}
-
         <slot></slot>
 
         <svg class="wires"></svg>
@@ -818,6 +854,8 @@ export class FbNodeElement extends LitElement {
       </div>
 
       ${sockets.map(s => this.renderSocket(s))}
+
+      ${this.renderConfig()}
     `;
   }
 
@@ -886,14 +924,58 @@ export class FbNodeElement extends LitElement {
   }
 
   private toggleConfig(): void {
-    this.configOpen = !this.configOpen;
+    /*
+     * The dialog's own `open` is the truth, not a boolean beside it.
+     *
+     * Keeping both meant Escape — which the browser handles without asking —
+     * closed the dialog while the flag still said open, so the next press tried
+     * to close something already closed and nothing happened.
+     */
+    if (this.dialog?.open) {
+      this.closeConfig();
 
-    if (!this.configOpen) {
-      this.settingsTeardown?.();
-      this.settingsTeardown = undefined;
+      return;
     }
 
+    this.configOpen = true;
     this.requestUpdate();
+  }
+
+  /** Called however the dialog was dismissed: the button, Escape, or code. */
+  private onDialogClosed(): void {
+    this.configOpen = false;
+    this.settingsTeardown?.();
+    this.settingsTeardown = undefined;
+    this.requestUpdate();
+  }
+
+  private closeConfig(): void {
+    this.dialog?.close();
+  }
+
+  private get dialog(): HTMLDialogElement | null {
+    return this.renderRoot.querySelector('dialog.config');
+  }
+
+  /**
+   * Opened with showModal(), not by rendering it visible.
+   *
+   * Only a modal dialog is promoted to the top layer, and the top layer is the
+   * whole point: nodes overlap, so a panel painted inside its own node is
+   * clipped by it and covered by whatever comes after.
+   */
+  private syncDialog(): void {
+    const dialog = this.dialog;
+
+    if (!dialog) {
+      return;
+    }
+
+    if (this.configOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!this.configOpen && dialog.open) {
+      dialog.close();
+    }
   }
 
   /**
@@ -910,7 +992,17 @@ export class FbNodeElement extends LitElement {
     const sockets = state.sockets ?? [];
 
     return html`
-      <div class="config fb-drag-ignore" @pointerdown=${(e: Event) => e.stopPropagation()}>
+      <dialog
+        class="config fb-drag-ignore"
+        @pointerdown=${(e: Event) => e.stopPropagation()}
+        @keydown=${(e: Event) => e.stopPropagation()}
+        @close=${() => this.onDialogClosed()}>
+        <header>
+          <strong>Settings</strong>
+          <button type="button" title="Close" aria-label="Close"
+                  @click=${() => this.closeConfig()}>\u00d7</button>
+        </header>
+
         <label>
           Title
           <input
@@ -928,7 +1020,7 @@ export class FbNodeElement extends LitElement {
         </div>
 
         <div class="own"></div>
-      </div>
+      </dialog>
     `;
   }
 
