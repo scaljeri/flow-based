@@ -22,6 +22,7 @@ export * from './lib/geometry';
 export * from './lib/clipboard';
 export * from './lib/routing';
 export * from './lib/inline';
+export * from './lib/views';
 export * from './lib/node-events';
 export * from './lib/node-renderer';
 export * from './lib/document';

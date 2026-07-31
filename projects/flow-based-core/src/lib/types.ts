@@ -79,6 +79,11 @@ export interface FbNodeState {
   sockets?: FbSocket[];
   connections?: FbConnection[];
   children?: FbNodeState[];
+  /**
+   * How much room this node is currently given. Serialised, so a flow reopens
+   * looking the way it was left.
+   */
+  view?: import('./views').FbNodeView;
   /** Prose and figure settings for this node in the document representation. */
   doc?: FbNodeDoc;
   /**
@@ -116,6 +121,11 @@ export interface FbNodeSettings {
   config?: any;
   sockets?: FbSocket[];
   isFlow?: boolean;
+  /**
+   * Which of small/medium/large this type can render; see `supportedViews`.
+   * Omitted means `['small', 'medium']` — a flow gets all three.
+   */
+  views?: import('./views').FbNodeView[];
 }
 
 /**
