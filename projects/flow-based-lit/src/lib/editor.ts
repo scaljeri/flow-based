@@ -22,6 +22,7 @@ import {
   alignNodes,
   copyNodes,
   distributeNodes,
+  moveSocket,
   pasteNodes,
   supportedViews,
 } from '@scaljeri/flow-based-core';
@@ -352,6 +353,25 @@ export class FbEditor {
    * from what a socket is connected to, and a value typed into a form would be
    * overwritten by the next propagation without explanation.
    */
+  /** Reorder a socket among those on its own side of the node. */
+  moveSocket(nodeId: number, socketId: number, toIndex: number): void {
+    const node = this.nodeById(nodeId);
+
+    if (!node) {
+      return;
+    }
+
+    // Snapshotted before, and only when something actually moves — a drag that
+    // ends where it started must not cost an undo step.
+    this.history.capture(this.root);
+
+    if (moveSocket(node, socketId, toIndex)) {
+      this.changes.emit({ kind: 'sockets' });
+    } else {
+      this.history.undo(this.root);
+    }
+  }
+
   updateSocket(socket: FbSocket, patch: { name?: string; color?: string }): void {
     Object.assign(socket, patch);
     this.changes.emit({ kind: 'sockets' });

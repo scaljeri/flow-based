@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FB_NODE_VIEWS, previewChild, stepView, supportedViews, viewOf } from './views';
+import { FB_NODE_VIEWS, moveSocket, previewChild, stepView, supportedViews, viewOf } from './views';
 import { FbNodeSettings, FbNodeState } from './types';
 
 const plain: FbNodeSettings = { title: 'Plain' };
@@ -66,5 +66,39 @@ describe('previewChild', () => {
 
   it('has nothing to show for an empty composite', () => {
     expect(previewChild({ type: 'flow', children: [] })).toBeUndefined();
+  });
+});
+
+describe('moveSocket', () => {
+  const node = (): FbNodeState => ({
+    type: 'a',
+    sockets: [
+      { id: 1, type: 'in' }, { id: 2, type: 'out' },
+      { id: 3, type: 'in' }, { id: 4, type: 'in' },
+    ],
+  });
+
+  it('reorders within one side and leaves the other side alone', () => {
+    const n = node();
+
+    // Move in-socket 4 (third of its side) to the front of its side.
+    expect(moveSocket(n, 4, 0)).toBe(true);
+    expect(n.sockets!.map(s => s.id)).toEqual([4, 2, 1, 3]);
+    // The out-socket kept its slot, so nothing on the other edge moved.
+    expect(n.sockets![1].id).toBe(2);
+  });
+
+  it('reports a move that changes nothing, so undo is not pushed for it', () => {
+    const n = node();
+
+    expect(moveSocket(n, 1, 0)).toBe(false);
+    expect(moveSocket(n, 99, 0)).toBe(false);
+  });
+
+  it('clamps an index past the end rather than dropping the socket', () => {
+    const n = node();
+
+    expect(moveSocket(n, 1, 99)).toBe(true);
+    expect(n.sockets!.filter(s => s.type === 'in').map(s => s.id)).toEqual([3, 4, 1]);
   });
 });

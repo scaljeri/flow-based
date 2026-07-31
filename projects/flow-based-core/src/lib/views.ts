@@ -90,3 +90,42 @@ export function previewChild(node: FbNodeState): FbNodeState | undefined {
 
   return children[0];
 }
+
+/**
+ * Move a socket to another place among the sockets on its own side.
+ *
+ * `sockets` holds both directions in one array, and the shell lays each side out
+ * by position WITHIN its side — so reordering has to happen inside the group and
+ * leave the other group where it was. Rebuilding the array by refilling the slots
+ * each group already occupied does that: the in-sockets keep their slots, the
+ * out-sockets keep theirs, and only the order within one of them changes.
+ *
+ * Returns whether anything moved, so a caller can avoid pushing a no-op onto the
+ * undo stack.
+ */
+export function moveSocket(node: FbNodeState, socketId: number, toIndex: number): boolean {
+  const sockets = node.sockets ?? [];
+  const socket = sockets.find(s => s.id === socketId);
+
+  if (!socket) {
+    return false;
+  }
+
+  const group = sockets.filter(s => s.type === socket.type);
+  const from = group.indexOf(socket);
+  const to = Math.max(0, Math.min(group.length - 1, toIndex));
+
+  if (from === to) {
+    return false;
+  }
+
+  group.splice(from, 1);
+  group.splice(to, 0, socket);
+
+  // Refill the slots this group already occupied, in the new order.
+  let next = 0;
+
+  node.sockets = sockets.map(s => (s.type === socket.type ? group[next++] : s));
+
+  return true;
+}

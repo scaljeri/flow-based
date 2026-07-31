@@ -280,7 +280,10 @@ export class Flow {
     const sockets = node.state.sockets ?? [];
 
     if (!sockets.includes(socket)) {
-      node.state.sockets = [socket, ...sockets];
+      // Appended, not prepended. "Add" that puts the new one first reads as a
+      // mistake, and now that sockets can be dragged into order it would mean
+      // every added socket has to be dragged back down again.
+      node.state.sockets = [...sockets, socket];
     }
 
     this.sockets[socket.id] = nodeId;

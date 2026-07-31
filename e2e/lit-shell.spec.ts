@@ -872,7 +872,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
 
     // The out column's own add button; in and out are separate columns because
     // that is which edge of the node they appear on.
-    node.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .socket-out .add-socket')!.click();
+    node.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .column-out .add-socket')!.click();
   });
 
   expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')!.sockets!.length))
@@ -923,4 +923,70 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
   await page.evaluate(() => (window.fbEditor as unknown as { undo(): void }).undo());
   expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')?.sockets!.length ?? 0))
     .toBe(before);
+});
+
+test('drags sockets into order, and the node redraws them in that order', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  // Three in-sockets, named so the order is legible.
+  await page.evaluate(() => {
+    const editor = window.fbEditor as unknown as {
+      children: { id?: number; title?: string; sockets?: { name?: string }[] }[];
+      addSocket(nodeId: number, type: string): { name?: string } | undefined;
+    };
+    const sink = editor.children.find(c => c.title === 'Sink')!;
+
+    sink.sockets![0].name = 'alpha';
+    editor.addSocket(sink.id!, 'in')!.name = 'beta';
+    editor.addSocket(sink.id!, 'in')!.name = 'gamma';
+  });
+
+  const order = () => page.evaluate(() =>
+    window.fbEditor.children.find(c => c.title === 'Sink')!.sockets!
+      .filter(s => s.type === 'in').map(s => s.name));
+
+  // Added sockets go on the END. Prepending would mean every new socket has to
+  // be dragged back down, which is the opposite of what "add" should cost.
+  expect(await order()).toEqual(['alpha', 'beta', 'gamma']);
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.views button.config-toggle')!.click();
+  });
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const rows = node.shadowRoot!.querySelectorAll('dialog.config .column-in .socket-row');
+    const dataTransfer = new DataTransfer();
+
+    rows[2].dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer }));
+    rows[0].dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }));
+  });
+
+  expect(await order()).toEqual(['gamma', 'alpha', 'beta']);
+
+  /*
+   * And the node draws them in that order. Socket position is derived from the
+   * index within its side, so reordering the list is what moves the dots — a
+   * reorder that only changed the dialog would be no reorder at all.
+   */
+  const topToBottom = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    return [...node.shadowRoot!.querySelectorAll<HTMLElement>('.socket.socket-in')]
+      .map(dot => ({ id: dot.dataset['socketId'], y: dot.getBoundingClientRect().top }))
+      .sort((a, b) => a.y - b.y)
+      .map(dot => Number(dot.id));
+  });
+
+  const ids = await page.evaluate(() =>
+    window.fbEditor.children.find(c => c.title === 'Sink')!.sockets!
+      .filter(s => s.type === 'in').map(s => s.id));
+
+  expect(topToBottom).toEqual(ids);
 });

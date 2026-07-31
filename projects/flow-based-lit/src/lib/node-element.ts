@@ -218,12 +218,17 @@ export class FbNodeElement extends LitElement {
       margin-top: 4px;
     }
 
-    /* The out column reads right-to-left, mirroring the node's own two edges. */
-    .socket-out {
+    /*
+     * Named column-out, not socket-out: a socket DOT is .socket.socket-out, and
+     * giving the dialog's column the same name meant one selector matched both a
+     * form column and a dot on the node. No backticks in this comment: it sits
+     * inside a tagged CSS template literal, and one would close it early.
+     */
+    .column-out {
       text-align: right;
     }
 
-    .socket-out .socket-row {
+    .column-out .socket-row {
       flex-direction: row-reverse;
     }
 
@@ -234,9 +239,21 @@ export class FbNodeElement extends LitElement {
 
     .socket-row {
       align-items: center;
+      border-radius: 4px;
       display: flex;
       gap: 4px;
       margin-bottom: 6px;
+    }
+
+    .socket-row[draggable='true'] {
+      cursor: grab;
+    }
+
+    .grip {
+      cursor: grab;
+      letter-spacing: -2px;
+      opacity: 0.4;
+      user-select: none;
     }
 
     .socket-row input[type='text'] {
@@ -1055,14 +1072,37 @@ export class FbNodeElement extends LitElement {
     `;
   }
 
+  private draggingSocket?: FbSocket;
+
+  private onSocketDragStart(event: DragEvent, socket: FbSocket): void {
+    this.draggingSocket = socket;
+    event.dataTransfer?.setData('text/plain', String(socket.id));
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  private onSocketDrop(event: DragEvent, toIndex: number): void {
+    event.preventDefault();
+
+    const socket = this.draggingSocket;
+
+    this.draggingSocket = undefined;
+
+    if (socket?.id !== undefined && this.state?.id !== undefined) {
+      this.editor.moveSocket(this.state.id, socket.id, toIndex);
+    }
+  }
+
   private renderSocketColumn(type: 'in' | 'out', nodeId: number, sockets: FbSocket[]) {
     const mine = sockets.filter(socket => socket.type === type);
 
     return html`
-      <section class="socket-column socket-${type}">
+      <section class="socket-column column-${type}">
         <h4>${type === 'in' ? 'In' : 'Out'}</h4>
         ${mine.length
-          ? mine.map(socket => this.renderSocketRow(socket))
+          ? mine.map((socket, index) => this.renderSocketRow(socket, index))
           : html`<p class="none">none</p>`}
         <button type="button" class="add-socket" @click=${() => this.editor.addSocket(nodeId, type)}>
           + add ${type}
@@ -1071,9 +1111,21 @@ export class FbNodeElement extends LitElement {
     `;
   }
 
-  private renderSocketRow(socket: FbSocket) {
+  private renderSocketRow(socket: FbSocket, index: number) {
+    /*
+     * Native drag and drop rather than pointer maths: the browser already knows
+     * what dragging a row looks like, and the drag image, the cursor and the
+     * cancel-on-Escape all come for free.
+     */
     return html`
-      <div class="socket-row">
+      <div
+        class="socket-row"
+        draggable="true"
+        data-index=${index}
+        @dragstart=${(e: DragEvent) => this.onSocketDragStart(e, socket)}
+        @dragover=${(e: DragEvent) => e.preventDefault()}
+        @drop=${(e: DragEvent) => this.onSocketDrop(e, index)}>
+        <span class="grip" title="Drag to reorder">\u22ee\u22ee</span>
         <input
           type="text"
           .value=${socket.name ?? ''}
