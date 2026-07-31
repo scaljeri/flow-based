@@ -47,3 +47,10 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
+
+# Secrets. This must come BEFORE any .env file exists: the remote is a public
+# repository and this branch is pushed on every commit, so an untracked-but-not-
+# ignored .env is one `git add -A` away from being published permanently.
+.env
+.env.*
+!.env.example
