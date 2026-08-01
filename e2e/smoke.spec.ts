@@ -320,7 +320,7 @@ test('drags a node and its connections follow', async ({ page }) => {
   expect(await worstEndpointError(page)).toBeLessThan(1);
 
   // A small collapsed node is easiest to grab without hitting inner controls.
-  const node = page.locator('fb-node-box').nth(4);
+  const node = page.locator('fb-node-box').nth(1);
   const start = await node.boundingBox();
   expect(start).not.toBeNull();
 
@@ -390,19 +390,23 @@ test('mounts a node type that has no framework in it, styled by a plain styleshe
   expect(errors).toEqual([]);
 });
 
-test('shows the validation badge on load, without waiting for an interaction', async ({ page }) => {
+test('reports no problems for the flow the demo opens with', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
 
   /*
-   * The engine propagates socket formats during load, long before anything the
-   * user does. When the graph's signal layer was replaced by the shell's plain
-   * emitter, this badge became a getter that nothing marked dirty — so it only
-   * appeared once the user happened to click something unrelated, which is worse
-   * than having no badge at all. Deliberately asserted with NO interaction first.
+   * The default flow is a generator feeding a logger: one connection, one format,
+   * nothing unresolved. The badge must therefore be absent — a validation
+   * surface that cries wolf on a correct flow is worse than none.
+   *
+   * NOTE: this used to also assert the badge APPEARS without any interaction,
+   * which is what caught a real regression — when the graph's signal layer was
+   * replaced by the shell's plain emitter, the badge became a getter nothing
+   * marked dirty and only showed up after an unrelated click. That half is no
+   * longer covered: the old fixture had seven unresolved sockets and this one has
+   * none, and I could not construct a reporting flow from the UI within reach of
+   * a test. Worth restoring with a deliberately broken fixture behind a query
+   * parameter.
    */
-  const badge = page.locator('mat-toolbar button.problems');
-
-  await expect(badge).toBeVisible();
-  await expect(badge).toContainText(/\d+/);
+  await expect(page.locator('mat-toolbar button.problems')).toHaveCount(0);
 });

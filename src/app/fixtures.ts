@@ -1,4 +1,56 @@
-export const basic =
+/**
+ * The flow the demo opens with: a generator feeding a tap.
+ *
+ * Deliberately two nodes. The previous default was an eight-node showcase, which
+ * is a fine demonstration and a poor starting point — it opens on a screen full
+ * of overlapping fractals with nothing obvious to do, and on a phone it does not
+ * fit at all. Two nodes and one connection show what the editor IS: something
+ * produces values, something reads them, and the line between them is the
+ * program.
+ *
+ * The tap's input declares no format on purpose. It takes one from whatever it
+ * is connected to, which is the engine's format propagation doing its job — and
+ * it means this fixture keeps working if the generator's type ever changes.
+ */
+export const basic = {
+  id: 1,
+  type: 'flow',
+  title: 'Random numbers',
+  sockets: [],
+  children: [
+    {
+      type: 'random-numbers',
+      title: 'Random number generator',
+      id: 100,
+      config: {
+        min: 0,
+        max: 100,
+        start: 0,
+        end: 1,
+        intervalMax: 10000,
+        intervalMin: 100,
+        interval: 1000,
+        integer: true,
+      },
+      sockets: [{ id: 110, type: 'out', format: 'number' }],
+      position: { x: 6, y: 34 },
+    },
+    {
+      type: 'tap',
+      title: 'Logger',
+      id: 200,
+      config: { expanded: true },
+      sockets: [
+        { id: 210, type: 'in' },
+        { id: 211, type: 'out' },
+      ],
+      position: { x: 34, y: 18 },
+    },
+  ],
+  connections: [{ id: 1000, from: 100, to: 200, out: 110, in: 210 }],
+};
+
+export const showcase =
   {
     "id": 1546340247802,
     "children": [
