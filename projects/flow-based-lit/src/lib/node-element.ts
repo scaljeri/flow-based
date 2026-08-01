@@ -127,6 +127,30 @@ export class FbNodeElement extends LitElement {
       opacity: 1;
     }
 
+    /*
+     * Bigger targets on a touch screen. 20px is comfortable with a mouse and
+     * below every guideline for a finger, and these are the ONLY way to open a
+     * node or its settings — a control you cannot reliably hit is a feature you
+     * do not have. Keyed on the pointer, not the width: a small window on a
+     * desktop still has a mouse.
+     */
+    @media (pointer: coarse) {
+      .views {
+        gap: 4px;
+      }
+
+      .views button {
+        height: 34px;
+        opacity: 0.85;
+        width: 34px;
+      }
+
+      .views svg {
+        height: 18px;
+        width: 18px;
+      }
+    }
+
     .views svg {
       height: 13px;
       width: 13px;
@@ -216,6 +240,31 @@ export class FbNodeElement extends LitElement {
       gap: 14px;
       grid-template-columns: 1fr 1fr;
       margin-top: 4px;
+    }
+
+    /*
+     * One column below this. Two columns of a name field, a colour swatch and a
+     * remove button do not fit a phone: the fields collapse to a few characters
+     * and the layout stops being a map of the node, which was the point of the
+     * two columns in the first place.
+     */
+    @media (max-width: 460px) {
+      .config {
+        width: min(320px, 88vw);
+      }
+
+      .sockets {
+        gap: 4px;
+        grid-template-columns: 1fr;
+      }
+
+      .column-out {
+        text-align: left;
+      }
+
+      .column-out .socket-row {
+        flex-direction: row;
+      }
     }
 
     /*

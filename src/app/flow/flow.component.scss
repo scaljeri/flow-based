@@ -5,18 +5,48 @@
 
 .viewport-controls {
   align-items: center;
+  // A backing plate, because these sit over the graph: on a phone the buttons
+  // landed on top of nodes and the zoom percentage was unreadable against
+  // whatever happened to be behind it.
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 28px;
   bottom: 16px;
   display: flex;
   gap: 8px;
   left: 16px;
+  padding: 6px 10px;
   position: absolute;
   // Above the nodes, which sit at z-index 2-5.
   z-index: 20;
 
   .zoom-level {
-    background-color: rgba(0, 0, 0, 0.6);
     color: #fff;
-    min-width: 64px;
+    min-width: 56px;
+  }
+}
+
+/*
+ * A landscape phone is ~360px tall, and a fixed 16px inset with full-size
+ * buttons eats a visible share of that. Tucked in closer and smaller, while
+ * staying well above a finger-sized target.
+ */
+@media (max-height: 480px) {
+  .viewport-controls {
+    bottom: 8px;
+    gap: 4px;
+    left: 8px;
+    padding: 4px 6px;
+
+    .zoom-level {
+      min-width: 44px;
+      padding: 0 4px;
+    }
+  }
+
+  .align-controls {
+    bottom: 8px;
+    gap: 4px;
+    padding: 4px 8px;
   }
 }
 
