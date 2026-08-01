@@ -54,7 +54,8 @@ mat-toolbar {
  */
 @media (max-width: 720px) {
   mat-toolbar {
-    .secondary-actions {
+    .secondary-actions,
+    .collapses {
       display: none;
     }
 

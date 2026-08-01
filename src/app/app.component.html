@@ -8,12 +8,12 @@
   <div class="actions primary-actions">
     <button type="button" mat-button (click)="openModal()" class="add">Add</button>
 
-    <button type="button" mat-button class="undo" (click)="undo()"
+    <button type="button" mat-button class="undo collapses" (click)="undo()"
             [disabled]="!history.canUndo()" matTooltip="Undo (Ctrl+Z)" aria-label="Undo">
       <mat-icon>undo</mat-icon>
     </button>
 
-    <button type="button" mat-button class="redo" (click)="redo()"
+    <button type="button" mat-button class="redo collapses" (click)="redo()"
             [disabled]="!history.canRedo()" matTooltip="Redo (Ctrl+Shift+Z)" aria-label="Redo">
       <mat-icon>redo</mat-icon>
     </button>
@@ -57,6 +57,23 @@
   </button>
 
   <mat-menu #overflowMenu="matMenu">
+    <!--
+      Undo and redo carry a label here. As icons on a phone they are two grey
+      arrows with no explanation: the tooltip that explains them only appears on
+      hover, and there is no hover on a touch screen.
+    -->
+    <button type="button" mat-menu-item (click)="undo()" [disabled]="!history.canUndo()">
+      <mat-icon>undo</mat-icon>
+      <span>Undo</span>
+    </button>
+
+    <button type="button" mat-menu-item (click)="redo()" [disabled]="!history.canRedo()">
+      <mat-icon>redo</mat-icon>
+      <span>Redo</span>
+    </button>
+
+    <mat-divider></mat-divider>
+
     <button type="button" mat-menu-item (click)="save()">
       <mat-icon>download</mat-icon>
       <span>Download JSON</span>
