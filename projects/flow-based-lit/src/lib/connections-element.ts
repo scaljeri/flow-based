@@ -35,6 +35,14 @@ export class FbConnectionsElement extends LitElement {
 
     svg {
       height: 100%;
+      /*
+       * SVG clips to its own box by default, and this box is the plane. A node
+       * dragged past an edge sits at a negative percentage — the model allows it
+       * and the node itself still draws, because it is an ordinary element — but
+       * its half of the curve fell outside and was cut, leaving a line that stops
+       * in mid-air.
+       */
+      overflow: visible;
       width: 100%;
     }
 
