@@ -242,45 +242,6 @@ export class FbNodeElement extends LitElement {
       margin-top: 4px;
     }
 
-    /*
-     * One column below this. Two columns of a name field, a colour swatch and a
-     * remove button do not fit a phone: the fields collapse to a few characters
-     * and the layout stops being a map of the node, which was the point of the
-     * two columns in the first place.
-     */
-    @media (max-width: 460px) {
-      .config {
-        width: min(320px, 88vw);
-      }
-
-      .sockets {
-        gap: 4px;
-        grid-template-columns: 1fr;
-      }
-
-      .column-out {
-        text-align: left;
-      }
-
-      .column-out .socket-row {
-        flex-direction: row;
-      }
-    }
-
-    /*
-     * Named column-out, not socket-out: a socket DOT is .socket.socket-out, and
-     * giving the dialog's column the same name meant one selector matched both a
-     * form column and a dot on the node. No backticks in this comment: it sits
-     * inside a tagged CSS template literal, and one would close it early.
-     */
-    .column-out {
-      text-align: right;
-    }
-
-    .column-out .socket-row {
-      flex-direction: row-reverse;
-    }
-
     .none {
       margin: 0 0 6px;
       opacity: 0.45;
@@ -436,6 +397,51 @@ export class FbNodeElement extends LitElement {
     .socket.is-rejecting {
       background-color: var(--fb-reject-color, #f06);
       pointer-events: none;
+    }
+
+    /*
+     * One column below this. Two columns of a name field, a colour swatch and a
+     * remove button do not fit a phone: the fields collapse to a few characters
+     * and the layout stops being a map of the node, which was the point of the
+     * two columns in the first place.
+     */
+    @media (max-width: 460px) {
+      .config {
+        width: min(320px, 88vw);
+      }
+
+      .sockets {
+        gap: 4px;
+        grid-template-columns: 1fr;
+      }
+
+      /*
+       * Written with the parent, so this wins on SPECIFICITY rather than on
+       * source order. A media query adds none, and the base .column-out rules
+       * happen to come later in this stylesheet — so the obvious version was
+       * silently overridden and the column stayed mirrored on a phone.
+       */
+      .config .column-out {
+        text-align: left;
+      }
+
+      .config .column-out .socket-row {
+        flex-direction: row;
+      }
+    }
+
+    /*
+     * Named column-out, not socket-out: a socket DOT is .socket.socket-out, and
+     * giving the dialog's column the same name meant one selector matched both a
+     * form column and a dot on the node. No backticks in this comment: it sits
+     * inside a tagged CSS template literal, and one would close it early.
+     */
+    .column-out {
+      text-align: right;
+    }
+
+    .column-out .socket-row {
+      flex-direction: row-reverse;
     }
   `;
 
