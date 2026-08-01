@@ -1,28 +1,41 @@
+<!--
+  The toolbar is a real flex row: buttons, then a title that takes what is left.
+  It used to centre the title with the buttons absolutely positioned on top of it,
+  so nothing kept them apart — on a landscape phone the title ran straight over
+  the download, upload, warning and JSON buttons.
+-->
 <mat-toolbar [color]="'primary'">
-  <span>Flow based programming</span>
-
-  <div class="button-wrapper">
+  <div class="actions primary-actions">
     <button type="button" mat-button (click)="openModal()" class="add">Add</button>
 
     <button type="button" mat-button class="undo" (click)="undo()"
-            [disabled]="!history.canUndo()" matTooltip="Undo (Ctrl+Z)">
+            [disabled]="!history.canUndo()" matTooltip="Undo (Ctrl+Z)" aria-label="Undo">
       <mat-icon>undo</mat-icon>
     </button>
 
     <button type="button" mat-button class="redo" (click)="redo()"
-            [disabled]="!history.canRedo()" matTooltip="Redo (Ctrl+Shift+Z)">
+            [disabled]="!history.canRedo()" matTooltip="Redo (Ctrl+Shift+Z)" aria-label="Redo">
       <mat-icon>redo</mat-icon>
     </button>
+  </div>
 
-    <button type="button" mat-button class="save" (click)="save()" matTooltip="Download this flow as JSON">
+  <span class="title">Flow based programming</span>
+
+  <!--
+    Secondary actions. Shown inline when there is room, and folded into the menu
+    below when there is not — 528px of buttons does not fit a phone whatever the
+    title does.
+  -->
+  <div class="actions secondary-actions">
+    <button type="button" mat-button class="save" (click)="save()"
+            matTooltip="Download this flow as JSON" aria-label="Download this flow as JSON">
       <mat-icon>download</mat-icon>
     </button>
 
-    <button type="button" mat-button class="load" (click)="fileInput.click()" matTooltip="Load a flow from JSON">
+    <button type="button" mat-button class="load" (click)="fileInput.click()"
+            matTooltip="Load a flow from JSON" aria-label="Load a flow from JSON">
       <mat-icon>upload</mat-icon>
     </button>
-    <input #fileInput type="file" accept="application/json,.json" class="file-input"
-           (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
 
     <!--
       Validation surface. The engine reports unresolved socket formats and graph
@@ -37,6 +50,37 @@
 
     <button type="button" mat-button (click)="showJSON()" class="json">{{showJson ? 'Flow' : 'JSON'}}</button>
   </div>
+
+  <button type="button" mat-icon-button class="overflow" [matMenuTriggerFor]="overflowMenu"
+          aria-label="More actions">
+    <mat-icon>menu</mat-icon>
+  </button>
+
+  <mat-menu #overflowMenu="matMenu">
+    <button type="button" mat-menu-item (click)="save()">
+      <mat-icon>download</mat-icon>
+      <span>Download JSON</span>
+    </button>
+
+    <button type="button" mat-menu-item (click)="fileInput.click()">
+      <mat-icon>upload</mat-icon>
+      <span>Load JSON</span>
+    </button>
+
+    <button type="button" mat-menu-item *ngIf="problemCount > 0" [matTooltip]="validationDetail">
+      <mat-icon>warning</mat-icon>
+      <span>{{problemCount}} problems</span>
+    </button>
+
+    <button type="button" mat-menu-item (click)="showJSON()">
+      <mat-icon>data_object</mat-icon>
+      <span>{{showJson ? 'Show flow' : 'Show JSON'}}</span>
+    </button>
+  </mat-menu>
+
+  <!-- One file input, shared by the inline button and the menu item. -->
+  <input #fileInput type="file" accept="application/json,.json" class="file-input"
+         (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
 </mat-toolbar>
 
 <p *ngIf="loadError" class="load-error" role="alert">Could not load that flow — {{loadError}}</p>
