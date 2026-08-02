@@ -1,6 +1,11 @@
 import { ApplicationRef, EnvironmentInjector, Injector, Type, createComponent } from '@angular/core';
-import { FbNodeMount, FbNodeTypes as FbCoreNodeTypes } from '@scaljeri/flow-based-core';
-import { FbNodeTypes, isMountedNode } from './flow-based';
+import {
+  FbNodeMount,
+  FbNodeTypes as FbCoreNodeTypes,
+  FbViewComponents,
+  isViewComponents,
+} from '@scaljeri/flow-based-core';
+import { FbNodeComponent, FbNodeTypes, isMountedNode } from './flow-based';
 import { NodeService } from './node/node-service';
 
 /**
@@ -68,13 +73,44 @@ export function angularNodeTypes(
   for (const [name, type] of Object.entries(types)) {
     mounted[name] = {
       ...type,
-      // Already a mount function: it needs nothing from Angular, so it goes
-      // through untouched.
-      component: isMountedNode(type.component)
-        ? type.component.mount
-        : angularNodeMount(type.component, environmentInjector),
+      component: toMounts(type.component, environmentInjector),
     };
   }
 
   return mounted;
+}
+
+/**
+ * Translate a type's drawing, whichever shape it is in.
+ *
+ * A type registers one component for every view or one per view, and the
+ * translation is the same either way — so the map is walked rather than being a
+ * second code path. An entry that is already a mount function needs nothing from
+ * Angular and goes through untouched.
+ */
+function toMounts(
+  component: FbNodeComponent | FbViewComponents<FbNodeComponent>,
+  environmentInjector: EnvironmentInjector,
+): FbNodeMount | FbViewComponents<FbNodeMount> {
+  if (isViewComponents<FbNodeComponent>(component)) {
+    const perView: FbViewComponents<FbNodeMount> = {};
+
+    for (const [view, drawing] of Object.entries(component)) {
+      // An explicitly undefined entry is a view the type does NOT have, and
+      // carrying the key through would claim it does.
+      if (drawing) {
+        perView[view as keyof FbViewComponents<FbNodeMount>] = toMount(drawing, environmentInjector);
+      }
+    }
+
+    return perView;
+  }
+
+  return toMount(component, environmentInjector);
+}
+
+function toMount(component: FbNodeComponent, environmentInjector: EnvironmentInjector): FbNodeMount {
+  return isMountedNode(component)
+    ? component.mount
+    : angularNodeMount(component, environmentInjector);
 }

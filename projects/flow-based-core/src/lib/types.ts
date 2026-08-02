@@ -122,8 +122,11 @@ export interface FbNodeSettings {
   sockets?: FbSocket[];
   isFlow?: boolean;
   /**
-   * Which of small/normal/full this type can render; see `supportedViews`.
-   * Omitted means `['small', 'normal']` — a flow gets all three.
+   * Which of small/normal/full this type wants offered; see `supportedViews`.
+   *
+   * Omitted means all three. A type that draws a different component per view
+   * has usually said this already, by not supplying one — this is for a type
+   * that draws the same thing at every size and simply has no use for the room.
    */
   views?: import('./views').FbNodeView[];
   /**
@@ -141,7 +144,13 @@ export interface FbNodeSettings {
  * component. The Angular package narrows it to `Type<unknown>`.
  */
 export interface FbNodeType<TComponent = unknown> {
-  component: TComponent;
+  /**
+   * What draws this node: one drawing for every view, or one per view.
+   *
+   * A per-view map is the more honest form — each view sizes itself, and a view
+   * with no entry is a view the node does not have. See `FbViewComponents`.
+   */
+  component: TComponent | import('./views').FbViewComponents<TComponent>;
   settings: FbNodeSettings;
   type?: string;
   /** Absent for composite ("flow") types, which get the built-in FlowWorker. */

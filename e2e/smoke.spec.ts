@@ -406,6 +406,24 @@ test('mounts a node type that has no framework in it, styled by a plain styleshe
   await expect(meter.locator('.fb-meter-value')).toBeVisible();
 
   /*
+   * At rest it draws the small one, which is a reading and nothing else. This
+   * type registers a drawing PER VIEW, so the track is not hidden here — it is
+   * not in the document at all.
+   */
+  await expect(page.locator('.fb-meter-track')).toHaveCount(0);
+
+  // Open it, and the shell mounts the other drawing.
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'meter')!;
+
+    node.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  });
+
+  await expect(page.locator('.fb-meter-track')).toHaveCount(1);
+
+  /*
    * And it is styled by the app's GLOBAL stylesheet, which is the load-bearing
    * part: this node has no component and therefore no scoped styles, so if node
    * content were mounted inside a shadow root — as it was — a plain `.fb-meter`
@@ -413,6 +431,16 @@ test('mounts a node type that has no framework in it, styled by a plain styleshe
    */
   const trackHeight = await page.locator('.fb-meter-track').evaluate(el => getComputedStyle(el).height);
   expect(trackHeight).toBe('6px');
+
+  // It has no `full` drawing, so the header offers one step and it goes down.
+  const steps = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'meter')!;
+
+    return [...node.shadowRoot!.querySelectorAll('.head button.step')]
+      .map(b => b.getAttribute('aria-label'));
+  });
+  expect(steps).toEqual(['Show smaller (small)']);
 
   expect(errors).toEqual([]);
 });

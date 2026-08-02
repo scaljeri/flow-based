@@ -285,7 +285,8 @@ export class FbEditor {
       return;
     }
 
-    const supported = supportedViews(this.types[node.type]?.settings);
+    const type = this.types[node.type];
+    const supported = supportedViews(type?.settings, type?.component);
 
     if (!supported.includes(view) || node.view === view) {
       return;
@@ -302,7 +303,11 @@ export class FbEditor {
    * something that covers the surface moves a graph the user cannot see.
    */
   get fullNode(): FbNodeState | undefined {
-    return this.children.find(node => viewOf(node, this.types[node.type]?.settings) === 'full' && !node.children);
+    return this.children.find(node => {
+      const type = this.types[node.type];
+
+      return viewOf(node, type?.settings, type?.component) === 'full' && !node.children;
+    });
   }
 
   nodeById(id: number): FbNodeState | undefined {

@@ -154,25 +154,54 @@ is connected to, and the engine propagates that through the graph.
 
 A node has three sizes, and your type declares which of them it can render:
 
-```ts
-const METER_SETTINGS: FbNodeSettings = {
-  title: 'Meter',
-  views: ['small', 'normal'],   // omitted means all three
-};
-```
-
 | | |
 |---|---|
 | `small` | the node at rest: an icon, a reading, a title, and no chrome at all |
 | `normal` | opened in place, with a header bar across the top |
 | `full` | the whole editor surface, with zoom and pan suspended |
 
-Every node opens `small`, and every node can reach all three unless you say
-otherwise. Narrow `views` if your node genuinely has nothing to do with the extra
-room — but prefer leaving it alone: a header with two buttons on one node and
-three on the next is a difference the user has to work out, and room to look at
-something closely is rarely unwelcome. For a composite (`isFlow: true`), `full`
-is navigation: the editor enters its graph rather than the node growing.
+Every node opens `small`. For a composite (`isFlow: true`), `full` is navigation:
+the editor enters its graph rather than the node growing.
+
+### A drawing per view
+
+Register one component per view, and each of them draws — and sizes — one thing:
+
+```ts
+const types: FbNodeTypes = {
+  meter: {
+    component: {
+      small:  MeterSmallComponent,
+      normal: MeterNormalComponent,
+      // no `full`: this node has nothing to do with the whole surface
+    },
+    settings: METER_SETTINGS,
+    worker: MeterWorker,
+  },
+};
+```
+
+**A view with no component is a view the node does not have.** Nothing offers it:
+the header draws no button for it, `supportedViews` leaves it out, and
+`setView()` ignores it. That is how a type says "I have no use for the room" —
+`settings.views` still narrows too, and is for a type that draws one thing at
+every size.
+
+**Each component defines its own size.** The shell imposes none: it draws a frame
+around whatever comes out, so a small drawing can be forty pixels wide and a
+normal one three hundred. At `full` the drawing is handed the surface, and
+`width: 100%` / `height: 100%` fill it.
+
+One component for the whole type still works and covers every view:
+
+```ts
+fractals: { component: FractalComponent, settings: FRACTALS_SETTINGS },
+```
+
+Prefer the map when the sizes genuinely differ. One component branching on
+`api.view` means every size a node has is in the DOM at once with all but one
+hidden by CSS — which is what this demo used to do, and why its nodes were 500px
+wide whether or not you could see them.
 
 **You do not draw the chrome.** The shell does, and it is the same for every node
 type: a double-click opens a small node, and the header of an open one carries

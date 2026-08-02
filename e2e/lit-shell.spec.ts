@@ -799,9 +799,42 @@ test('every node offers full unless its type narrows the set', async ({ page }) 
   expect(await viewsOf(page)).toContain('normal:Source');
   expect(await stepsAt('Source')).toEqual(['Show smaller (small)', 'Show larger (full)']);
 
-  // Sink narrows to two, so no control claims a view it does not have.
+  // Sink registers a drawing for small and normal only, so no control claims a
+  // view it has nothing to draw for.
   await openNode(page, 'Sink');
   expect(await stepsAt('Sink')).toEqual(['Show smaller (small)']);
+});
+
+test('a type can draw a different thing at each size', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const drawing = (title: string) => page.evaluate(t => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
+
+    return node.querySelector('.fb-node-content')?.textContent?.trim() ?? '';
+  }, title);
+
+  /*
+   * Sink's two drawings say different things, so which one is mounted is
+   * visible rather than inferred. The old shape of this — one drawing holding
+   * every size at once and hiding all but one with CSS — would have both texts
+   * in the DOM here.
+   */
+  expect(await drawing('Sink')).toBe('·');
+
+  await openNode(page, 'Sink');
+  expect(await drawing('Sink')).toBe('Sink');
+
+  // And back: the small drawing is mounted again, not merely revealed.
+  await stepView(page, 'Sink', 'shrink');
+  expect(await drawing('Sink')).toBe('·');
+
+  // A type with one drawing keeps it at every size — no needless teardown.
+  expect(await drawing('Source')).toBe('Source');
+  await openNode(page, 'Source');
+  expect(await drawing('Source')).toBe('Source');
 });
 
 test('an open node carries its title and its way out in one header', async ({ page }) => {

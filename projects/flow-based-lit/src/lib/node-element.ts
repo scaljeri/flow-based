@@ -2,9 +2,11 @@ import { LitElement, PropertyValues, css, html, nothing, svg } from 'lit';
 import {
   FbNodeApi,
   FbNodeHandle,
+  FbNodeMount,
   FbNodeState,
   FbNodeView,
   FbSocket,
+  componentFor,
   previewChild,
   stepView,
   supportedViews,
@@ -386,8 +388,18 @@ export class FbNodeElement extends LitElement {
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      min-height: 50px;
-      min-width: 72px;
+      /*
+       * How big a node is, is its own business.
+       *
+       * This used to read 72x50, which was a guess at what a node ought to look
+       * like at rest — and a wrong one for anything drawing a meter, a chart or
+       * one character. A type that draws a component per view sizes each of them
+       * itself, and the box follows its content. What is left is a floor small
+       * enough to disappear behind any real content, and only there so a node
+       * whose drawing failed is still something you can see, select and delete.
+       */
+      min-height: var(--fb-node-min-size, 24px);
+      min-width: var(--fb-node-min-size, 24px);
       overflow: hidden;
       padding: 4px;
       position: relative;
@@ -410,6 +422,34 @@ export class FbNodeElement extends LitElement {
      */
     slot {
       display: block;
+    }
+
+    ::slotted(.fb-node-content) {
+      display: block;
+    }
+
+    /*
+     * A full node's content is GIVEN the surface rather than centred in it.
+     *
+     * The stretching is done on the SLOT, not on the content host. A drawing
+     * sized as width:100% measures itself against its parent, and its parent is
+     * the content host, whose parent is the slot — so a slot that shrank to fit
+     * capped the whole chain at the width of the text inside it, and a node told
+     * to take the editor drew a narrow panel adrift in the middle of it.
+     *
+     * The content host itself is deliberately left alone: a rule here would be an
+     * outer-tree declaration losing to the node's own, which is the right way
+     * round. How big a drawing is remains the drawing's business.
+     */
+    :host([view='full']) .body {
+      align-items: stretch;
+    }
+
+    :host([view='full']) slot {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
     }
 
     /* Lines a node draws between its own elements; purely decorative. */
@@ -545,6 +585,8 @@ export class FbNodeElement extends LitElement {
   private contentHost?: HTMLElement;
   /** Whose content is mounted; see contentSource(). */
   private mountedFor?: FbNodeState;
+  /** Which drawing is mounted; see mountFor(). Differs per view for some types. */
+  private mountedMount?: FbNodeMount;
   private showLabel = true;
   private configOpen = false;
   private settingsTeardown?: () => void;
@@ -588,9 +630,19 @@ export class FbNodeElement extends LitElement {
     if (changed.has('state') && changed.get('state')) {
       this.unmountContent();
       this.mountContent();
-    } else if (this.mountedFor && this.mountedFor !== this.contentSource()) {
-      // A composite shows one of its children until it is big enough to show its
-      // graph, so the view decides WHAT is mounted, not just how big it is.
+    } else if (
+      this.mountedFor
+      && (this.mountedFor !== this.contentSource() || this.mountedMount !== this.mountFor())
+    ) {
+      /*
+       * The view decides WHAT is mounted, not only how much room it gets — a
+       * composite shows one of its children until it is big enough for its graph,
+       * and a type with a per-view component draws a different one at each size.
+       *
+       * Both are caught by comparing the resolved mount function rather than the
+       * view: a type with one component resolves to the same function at every
+       * size, so it is never needlessly torn down and rebuilt.
+       */
       this.unmountContent();
       this.mountContent();
     }
@@ -665,8 +717,17 @@ export class FbNodeElement extends LitElement {
     return this.editor?.types[this.state?.type]?.settings;
   }
 
+  /*
+   * The type's drawing, whatever shape it is in. Every view question needs it
+   * now: a per-view component map is what says which views the type HAS, and
+   * asking from the settings alone would offer a view with nothing to draw.
+   */
+  private get component() {
+    return this.editor?.types[this.state?.type]?.component;
+  }
+
   private get view(): FbNodeView {
-    return viewOf(this.state, this.settings);
+    return viewOf(this.state, this.settings, this.component);
   }
 
   /**
@@ -758,12 +819,28 @@ export class FbNodeElement extends LitElement {
     return this.state;
   }
 
+  /**
+   * The drawing for the view this node is in.
+   *
+   * A type may register one component for every view or one per view; this is
+   * where the difference stops mattering. Resolved against the SOURCE's type and
+   * this element's view, which for a composite's preview child means the child's
+   * drawing at the composite's size — the size the child is actually given.
+   */
+  private mountFor(): FbNodeMount | undefined {
+    const source = this.contentSource();
+    const component = source && this.editor?.types[source.type]?.component;
+
+    return componentFor<FbNodeMount>(component, this.view);
+  }
+
   private mountContent(): void {
     const source = this.contentSource();
-    const mount = source && this.editor?.types[source.type]?.component;
+    const mount = this.mountFor();
 
     if (!source || typeof mount !== 'function') {
       this.mountedFor = source;
+      this.mountedMount = undefined;
 
       return;
     }
@@ -771,13 +848,19 @@ export class FbNodeElement extends LitElement {
     if (!this.contentHost) {
       this.contentHost = document.createElement('div');
       this.contentHost.className = 'fb-node-content';
-      this.contentHost.style.display = 'block';
+      /*
+       * Its display is set in the stylesheet, through ::slotted, rather than
+       * inline here — an inline declaration outranks every rule, so the full
+       * view could not make this stretch and the node's content sat centred in
+       * the middle of a surface it had been given all of.
+       */
     }
 
     // Re-appended rather than assumed present: a re-mount after the element moved
     // in the DOM has to put the host back.
     this.appendChild(this.contentHost);
     this.mountedFor = source;
+    this.mountedMount = mount;
     this.handle = mount(this.contentHost, { api: this.api(source) });
   }
 
@@ -787,6 +870,7 @@ export class FbNodeElement extends LitElement {
     this.handle?.destroy();
     this.handle = undefined;
     this.mountedFor = undefined;
+    this.mountedMount = undefined;
     this.wires.clear();
     this.clickListeners.clear();
     this.viewListeners.clear();
@@ -814,10 +898,10 @@ export class FbNodeElement extends LitElement {
         return state.id === undefined ? undefined : editor.flow.getWorker(state.id);
       },
       get view() {
-        return viewOf(state, editor.types[state.type]?.settings);
+        return viewOf(state, editor.types[state.type]?.settings, editor.types[state.type]?.component);
       },
       get supportedViews() {
-        return supportedViews(editor.types[state.type]?.settings);
+        return supportedViews(editor.types[state.type]?.settings, editor.types[state.type]?.component);
       },
       setView: (view: FbNodeView) => this.requestView(view),
       /*
@@ -833,7 +917,7 @@ export class FbNodeElement extends LitElement {
       // Kept for node types written against the boolean: the largest supported
       // view, or the smallest.
       setMaxSize: (isMax: boolean) => {
-        const views = supportedViews(this.settings);
+        const views = supportedViews(this.settings, this.component);
 
         this.requestView(isMax ? views[views.length - 1] : views[0]);
       },
@@ -1145,8 +1229,8 @@ export class FbNodeElement extends LitElement {
       return nothing;
     }
 
-    const bigger = stepView(current, 1, this.settings);
-    const smaller = stepView(current, -1, this.settings);
+    const bigger = stepView(current, 1, this.settings, this.component);
+    const smaller = stepView(current, -1, this.settings, this.component);
 
     return html`
       <div class="head">
@@ -1197,7 +1281,7 @@ export class FbNodeElement extends LitElement {
 
     event.stopPropagation();
 
-    const bigger = stepView('small', 1, this.settings);
+    const bigger = stepView('small', 1, this.settings, this.component);
 
     if (bigger) {
       this.requestView(bigger);

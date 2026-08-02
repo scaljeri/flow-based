@@ -193,6 +193,16 @@ fb-root {
   text-align: center;
 }
 
+/*
+ * The meter at rest is a number, so it is as wide as a number — the 120px above
+ * is the width its track needs, not a width every size of this node should have.
+ * Each drawing sizes itself now; the shell imposes nothing.
+ */
+.fb-meter-small {
+  min-width: 0;
+  padding: 4px 8px;
+}
+
 .fb-meter-value {
   font-size: 20px;
   line-height: 1.2;

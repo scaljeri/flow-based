@@ -5,7 +5,9 @@ import {
   FbInline,
   FbNodeApi,
   FbNodeHandle,
+  FbNodeMount,
   FbNodeState,
+  componentFor,
   documentFor,
   isDisplayMath,
   paragraphsOf,
@@ -245,7 +247,16 @@ export class FbFlowDocumentElement extends LitElement {
       }
 
       const node = this.editor.nodeById(nodeId);
-      const mount = node && this.editor.types[node.type]?.component;
+      /*
+       * The `normal` drawing for a type that has one per view. A figure is a node
+       * shown at the size the page gives it, which is neither an icon on a canvas
+       * nor the whole surface — and if a type has no normal drawing, the smallest
+       * one it does have is a better figure than an empty box.
+       */
+      const component = node && this.editor.types[node.type]?.component;
+      const mount = componentFor<FbNodeMount>(component, 'normal')
+        ?? componentFor<FbNodeMount>(component, 'small')
+        ?? componentFor<FbNodeMount>(component, 'full');
 
       if (!node || typeof mount !== 'function') {
         continue;

@@ -43,27 +43,101 @@ export function normaliseView(view: string | undefined | null): FbNodeView | und
 }
 
 /**
- * The views a node type supports, smallest first.
+ * A node type's drawing, one per view.
  *
- * All three by default. `full` used to be opt-in, on the reasoning that taking
- * the whole surface is a claim only a node's author can make — and the effect was
- * that most nodes had no way to full at all, so the header offered two buttons on
- * one node and three on the next for no reason a user could see. Room to look at
- * something closely is not a privilege a node type has to earn; a type that
- * genuinely has nothing to do with the space still says so, by narrowing `views`.
+ * The alternative — one drawing that reads its own view and branches — is what
+ * the demo did with `.minified` / `.expanded` classes, and it means every size a
+ * node has ever had is in the DOM at once, hidden by CSS. A separate drawing per
+ * view is smaller, sizes itself honestly, and makes the absence of one mean
+ * something: a view with no drawing is a view the node does not have.
  */
-export function supportedViews(settings: FbNodeSettings | undefined): readonly FbNodeView[] {
-  const declared = settings?.views;
+export type FbViewComponents<TComponent> = Partial<Record<FbNodeView, TComponent>>;
 
-  if (declared?.length) {
-    const named = declared.map(view => normaliseView(view));
-
-    // Kept in size order however they were written, so stepping is predictable.
-    return FB_NODE_VIEWS.filter(view => named.includes(view));
+/**
+ * Whether a type's `component` is a per-view map rather than one drawing.
+ *
+ * Detected structurally, unlike `nodeMount()`, which is explicit. That is not an
+ * inconsistency: telling an Angular component from a mount function means reading
+ * private compiled metadata, because both are functions — whereas the view names
+ * are a closed set of three, so "an object whose every key is a view name" cannot
+ * be anything else. A component type is a function, and `FbMountedNode` has a
+ * `mount` key, which is not a view name.
+ */
+export function isViewComponents<TComponent>(
+  component: unknown,
+): component is FbViewComponents<TComponent> {
+  if (typeof component !== 'object' || component === null) {
+    return false;
   }
 
-  return FB_NODE_VIEWS;
+  const keys = Object.keys(component);
+
+  return keys.length > 0 && keys.every(key => (FB_NODE_VIEWS as readonly string[]).includes(key));
 }
+
+/** The drawing for one view: the per-view one, or the single one for all views. */
+export function componentFor<TComponent>(
+  component: TComponent | FbViewComponents<TComponent> | undefined,
+  view: FbNodeView,
+): TComponent | undefined {
+  if (component === undefined) {
+    return undefined;
+  }
+
+  return isViewComponents<TComponent>(component) ? component[view] : component;
+}
+
+/** The views a per-view map draws, or `undefined` for a single drawing. */
+export function componentViews(component: unknown): readonly FbNodeView[] | undefined {
+  if (!isViewComponents(component)) {
+    return undefined;
+  }
+
+  return FB_NODE_VIEWS.filter(view => component[view] !== undefined);
+}
+
+/**
+ * The views a node type supports, smallest first.
+ *
+ * Two things narrow it, and both have to agree. A per-view `component` map says
+ * which views the type can DRAW — a view it has no drawing for is a view it does
+ * not have. `settings.views` says which of those it wants OFFERED, for a type
+ * that draws one thing at every size and simply has no use for the room.
+ *
+ * All three when neither says otherwise. `full` used to be opt-in, on the
+ * reasoning that taking the whole surface is a claim only a node's author can
+ * make — and the effect was that most nodes had no way to full at all, so the
+ * header offered two buttons on one node and three on the next for no reason a
+ * user could see.
+ */
+export function supportedViews(
+  settings: FbNodeSettings | undefined,
+  component?: unknown,
+): readonly FbNodeView[] {
+  const drawn = componentViews(component);
+  const declared = settings?.views?.length
+    ? settings.views.map(view => normaliseView(view))
+    : undefined;
+
+  // Filtered out of the canonical order, so the result is in size order however
+  // either list was written and stepping through it is predictable.
+  const supported = FB_NODE_VIEWS.filter(view =>
+    (!drawn || drawn.includes(view)) && (!declared || declared.includes(view)));
+
+  /*
+   * Never empty. A type whose two lists do not overlap has said something
+   * contradictory, and a node with no views at all cannot be rendered, selected
+   * or opened — so it would vanish rather than report the mistake.
+   */
+  return supported.length ? supported : FB_NODE_VIEWS;
+}
+
+/*
+ * `component` is optional on all three below, and threaded through to
+ * `supportedViews` — it is what tells them which views the type can draw. A
+ * caller that has the node's type to hand should pass it; one that only has the
+ * settings still gets the right answer for every type that draws one thing.
+ */
 
 /**
  * The view a node opens in when its state does not name one.
@@ -73,19 +147,23 @@ export function supportedViews(settings: FbNodeSettings | undefined): readonly F
  * the editor is about the connections between them at least as much as their
  * contents.
  */
-export function defaultView(settings: FbNodeSettings | undefined): FbNodeView {
-  const supported = supportedViews(settings);
+export function defaultView(settings: FbNodeSettings | undefined, component?: unknown): FbNodeView {
+  const supported = supportedViews(settings, component);
   const declared = normaliseView(settings?.defaultView);
 
   return declared && supported.includes(declared) ? declared : supported[0];
 }
 
 /** The view a node is in, falling back to its type's default. */
-export function viewOf(node: FbNodeState, settings: FbNodeSettings | undefined): FbNodeView {
-  const supported = supportedViews(settings);
+export function viewOf(
+  node: FbNodeState,
+  settings: FbNodeSettings | undefined,
+  component?: unknown,
+): FbNodeView {
+  const supported = supportedViews(settings, component);
   const stored = normaliseView(node.view);
 
-  return stored && supported.includes(stored) ? stored : defaultView(settings);
+  return stored && supported.includes(stored) ? stored : defaultView(settings, component);
 }
 
 /**
@@ -99,8 +177,9 @@ export function stepView(
   current: FbNodeView,
   direction: 1 | -1,
   settings: FbNodeSettings | undefined,
+  component?: unknown,
 ): FbNodeView | null {
-  const supported = supportedViews(settings);
+  const supported = supportedViews(settings, component);
   const index = supported.indexOf(current);
 
   if (index === -1) {

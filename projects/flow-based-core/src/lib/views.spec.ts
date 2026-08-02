@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { FB_NODE_VIEWS, FbNodeView, defaultView, moveSocket, previewChild, stepView, supportedViews, viewOf } from './views';
+import {
+  FB_NODE_VIEWS,
+  FbNodeView,
+  componentFor,
+  defaultView,
+  isViewComponents,
+  moveSocket,
+  previewChild,
+  stepView,
+  supportedViews,
+  viewOf,
+} from './views';
 import { FbNodeSettings, FbNodeState } from './types';
 
 const plain: FbNodeSettings = { title: 'Plain' };
@@ -23,6 +34,66 @@ describe('supportedViews', () => {
 
   it('keeps a declared set in size order, however it was written', () => {
     expect(supportedViews({ title: 'x', views: ['full', 'small'] })).toEqual(['small', 'full']);
+  });
+});
+
+describe('a drawing per view', () => {
+  const draw = (name: string) => () => name;
+
+  it('takes the views from the map, so a missing one is a view the node lacks', () => {
+    expect(supportedViews(plain, { small: draw('s'), normal: draw('n') }))
+      .toEqual(['small', 'normal']);
+  });
+
+  it('leaves a single drawing covering every view', () => {
+    expect(supportedViews(plain, draw('one'))).toEqual(FB_NODE_VIEWS);
+  });
+
+  it('lets settings narrow the map further, since both have to agree', () => {
+    // The map says what can be drawn; `views` says what is offered.
+    expect(supportedViews(narrow, { small: draw('s'), normal: draw('n'), full: draw('f') }))
+      .toEqual(['small', 'normal']);
+  });
+
+  it('never reports nothing, so a contradictory type still renders', () => {
+    // A node with no views cannot be drawn, selected or opened — it would
+    // disappear rather than report the mistake.
+    expect(supportedViews({ title: 'x', views: ['full'] }, { small: draw('s') }))
+      .toEqual(FB_NODE_VIEWS);
+  });
+
+  it('picks the drawing for a view, whichever shape the type registered', () => {
+    const map = { small: draw('s'), full: draw('f') };
+
+    expect(componentFor(map, 'small')).toBe(map.small);
+    expect(componentFor(map, 'normal')).toBeUndefined();
+
+    const single = draw('one');
+
+    expect(componentFor(single, 'normal')).toBe(single);
+    expect(componentFor(undefined, 'normal')).toBeUndefined();
+  });
+
+  it('tells a map apart from a component without reading Angular internals', () => {
+    expect(isViewComponents({ small: draw('s') })).toBe(true);
+    expect(isViewComponents({ mount: draw('m') })).toBe(false);
+    expect(isViewComponents(draw('fn'))).toBe(false);
+    // An empty object claims no views at all, which is not the same as a map.
+    expect(isViewComponents({})).toBe(false);
+    expect(isViewComponents(undefined)).toBe(false);
+  });
+
+  it('opens in the smallest view it can actually draw', () => {
+    expect(viewOf({ type: 'a' }, plain, { normal: draw('n'), full: draw('f') })).toBe('normal');
+    // And a stored view the type cannot draw falls back to that same default.
+    expect(viewOf({ type: 'a', view: 'small' }, plain, { normal: draw('n') })).toBe('normal');
+  });
+
+  it('does not step to a view that has no drawing', () => {
+    const two = { small: draw('s'), normal: draw('n') };
+
+    expect(stepView('normal', 1, plain, two)).toBeNull();
+    expect(stepView('normal', -1, plain, two)).toBe('small');
   });
 });
 

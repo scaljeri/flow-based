@@ -724,6 +724,43 @@ the view is no longer something content asks for and therefore already knows: th
 shell changes it. `FbNodeHandle.update()` is finally called too — it had been in
 the contract since it was written with nothing ever invoking it.
 
+## Stage 7 — a drawing per view
+
+A node type registers one component per view rather than one that branches:
+
+```ts
+component: { small: TapSmallComponent, normal: TapNormalComponent, full: TapFullComponent }
+```
+
+Three things follow, and they are the point.
+
+**A view with no component is a view the node does not have.** `supportedViews`
+takes its answer from which entries exist, so the header draws no button for a
+view with nothing behind it. The demo's Meter says exactly this by having no
+`full`: it is a reading against a range, and there is nothing it could do with
+the surface it does not already do in a hundred pixels.
+
+**Each drawing sizes itself.** The box's `min-width: 72px; min-height: 50px` is
+gone — it was a guess at what a node ought to look like at rest, and wrong for
+anything drawing a meter, a chart or one character. What is left is a 24px floor,
+only so a node whose drawing failed is still something you can see and delete.
+
+**Nothing is in the DOM that is not on screen.** The old shape was one component
+holding every size at once, with `.minified` / `.expanded` sections and CSS
+hiding all but one — which is why a collapsed node was still 500px wide.
+
+`Tap` (the demo's Logger) is three Angular components over a shared `TapView`
+base, and `Meter` is two plain-DOM mount functions — so the mechanism is shown to
+be independent of the framework, not just of Angular's change detection. The
+other nine types still register one component and are unaffected.
+
+Also fixed while checking it: a `full` node's content was centred in the surface
+rather than given it. The stretching has to happen on the `<slot>` — a drawing
+sized `width: 100%` measures against its parent, and a slot that shrank to fit
+capped the whole chain at the width of its own text. The content host itself is
+deliberately left alone: a rule there would be an outer-tree declaration losing
+to the node's own, which is the right way round.
+
 ### Still open
 - `ng lint` reports 0 errors but ~265 warnings, concentrated in four families
   (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,

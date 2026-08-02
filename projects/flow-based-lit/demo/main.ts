@@ -105,14 +105,19 @@ const types: FbNodeTypes<FbNodeMount> = {
     settings: { title: 'Source', sockets: [{ type: 'out', format: 'number' }] },
   },
   sink: {
-    component: boxNode('#c2185b', 'Sink'),
-    // Narrows to two: every type gets all three unless it says otherwise, and a
-    // box printing one value has nothing to do with the whole surface.
-    settings: {
-      title: 'Sink',
-      sockets: [{ type: 'in', format: 'number' }],
-      views: ['small', 'normal'],
+    /*
+     * A drawing per view, and only two of them.
+     *
+     * The small one is a dot, the normal one is a labelled box, and there is no
+     * `full` — which is how a type says it has no use for the whole surface. The
+     * shell mounts whichever the current view names and offers no button to the
+     * one that is missing.
+     */
+    component: {
+      small: boxNode('#c2185b', '·'),
+      normal: boxNode('#c2185b', 'Sink'),
     },
+    settings: { title: 'Sink', sockets: [{ type: 'in', format: 'number' }] },
   },
   scope: {
     component: canvasNode,

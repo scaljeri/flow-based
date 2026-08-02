@@ -3,7 +3,9 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
-import { TapComponent } from './nodes/tap/tap.component';
+import { TapSmallComponent } from './nodes/tap/tap-small.component';
+import { TapNormalComponent } from './nodes/tap/tap-normal.component';
+import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
 import { FlowComponent } from './flow/flow.component';
 import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
@@ -52,7 +54,9 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
     AppComponent,
     AddSocketComponent,
     RandomNumbersComponent,
-    TapComponent,
+    TapSmallComponent,
+    TapNormalComponent,
+    TapFullComponent,
     DefaultFlowComponent,
     FlowComponent,
     DefaultFrontComponent,
