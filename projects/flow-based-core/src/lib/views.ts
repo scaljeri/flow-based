@@ -45,14 +45,12 @@ export function normaliseView(view: string | undefined | null): FbNodeView | und
 /**
  * The views a node type supports, smallest first.
  *
- * Defaults to `['small', 'normal']`, which is exactly what every node could do
- * before this existed — collapsed and expanded. A type opts into `full` rather
- * than inheriting it, because taking the whole surface is a claim only the node's
- * author can make: a node that renders a single number has nothing to do with the
- * extra room.
- *
- * A flow node is the exception and gets all three by default: its `full` view is
- * its own graph, which it always has.
+ * All three by default. `full` used to be opt-in, on the reasoning that taking
+ * the whole surface is a claim only a node's author can make — and the effect was
+ * that most nodes had no way to full at all, so the header offered two buttons on
+ * one node and three on the next for no reason a user could see. Room to look at
+ * something closely is not a privilege a node type has to earn; a type that
+ * genuinely has nothing to do with the space still says so, by narrowing `views`.
  */
 export function supportedViews(settings: FbNodeSettings | undefined): readonly FbNodeView[] {
   const declared = settings?.views;
@@ -64,7 +62,7 @@ export function supportedViews(settings: FbNodeSettings | undefined): readonly F
     return FB_NODE_VIEWS.filter(view => named.includes(view));
   }
 
-  return settings?.isFlow ? FB_NODE_VIEWS : ['small', 'normal'];
+  return FB_NODE_VIEWS;
 }
 
 /**

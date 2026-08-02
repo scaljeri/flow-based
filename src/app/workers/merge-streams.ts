@@ -4,16 +4,6 @@ import { map } from 'rxjs/operators';
 
 export const MERGE_STREAMS_SETTINGS: FbNodeSettings = {
   title: 'Merge streams',
-  /*
-   * Opts into the full view, which is how this node used to open: it draws a line
-   * from every input socket through the value it received to the merged output,
-   * and that picture is only legible with the surface to itself.
-   *
-   * Declared here rather than as a `[fullscreen]="true"` on the chrome, which is
-   * where it lived before. Which views a type can render is a property of the
-   * type, not of the markup one app happens to wrap it in.
-   */
-  views: ['small', 'normal', 'full'],
   sockets: [
     {
       type: 'in',

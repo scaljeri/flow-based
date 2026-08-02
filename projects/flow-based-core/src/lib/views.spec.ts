@@ -5,16 +5,20 @@ import { FbNodeSettings, FbNodeState } from './types';
 const plain: FbNodeSettings = { title: 'Plain' };
 const flow: FbNodeSettings = { title: 'Flow', isFlow: true };
 const big: FbNodeSettings = { title: 'Big', views: ['small', 'full'] };
+const narrow: FbNodeSettings = { title: 'Narrow', views: ['small', 'normal'] };
 
 describe('supportedViews', () => {
-  it('gives an ordinary node the two views it always had', () => {
-    // Exactly the old collapsed/expanded pair, so nothing changes for a type
-    // written before views existed.
-    expect(supportedViews(plain)).toEqual(['small', 'normal']);
+  it('gives a node that declares nothing all three', () => {
+    // Room to look at something closely is not something a node type has to earn:
+    // a header offering two buttons on one node and three on the next, for no
+    // reason a user can see, is worse than a plain node with a full view it will
+    // rarely use.
+    expect(supportedViews(plain)).toEqual(FB_NODE_VIEWS);
+    expect(supportedViews(flow)).toEqual(FB_NODE_VIEWS);
   });
 
-  it('gives a flow all three, because its full view is its own graph', () => {
-    expect(supportedViews(flow)).toEqual(FB_NODE_VIEWS);
+  it('lets a type that has nothing to do with the room say so', () => {
+    expect(supportedViews(narrow)).toEqual(['small', 'normal']);
   });
 
   it('keeps a declared set in size order, however it was written', () => {
@@ -52,8 +56,8 @@ describe('viewOf', () => {
 
   it('ignores a stored view the type does not support', () => {
     // A saved flow can name a view a type has since dropped.
-    expect(viewOf({ type: 'a', view: 'full' }, plain)).toBe('small');
-    expect(viewOf({ type: 'a', view: 'normal' }, plain)).toBe('normal');
+    expect(viewOf({ type: 'a', view: 'full' }, narrow)).toBe('small');
+    expect(viewOf({ type: 'a', view: 'normal' }, narrow)).toBe('normal');
   });
 });
 
@@ -65,7 +69,8 @@ describe('stepView', () => {
 
   it('stops at the ends rather than wrapping', () => {
     // Wrapping would make a directional control lie about where it goes next.
-    expect(stepView('normal', 1, plain)).toBeNull();
+    expect(stepView('normal', 1, narrow)).toBeNull();
+    expect(stepView('full', 1, plain)).toBeNull();
     expect(stepView('small', -1, plain)).toBeNull();
   });
 });

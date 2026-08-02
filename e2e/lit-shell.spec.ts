@@ -777,23 +777,31 @@ test('steps a node through small, normal and full', async ({ page }) => {
   expect(await viewsOf(page)).toContain('normal:Scope');
 });
 
-test('a node only offers the views its type declares', async ({ page }) => {
+test('every node offers full unless its type narrows the set', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
-  // Source declares nothing, so it gets the pair every node always had.
+  const stepsAt = (title: string) => page.evaluate(t => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
+
+    return [...node.shadowRoot!.querySelectorAll('.head button.step')]
+      .map(b => b.getAttribute('aria-label'));
+  }, title);
+
+  /*
+   * Source declares no views at all and still gets a way to full. Making full
+   * opt-in read well in the abstract and badly on screen: most types declared
+   * nothing, so the header showed two buttons on one node and three on the next
+   * for no reason a user could see.
+   */
   await openNode(page, 'Source');
   expect(await viewsOf(page)).toContain('normal:Source');
+  expect(await stepsAt('Source')).toEqual(['Show smaller (small)', 'Show larger (full)']);
 
-  const atTop = await page.evaluate(() => {
-    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
-      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
-
-    return node.shadowRoot!.querySelectorAll('.head button.step').length;
-  });
-
-  // Shrink only: there is no full view to offer, so no control claims there is.
-  expect(atTop).toBe(1);
+  // Sink narrows to two, so no control claims a view it does not have.
+  await openNode(page, 'Sink');
+  expect(await stepsAt('Sink')).toEqual(['Show smaller (small)']);
 });
 
 test('an open node carries its title and its way out in one header', async ({ page }) => {

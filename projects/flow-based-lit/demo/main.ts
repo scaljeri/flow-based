@@ -106,16 +106,18 @@ const types: FbNodeTypes<FbNodeMount> = {
   },
   sink: {
     component: boxNode('#c2185b', 'Sink'),
-    settings: { title: 'Sink', sockets: [{ type: 'in', format: 'number' }] },
+    // Narrows to two: every type gets all three unless it says otherwise, and a
+    // box printing one value has nothing to do with the whole surface.
+    settings: {
+      title: 'Sink',
+      sockets: [{ type: 'in', format: 'number' }],
+      views: ['small', 'normal'],
+    },
   },
   scope: {
     component: canvasNode,
-    // Opts into the full view: a plot is worth the whole surface.
-    settings: {
-      title: 'Scope',
-      sockets: [{ type: 'in', format: 'number' }],
-      views: ['small', 'normal', 'full'],
-    },
+    // Declares nothing, so it gets all three — which is what a plot wants anyway.
+    settings: { title: 'Scope', sockets: [{ type: 'in', format: 'number' }] },
   },
   /*
    * A composite. It draws one of its children until it is full, at which point

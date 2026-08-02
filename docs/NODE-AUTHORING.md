@@ -155,9 +155,9 @@ is connected to, and the engine propagates that through the graph.
 A node has three sizes, and your type declares which of them it can render:
 
 ```ts
-const SCOPE_SETTINGS: FbNodeSettings = {
-  title: 'Scope',
-  views: ['small', 'normal', 'full'],   // omitted means ['small', 'normal']
+const METER_SETTINGS: FbNodeSettings = {
+  title: 'Meter',
+  views: ['small', 'normal'],   // omitted means all three
 };
 ```
 
@@ -167,10 +167,12 @@ const SCOPE_SETTINGS: FbNodeSettings = {
 | `normal` | opened in place, with a header bar across the top |
 | `full` | the whole editor surface, with zoom and pan suspended |
 
-Every node opens `small`. Taking the surface is a claim only you can make, so
-`full` is opted into rather than inherited — a node drawing one number has
-nothing to do with the extra room. A composite (`isFlow: true`) gets all three,
-and its `full` view is navigation: the editor enters its graph.
+Every node opens `small`, and every node can reach all three unless you say
+otherwise. Narrow `views` if your node genuinely has nothing to do with the extra
+room — but prefer leaving it alone: a header with two buttons on one node and
+three on the next is a difference the user has to work out, and room to look at
+something closely is rarely unwelcome. For a composite (`isFlow: true`), `full`
+is navigation: the editor enters its graph rather than the node growing.
 
 **You do not draw the chrome.** The shell does, and it is the same for every node
 type: a double-click opens a small node, and the header of an open one carries

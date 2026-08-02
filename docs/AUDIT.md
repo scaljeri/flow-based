@@ -698,6 +698,12 @@ way out to full. Deleting moved into that settings panel, beside the title and
 the sockets it already edited — it used to be a button the *demo's* node chrome
 drew, so a node type not written for that app could not be deleted from itself.
 
+Every type gets all three views unless it narrows `views`. `full` was opt-in
+first, on the reasoning that taking the whole surface is a claim only a node's
+author can make. That read well and looked wrong: almost no type declared
+anything, so the header showed two buttons on one node and three on the next for
+no reason a user could see.
+
 Behind it, two independent notions of how big a node is became one. `view` (the
 shell) and `config.expanded` (the demo chrome) each thought they owned the answer
 and disagreed: a single click left the shell at `small` while the chrome expanded
