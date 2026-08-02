@@ -18,6 +18,34 @@ import { expect, test } from '@playwright/test';
  * re-rendering underneath the click. Readiness is therefore "every connection has
  * real geometry", which is a property of the app rather than a sleep.
  */
+/**
+ * Open a node so its chrome — header, footer, delete — is on screen.
+ *
+ * Nodes now open small and carry no chrome at rest, so a test that reaches
+ * straight for the delete button is reaching for something that is not there
+ * yet. This is the gesture a user makes.
+ */
+async function openNode(page: import('@playwright/test').Page, index = 0): Promise<void> {
+  const box = await page.locator('fb-node-box').nth(index).boundingBox();
+
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.waitForTimeout(250);
+}
+
+/**
+ * Delete a node the way the editor itself offers: select it, press Delete.
+ *
+ * These tests used to click a delete button in the node's own footer, which
+ * belongs to the demo's `fb-normal-node` chrome — and the two node types the
+ * demo now opens with do not use it. Going through the editor tests the path
+ * every node type has, rather than one that happens to exist for some.
+ */
+async function deleteNode(page: import('@playwright/test').Page, index = 0): Promise<void> {
+  await openNode(page, index);
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(250);
+}
+
 async function waitUntilReady(page: import('@playwright/test').Page): Promise<void> {
   await expect(page.locator('fb-node-box').first()).toBeVisible();
 
@@ -84,9 +112,7 @@ test('deletes a node and its connections without errors', async ({ page }) => {
   const socketsBefore = await page.locator('fb-node-box .socket').count();
   expect(before).toBeGreaterThan(1);
 
-  // The delete control lives in the expanded node's footer.
-  const del = page.locator('fb-node-box footer button:has(mat-icon:text-is("delete_forever"))').first();
-  await del.click({ force: true });
+  await deleteNode(page);
 
   await expect(page.locator('fb-node-box')).toHaveCount(before - 1);
 
@@ -279,7 +305,8 @@ test('undoes and redoes a node deletion', async ({ page }) => {
   const before = await page.locator('fb-node-box').count();
   const socketsBefore = await page.locator('fb-node-box .socket').count();
 
-  await page.locator('fb-node-box footer button:has(mat-icon:text-is("delete_forever"))').first()
+  await deleteNode(page);
+  await page.locator('body')
     .click({ force: true });
   await expect(page.locator('fb-node-box')).toHaveCount(before - 1);
   await expect(undo).toBeEnabled();

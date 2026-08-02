@@ -39,7 +39,7 @@ export const basic = {
       type: 'tap',
       title: 'Logger',
       id: 200,
-      config: { expanded: true },
+      config: { expanded: false },
       sockets: [
         { id: 210, type: 'in' },
         { id: 211, type: 'out' },

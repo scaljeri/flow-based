@@ -3,9 +3,6 @@ import { Observable, Subject, Subscription } from 'rxjs';
 
 export const TAP_SETTINGS: FbNodeSettings = {
   title: 'Tap',
-  // A logger with nothing on screen is not a logger. This is the one node type
-  // whose whole purpose is the value it displays, so it opens showing it.
-  defaultView: 'medium',
   config: {expanded: false},
   sockets: [
     {
