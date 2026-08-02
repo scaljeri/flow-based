@@ -161,7 +161,27 @@ export class FbEditor {
     this.state = state;
     this.ancestors.length = 0;
     this.flow = new Flow(this.types, this.helpers, this.ids);
-    this.unbind = this.flow.changes.subscribe(kind => this.changes.emit({ kind }));
+    this.unbind = this.flow.changes.subscribe(kind => {
+      /*
+       * A half-drawn connection does not survive a change to the graph.
+       *
+       * Tapping a socket arms one, and only the canvas ever cancelled it — the
+       * toolbar is not the canvas — so the pending line stayed anchored to that
+       * socket and stretched to wherever the pointer last was. Adding a node
+       * then looked exactly like the new node had wired itself to the old one.
+       *
+       * Handled here rather than in `addNode`, which is where the symptom was
+       * reported: undo, loading a file and deleting a selection have the same
+       * shape, and a rule every caller has to remember is one somebody will
+       * forget. Geometry is deliberately not included — dragging a node while
+       * aiming at a socket is a real thing to do.
+       */
+      if (kind === 'structure' || kind === 'connections') {
+        this.cancelPending();
+      }
+
+      this.changes.emit({ kind });
+    });
     this.flow.initialize(state);
 
     this.pending = null;
@@ -586,15 +606,6 @@ export class FbEditor {
       ...(settings.isFlow ? { children: [], connections: [] } : {}),
     };
 
-    /*
-     * A half-drawn connection does not survive adding a node.
-     *
-     * Tapping a socket arms one, and nothing outside the canvas cancelled it —
-     * the toolbar is not the canvas — so the pending line stayed anchored to that
-     * socket and stretched to wherever the pointer last was. Adding a node then
-     * looked like the new node had wired itself to the old one.
-     */
-    this.cancelPending();
     this.flow.addNode(node, this.state);
 
     return node;

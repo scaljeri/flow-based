@@ -1067,3 +1067,61 @@ test('pinches to zoom, so the surface is reachable without a mouse', async ({ pa
   await pinch(220, 60);
   expect(await zoom()).toBeLessThan(spread);
 });
+
+test('a half-drawn connection does not survive a change to the graph', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const arm = () => page.evaluate(() => {
+    const editor = window.fbEditor as unknown as {
+      children: { id?: number; title?: string; sockets?: { id?: number; type: string }[] }[];
+      socketClicked(socket: unknown, nodeId: number): void;
+      setPointer(point: unknown): void;
+      pending: unknown;
+    };
+    const source = editor.children.find(node => node.title === 'Source')!;
+
+    editor.socketClicked(source.sockets!.find(s => s.type === 'out'), source.id!);
+    editor.setPointer({ x: 150, y: 200 });
+
+    return !!editor.pending;
+  });
+
+  const pending = () => page.evaluate(() =>
+    !!(window.fbEditor as unknown as { pending: unknown }).pending);
+
+  const danglingLines = () => page.evaluate(() => {
+    const connections = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections');
+
+    return connections?.shadowRoot?.querySelectorAll('path.pointer-path').length ?? 0;
+  });
+
+  /*
+   * Tapping a socket arms a connection, and only the canvas ever cancelled it —
+   * the toolbar is not the canvas. The pending line stayed anchored to that
+   * socket and stretched to wherever the pointer last was, so adding a node
+   * looked exactly like the new node had wired itself to the old one.
+   *
+   * Checked across three different operations, because the point of fixing this
+   * in one place was that every caller no longer has to remember.
+   */
+  expect(await arm()).toBe(true);
+  expect(await danglingLines()).toBe(1);
+
+  await page.evaluate(() => (window.fbEditor as unknown as { addNode(t: string): void }).addNode('sink'));
+  expect(await pending()).toBe(false);
+  expect(await danglingLines()).toBe(0);
+
+  expect(await arm()).toBe(true);
+  await page.evaluate(() => {
+    const editor = window.fbEditor as unknown as { children: { id?: number }[]; removeNode(id: number): void };
+
+    editor.removeNode(editor.children[editor.children.length - 1].id!);
+  });
+  expect(await pending()).toBe(false);
+
+  expect(await arm()).toBe(true);
+  await page.evaluate(() => (window.fbEditor as unknown as { undo(): void }).undo());
+  expect(await pending()).toBe(false);
+});
