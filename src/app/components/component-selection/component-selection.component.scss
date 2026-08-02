@@ -2,7 +2,19 @@
   background-color: #fff;
   display: flex;
   flex-direction: column;
+  /*
+   * The overlay is as tall as its content, and the content is one row per node
+   * type. On a phone that ran past the bottom of the screen with no way to
+   * reach the rest: the overlay does not scroll, the page behind it does.
+   */
+  max-height: 90vh;
   width: 100%;
+}
+
+/* The toolbar and the search box stay put; only the list moves. */
+mat-toolbar,
+.search {
+  flex: 0 0 auto;
 }
 
 mat-toolbar {
@@ -11,7 +23,19 @@ mat-toolbar {
 }
 
 .type-selection {
+  display: flex;
+  flex-direction: column;
   margin: var(--fb-gutter-size);
+  min-height: 0;
+  overflow: hidden;
+}
+
+mat-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  // Momentum scrolling, and it keeps a swipe on the list from panning the page.
+  overscroll-behavior: contain;
 }
 
 .search {

@@ -586,6 +586,15 @@ export class FbEditor {
       ...(settings.isFlow ? { children: [], connections: [] } : {}),
     };
 
+    /*
+     * A half-drawn connection does not survive adding a node.
+     *
+     * Tapping a socket arms one, and nothing outside the canvas cancelled it —
+     * the toolbar is not the canvas — so the pending line stayed anchored to that
+     * socket and stretched to wherever the pointer last was. Adding a node then
+     * looked like the new node had wired itself to the old one.
+     */
+    this.cancelPending();
     this.flow.addNode(node, this.state);
 
     return node;
