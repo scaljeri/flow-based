@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 
 import { FB_NODE_TYPES } from './flow-based';
 import { FlowBasedComponent } from './flow-based.component';
+import { FbNoDragDirective } from './controls/no-drag.directive';
+import { FbSliderComponent } from './controls/slider.component';
 import { SocketInPipe } from './pipes/socket-in.pipe';
 import { SocketOutPipe } from './pipes/socket-out.pipe';
 
@@ -17,13 +19,26 @@ import { SocketOutPipe } from './pipes/socket-out.pipe';
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    /*
+     * Controls a node type can use, standalone so they are equally available to
+     * an app that never touches this module. Exported below, so importing
+     * FlowBasedModule brings them along — a node author should not have to know
+     * they are separate.
+     */
+    FbNoDragDirective,
+    FbSliderComponent
   ],
   declarations: [
     FlowBasedComponent,
     SocketInPipe,
     SocketOutPipe],
-  exports: [FlowBasedComponent, SocketInPipe, SocketOutPipe],
+  exports: [
+    FlowBasedComponent,
+    FbNoDragDirective,
+    FbSliderComponent,
+    SocketInPipe,
+    SocketOutPipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   providers: [
     {

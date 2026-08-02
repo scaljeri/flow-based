@@ -38,7 +38,7 @@
             <span class="value">{{avg}}</span>
           </mat-card-content>
 
-          <button mat-stroked-button (click)="onReset()">Reset</button>
+          <button mat-stroked-button fbNoDrag (click)="onReset()">Reset</button>
         </mat-card>
 
         <mat-card class="distribution">
@@ -47,13 +47,9 @@
           </mat-card-header>
           <mat-card-content>
             <div #distribution></div>
-            <div class="column-width">
-              <span>Column width: </span>
-              <mat-slider class="fb-drag-ignore" min="0" max="10" step=".1">
-                <input matSliderThumb [(ngModel)]="worker.columnWidth">
-              </mat-slider>
-              <span>{{worker.columnWidth}}</span>
-            </div>
+            <fb-slider label="Column width" class="column-width"
+                       [min]="0" [max]="10" step="0.1"
+                       [(ngModel)]="worker.columnWidth"></fb-slider>
           </mat-card-content>
         </mat-card>
       </div>

@@ -7,43 +7,26 @@
     <div class="card-wrapper">
       <mat-card class="form">
         <mat-card-content>
+          <!--
+            <fb-slider> rather than a bare Material slider, and it is not a
+            cosmetic swap: pressing a node drags it, so a slider inside one used
+            to move its thumb AND take the graph with it. The control carries
+            fbNoDrag itself, which is the point — a node author should not have
+            to know that a slider needs telling.
+          -->
           <form [formGroup]="configForm">
-            <label>
-              <span>Start</span>
-              <div>
-                <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
-                            discrete class="fb-drag-ignore">
-                  <input matSliderThumb formControlName="startValue">
-                </mat-slider>
-                <span>{{configForm.controls.startValue.value}}</span>
-              </div>
-            </label>
+            <fb-slider label="Start" formControlName="startValue"
+                       [min]="worker.min" [max]="worker.max" step="0.1"></fb-slider>
 
-            <label>
-              <span>End</span>
-              <div>
-                <mat-slider [min]="worker.min" [max]="worker.max" step=".1"
-                            discrete class="fb-drag-ignore">
-                  <input matSliderThumb formControlName="endValue">
-                </mat-slider>
-                <span>{{configForm.controls.endValue.value}}</span>
-              </div>
-            </label>
+            <fb-slider label="End" formControlName="endValue"
+                       [min]="worker.min" [max]="worker.max" step="0.1"></fb-slider>
 
-            <label>
-              <span>Interval</span>
-              <div>
-                <mat-slider [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"
-                            discrete class="fb-drag-ignore">
-                  <input matSliderThumb formControlName="intervalValue">
-                </mat-slider>
-                <span>{{configForm.controls.intervalValue.value}}</span>
-              </div>
-            </label>
+            <fb-slider label="Interval" formControlName="intervalValue"
+                       [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"></fb-slider>
 
             <label class="horizontal">
               <span class="large">Integers only</span>
-              <mat-checkbox formControlName="integersOnlyValue"></mat-checkbox>
+              <mat-checkbox fbNoDrag formControlName="integersOnlyValue"></mat-checkbox>
             </label>
           </form>
         </mat-card-content>

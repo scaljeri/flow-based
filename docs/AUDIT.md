@@ -761,6 +761,26 @@ capped the whole chain at the width of its own text. The content host itself is
 deliberately left alone: a rule there would be an outer-tree declaration losing
 to the node's own, which is the right way round.
 
+## Stage 8 — controls that work inside a node
+
+A slider in a node moved its thumb **and panned the whole canvas**, so the graph
+slid away while you used it. `.fb-drag-ignore` was on the slider and the node did
+read it — and then returned without stopping the event, which the canvas takes as
+a background press. The node now stops every press that lands on it, including
+the ones it declines to act on, which is what the canvas already documented it
+was relying on.
+
+The class is exported as `FB_DRAG_IGNORE`, and Angular authors get `fbNoDrag` and
+`<fb-slider>`. That is the more interesting half: the contract was undocumented,
+unnamed and silent when misspelled — the control still works and the editor runs
+away — so leaving every node author to know a magic string was the actual defect.
+`<fb-slider>` is a native range input with a `ControlValueAccessor`, carrying
+`fbNoDrag` through `hostDirectives`; the package still has no UI dependency, and
+the control grows a finger-sized thumb on a touch screen.
+
+The demo's four Material sliders are gone with it, and `custom-code`, `fractal`
+and `zoom-canvas` now say `fbNoDrag` instead of the string.
+
 ### Still open
 - `ng lint` reports 0 errors but ~265 warnings, concentrated in four families
   (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,

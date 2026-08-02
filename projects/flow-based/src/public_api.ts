@@ -25,6 +25,10 @@ export * from './lib/flow-based.service';
 export * from './lib/node/node-service';
 export * from './lib/angular-node';
 
+// Controls that behave inside a node, where a plain one drags the graph away
+export * from './lib/controls/no-drag.directive';
+export * from './lib/controls/slider.component';
+
 // Sockets
 export * from './lib/pipes/socket-in.pipe';
 export * from './lib/pipes/socket-out.pipe';

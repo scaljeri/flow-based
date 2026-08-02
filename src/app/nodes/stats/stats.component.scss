@@ -78,14 +78,9 @@
       height: 300px;
       margin-left: 8px;
 
+      // fb-slider lays out its own label, track and reading; it only needs room.
       .column-width {
-        align-items: center;
-        display: flex;
-        justify-content: center;
-
-        mat-slider {
-          margin: 0 8px;
-        }
+        margin: 8px 16px 0;
       }
     }
   }

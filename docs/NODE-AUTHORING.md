@@ -219,6 +219,36 @@ the rename — so nothing has to be rewritten to keep working.
 
 ---
 
+## Controls inside a node
+
+**A node is dragged by pressing it.** That is also how a slider is moved, a text
+field focused and a canvas drawn on, and the shell cannot tell those apart — only
+you know which of your elements are controls. Say so, and the editor will neither
+select, drag nor pan from a press inside one:
+
+```html
+<input type="range" class="fb-drag-ignore">        <!-- any node type -->
+<input type="range" fbNoDrag>                      <!-- Angular -->
+```
+
+The class name is exported as `FB_DRAG_IGNORE` from `@scaljeri/flow-based-core`;
+`fbNoDrag` is the same thing as a directive, so a typo is a compile error instead
+of a control that works while the graph slides out from under it.
+
+Angular authors get controls that already carry it:
+
+```html
+<fb-slider label="Interval" [min]="0" [max]="5000" step="100"
+           formControlName="intervalValue"></fb-slider>
+```
+
+`<fb-slider>` is a native range input — this package has no UI-library dependency
+— and works with `formControlName`, `[(ngModel)]` or plain `[value]`/
+`(valueChange)`. It grows a finger-sized thumb on a touch screen, and its track
+shrinks to the node rather than setting a floor under it.
+
+---
+
 ## Workers
 
 A worker computes; it never touches the DOM.

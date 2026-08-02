@@ -465,3 +465,64 @@ test('reports no problems for the flow the demo opens with', async ({ page }) =>
    */
   await expect(page.locator('mat-toolbar button.problems')).toHaveCount(0);
 });
+
+/**
+ * A control inside a node must not move the editor.
+ *
+ * This is the sharpest form of the `fb-drag-ignore` contract, and it was broken
+ * in a way no build or unit test could catch: the node saw the press, correctly
+ * declined to drag itself — and let the event through to the canvas, which
+ * treats anything reaching it as a background press and pans. The slider worked
+ * perfectly while the entire graph slid out from under it.
+ *
+ * Asserting on the value AND on the viewport, because either alone passes for
+ * the wrong reason: a slider that does nothing does not pan either.
+ */
+test('a slider inside a node moves its thumb and nothing else', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+
+    node.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  });
+
+  const slider = page.locator('fb-slider input[type=range]').first();
+  await expect(slider).toBeVisible();
+
+  const before = await page.evaluate(() => {
+    const plane = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('.plane') as HTMLElement;
+    const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .map(n => JSON.stringify((n as unknown as { state?: { position?: unknown } }).state?.position));
+
+    return { transform: plane.style.transform, nodes };
+  });
+
+  const box = (await slider.boundingBox())!;
+  const y = box.y + box.height / 2;
+
+  // A real drag: press on the thumb, move across the track, release.
+  await page.mouse.move(box.x + box.width / 2, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 60, y, { steps: 10 });
+  await page.mouse.up();
+
+  const after = await page.evaluate(() => {
+    const plane = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('.plane') as HTMLElement;
+    const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .map(n => JSON.stringify((n as unknown as { state?: { position?: unknown } }).state?.position));
+
+    return { transform: plane.style.transform, nodes };
+  });
+
+  // The slider did its job...
+  expect(Number(await slider.inputValue())).toBeGreaterThan(0);
+  // ...and took nothing with it.
+  expect(after.transform).toBe(before.transform);
+  expect(after.nodes).toEqual(before.nodes);
+});

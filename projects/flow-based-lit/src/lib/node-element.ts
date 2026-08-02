@@ -1,5 +1,6 @@
 import { LitElement, PropertyValues, css, html, nothing, svg } from 'lit';
 import {
+  FB_DRAG_IGNORE,
   FbNodeApi,
   FbNodeHandle,
   FbNodeMount,
@@ -1051,12 +1052,22 @@ export class FbNodeElement extends LitElement {
      ---------------------------------------------------------------------- */
 
   private onPointerDown = (event: PointerEvent): void => {
-    if (event.button !== 0 || (event.target as Element | null)?.closest('.fb-drag-ignore')) {
+    /*
+     * Stopped FIRST, and for every press that lands on this node — including the
+     * ones this element then declines to act on.
+     *
+     * The canvas treats anything that reaches it as a background press and pans,
+     * on the stated understanding that nodes and sockets stop what is theirs. A
+     * press inside `.fb-drag-ignore` is exactly that: the content's, not the
+     * editor's. Returning early without stopping it meant a slider both moved its
+     * thumb AND panned the whole canvas under the user's finger — the control
+     * worked, and everything around it slid away while it did.
+     */
+    event.stopPropagation();
+
+    if (event.button !== 0 || (event.target as Element | null)?.closest(`.${FB_DRAG_IGNORE}`)) {
       return;
     }
-
-    // Stop the canvas treating this as a background press, which would pan.
-    event.stopPropagation();
 
     /*
      * Select before dragging, so a drag moves what the user can see is selected.
@@ -1238,7 +1249,7 @@ export class FbNodeElement extends LitElement {
 
         <button
           type="button"
-          class="config-toggle fb-drag-ignore"
+          class="config-toggle ${FB_DRAG_IGNORE}"
           title="Settings"
           aria-label="Settings"
           aria-pressed=${this.configOpen ? 'true' : 'false'}
@@ -1247,7 +1258,7 @@ export class FbNodeElement extends LitElement {
         ${smaller
           ? html`<button
               type="button"
-              class="step fb-drag-ignore"
+              class="step ${FB_DRAG_IGNORE}"
               title=${`Show smaller (${smaller})`}
               aria-label=${`Show smaller (${smaller})`}
               @pointerdown=${(e: Event) => e.stopPropagation()}
@@ -1256,7 +1267,7 @@ export class FbNodeElement extends LitElement {
         ${bigger
           ? html`<button
               type="button"
-              class="step fb-drag-ignore"
+              class="step ${FB_DRAG_IGNORE}"
               title=${`Show larger (${bigger})`}
               aria-label=${`Show larger (${bigger})`}
               @pointerdown=${(e: Event) => e.stopPropagation()}
@@ -1358,7 +1369,7 @@ export class FbNodeElement extends LitElement {
 
     return html`
       <dialog
-        class="config fb-drag-ignore"
+        class="config ${FB_DRAG_IGNORE}"
         @pointerdown=${(e: Event) => e.stopPropagation()}
         @keydown=${(e: Event) => e.stopPropagation()}
         @close=${() => this.onDialogClosed()}>

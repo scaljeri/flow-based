@@ -95,6 +95,22 @@ export interface FbNodeApi {
   refreshWiring(): void;
 }
 
+/**
+ * Class marking content the editor must keep its hands off.
+ *
+ * A node is dragged by pressing it, which is the whole of how a graph is laid
+ * out — and the same press is how a slider is moved, a text field focused or a
+ * canvas drawn on. There is no way to tell those apart from outside, so content
+ * says which of its own elements are controls, and the shell neither selects,
+ * drags nor pans from a press inside one.
+ *
+ * Exported as a constant because it is a CONTRACT rather than styling: a node
+ * author writing the string by hand has no way to find out they misspelled it,
+ * and the failure is silent — the control still works, and the node runs away
+ * while they use it. Angular authors have `fbNoDrag`, which is this with a name.
+ */
+export const FB_DRAG_IGNORE = 'fb-drag-ignore';
+
 export interface FbNodeContext {
   api: FbNodeApi;
 }
