@@ -126,6 +126,11 @@ export interface FbNodeSettings {
    * Omitted means `['small', 'medium']` — a flow gets all three.
    */
   views?: import('./views').FbNodeView[];
+  /**
+   * How this type opens when the node's state names no view. Defaults to the
+   * smallest supported one — a node at rest is an icon.
+   */
+  defaultView?: import('./views').FbNodeView;
 }
 
 /**

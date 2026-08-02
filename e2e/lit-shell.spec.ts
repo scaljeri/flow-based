@@ -716,8 +716,25 @@ async function stepView(page: Page, title: string, direction: 'grow' | 'shrink')
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
     const buttons = node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.views button.step');
 
+    /*
+     * A node at rest has no controls — two buttons pinned to the corner of an
+     * icon are most of the icon — so opening it is a double-click, the same
+     * gesture a user has.
+     */
+    if (buttons.length === 0) {
+      node.shadowRoot!.querySelector('.box')!
+        .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+
+      return;
+    }
+
     (d === 'grow' ? buttons[buttons.length - 1] : buttons[0]).click();
   }, [title, direction]);
+}
+
+/** Open a node so its chrome — view controls and settings — is present. */
+async function openNode(page: Page, title: string): Promise<void> {
+  await stepView(page, title, 'grow');
 }
 
 test('steps a node through small, medium and large', async ({ page }) => {
@@ -726,17 +743,23 @@ test('steps a node through small, medium and large', async ({ page }) => {
 
   expect(await viewsOf(page)).toContain('small:Scope');
 
-  // At rest there is only one control: nothing is smaller than small.
-  const controls = await page.evaluate(() => {
+  const controlsAt = (title: string) => page.evaluate(t => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
-      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Scope')!;
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
 
     return node.shadowRoot!.querySelectorAll('.views button.step').length;
-  });
-  expect(controls).toBe(1);
+  }, title);
 
+  // A node at rest carries no chrome at all: it is an icon, and buttons pinned
+  // to the corner of an icon are most of the icon.
+  expect(await controlsAt('Scope')).toBe(0);
+
+  // Double-click opens it — the gesture, not a button, because there is none.
   await stepView(page, 'Scope', 'grow');
   expect(await viewsOf(page)).toContain('medium:Scope');
+
+  // Open, there is one step up and one step down.
+  expect(await controlsAt('Scope')).toBe(2);
 
   await stepView(page, 'Scope', 'grow');
   expect(await viewsOf(page)).toContain('large:Scope');
@@ -760,7 +783,7 @@ test('a node only offers the views its type declares', async ({ page }) => {
   await expect(canvas(page)).toBeVisible();
 
   // Source declares nothing, so it gets the pair every node always had.
-  await stepView(page, 'Source', 'grow');
+  await openNode(page, 'Source');
   expect(await viewsOf(page)).toContain('medium:Source');
 
   const atTop = await page.evaluate(() => {
@@ -817,6 +840,8 @@ test('a composite shows a child until it is large, then becomes the flow itself'
 test('edits a node\'s title and sockets from the shell, not from the host app', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
+
+  await openNode(page, 'Sink');
 
   const openConfig = () => page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
@@ -950,6 +975,7 @@ test('drags sockets into order, and the node redraws them in that order', async 
   // be dragged back down, which is the opposite of what "add" should cost.
   expect(await order()).toEqual(['alpha', 'beta', 'gamma']);
 
+  await openNode(page, 'Sink');
   await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;

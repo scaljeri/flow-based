@@ -39,11 +39,26 @@ export function supportedViews(settings: FbNodeSettings | undefined): readonly F
   return settings?.isFlow ? FB_NODE_VIEWS : ['small', 'medium'];
 }
 
-/** The view a node is in, falling back to the smallest one it supports. */
+/**
+ * The view a node opens in when its state does not name one.
+ *
+ * Small unless the type says otherwise. A node at rest should be an icon: a
+ * screen of nodes that all opened at their full size would be unreadable, and
+ * the editor is about the connections between them at least as much as their
+ * contents.
+ */
+export function defaultView(settings: FbNodeSettings | undefined): FbNodeView {
+  const supported = supportedViews(settings);
+  const declared = settings?.defaultView;
+
+  return declared && supported.includes(declared) ? declared : supported[0];
+}
+
+/** The view a node is in, falling back to its type's default. */
 export function viewOf(node: FbNodeState, settings: FbNodeSettings | undefined): FbNodeView {
   const supported = supportedViews(settings);
 
-  return node.view && supported.includes(node.view) ? node.view : supported[0];
+  return node.view && supported.includes(node.view) ? node.view : defaultView(settings);
 }
 
 /**

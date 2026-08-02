@@ -942,7 +942,7 @@ export class FbNodeElement extends LitElement {
     const sockets = this.state?.sockets ?? [];
 
     return html`
-      <div class="box" @pointerdown=${this.onPointerDown}>
+      <div class="box" @pointerdown=${this.onPointerDown} @dblclick=${this.onDoubleClick}>
         ${this.renderViewControls()}
 
         <slot></slot>
@@ -985,6 +985,19 @@ export class FbNodeElement extends LitElement {
 
   private renderViewControls() {
     const current = this.view;
+
+    /*
+     * Nothing at rest.
+     *
+     * A small node is an icon, and two buttons pinned to the corner of an icon
+     * are most of the icon. Double-clicking opens it, which is also what a
+     * double-tap does on a touch screen — and once it is open the controls have
+     * somewhere to live that is not on top of the content.
+     */
+    if (current === 'small') {
+      return nothing;
+    }
+
     const bigger = stepView(current, 1, this.settings);
     const smaller = stepView(current, -1, this.settings);
 
@@ -1023,6 +1036,28 @@ export class FbNodeElement extends LitElement {
       </div>
     `;
   }
+
+  /**
+   * Open a node at rest.
+   *
+   * Only from `small`: past that the controls are visible and doing two things
+   * with one gesture — a double-click that also stepped medium to large would
+   * fight the button that does exactly that, and content inside an open node
+   * has its own double-clicks.
+   */
+  private onDoubleClick = (event: MouseEvent): void => {
+    if (this.view !== 'small') {
+      return;
+    }
+
+    event.stopPropagation();
+
+    const bigger = stepView('small', 1, this.settings);
+
+    if (bigger) {
+      this.requestView(bigger);
+    }
+  };
 
   private toggleConfig(): void {
     /*
