@@ -714,12 +714,11 @@ async function stepView(page: Page, title: string, direction: 'grow' | 'shrink')
   await page.evaluate(([t, d]) => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
-    const buttons = node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.views button.step');
+    const buttons = node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.head button.step');
 
     /*
-     * A node at rest has no controls — two buttons pinned to the corner of an
-     * icon are most of the icon — so opening it is a double-click, the same
-     * gesture a user has.
+     * A node at rest has no header — a bar across the top of an icon is most of
+     * the icon — so opening it is a double-click, the same gesture a user has.
      */
     if (buttons.length === 0) {
       node.shadowRoot!.querySelector('.box')!
@@ -732,12 +731,12 @@ async function stepView(page: Page, title: string, direction: 'grow' | 'shrink')
   }, [title, direction]);
 }
 
-/** Open a node so its chrome — view controls and settings — is present. */
+/** Open a node so its chrome — the header and its buttons — is present. */
 async function openNode(page: Page, title: string): Promise<void> {
   await stepView(page, title, 'grow');
 }
 
-test('steps a node through small, medium and large', async ({ page }) => {
+test('steps a node through small, normal and full', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
@@ -747,27 +746,27 @@ test('steps a node through small, medium and large', async ({ page }) => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
 
-    return node.shadowRoot!.querySelectorAll('.views button.step').length;
+    return node.shadowRoot!.querySelectorAll('.head button.step').length;
   }, title);
 
-  // A node at rest carries no chrome at all: it is an icon, and buttons pinned
-  // to the corner of an icon are most of the icon.
+  // A node at rest carries no chrome at all: it is an icon, and a header bar
+  // across the top of an icon is most of the icon.
   expect(await controlsAt('Scope')).toBe(0);
 
   // Double-click opens it — the gesture, not a button, because there is none.
   await stepView(page, 'Scope', 'grow');
-  expect(await viewsOf(page)).toContain('medium:Scope');
+  expect(await viewsOf(page)).toContain('normal:Scope');
 
   // Open, there is one step up and one step down.
   expect(await controlsAt('Scope')).toBe(2);
 
   await stepView(page, 'Scope', 'grow');
-  expect(await viewsOf(page)).toContain('large:Scope');
+  expect(await viewsOf(page)).toContain('full:Scope');
 
   /*
    * Zoom and pan are suspended while a node owns the surface. Panning behind
    * something that covers the editor moves a graph nobody can see, and the
-   * transform would otherwise scale the large node with it — "large" means the
+   * transform would otherwise scale the full node with it — "full" means the
    * surface, not the surface times the current zoom.
    */
   const transform = await page.evaluate(() =>
@@ -775,7 +774,7 @@ test('steps a node through small, medium and large', async ({ page }) => {
   expect(transform).toBe('none');
 
   await stepView(page, 'Scope', 'shrink');
-  expect(await viewsOf(page)).toContain('medium:Scope');
+  expect(await viewsOf(page)).toContain('normal:Scope');
 });
 
 test('a node only offers the views its type declares', async ({ page }) => {
@@ -784,20 +783,96 @@ test('a node only offers the views its type declares', async ({ page }) => {
 
   // Source declares nothing, so it gets the pair every node always had.
   await openNode(page, 'Source');
-  expect(await viewsOf(page)).toContain('medium:Source');
+  expect(await viewsOf(page)).toContain('normal:Source');
 
   const atTop = await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
 
-    return node.shadowRoot!.querySelectorAll('.views button.step').length;
+    return node.shadowRoot!.querySelectorAll('.head button.step').length;
   });
 
-  // Shrink only: there is no large view to offer, so no control claims there is.
+  // Shrink only: there is no full view to offer, so no control claims there is.
   expect(atTop).toBe(1);
 });
 
-test('a composite shows a child until it is large, then becomes the flow itself', async ({ page }) => {
+test('an open node carries its title and its way out in one header', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const chrome = (title: string) => page.evaluate(t => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
+    const head = node.shadowRoot!.querySelector('.head');
+
+    return {
+      head: !!head,
+      name: head?.querySelector('.name')?.textContent ?? null,
+      // The label below the node, which belongs to a node at rest.
+      label: node.shadowRoot!.querySelector('.title')?.textContent ?? null,
+      buttons: [...(head?.querySelectorAll('button') ?? [])].map(b => b.getAttribute('aria-label')),
+    };
+  }, title);
+
+  // At rest: no header, and the title sits under the icon.
+  expect(await chrome('Scope')).toMatchObject({ head: false, label: 'Scope' });
+
+  await stepView(page, 'Scope', 'grow');
+
+  /*
+   * Open: the header carries the title and everything reachable from here —
+   * settings, back to small, out to full. The label under the node is gone,
+   * because two copies of one title a few pixels apart is one too many.
+   */
+  expect(await chrome('Scope')).toEqual({
+    head: true,
+    name: 'Scope',
+    label: null,
+    buttons: ['Settings', 'Show smaller (small)', 'Show larger (full)'],
+  });
+});
+
+test('deletes a node from its settings, which every node type has', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await viewsOf(page);
+  expect(before.map(v => v.split(':')[1])).toContain('Sink');
+
+  const linesBefore = (await connectionPaths(page)).length;
+
+  await openNode(page, 'Sink');
+
+  /*
+   * Deleting used to belong to the demo's own node chrome, so a node type that
+   * did not use it — anything not written for that app — could not be deleted
+   * from the node at all. Sink is a plain box node in a harness with no Angular
+   * in it, which is the case that used to have no way out.
+   */
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+  });
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .delete')!.click();
+  });
+
+  await expect
+    .poll(async () => (await viewsOf(page)).map(v => v.split(':')[1]))
+    .not.toContain('Sink');
+
+  // The one connection that ended on it went too, rather than being left
+  // dangling; the other one, which never touched Sink, is untouched.
+  expect(await connectionPaths(page)).toHaveLength(linesBefore - 1);
+});
+
+test('a composite shows a child until it is full, then becomes the flow itself', async ({ page }) => {
   // The composite is opt-in, so the other tests keep asserting counts against a
   // fixture this feature does not change.
   await page.goto(`${HARNESS}?composite=1`);
@@ -822,7 +897,7 @@ test('a composite shows a child until it is large, then becomes the flow itself'
   await stepView(page, 'Group', 'grow');
 
   /*
-   * Large for a composite is its own graph, and showing that is navigation: one
+   * Full for a composite is its own graph, and showing that is navigation: one
    * editor moves to the child flow rather than a node growing to hold an editor
    * of its own.
    */
@@ -847,7 +922,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.views button.config-toggle')!.click();
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
   });
 
   await openConfig();
@@ -980,7 +1055,7 @@ test('drags sockets into order, and the node redraws them in that order', async 
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.views button.config-toggle')!.click();
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
   });
 
   await page.evaluate(() => {

@@ -17,7 +17,7 @@ export interface FbNodeApi {
   /** The worker computing this node, if its type declares one. */
   readonly worker: FbNodeWorker | undefined;
 
-  /** How much room this node has: small, medium or large. */
+  /** How much room this node has: small, normal or full. */
   readonly view: FbNodeView;
 
   /** The views this node's type can render, smallest first. */
@@ -25,6 +25,15 @@ export interface FbNodeApi {
 
   /** Ask for a view. Ignored if the type does not support it. */
   setView(view: FbNodeView): void;
+
+  /**
+   * Called when the view changed, however it changed. Returns an unsubscribe.
+   *
+   * Content needs this because the view is no longer something content asks for
+   * and therefore already knows about: the shell's own header steps it, so a
+   * node type that draws differently when open only finds out if it is told.
+   */
+  onViewChange(listener: (view: FbNodeView) => void): () => void;
 
   /**
    * @deprecated Use {@link setView}. `true` means the largest supported view and

@@ -684,6 +684,40 @@ the promise wrapper: every `run()` leaked a `message` listener, and with two
 computations in flight the first reply resolved both promises — one caller got
 the other's image.
 
+## Stage 6 — one notion of how open a node is
+
+Three views, named `small`, `normal` and `full` — previously `small`, `medium`
+and `large`. Both old spellings are still read, from a saved flow's `view` or a
+node type's `views`, so nothing has to be rewritten to keep opening the way it
+was left.
+
+The interaction is now the same for every node type, and the shell owns all of
+it: a small node carries no chrome and a double-click opens it, and an open one
+has a header bar with its title, a settings button, the way back to small and the
+way out to full. Deleting moved into that settings panel, beside the title and
+the sockets it already edited — it used to be a button the *demo's* node chrome
+drew, so a node type not written for that app could not be deleted from itself.
+
+Behind it, two independent notions of how big a node is became one. `view` (the
+shell) and `config.expanded` (the demo chrome) each thought they owned the answer
+and disagreed: a single click left the shell at `small` while the chrome expanded
+the node to 500px. `config.expanded` is now written *from* the view, and
+`fb-normal-node` draws nothing — it only reports how open its node is.
+
+Two bugs surfaced while checking it in a browser rather than in a test:
+
+- A component's `@HostBinding` is refreshed by the view that *declares* it, not
+  by its own change detector, so the chrome's class only appeared when something
+  else happened to tick the parent. A node fed by a generator got it a second
+  late and looked fine; a node with nothing on its inputs never got it at all.
+- The node's title label sat inside the box, at `top: 100%` — which is exactly
+  what the box's `overflow: hidden` clips. It had never been visible.
+
+`FbNodeApi` gained `onViewChange`, and `NodeService` a `view$` to match, because
+the view is no longer something content asks for and therefore already knows: the
+shell changes it. `FbNodeHandle.update()` is finally called too — it had been in
+the contract since it was written with nothing ever invoking it.
+
 ### Still open
 - `ng lint` reports 0 errors but ~265 warnings, concentrated in four families
   (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,

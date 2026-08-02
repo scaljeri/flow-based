@@ -25,6 +25,7 @@ import {
   moveSocket,
   pasteNodes,
   supportedViews,
+  viewOf,
 } from '@scaljeri/flow-based-core';
 
 /**
@@ -233,7 +234,7 @@ export class FbEditor {
   /**
    * Show a composite node's own graph.
    *
-   * This is what `large` means for a flow node, and it is navigation rather than
+   * This is what `full` means for a flow node, and it is navigation rather than
    * a size: one editor moves to a different flow. The alternative — mounting an
    * editor inside a node — is what the previous implementation did, and nesting
    * shells is where its viewport, its socket registry and its change detection
@@ -297,11 +298,11 @@ export class FbEditor {
   /**
    * The node currently taking the whole surface, if any.
    *
-   * The canvas asks, because a large node suspends zoom and pan: panning behind
+   * The canvas asks, because a full node suspends zoom and pan: panning behind
    * something that covers the surface moves a graph the user cannot see.
    */
-  get largeNode(): FbNodeState | undefined {
-    return this.children.find(node => node.view === 'large' && !node.children);
+  get fullNode(): FbNodeState | undefined {
+    return this.children.find(node => viewOf(node, this.types[node.type]?.settings) === 'full' && !node.children);
   }
 
   nodeById(id: number): FbNodeState | undefined {

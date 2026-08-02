@@ -23,9 +23,21 @@ Primary service for custom nodes to communicate with the framework
  */
 export class NodeService {
   private readonly nodeClicked = new Subject<PointerEvent>();
+  private readonly viewChanged = new Subject<FbNodeView>();
 
   /** Emits when this node is clicked, but not when a drag happens to end on it. */
   readonly nodeClicked$: Observable<PointerEvent> = this.nodeClicked.asObservable();
+
+  /**
+   * Emits whenever this node's view changes, however it changed.
+   *
+   * A node's size is no longer something its content decides and therefore
+   * already knows: the shell draws the header that steps between views. A node
+   * type that renders differently when open subscribes here rather than tracking
+   * a flag of its own — two flags for one fact is how the chrome and the shell
+   * ended up disagreeing about whether a node was open.
+   */
+  readonly view$: Observable<FbNodeView> = this.viewChanged.asObservable();
 
   private doubleClick?: () => void;
   private thresholdClicks = 300;
@@ -33,6 +45,7 @@ export class NodeService {
 
   constructor(private readonly api: FbNodeApi) {
     this.api.onClick(event => this.onClick(event));
+    this.api.onViewChange(view => this.viewChanged.next(view));
   }
 
   get state(): FbNodeState {
@@ -51,7 +64,7 @@ export class NodeService {
      Size and chrome
      ---------------------------------------------------------------------- */
 
-  /** How much room this node has: small, medium or large. */
+  /** How much room this node has: small, normal or full. */
   get view(): FbNodeView {
     return this.api.view;
   }

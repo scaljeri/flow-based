@@ -297,9 +297,11 @@ export class FbFlowDocumentElement extends LitElement {
       },
       // A document is for reading: the node is shown at the size the figure
       // gives it, and nothing here can change that.
-      view: 'medium' as const,
-      supportedViews: ['medium'] as const,
+      view: 'normal' as const,
+      supportedViews: ['normal'] as const,
       setView: () => undefined,
+      // Nothing here can change the view, so nothing here ever announces one.
+      onViewChange: () => () => undefined,
       setMaxSize: () => undefined,
       isMaxSize: () => false,
       setLabelVisible: () => undefined,

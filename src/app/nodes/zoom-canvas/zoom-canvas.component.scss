@@ -9,6 +9,7 @@ canvas {
   position: relative;
 }
 
+.fractal,
 .zoom,
 .xmax-xmin {
   background-color: rgba(0, 0, 0, 0.3);
@@ -20,10 +21,15 @@ canvas {
 
 .zoom {
   left: 5px;
-  top: 30px;
+  top: 55px;
 }
 
 .xmax-xmin {
+  left: 5px;
+  top: 30px;
+}
+
+.fractal {
   left: 5px;
   top: 5px;
 }

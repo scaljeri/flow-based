@@ -60,12 +60,6 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  onEdit(isEditing: boolean): void {
-    if (!isEditing) {
-      this.createConnections();
-    }
-  }
-
   createConnections(): void {
     this.service.removeConnections();
 

@@ -3,40 +3,68 @@ import { FbNodeSettings, FbNodeState } from './types';
 /**
  * How much room a node is given.
  *
- * `small` is the node at rest — an icon, a reading, a title. `medium` is the
- * node opened up in place, big enough to interact with. `large` is the node with
+ * `small` is the node at rest — an icon, a reading, a title. `normal` is the
+ * node opened up in place, big enough to interact with. `full` is the node with
  * the whole editor surface to itself.
  *
  * This replaces a boolean "is it maximised", which could only ever describe two
  * of the three and left node types conflating "opened" with "opened as far as it
  * goes".
  */
-export type FbNodeView = 'small' | 'medium' | 'large';
+export type FbNodeView = 'small' | 'normal' | 'full';
 
 /** Ordered smallest to largest; the order the view control steps through. */
-export const FB_NODE_VIEWS: readonly FbNodeView[] = ['small', 'medium', 'large'] as const;
+export const FB_NODE_VIEWS: readonly FbNodeView[] = ['small', 'normal', 'full'] as const;
+
+/**
+ * What the two larger views used to be called.
+ *
+ * `view` is SERIALISED — it is part of the saved flow — so a file written before
+ * the rename still says `medium`/`large`, as does any node type declaring its
+ * `views` against the old names. Translating on the way in costs one lookup and
+ * means neither a saved flow nor a third-party node type has to be rewritten to
+ * keep opening the way it was left.
+ */
+const RENAMED_VIEWS: Readonly<Record<string, FbNodeView>> = { medium: 'normal', large: 'full' };
+
+/** A view name under its current spelling, or `undefined` if it is not one. */
+export function normaliseView(view: string | undefined | null): FbNodeView | undefined {
+  if (!view) {
+    return undefined;
+  }
+
+  const renamed = RENAMED_VIEWS[view];
+
+  if (renamed) {
+    return renamed;
+  }
+
+  return (FB_NODE_VIEWS as readonly string[]).includes(view) ? (view as FbNodeView) : undefined;
+}
 
 /**
  * The views a node type supports, smallest first.
  *
- * Defaults to `['small', 'medium']`, which is exactly what every node could do
- * before this existed — collapsed and expanded. A type opts into `large` rather
+ * Defaults to `['small', 'normal']`, which is exactly what every node could do
+ * before this existed — collapsed and expanded. A type opts into `full` rather
  * than inheriting it, because taking the whole surface is a claim only the node's
  * author can make: a node that renders a single number has nothing to do with the
  * extra room.
  *
- * A flow node is the exception and gets all three by default: its `large` view is
+ * A flow node is the exception and gets all three by default: its `full` view is
  * its own graph, which it always has.
  */
 export function supportedViews(settings: FbNodeSettings | undefined): readonly FbNodeView[] {
   const declared = settings?.views;
 
   if (declared?.length) {
+    const named = declared.map(view => normaliseView(view));
+
     // Kept in size order however they were written, so stepping is predictable.
-    return FB_NODE_VIEWS.filter(view => declared.includes(view));
+    return FB_NODE_VIEWS.filter(view => named.includes(view));
   }
 
-  return settings?.isFlow ? FB_NODE_VIEWS : ['small', 'medium'];
+  return settings?.isFlow ? FB_NODE_VIEWS : ['small', 'normal'];
 }
 
 /**
@@ -49,7 +77,7 @@ export function supportedViews(settings: FbNodeSettings | undefined): readonly F
  */
 export function defaultView(settings: FbNodeSettings | undefined): FbNodeView {
   const supported = supportedViews(settings);
-  const declared = settings?.defaultView;
+  const declared = normaliseView(settings?.defaultView);
 
   return declared && supported.includes(declared) ? declared : supported[0];
 }
@@ -57,14 +85,15 @@ export function defaultView(settings: FbNodeSettings | undefined): FbNodeView {
 /** The view a node is in, falling back to its type's default. */
 export function viewOf(node: FbNodeState, settings: FbNodeSettings | undefined): FbNodeView {
   const supported = supportedViews(settings);
+  const stored = normaliseView(node.view);
 
-  return node.view && supported.includes(node.view) ? node.view : defaultView(settings);
+  return stored && supported.includes(stored) ? stored : defaultView(settings);
 }
 
 /**
  * The next view up or down, or `null` at the end.
  *
- * Returns null rather than wrapping around. A control that cycles small → large
+ * Returns null rather than wrapping around. A control that cycles small → full
  * → small gives no clue which way the next press will go, and the icons the
  * shell draws are directional — outward for bigger, inward for smaller.
  */
@@ -84,9 +113,9 @@ export function stepView(
 }
 
 /**
- * Which child a flow node shows when it is not large enough to show its graph.
+ * Which child a flow node shows when it is not big enough to show its graph.
  *
- * A composite node still has to look like something at `small` and `medium`, and
+ * A composite node still has to look like something at `small` and `normal`, and
  * the honest answer is one of the things it contains. `config.preview` names it;
  * without that it is the first child, so flows written before this existed still
  * show something rather than an empty box.

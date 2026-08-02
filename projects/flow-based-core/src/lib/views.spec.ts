@@ -1,24 +1,47 @@
 import { describe, expect, it } from 'vitest';
-import { FB_NODE_VIEWS, moveSocket, previewChild, stepView, supportedViews, viewOf } from './views';
+import { FB_NODE_VIEWS, FbNodeView, defaultView, moveSocket, previewChild, stepView, supportedViews, viewOf } from './views';
 import { FbNodeSettings, FbNodeState } from './types';
 
 const plain: FbNodeSettings = { title: 'Plain' };
 const flow: FbNodeSettings = { title: 'Flow', isFlow: true };
-const big: FbNodeSettings = { title: 'Big', views: ['small', 'large'] };
+const big: FbNodeSettings = { title: 'Big', views: ['small', 'full'] };
 
 describe('supportedViews', () => {
   it('gives an ordinary node the two views it always had', () => {
     // Exactly the old collapsed/expanded pair, so nothing changes for a type
     // written before views existed.
-    expect(supportedViews(plain)).toEqual(['small', 'medium']);
+    expect(supportedViews(plain)).toEqual(['small', 'normal']);
   });
 
-  it('gives a flow all three, because its large view is its own graph', () => {
+  it('gives a flow all three, because its full view is its own graph', () => {
     expect(supportedViews(flow)).toEqual(FB_NODE_VIEWS);
   });
 
   it('keeps a declared set in size order, however it was written', () => {
-    expect(supportedViews({ title: 'x', views: ['large', 'small'] })).toEqual(['small', 'large']);
+    expect(supportedViews({ title: 'x', views: ['full', 'small'] })).toEqual(['small', 'full']);
+  });
+});
+
+describe('the rename from medium/large', () => {
+  /*
+   * `view` is serialised, so a flow saved before the rename still names the old
+   * views — as does any node type whose `views` were written against them. Both
+   * are cast, because the type no longer admits those spellings: the point is
+   * what arrives at runtime from a JSON file or an unrebuilt package.
+   */
+  it('reads a saved flow that still says medium or large', () => {
+    expect(viewOf({ type: 'a', view: 'medium' as FbNodeView }, plain)).toBe('normal');
+    expect(viewOf({ type: 'a', view: 'large' as FbNodeView }, flow)).toBe('full');
+  });
+
+  it('accepts a node type that still declares the old names', () => {
+    const legacy = { title: 'x', views: ['large', 'small'] as unknown as FbNodeView[] };
+
+    expect(supportedViews(legacy)).toEqual(['small', 'full']);
+  });
+
+  it('translates an old default view as well', () => {
+    expect(defaultView({ title: 'x', defaultView: 'medium' as FbNodeView })).toBe('normal');
   });
 });
 
@@ -29,20 +52,20 @@ describe('viewOf', () => {
 
   it('ignores a stored view the type does not support', () => {
     // A saved flow can name a view a type has since dropped.
-    expect(viewOf({ type: 'a', view: 'large' }, plain)).toBe('small');
-    expect(viewOf({ type: 'a', view: 'medium' }, plain)).toBe('medium');
+    expect(viewOf({ type: 'a', view: 'full' }, plain)).toBe('small');
+    expect(viewOf({ type: 'a', view: 'normal' }, plain)).toBe('normal');
   });
 });
 
 describe('stepView', () => {
   it('steps to the next supported view, skipping unsupported ones', () => {
-    expect(stepView('small', 1, big)).toBe('large');
-    expect(stepView('large', -1, big)).toBe('small');
+    expect(stepView('small', 1, big)).toBe('full');
+    expect(stepView('full', -1, big)).toBe('small');
   });
 
   it('stops at the ends rather than wrapping', () => {
     // Wrapping would make a directional control lie about where it goes next.
-    expect(stepView('medium', 1, plain)).toBeNull();
+    expect(stepView('normal', 1, plain)).toBeNull();
     expect(stepView('small', -1, plain)).toBeNull();
   });
 });

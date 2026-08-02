@@ -81,8 +81,8 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     /* Nothing behind a node that has taken the surface. */
-    .plane[data-large='true'] > fb-connections,
-    .plane[data-large='true'] ::slotted(fb-node-box:not([view='large'])) {
+    .plane[data-full='true'] > fb-connections,
+    .plane[data-full='true'] ::slotted(fb-node-box:not([view='full'])) {
       display: none;
     }
 
@@ -486,17 +486,17 @@ export class FbFlowCanvasElement extends LitElement {
     /*
      * Zoom and pan are suspended while a node has the surface to itself.
      * Panning behind something that covers the whole editor moves a graph the
-     * user cannot see, and the transform would scale the large node with it —
-     * "large" means the surface, not the surface times the current zoom.
+     * user cannot see, and the transform would scale the full node with it —
+     * "full" means the surface, not the surface times the current zoom.
      */
-    const large = this.editor.largeNode;
-    const transform = large ? 'none' : viewport.transform();
+    const full = this.editor.fullNode;
+    const transform = full ? 'none' : viewport.transform();
 
     return html`
       ${this.renderCrumbs()}
       <div
         class="plane"
-        data-large=${large ? 'true' : 'false'}
+        data-full=${full ? 'true' : 'false'}
         style=${this.planeStyle(plane.width, plane.height, transform)}
         @wheel=${this.onWheel}
         @pointerdown=${this.onPointerDown}

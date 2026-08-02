@@ -110,15 +110,15 @@ const types: FbNodeTypes<FbNodeMount> = {
   },
   scope: {
     component: canvasNode,
-    // Opts into the large view: a plot is worth the whole surface.
+    // Opts into the full view: a plot is worth the whole surface.
     settings: {
       title: 'Scope',
       sockets: [{ type: 'in', format: 'number' }],
-      views: ['small', 'medium', 'large'],
+      views: ['small', 'normal', 'full'],
     },
   },
   /*
-   * A composite. It draws one of its children until it is large, at which point
+   * A composite. It draws one of its children until it is full, at which point
    * the editor enters it and you see the graph itself.
    */
   group: {

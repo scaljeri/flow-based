@@ -122,8 +122,8 @@ export interface FbNodeSettings {
   sockets?: FbSocket[];
   isFlow?: boolean;
   /**
-   * Which of small/medium/large this type can render; see `supportedViews`.
-   * Omitted means `['small', 'medium']` — a flow gets all three.
+   * Which of small/normal/full this type can render; see `supportedViews`.
+   * Omitted means `['small', 'normal']` — a flow gets all three.
    */
   views?: import('./views').FbNodeView[];
   /**

@@ -105,7 +105,10 @@ same interface, so the two are always in step.
 |---|---|
 | `state` | the node's own state — the live object, not a copy |
 | `worker` | the worker computing this node, if its type declares one |
-| `setMaxSize(isMax)` / `isMaxSize()` | expand or collapse |
+| `view` / `supportedViews` | how much room you have: `small`, `normal` or `full` |
+| `setView(view)` | ask for one of them |
+| `onViewChange(listener)` | the view changed; returns an unsubscribe function |
+| `setMaxSize(isMax)` / `isMaxSize()` | deprecated: the largest or smallest supported view |
 | `setLabelVisible(visible)` | hide the shell's title if you draw your own |
 | `deleteSelf()` | remove this node from the flow |
 | `addSocket(socket)` / `removeSocket(socket)` | change the node's sockets at runtime |
@@ -144,6 +147,44 @@ Socket ids are assigned by the editor, so do not write them here. `format` drive
 connection validity and colour: sockets only connect when their formats agree, or
 when at least one is unset. A socket with no `format` takes one from whatever it
 is connected to, and the engine propagates that through the graph.
+
+---
+
+## Views
+
+A node has three sizes, and your type declares which of them it can render:
+
+```ts
+const SCOPE_SETTINGS: FbNodeSettings = {
+  title: 'Scope',
+  views: ['small', 'normal', 'full'],   // omitted means ['small', 'normal']
+};
+```
+
+| | |
+|---|---|
+| `small` | the node at rest: an icon, a reading, a title, and no chrome at all |
+| `normal` | opened in place, with a header bar across the top |
+| `full` | the whole editor surface, with zoom and pan suspended |
+
+Every node opens `small`. Taking the surface is a claim only you can make, so
+`full` is opted into rather than inherited — a node drawing one number has
+nothing to do with the extra room. A composite (`isFlow: true`) gets all three,
+and its `full` view is navigation: the editor enters its graph.
+
+**You do not draw the chrome.** The shell does, and it is the same for every node
+type: a double-click opens a small node, and the header of an open one carries
+the title, a settings button, the way back to small and the way out to full.
+Deleting is in that settings panel. Drawing your own title bar or close button
+gives the user two controls for one fact, which is how they come to disagree.
+
+What you do draw is the *content*, which may differ per view — read `api.view`
+when you mount, and subscribe with `api.onViewChange` for the rest. Angular nodes
+get the same thing as `NodeService.view$`.
+
+The two larger views used to be called `medium` and `large`. Both spellings are
+still read — from a saved flow, or from a `views` array in a package built before
+the rename — so nothing has to be rewritten to keep working.
 
 ---
 

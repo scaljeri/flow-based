@@ -30,6 +30,9 @@ import { FbEditor, FbEditorChange } from './editor';
 const ICON_OPEN = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>`;
 
+const ICON_TRASH = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>`;
+
 const ICON_GROW = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4v6M4 4l6 6M14 20h6v-6M20 20l-6-6"/></svg>`;
 
@@ -79,8 +82,8 @@ export class FbNodeElement extends LitElement {
       box-shadow: 0 0 0 2px var(--fb-selected-color, #bada55);
     }
 
-    /* Large: the node has the editor surface to itself. */
-    :host([view='large']) {
+    /* Full: the node has the editor surface to itself. */
+    :host([view='full']) {
       --fb-socket-size: 42px;
 
       cursor: default;
@@ -92,22 +95,49 @@ export class FbNodeElement extends LitElement {
       z-index: 50;
     }
 
-    :host([view='large']) .box {
+    :host([view='full']) .box {
       height: 100%;
       width: 100%;
     }
 
-    /* Controls for stepping between views. */
-    .views {
+    /*
+     * The header bar of an open node: its title, and the way to everything else.
+     *
+     * A bar rather than the floating corner buttons this replaces. Those sat ON
+     * the content — over a chart, over a form — so on a small node they were most
+     * of what you could see, and on a big one they landed wherever the content
+     * happened to be busiest. A bar has its own row, which is also the only place
+     * a title can go without covering something.
+     *
+     * The bar itself does NOT carry fb-drag-ignore: it is the node's handle,
+     * exactly as a window's title bar is. Only the buttons opt out of dragging.
+     * No backticks in this comment — it sits inside a tagged CSS template
+     * literal, and one would close it early.
+     */
+    .head {
+      align-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
       display: flex;
       gap: 2px;
-      position: absolute;
-      right: 3px;
-      top: 3px;
-      z-index: 40;
+      /* Cancels the box's padding, so the bar spans it edge to edge. */
+      margin: -4px -4px 4px;
+      padding: 3px 4px;
     }
 
-    .views button {
+    .head .name {
+      color: #fff;
+      flex: 1;
+      font: 12px system-ui, sans-serif;
+      /* Without this a long title refuses to shrink and widens the whole node. */
+      min-width: 0;
+      overflow: hidden;
+      padding-left: 2px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .head button {
       align-items: center;
       background: rgba(0, 0, 0, 0.45);
       border: none;
@@ -115,43 +145,44 @@ export class FbNodeElement extends LitElement {
       color: #fff;
       cursor: pointer;
       display: flex;
+      flex: 0 0 auto;
       height: 20px;
       justify-content: center;
-      opacity: 0.55;
+      opacity: 0.75;
       padding: 0;
       width: 20px;
     }
 
-    .views button:hover,
-    .views button:focus-visible {
+    .head button:hover,
+    .head button:focus-visible {
       opacity: 1;
     }
 
     /*
      * Bigger targets on a touch screen. 20px is comfortable with a mouse and
-     * below every guideline for a finger, and these are the ONLY way to open a
-     * node or its settings — a control you cannot reliably hit is a feature you
-     * do not have. Keyed on the pointer, not the width: a small window on a
-     * desktop still has a mouse.
+     * below every guideline for a finger, and these are the ONLY way to reach a
+     * node's settings or its other views — a control you cannot reliably hit is a
+     * feature you do not have. Keyed on the pointer, not the width: a small
+     * window on a desktop still has a mouse.
      */
     @media (pointer: coarse) {
-      .views {
+      .head {
         gap: 4px;
       }
 
-      .views button {
+      .head button {
         height: 34px;
-        opacity: 0.85;
+        opacity: 0.9;
         width: 34px;
       }
 
-      .views svg {
+      .head svg {
         height: 18px;
         width: 18px;
       }
     }
 
-    .views svg {
+    .head svg {
       height: 13px;
       width: 13px;
     }
@@ -307,21 +338,69 @@ export class FbNodeElement extends LitElement {
       padding-top: 10px;
     }
 
+    /*
+     * Deleting lives here rather than in the header.
+     *
+     * It used to be a button the DEMO's node chrome drew, which meant node types
+     * that did not use that chrome — anything not written for this app — simply
+     * could not be deleted from the node itself. A node's own existence is model,
+     * like its title and its sockets, so the panel that edits those owns it.
+     */
+    .config .danger {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      margin-top: 14px;
+      padding-top: 10px;
+    }
+
+    .config .delete {
+      align-items: center;
+      background: rgba(255, 0, 68, 0.16);
+      border: 1px solid rgba(255, 0, 68, 0.5);
+      border-radius: 4px;
+      color: #ff89a6;
+      cursor: pointer;
+      display: flex;
+      font: inherit;
+      gap: 6px;
+      padding: 5px 10px;
+    }
+
+    .config .delete svg {
+      height: 14px;
+      width: 14px;
+    }
+
     .box {
       --inner-border-color: var(--fb-block-border-color, #868686);
 
-      align-items: center;
+      /*
+       * A column of header-then-content, stretched rather than centred: the
+       * header is a bar and has to span the node. The content is centred inside
+       * .body instead, which is where the centring that used to live here went —
+       * a node with no header looks exactly as it did.
+       */
+      align-items: stretch;
       background-color: var(--fb-node-background, rgba(0, 0, 0, 0.8));
       border: 3px solid var(--inner-border-color);
       border-radius: 12px;
       box-sizing: border-box;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       min-height: 50px;
       min-width: 72px;
       overflow: hidden;
       padding: 4px;
       position: relative;
+    }
+
+    .body {
+      align-items: center;
+      display: flex;
+      flex: 1;
+      justify-content: center;
+      /* Both needed, or the content refuses to shrink inside a full-view node. */
+      min-height: 0;
+      min-width: 0;
     }
 
     /*
@@ -351,11 +430,18 @@ export class FbNodeElement extends LitElement {
       stroke-width: 2;
     }
 
+    /*
+     * Sits on the HOST, not inside the box, so the box's overflow does not clip
+     * it. Absolutely positioned, so it stays out of the flow and the measured
+     * size the socket geometry works from is still the node's own.
+     */
     .title {
       color: #fff;
       display: block;
       font-size: 12px;
       left: 50%;
+      padding-top: 3px;
+      pointer-events: none;
       position: absolute;
       text-align: center;
       top: 100%;
@@ -462,7 +548,10 @@ export class FbNodeElement extends LitElement {
   private showLabel = true;
   private configOpen = false;
   private settingsTeardown?: () => void;
+  /** The view the content was last told about; see notifyView(). */
+  private notifiedView?: FbNodeView;
   private readonly clickListeners = new Set<(event: PointerEvent) => void>();
+  private readonly viewListeners = new Set<(view: FbNodeView) => void>();
   private readonly wires = new Map<number, { from: Element; to: Element }>();
   private nextWireId = 1;
 
@@ -500,8 +589,8 @@ export class FbNodeElement extends LitElement {
       this.unmountContent();
       this.mountContent();
     } else if (this.mountedFor && this.mountedFor !== this.contentSource()) {
-      // A composite shows one of its children until it is large enough to show
-      // its graph, so the view decides WHAT is mounted, not just how big it is.
+      // A composite shows one of its children until it is big enough to show its
+      // graph, so the view decides WHAT is mounted, not just how big it is.
       this.unmountContent();
       this.mountContent();
     }
@@ -509,9 +598,43 @@ export class FbNodeElement extends LitElement {
     this.applyPosition();
     this.applySelected();
     this.setAttribute('view', this.view);
+    this.notifyView();
     this.syncDialog();
     this.mountOwnSettings();
     this.drawWires();
+  }
+
+  /**
+   * Tell the content its view changed.
+   *
+   * Content used to be the only thing that could change its own size, so it
+   * always knew. It is not any more — the header steps the view, and a node type
+   * that draws differently when open would otherwise never hear about it.
+   *
+   * Compared against the last value rather than fired on every render: `updated`
+   * runs for a selection change or a resize as much as for a view change.
+   */
+  private notifyView(): void {
+    const view = this.view;
+
+    if (this.notifiedView === view) {
+      return;
+    }
+
+    this.notifiedView = view;
+
+    for (const listener of [...this.viewListeners]) {
+      listener(view);
+    }
+
+    /*
+     * And ask the content itself to re-render. `update` has been on the handle
+     * since it was written and nothing ever called it, so a framework node was
+     * only ever re-checked when its own worker gave it a reason to be. A view
+     * change is a reason: it is the one thing about a node that changes without
+     * anything arriving on a socket.
+     */
+    this.handle?.update?.();
   }
 
   /**
@@ -622,13 +745,13 @@ export class FbNodeElement extends LitElement {
   /**
    * Whose content this node draws.
    *
-   * Its own, except for a composite that is not large: a flow node has to look
-   * like something at small and medium, and the honest answer is one of the
+   * Its own, except for a composite that is not full: a flow node has to look
+   * like something at small and normal, and the honest answer is one of the
    * things it contains. Returns the node whose type supplies the mount function,
    * so a change of view can be detected as a change of source.
    */
   private contentSource(): FbNodeState | undefined {
-    if (this.state?.children && this.view !== 'large') {
+    if (this.state?.children && this.view !== 'full') {
       return previewChild(this.state);
     }
 
@@ -666,6 +789,7 @@ export class FbNodeElement extends LitElement {
     this.mountedFor = undefined;
     this.wires.clear();
     this.clickListeners.clear();
+    this.viewListeners.clear();
 
     if (this.state?.id !== undefined) {
       this.editor?.events.unregisterAll(this.state.id);
@@ -696,6 +820,16 @@ export class FbNodeElement extends LitElement {
         return supportedViews(editor.types[state.type]?.settings);
       },
       setView: (view: FbNodeView) => this.requestView(view),
+      /*
+       * Reports the view of the node this content is DRAWN IN, which for a
+       * composite's preview child is the composite's rather than the child's own.
+       * That is the one the content's size actually follows.
+       */
+      onViewChange: listener => {
+        this.viewListeners.add(listener);
+
+        return () => this.viewListeners.delete(listener);
+      },
       // Kept for node types written against the boolean: the largest supported
       // view, or the smallest.
       setMaxSize: (isMax: boolean) => {
@@ -943,16 +1077,29 @@ export class FbNodeElement extends LitElement {
 
     return html`
       <div class="box" @pointerdown=${this.onPointerDown} @dblclick=${this.onDoubleClick}>
-        ${this.renderViewControls()}
+        ${this.renderHeader()}
 
-        <slot></slot>
+        <div class="body">
+          <slot></slot>
+        </div>
 
         <svg class="wires"></svg>
-
-        ${this.showLabel && this.state?.title
-          ? html`<span class="title">${this.state.title}</span>`
-          : nothing}
       </div>
+
+      <!--
+        The label below the node belongs to a node at REST: once it is open the
+        header carries the title, and drawing both put the same words on screen
+        twice, a few pixels apart.
+
+        Outside the box, not in it. The box clips its overflow — it has to, or an
+        open node's content would spill past its own rounded corners — and this
+        sits at top:100%, which is exactly the part that gets clipped. So the
+        label was there all along and had never been visible. (No backticks in
+        this comment: it is inside a tagged template literal.)
+      -->
+      ${this.showLabel && this.state?.title && this.view === 'small'
+        ? html`<span class="title">${this.state.title}</span>`
+        : nothing}
 
       ${sockets.map(s => this.renderSocket(s))}
 
@@ -961,9 +1108,9 @@ export class FbNodeElement extends LitElement {
   }
 
   /**
-   * Step this node's view, or enter it when it is a composite going large.
+   * Step this node's view, or enter it when it is a composite going full.
    *
-   * A composite's large view is its graph, and showing that is navigation rather
+   * A composite's full view is its graph, and showing that is navigation rather
    * than a size — the editor moves to the child flow instead of the node growing
    * to hold an editor of its own.
    */
@@ -974,7 +1121,7 @@ export class FbNodeElement extends LitElement {
       return;
     }
 
-    if (view === 'large' && this.state.children) {
+    if (view === 'full' && this.state.children) {
       this.editor.enter(id);
 
       return;
@@ -983,17 +1130,17 @@ export class FbNodeElement extends LitElement {
     this.editor.setView(id, view);
   }
 
-  private renderViewControls() {
+  /**
+   * The header bar of an open node: title, settings, and the other views.
+   *
+   * Nothing at rest. A small node is an icon, and buttons pinned to the corner of
+   * an icon are most of the icon — so `small` is the one view with no chrome at
+   * all, and a double-click is how you leave it. From `normal` everything else is
+   * one press away: settings, back to small, or out to full.
+   */
+  private renderHeader() {
     const current = this.view;
 
-    /*
-     * Nothing at rest.
-     *
-     * A small node is an icon, and two buttons pinned to the corner of an icon
-     * are most of the icon. Double-clicking opens it, which is also what a
-     * double-tap does on a touch screen — and once it is open the controls have
-     * somewhere to live that is not on top of the content.
-     */
     if (current === 'small') {
       return nothing;
     }
@@ -1001,15 +1148,13 @@ export class FbNodeElement extends LitElement {
     const bigger = stepView(current, 1, this.settings);
     const smaller = stepView(current, -1, this.settings);
 
-    if (!bigger && !smaller) {
-      return nothing;
-    }
-
     return html`
-      <div class="views fb-drag-ignore">
+      <div class="head">
+        <span class="name">${this.state?.title ?? ''}</span>
+
         <button
           type="button"
-          class="config-toggle"
+          class="config-toggle fb-drag-ignore"
           title="Settings"
           aria-label="Settings"
           aria-pressed=${this.configOpen ? 'true' : 'false'}
@@ -1018,7 +1163,7 @@ export class FbNodeElement extends LitElement {
         ${smaller
           ? html`<button
               type="button"
-              class="step"
+              class="step fb-drag-ignore"
               title=${`Show smaller (${smaller})`}
               aria-label=${`Show smaller (${smaller})`}
               @pointerdown=${(e: Event) => e.stopPropagation()}
@@ -1027,11 +1172,11 @@ export class FbNodeElement extends LitElement {
         ${bigger
           ? html`<button
               type="button"
-              class="step"
+              class="step fb-drag-ignore"
               title=${`Show larger (${bigger})`}
               aria-label=${`Show larger (${bigger})`}
               @pointerdown=${(e: Event) => e.stopPropagation()}
-              @click=${() => this.requestView(bigger)}>${bigger === 'medium' ? ICON_OPEN : ICON_GROW}</button>`
+              @click=${() => this.requestView(bigger)}>${bigger === 'normal' ? ICON_OPEN : ICON_GROW}</button>`
           : nothing}
       </div>
     `;
@@ -1040,10 +1185,10 @@ export class FbNodeElement extends LitElement {
   /**
    * Open a node at rest.
    *
-   * Only from `small`: past that the controls are visible and doing two things
-   * with one gesture — a double-click that also stepped medium to large would
-   * fight the button that does exactly that, and content inside an open node
-   * has its own double-clicks.
+   * Only from `small`: past that the header is visible and doing two things with
+   * one gesture — a double-click that also stepped normal to full would fight the
+   * button that does exactly that, and content inside an open node has its own
+   * double-clicks.
    */
   private onDoubleClick = (event: MouseEvent): void => {
     if (this.view !== 'small') {
@@ -1158,8 +1303,25 @@ export class FbNodeElement extends LitElement {
         </div>
 
         <div class="own"></div>
+
+        <div class="danger">
+          <button type="button" class="delete" @click=${() => this.deleteNode()}>
+            ${ICON_TRASH} Delete node
+          </button>
+        </div>
       </dialog>
     `;
+  }
+
+  /** Closed first: the dialog is in the top layer and its node is about to go. */
+  private deleteNode(): void {
+    const id = this.state?.id;
+
+    this.closeConfig();
+
+    if (id !== undefined) {
+      this.editor.removeNode(id);
+    }
   }
 
   private draggingSocket?: FbSocket;

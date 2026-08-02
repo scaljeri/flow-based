@@ -14,7 +14,6 @@ import { GoogleChart } from '../../app.models';
 export class StatsComponent implements OnInit, OnDestroy {
   public worker!: StatsWorker;
   private state: FbNodeState;
-  public isEditing = false;
   public data: number[][] = [];
   // The `#distribution` div lives inside <fb-normal-node>'s content, which is
   // removed while the node is being edited, so the query legitimately resolves
@@ -75,10 +74,6 @@ export class StatsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.cdr.detach();
-  }
-
-  onEdit(isEditing: boolean): void {
-    this.isEditing = isEditing;
   }
 
   onReset(): void {

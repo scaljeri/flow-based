@@ -1,5 +1,13 @@
-<fb-normal-node [isActive]="true" [label]="getTitle()">
+<fb-normal-node>
   <div class="canvas-wrapper">
+    <!--
+      Which fractal this is drawing used to be fed to the chrome as a title. The
+      shell's header shows the node's own title, which is model and does not
+      change as a different fractal arrives on the socket — so the live one is
+      drawn here, next to the other readings taken off the same stream.
+    -->
+    <span class="fractal">{{getTitle()}}</span>
+
     <ng-container *ngIf="dimensions">
       <span class="xmax-xmin">xMax - xMin: {{width}}</span>
       <span class="zoom">zoom: {{zoom}}</span>
