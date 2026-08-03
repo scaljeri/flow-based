@@ -2119,3 +2119,71 @@ test('a socket can carry more than one type', async ({ page }) => {
   await expect.poll(async () => (await connectionPaths(page)).length).toBe(1);
   expect(await read()).toEqual({ format: 'point', formats: null });
 });
+
+/**
+ * A subflow has two sides, and its sockets face different ways.
+ *
+ * It is a node in one flow and a flow of its own, so which types are on offer
+ * depends on which side a socket faces: its INPUTS take whatever the flow it
+ * sits in produces, because a sibling out there is what will feed them; its
+ * OUTPUTS carry whatever its own children produce, because that is where the
+ * values come from.
+ *
+ * This is what keeps a subflow's vocabulary its own — types reach the outside
+ * through its outputs, and nothing reaches in but through its inputs.
+ */
+test('a subflow takes its inputs from outside and its outputs from within', async ({ page }) => {
+  await page.goto(`${HARNESS}?subflow=1`);
+  await expect(canvas(page)).toBeVisible();
+
+  const offered = await page.evaluate(() => {
+    const group = window.fbEditor.children.find(n => n.title === 'Group')!;
+
+    // Something inside deals in a type the outside has never heard of.
+    window.fbEditor.enter(group.id!);
+    window.fbEditor.setSocketFormats(window.fbEditor.children[0].sockets![0], ['heat']);
+    window.fbEditor.leave();
+
+    const into = window.fbEditor.addSocket(group.id!, 'in')!;
+    const outOf = window.fbEditor.addSocket(group.id!, 'out')!;
+
+    return {
+      outside: window.fbEditor.formatsInScope(),
+      itsInput: window.fbEditor.formatsFor(group, into),
+      itsOutput: window.fbEditor.formatsFor(group, outOf),
+    };
+  });
+
+  expect(offered.outside).toEqual(['number']);
+  // In from the flow it sits in...
+  expect(offered.itsInput).toEqual(['number']);
+  // ...out from what its own children produce, `heat` among them.
+  expect(offered.itsOutput).toEqual(['heat', 'number']);
+
+  /*
+   * And the same answers from INSIDE it, reached through its own header. Which
+   * side a socket faces is a property of the socket, not of where the person
+   * looking at it happens to be standing.
+   */
+  const fromInside = await page.evaluate(() => {
+    const group = window.fbEditor.children.find(n => n.title === 'Group')!;
+
+    window.fbEditor.enter(group.id!);
+
+    const me = window.fbEditor.state;
+
+    return {
+      itsInput: window.fbEditor.formatsFor(me, me.sockets!.find(s => s.type === 'in')!),
+      itsOutput: window.fbEditor.formatsFor(me, me.sockets!.find(s => s.type === 'out')!),
+    };
+  });
+
+  expect(fromInside).toEqual({ itsInput: ['number'], itsOutput: ['heat', 'number'] });
+
+  // An ordinary node has one side: the flow it is in.
+  expect(await page.evaluate(() => {
+    const node = window.fbEditor.children[0];
+
+    return window.fbEditor.formatsFor(node, node.sockets![0]);
+  })).toEqual(['heat', 'number']);
+});

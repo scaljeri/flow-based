@@ -408,35 +408,69 @@ export class FbEditor {
   }
 
   /**
-   * Every data type in use in the flow ON SCREEN.
+   * The types the NODES of a flow deal in.
    *
-   * Scoped to this flow deliberately, and that is the interesting part: a
-   * subflow is its own world. The types its nodes deal in are its own, and are
-   * not offered outside it — a graph where any node could claim any type its
-   * grandparent had heard of would make the vocabulary global, which is exactly
-   * what nesting is supposed to avoid.
-   *
-   * Gathered from the nodes rather than declared anywhere, because a type only
-   * exists here in the sense that something in this flow carries it. The flow's
-   * own sockets are included: inside a subflow they are what connects it out.
+   * Its children's sockets, and deliberately not its own: a flow's own sockets
+   * are its boundary rather than something inside it, and counting them would
+   * let a type reach in from outside through the very socket whose type is the
+   * question being asked.
    */
-  formatsInScope(): string[] {
+  private vocabularyOf(flow: FbNodeState | undefined): string[] {
     const seen = new Set<string>();
-    const gather = (sockets: FbSocket[] | undefined) => {
-      for (const socket of sockets ?? []) {
+
+    for (const child of flow?.children ?? []) {
+      for (const socket of child.sockets ?? []) {
         for (const format of formatsOf(socket)) {
           seen.add(format);
         }
       }
-    };
-
-    gather(this.state?.sockets);
-
-    for (const child of this.children) {
-      gather(child.sockets);
     }
 
     return [...seen].sort();
+  }
+
+  /** Every data type the flow on screen deals in. */
+  formatsInScope(): string[] {
+    return this.vocabularyOf(this.state);
+  }
+
+  /**
+   * The types a particular socket could sensibly carry.
+   *
+   * A type exists only where something carries it, so which types are on offer
+   * depends on which side of a boundary the socket faces — and a subflow has two
+   * sides. It is a node in one flow and a flow of its own, so:
+   *
+   * - its INPUTS take whatever the flow it sits in produces, because a sibling
+   *   out there is what will feed them;
+   * - its OUTPUTS carry whatever its own children produce, because that is where
+   *   the values come from.
+   *
+   * An ordinary node has one side, and takes the vocabulary of the flow it is
+   * in. This is what keeps a subflow's types its own: they reach the outside
+   * through its outputs, and nothing reaches in but through its inputs.
+   */
+  formatsFor(node: FbNodeState, socket: FbSocket): string[] {
+    if (node.children && socket.type === 'out') {
+      return this.vocabularyOf(node);
+    }
+
+    return this.vocabularyOf(this.flowContaining(node));
+  }
+
+  /**
+   * The flow a node sits in.
+   *
+   * Only two nodes are ever asked about: one on screen, whose flow is the one on
+   * screen — or the flow on screen itself, reached through the header while
+   * inside it, whose flow is its parent.
+   */
+  private flowContaining(node: FbNodeState): FbNodeState | undefined {
+    if (node !== this.state) {
+      return this.state;
+    }
+
+    return this.ancestors[this.ancestors.length - 1];
   }
 
   /**

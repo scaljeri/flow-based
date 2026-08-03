@@ -947,12 +947,22 @@ overlapping sets still leave a real choice, and guessing is worse than leaving i
 for the next connection to settle. Retyping a socket cuts the connections its new
 set cannot carry (`Flow.pruneIncompatible`).
 
-**The vocabulary is per flow, and that is the point.** `formatsInScope()` gathers
-the types from the nodes of the flow ON SCREEN — so a subflow deals in its own,
-and neither inherits its parent's nor leaks into it. A type exists here only in
-the sense that something in this flow carries it; a graph where any node could
-claim a type its grandparent had heard of would make the vocabulary global, which
-is what nesting is supposed to avoid.
+**The vocabulary is per flow, and a subflow has two sides.** A type exists only
+where something carries it, so which types are on offer depends on which side of
+a boundary a socket faces — and a subflow is a node in one flow and a flow of its
+own:
+
+- its **inputs** take whatever the flow it sits in produces, because a sibling
+  out there is what will feed them;
+- its **outputs** carry whatever its own children produce, because that is where
+  the values come from.
+
+An ordinary node has one side and takes the vocabulary of the flow it is in.
+`formatsFor(node, socket)` is where this is decided; `vocabularyOf` counts a
+flow's children's sockets and deliberately not its own, since a flow's own
+sockets are its boundary rather than something inside it. That is what keeps a
+subflow's types its own: they reach the outside through its outputs, and nothing
+reaches in but through its inputs.
 
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed

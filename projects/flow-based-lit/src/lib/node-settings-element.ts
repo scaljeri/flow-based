@@ -1006,20 +1006,24 @@ export class FbNodeSettingsElement extends LitElement {
    * it is the native thing — so it arrives keyboard-operable and with a picker
    * of the platform's own on a phone.
    *
-   * The list is what the FLOW deals in, plus whatever this socket already
-   * carries. That last part matters when a subflow's socket was typed before the
-   * node that gave it that type was removed: the type is still true of the
-   * socket, and dropping it from the list would silently drop it from the model
-   * the next time anything was changed.
+   * The list is what could reach THIS socket — see `FbEditor.formatsFor`, which
+   * is where a subflow's two sides are told apart — plus whatever the socket
+   * already carries. That last part matters when the node that gave it a type
+   * has since been removed: the type is still true of the socket, and dropping
+   * it from the list would silently drop it from the model the next time
+   * anything else was changed.
    */
   private renderFormats(socket: FbSocket) {
     const mine = formatsOf(socket);
-    const available = [...new Set([...this.editor.formatsInScope(), ...mine])].sort();
+    const offered = this.state ? this.editor.formatsFor(this.state, socket) : [];
+    const available = [...new Set([...offered, ...mine])].sort();
 
     if (!available.length) {
       return html`
         <p class="none">
-          This flow deals in no types yet — they come from the nodes in it.
+          ${socket.type === 'out' && this.state?.children
+            ? 'Nothing in this subflow produces a type yet.'
+            : 'This flow deals in no types yet — they come from the nodes in it.'}
         </p>
       `;
     }
