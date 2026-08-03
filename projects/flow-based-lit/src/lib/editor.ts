@@ -616,18 +616,44 @@ export class FbEditor {
 
     /*
      * A new subflow opens in its full view, which for a subflow means going
-     * inside it.
+     * inside it — and with its settings up, so the first thing you do is name it.
      *
      * Everything else opens small, because a screen of nodes at full size is
      * unreadable. A subflow is the exception because a new one is EMPTY: at
      * small it is an icon of nothing, and the only reason to have added it is to
-     * put something in it. So the editor goes where the work is.
+     * put something in it. So the editor goes where the work is, and asks what
+     * this one is called while the answer is still obvious — every subflow after
+     * the first is otherwise called "Subflow", and a trail of those says nothing.
      */
     if (settings.isFlow && node.id !== undefined) {
       this.enter(node.id);
+      this.requestSettings();
     }
 
     return node;
+  }
+
+  private settingsRequested = false;
+
+  /**
+   * Ask whoever is drawing the current flow to open its settings.
+   *
+   * A request rather than a call, because the editor holds no elements: the
+   * canvas draws the header that owns that panel, and this is the editor saying
+   * what should happen rather than reaching across to do it.
+   */
+  requestSettings(): void {
+    this.settingsRequested = true;
+    this.changes.emit({ kind: 'structure' });
+  }
+
+  /** Consumed once, so a later re-render does not reopen a panel you closed. */
+  takeSettingsRequest(): boolean {
+    const requested = this.settingsRequested;
+
+    this.settingsRequested = false;
+
+    return requested;
   }
 
   removeNode(id: number): void {

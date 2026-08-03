@@ -329,6 +329,16 @@ export class FbNodeSettingsElement extends LitElement {
 
     if (this.open && !dialog.open) {
       dialog.showModal();
+
+      /*
+       * With the title SELECTED, not just focused, so typing replaces it.
+       *
+       * A new subflow opens this panel by itself and arrives called "Subflow" —
+       * a placeholder, and the reason the panel opened at all. Appending to it
+       * gave "SubflowSmoothing". Done once on open rather than on every focus,
+       * so clicking into the field later still puts the caret where you clicked.
+       */
+      dialog.querySelector<HTMLInputElement>('input[type=text]')?.select();
     } else if (!this.open && dialog.open) {
       dialog.close();
     }
@@ -394,10 +404,18 @@ export class FbNodeSettingsElement extends LitElement {
                   @click=${() => this.close()}>×</button>
         </header>
 
+        <!--
+          Autofocused, so the panel opens ready to be typed into. It matters most
+          for a new subflow, which opens this by itself and is called "Subflow"
+          until told otherwise — but a panel whose first field is focused is the
+          right behaviour for every node. Without it the browser focuses the
+          first focusable thing, which is the close button.
+        -->
         <label>
           Title
           <input
             type="text"
+            autofocus
             .value=${state.title ?? ''}
             @input=${(e: Event) => this.editor.setTitle(state.id!, (e.target as HTMLInputElement).value)}>
         </label>

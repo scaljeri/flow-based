@@ -847,13 +847,20 @@ it, and then it is the editor:
   `previewChild` already did — one of its children standing in for it.
 - **`full` is the flow itself**, with its connections. Unchanged: it is
   `editor.enter()`, navigation rather than a size.
-- **A new subflow opens in full**, because at small an empty one is an icon of
-  nothing and the only reason to add one is to put something in it.
+- **A new subflow opens in full, with its settings up and its name selected**,
+  because at small an empty one is an icon of nothing, the only reason to add one
+  is to put something in it, and every one of them arrives called "Subflow".
 
 **The header follows it onto the canvas.** Stepping a subflow to full removes its
 node box, and everything the header offered went with it. The canvas now draws
 the same bar for the flow it is showing: the path, its settings, and the way back
 out. There is no "bigger" — full is where you are.
+
+The breadcrumb's root reads `main` when the document has no title of its own —
+it was showing the type name, the literal string `flow`. The demo's root was
+titled "Random numbers", which described the two nodes it happened to contain, so
+a subflow with nothing to do with them appeared under "Random numbers ›". It is
+called `main` now: the document, not its contents.
 
 That needed the settings panel to stop being part of the node box, so it is now
 `<fb-node-settings>`. What it edits — a title and a set of sockets — is model

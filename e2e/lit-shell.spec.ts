@@ -1579,14 +1579,16 @@ test('the subflow header follows it onto the canvas', async ({ page }) => {
 });
 
 /**
- * A new subflow is empty, and both halves of that need answering.
+ * A new subflow is empty, and every part of that needs answering.
  *
  * It opens in full, because at small an empty subflow is an icon of nothing and
- * the only reason to have added one is to put something in it. And when you come
- * back out it draws its type's own icon rather than the nothing it used to: a
- * subflow normally draws one of its children, and it has none yet.
+ * the only reason to have added one is to put something in it. Its settings open
+ * with it, with the name selected, because every subflow arrives called
+ * "Subflow" and a trail of those says nothing. And when you come back out it
+ * draws its type's own icon rather than the nothing it used to: a subflow
+ * normally draws one of its children, and it has none yet.
  */
-test('a new subflow opens inside itself, and draws an icon when empty', async ({ page }) => {
+test('a new subflow opens inside itself, ready to be named', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
@@ -1599,6 +1601,34 @@ test('a new subflow opens inside itself, and draws an icon when empty', async ({
   await expect.poll(() => nodeCount(page)).toBe(0);
   await expect(page.locator('fb-flow-canvas .head')).toHaveCount(1);
 
+  /*
+   * And the panel is open with the placeholder name selected, so typing
+   * replaces it rather than appending to it.
+   */
+  const ready = await page.evaluate(() => {
+    const dialog = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('dialog.config') as HTMLDialogElement;
+    const input = dialog.querySelector<HTMLInputElement>('input[type=text]')!;
+
+    return {
+      open: dialog.open,
+      value: input.value,
+      selected: input.selectionStart === 0 && input.selectionEnd === input.value.length,
+    };
+  });
+
+  expect(ready).toEqual({ open: true, value: 'Group', selected: true });
+
+  await page.keyboard.type('Smoothing');
+
+  // The name lands in the model and in the trail that leads back out.
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('.crumbs')!.textContent!.replace(/\s+/g, ' ').trim()))
+    .toBe('Signals and scopes › Smoothing');
+
+  await page.keyboard.press('Escape');
   await page.evaluate(() => window.fbEditor.leave());
 
   await expect.poll(() => nodeCount(page)).toBe(before + 1);
@@ -1616,4 +1646,34 @@ test('a new subflow opens inside itself, and draws an icon when empty', async ({
 
   expect(drawn.children).toBe(0);
   expect(drawn.content).toBe('Group');
+});
+
+/**
+ * The root of the trail is the DOCUMENT, and says so.
+ *
+ * The demo's root was titled "Random numbers", which described the two nodes it
+ * happened to contain — so a subflow with no random numbers in it appeared under
+ * "Random numbers ›", which is nonsense. A root with no title of its own now
+ * reads `main` rather than its type name, which is the literal string `flow`.
+ */
+test('an untitled root flow is called main', async ({ page }) => {
+  await page.goto(`${HARNESS}?subflow=1`);
+  await expect(canvas(page)).toBeVisible();
+
+  const crumbs = () => page.evaluate(() => document.querySelector('fb-flow-canvas')!
+    .shadowRoot!.querySelector('.crumbs')?.textContent?.replace(/\s+/g, ' ').trim() ?? null);
+
+  await stepView(page, 'Group', 'grow');
+  await stepView(page, 'Group', 'grow');
+
+  // This harness names its document, so that name is what shows.
+  expect(await crumbs()).toBe('Signals and scopes › Group');
+
+  await page.evaluate(() => {
+    window.fbEditor.leave();
+    delete window.fbEditor.root.title;
+    window.fbEditor.enter(50);
+  });
+
+  await expect.poll(crumbs).toBe('main › Group');
 });

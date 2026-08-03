@@ -256,6 +256,15 @@ export class FbFlowCanvasElement extends LitElement {
       // The canvas owns the node list and the plane transform. A node moving or
       // resizing is the node's and the connection layer's business, not its.
       if (change.kind === 'structure' || change.kind === 'viewport') {
+        /*
+         * A newly created subflow asks to be named. Taken here rather than in
+         * render, which runs for reasons that have nothing to do with it and
+         * would reopen a panel the user had just closed.
+         */
+        if (this.editor.takeSettingsRequest()) {
+          this.settingsOpen = true;
+        }
+
         this.requestUpdate();
       }
     });
@@ -541,8 +550,8 @@ export class FbFlowCanvasElement extends LitElement {
           ${path.map((node, depth) => html`
             ${depth > 0 ? html`<span aria-hidden="true">\u203a</span>` : nothing}
             ${depth === path.length - 1
-              ? html`<span aria-current="true">${node.title ?? node.type}</span>`
-              : html`<button type="button" @click=${() => this.editor.goTo(depth)}>${node.title ?? node.type}</button>`}
+              ? html`<span aria-current="true">${this.crumbLabel(node, depth)}</span>`
+              : html`<button type="button" @click=${() => this.editor.goTo(depth)}>${this.crumbLabel(node, depth)}</button>`}
           `)}
         </nav>
 
@@ -574,6 +583,20 @@ export class FbFlowCanvasElement extends LitElement {
         .open=${this.settingsOpen}
         @settings-close=${() => this.onSettingsClosed()}></fb-node-settings>
     `;
+  }
+
+  /**
+   * What a step of the path is called.
+   *
+   * The root is `main` when it has no title of its own. It is the document
+   * rather than a node, and the alternative was its type name — the literal
+   * string `flow`, which tells a reader nothing about where they are.
+   *
+   * A subflow deeper in shows its own title, which is what makes naming one
+   * worth doing: the trail is only readable if each step says what it is.
+   */
+  private crumbLabel(node: FbNodeState, depth: number): string {
+    return node.title || (depth === 0 ? 'main' : node.type);
   }
 
   private settingsOpen = false;

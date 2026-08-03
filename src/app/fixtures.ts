@@ -15,7 +15,13 @@
 export const basic = {
   id: 1,
   type: 'flow',
-  title: 'Random numbers',
+  /*
+   * The document, not its contents. It was called "Random numbers", which
+   * described the two nodes that happen to be in it — and read as nonsense the
+   * moment anything else was added: a subflow with no random numbers in it
+   * showed up under "Random numbers ›".
+   */
+  title: 'main',
   sockets: [],
   children: [
     {
