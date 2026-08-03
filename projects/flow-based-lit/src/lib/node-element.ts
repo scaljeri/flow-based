@@ -17,6 +17,7 @@ import {
   viewOf,
 } from '@scaljeri/flow-based-core';
 import { FbEditor, FbEditorChange } from './editor';
+import { socketArrow } from './socket-icon';
 import { FbNodeSettingsElement } from './node-settings-element';
 
 /**
@@ -318,19 +319,41 @@ export class FbNodeElement extends LitElement {
      * renderer uses makes the two impossible to desynchronise.
      */
     .socket {
+      align-items: center;
       background-color: #fff;
-      border: 3px solid;
+      border: 2px solid;
       border-color: var(--fb-socket-border, #999);
       border-radius: 50%;
       box-sizing: border-box;
+      /*
+       * Flex rather than block, to centre the arrow inside. The old
+       * rotate(45deg) went with it: it was left over from a diamond and did
+       * nothing to a circle, and it would have spun the arrow.
+       */
       cursor: pointer;
-      height: var(--fb-socket-size, 14px);
+      display: flex;
+      height: var(--fb-socket-size, 16px);
+      justify-content: center;
       position: absolute;
-      transform: translate(-50%, -50%) rotate(45deg);
+      transform: translate(-50%, -50%);
       /* Only the growth is animated; the position is written every frame. */
       transition: transform 120ms ease-out, background-color 120ms linear;
-      width: var(--fb-socket-size, 14px);
+      width: var(--fb-socket-size, 16px);
       z-index: 30;
+    }
+
+    /*
+     * The arrow: which way values move through this socket.
+     *
+     * Dark on the socket's own fill rather than another colour of its own —
+     * a socket's colour says what FORMAT it carries, and direction is a
+     * different question that has to stay readable when there is no colour.
+     */
+    .socket svg {
+      color: rgba(0, 0, 0, 0.65);
+      height: 100%;
+      pointer-events: none;
+      width: 100%;
     }
 
     /*
@@ -394,7 +417,7 @@ export class FbNodeElement extends LitElement {
       background-color: var(--fb-active-color, #fa0);
       border-color: var(--fb-active-color, #fa0);
       box-shadow: 0 0 0 4px rgba(255, 170, 0, 0.25);
-      transform: translate(-50%, -50%) rotate(45deg) scale(1.6);
+      transform: translate(-50%, -50%) scale(1.6);
     }
 
     .socket.is-accepting {
@@ -1126,7 +1149,7 @@ export class FbNodeElement extends LitElement {
         class="socket socket-${socket.type} ${isActive ? 'is-active' : ''} ${accepts === true ? 'is-accepting' : ''} ${accepts === false ? 'is-rejecting' : ''}"
         style=${this.socketStyle(socket)}
         data-socket-id=${String(socket.id)}
-        @pointerdown=${(e: PointerEvent) => this.onSocketDown(e, socket)}></div>
+        @pointerdown=${(e: PointerEvent) => this.onSocketDown(e, socket)}>${socketArrow(socket)}</div>
     `;
   }
 

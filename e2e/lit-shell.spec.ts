@@ -1950,40 +1950,72 @@ test('pressing a socket on the rim opens that socket', async ({ page }) => {
     return {
       open: !!dialog?.open,
       fields: [...(dialog?.querySelectorAll('input') ?? [])].map(i => i.type),
-      direction: [...(dialog?.querySelectorAll('.choice button') ?? [])]
-        .map(b => `${b.textContent!.trim()}${b.classList.contains('on') ? '*' : ''}`),
+      // Stated, not offered: which way a socket carries is fixed when it is made.
+      direction: dialog?.querySelector('.direction')?.textContent?.trim(),
+      offersAChoice: !!dialog?.querySelector('.choice'),
     };
   });
 
   expect(editor).toEqual({
     open: true,
     fields: ['text', 'color'],
-    direction: ['in*', 'out'],
+    direction: 'Takes values in',
+    offersAChoice: false,
   });
 });
 
+
 /**
- * Turning a socket around cuts what ran through it.
+ * A socket says which way it carries, without relying on its colour.
  *
- * A connection is a direction. An `in` that becomes an `out` leaves every line
- * through it describing something that is no longer true, and a graph the engine
- * would have to keep pretending about is worse than one that lost a line.
+ * Colour comes from a socket's `format`, so two sockets of the same format are
+ * the same colour whichever way they point — and a colour is optional. Direction
+ * is not: it is the difference between a node's input and its output. So the
+ * mark is an arrow, and it TURNS with the edge the socket sits on, which is what
+ * makes the direction of flow legible from the node alone.
  */
-test('changing a socket direction disconnects it', async ({ page }) => {
+test('a socket draws an arrow, pointing the way values move', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
-  const before = (await connectionPaths(page)).length;
-  expect(before).toBeGreaterThan(0);
+  const arrows = () => page.evaluate(() =>
+    [...document.querySelectorAll('fb-flow-canvas fb-node-box')].flatMap(node => {
+      const state = (node as unknown as { state: { title?: string; sockets?: { id?: number; type: string; side?: string }[] } }).state;
+
+      return [...node.shadowRoot!.querySelectorAll<HTMLElement>('.socket')].map(dot => {
+        const socket = state.sockets!.find(s => String(s.id) === dot.dataset['socketId'])!;
+        const svg = dot.querySelector<SVGElement>('svg');
+
+        return `${state.title}/${socket.type}@${socket.side ?? 'default'}:${svg ? svg.style.transform : 'none'}`;
+      });
+    }));
+
+  /*
+   * At rest: an in-socket on the left points right, INTO the node, and an
+   * out-socket on the right also points right, OUT of it. Same glyph, same
+   * angle, opposite meaning — which is exactly why the edge has to be part of
+   * reading it.
+   */
+  expect(await arrows()).toEqual(expect.arrayContaining([
+    'Source/out@default:rotate(0deg)',
+    'Sink/in@default:rotate(0deg)',
+  ]));
 
   await page.evaluate(() => {
     const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
 
-    window.fbEditor.setSocketType(sink.sockets![0], 'out');
+    window.fbEditor.moveSocket(sink.id!, sink.sockets![0].id!, 0, 'top');
   });
 
-  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before - 1);
+  // On the top edge, an in-socket points DOWN into the node.
+  await expect.poll(arrows).toContain('Sink/in@top:rotate(90deg)');
 
-  expect(await page.evaluate(() =>
-    window.fbEditor.children.find(n => n.title === 'Sink')!.sockets![0].type)).toBe('out');
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.moveSocket(sink.id!, sink.sockets![0].id!, 0, 'bottom');
+  });
+
+  // And on the bottom, up into it.
+  await expect.poll(arrows).toContain('Sink/in@bottom:rotate(270deg)');
 });

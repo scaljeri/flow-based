@@ -8,6 +8,7 @@ import {
   sideOf,
 } from '@scaljeri/flow-based-core';
 import { FbEditor } from './editor';
+import { socketArrow } from './socket-icon';
 
 const ICON_TRASH = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>`;
@@ -95,22 +96,28 @@ export class FbNodeSettingsElement extends LitElement {
     }
 
     .rim .dot {
+      align-items: center;
       background: #fff;
-      border: 3px solid var(--fb-socket-border, #999);
+      border: 2px solid var(--fb-socket-border, #999);
       border-radius: 50%;
       box-sizing: border-box;
       cursor: grab;
-      height: 18px;
+      display: flex;
+      height: 20px;
+      justify-content: center;
       pointer-events: auto;
       position: absolute;
       touch-action: none;
       transform: translate(-50%, -50%);
-      width: 18px;
+      width: 20px;
     }
 
-    /* An in-socket is hollow and an out-socket filled, as on the node itself. */
-    .rim .dot.out {
-      background: var(--fb-socket-border, #999);
+    /* The same arrow the node draws, so the panel is a picture of the node. */
+    .rim .dot svg {
+      color: rgba(0, 0, 0, 0.65);
+      height: 100%;
+      pointer-events: none;
+      width: 100%;
     }
 
     .rim .dot:hover,
@@ -126,8 +133,8 @@ export class FbNodeSettingsElement extends LitElement {
     /* A finger needs more than eighteen pixels, and this one gets dragged. */
     @media (pointer: coarse) {
       .rim .dot {
-        height: 26px;
-        width: 26px;
+        height: 28px;
+        width: 28px;
       }
     }
 
@@ -276,27 +283,17 @@ export class FbNodeSettingsElement extends LitElement {
       background: rgba(0, 0, 0, 0.3);
     }
 
-    .socket-editor .choice {
+    .socket-editor .direction {
+      align-items: center;
       display: flex;
-      gap: 6px;
-      margin-bottom: 12px;
+      gap: 8px;
+      margin: 0 0 12px;
+      opacity: 0.75;
     }
 
-    .socket-editor .choice button {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid transparent;
-      border-radius: 4px;
-      color: #fff;
-      cursor: pointer;
-      flex: 1;
-      font: inherit;
-      padding: 5px 0;
-      text-transform: uppercase;
-    }
-
-    .socket-editor .choice button.on {
-      background: rgba(255, 255, 255, 0.22);
-      border-color: rgba(255, 255, 255, 0.45);
+    .socket-editor .direction svg {
+      height: 14px;
+      width: 14px;
     }
 
     .socket-editor .swatch {
@@ -722,7 +719,7 @@ export class FbNodeSettingsElement extends LitElement {
         style=${`${place}${colour ? `border-color:${colour};` : ''}`}
         data-socket-id=${String(socket.id)}
         title=${`${socket.name || socket.format || socket.type} — tap to edit, drag to move`}
-        @pointerdown=${(e: PointerEvent) => this.onDotDown(e, socket)}></span>
+        @pointerdown=${(e: PointerEvent) => this.onDotDown(e, socket)}>${socketArrow(socket)}</span>
     `;
   }
 
@@ -912,20 +909,15 @@ export class FbNodeSettingsElement extends LitElement {
         </label>
 
         <!--
-          Which way it carries. Turning a socket around cuts whatever ran through
-          it — a connection is a direction, and one through a socket that has
-          reversed describes something no longer true.
+          Stated, not offered. Which way a socket carries is fixed when it is
+          made: an in-socket is always an in-socket, and every connection through
+          it was formed on that promise. (No backticks in here — it sits inside a
+          tagged template literal.)
         -->
-        <label>Direction</label>
-        <div class="choice">
-          ${(['in', 'out'] as const).map(type => html`
-            <button
-              type="button"
-              class=${socket.type === type ? 'on' : ''}
-              aria-pressed=${socket.type === type ? 'true' : 'false'}
-              @click=${() => this.editor.setSocketType(socket, type)}>${type}</button>
-          `)}
-        </div>
+        <p class="direction">
+          ${socketArrow(socket)}
+          ${socket.type === 'in' ? 'Takes values in' : 'Sends values out'}
+        </p>
 
         <label class="swatch">
           Colour

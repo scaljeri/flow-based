@@ -148,6 +148,14 @@ connection validity and colour: sockets only connect when their formats agree, o
 when at least one is unset. A socket with no `format` takes one from whatever it
 is connected to, and the engine propagates that through the graph.
 
+A socket's `color` is **optional**: it is an aid for telling sockets apart while
+configuring a node, not how a reader knows which is which. That is the arrow
+drawn inside every socket, which points the way values move and turns with the
+edge the socket is on — so an `in` on the top of a node points down into it.
+
+`type` is fixed once a socket exists. An `in` is always an `in`, and every
+connection through it was formed on that promise.
+
 A socket also has a **`side`** — `top`, `right`, `bottom` or `left` — which is
 where on the node it is drawn. Omit it and an `in` sits on the left and an `out`
 on the right, which is where they have always been. `type` says which way the

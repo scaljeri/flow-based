@@ -917,12 +917,16 @@ direction, colour, remove. One that did is a move around the rim. Both start wit
 the same pointerdown, so the difference is made on release with a few pixels of
 slop, exactly as a node's own click/drag is.
 
-Direction is editable now, and changing it **disconnects the socket**:
-`Flow.disconnectSocket()` was extracted from `removeSocket` for it. A connection
-is a direction, so an `in` that becomes an `out` leaves every line through it
-describing something no longer true — better cut than left pointing the wrong
-way. It scans the whole connection index rather than one flow's list, because a
-subflow's own sockets are connected in its parent.
+The socket's dialog STATES its direction rather than offering it. Making it
+editable was my mistake and was reverted: an `in` is always an `in`, and every
+connection through it was formed on that promise.
+
+**Every socket draws an arrow**, and it turns with the edge it sits on — an `in`
+on the top of a node points down into it, an `out` on the bottom points down out
+of it. Colour cannot carry this: it comes from a socket's `format`, so two
+sockets of the same format are the same colour whichever way they point, and a
+colour is optional anyway. It is an aid for telling sockets apart while
+configuring a node, not how the graph is read.
 
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
