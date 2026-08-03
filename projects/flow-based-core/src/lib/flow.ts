@@ -6,6 +6,7 @@ import {
   FbNodeHelpers,
   FbNodeState, FbSocket
 } from './types';
+import { commonFormats, formatsCompatible } from './formats';
 import { FlowWorker } from './flow-worker';
 import { IdGenerator } from './id-generator';
 import { FbChangeEmitter } from './change-emitter';
@@ -515,12 +516,72 @@ export class Flow {
       return !!outSocket.format;
     }
 
-    let isChanged = false; // TODO: Is default false?
+    /*
+     * Narrow to what both ends can carry.
+     *
+     * A socket declaring several types has not chosen one yet; a connection to
+     * something narrower chooses for it. Only when exactly ONE type is left —
+     * two overlapping sets still leave a real choice, and guessing which is
+     * worse than leaving it open for the next connection to settle.
+     */
+    const common = commonFormats(outSocket, inSocket);
+    let isChanged = false;
+
+    if (common.length === 1) {
+      for (const socket of [outSocket, inSocket]) {
+        if (socket.format !== common[0]) {
+          socket.format = common[0];
+          isChanged = true;
+        }
+      }
+    }
+
     if (this.helpers) {
-      isChanged = this.helpers.connect(outSocket, inSocket, from.state, to.state);
+      isChanged = this.helpers.connect(outSocket, inSocket, from.state, to.state) || isChanged;
     }
 
     return isChanged;
+  }
+
+  /**
+   * Drop the connections through a socket that its types no longer allow.
+   *
+   * Retyping a socket can contradict what is already wired to it. Reporting that
+   * and leaving it is an option — the propagation report would — but a
+   * connection that cannot carry anything is not a connection, and a graph that
+   * says otherwise is one the engine has to keep pretending about.
+   */
+  pruneIncompatible(socketId: number): number {
+    const socket = this.getSocket(socketId);
+
+    if (!socket) {
+      return 0;
+    }
+
+    let dropped = 0;
+
+    for (const key of Object.keys(this.connections)) {
+      const { connection, state } = this.connections[key];
+
+      if (connection.in !== socketId && connection.out !== socketId) {
+        continue;
+      }
+
+      const peerId = connection.in === socketId ? connection.out : connection.in;
+      const peer = peerId === undefined ? undefined : this.getSocket(peerId);
+
+      if (peer && !formatsCompatible(socket, peer)) {
+        this.removeConnection(connection, state, false);
+        dropped++;
+      }
+    }
+
+    if (dropped) {
+      this.rebuildNodeConnections();
+      this.changes.emit('connections');
+    }
+
+    return dropped;
   }
 
   get uniqueId(): number {

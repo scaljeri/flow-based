@@ -23,6 +23,8 @@ import {
   alignNodes,
   copyNodes,
   distributeNodes,
+  formatsCompatible,
+  formatsOf,
   moveSocket,
   pasteNodes,
   supportedViews,
@@ -405,6 +407,71 @@ export class FbEditor {
     this.changes.emit({ kind: 'sockets' });
   }
 
+  /**
+   * Every data type in use in the flow ON SCREEN.
+   *
+   * Scoped to this flow deliberately, and that is the interesting part: a
+   * subflow is its own world. The types its nodes deal in are its own, and are
+   * not offered outside it — a graph where any node could claim any type its
+   * grandparent had heard of would make the vocabulary global, which is exactly
+   * what nesting is supposed to avoid.
+   *
+   * Gathered from the nodes rather than declared anywhere, because a type only
+   * exists here in the sense that something in this flow carries it. The flow's
+   * own sockets are included: inside a subflow they are what connects it out.
+   */
+  formatsInScope(): string[] {
+    const seen = new Set<string>();
+    const gather = (sockets: FbSocket[] | undefined) => {
+      for (const socket of sockets ?? []) {
+        for (const format of formatsOf(socket)) {
+          seen.add(format);
+        }
+      }
+    };
+
+    gather(this.state?.sockets);
+
+    for (const child of this.children) {
+      gather(child.sockets);
+    }
+
+    return [...seen].sort();
+  }
+
+  /**
+   * Set which types a socket may carry.
+   *
+   * One type is stored as the plain `format` the engine has always negotiated,
+   * so a socket with a single type is indistinguishable from one written before
+   * this existed — in the JSON as much as in the code. Several are a set, and
+   * `format` is cleared unless it is still among them: it says what the socket
+   * HAS, and a socket that may be two things has not settled yet.
+   *
+   * Connections the new set cannot carry are cut, because a connection that can
+   * carry nothing is not a connection.
+   */
+  setSocketFormats(socket: FbSocket, formats: string[]): void {
+    this.history.capture(this.root);
+
+    if (formats.length <= 1) {
+      delete socket.formats;
+      socket.format = formats[0] ?? null;
+    } else {
+      socket.formats = [...formats];
+
+      if (!socket.format || !formats.includes(socket.format)) {
+        socket.format = null;
+      }
+    }
+
+    if (socket.id !== undefined) {
+      this.flow.pruneIncompatible(socket.id);
+    }
+
+    this.changes.emit({ kind: 'sockets' });
+  }
+
 
   /* ----------------------------------------------------------------------
      Selection
@@ -754,7 +821,8 @@ export class FbEditor {
       return false;
     }
 
-    return !pending.socket.format || !socket.format || pending.socket.format === socket.format;
+    // Compatible when either takes anything, or their declared sets overlap.
+    return formatsCompatible(pending.socket, socket);
   }
 
   private buildConnection(a: FbPendingSocket, b: FbPendingSocket): FbConnection | null {

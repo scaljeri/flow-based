@@ -2026,3 +2026,96 @@ test('a socket draws an arrow, pointing the way values move', async ({ page }) =
   // And on the bottom, up into it.
   await expect.poll(arrows).toContain('Sink/in@bottom:rotate(270deg)');
 });
+
+/* ==========================================================================
+   A socket's types
+   ========================================================================== */
+
+/**
+ * The types on offer come from the flow you are IN, and go no further.
+ *
+ * That scope is the point. A type exists here only in the sense that something
+ * in this flow carries it — so a subflow deals in its own vocabulary, and a
+ * graph where any node could claim a type its grandparent had heard of would
+ * make the vocabulary global, which is what nesting is supposed to avoid.
+ */
+test('the types on offer are the ones this flow deals in, and no others', async ({ page }) => {
+  await page.goto(`${HARNESS}?subflow=1`);
+  await expect(canvas(page)).toBeVisible();
+
+  const inScope = () => page.evaluate(() => window.fbEditor.formatsInScope());
+
+  // The harness wires everything with `number`, and the Group's own socket has
+  // no type of its own.
+  expect(await inScope()).toEqual(['number']);
+
+  // Inside the Group: its children carry `number` too, but that is ITS number.
+  await page.evaluate(() => window.fbEditor.enter(50));
+  expect(await inScope()).toEqual(['number']);
+
+  // Give one of its sockets a type nothing outside has, and it stays inside.
+  await page.evaluate(() => {
+    const inner = window.fbEditor.children[0];
+
+    window.fbEditor.setSocketFormats(inner.sockets![0], ['heat']);
+  });
+
+  expect(await inScope()).toEqual(['heat', 'number']);
+
+  await page.evaluate(() => window.fbEditor.leave());
+
+  // Out here, `heat` was never heard of.
+  expect(await inScope()).toEqual(['number']);
+});
+
+/**
+ * A socket may carry several types, and the engine treats overlap as agreement.
+ *
+ * One type is stored as the plain `format` the engine has always negotiated, so
+ * a socket with a single type is indistinguishable from one written before this
+ * existed — in the JSON as much as in the code.
+ */
+test('a socket can carry more than one type', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const read = () => page.evaluate(() => {
+    const socket = window.fbEditor.children.find(n => n.title === 'Sink')!.sockets![0];
+
+    return { format: socket.format ?? null, formats: socket.formats ?? null };
+  });
+
+  // One type is a plain format, with no set beside it saying the same thing.
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.setSocketFormats(sink.sockets![0], ['number']);
+  });
+  expect(await read()).toEqual({ format: 'number', formats: null });
+
+  /*
+   * Several is a set. `format` says what the socket HAS, so it survives while it
+   * is still one of them — this socket is wired to a number source and really is
+   * carrying numbers; widening what it MAY carry does not change that.
+   */
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.setSocketFormats(sink.sockets![0], ['number', 'point']);
+  });
+  expect(await read()).toEqual({ format: 'number', formats: ['number', 'point'] });
+
+  // And the connection survived, because the sets still overlap on `number`.
+  expect(await connectionPaths(page)).toHaveLength(2);
+
+  // Retyped to something the other end cannot carry, the line is cut — and the
+  // format it had goes with it, since it is no longer one this socket may have.
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.setSocketFormats(sink.sockets![0], ['point']);
+  });
+
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(1);
+  expect(await read()).toEqual({ format: 'point', formats: null });
+});

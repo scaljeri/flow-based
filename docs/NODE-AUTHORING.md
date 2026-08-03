@@ -148,6 +148,22 @@ connection validity and colour: sockets only connect when their formats agree, o
 when at least one is unset. A socket with no `format` takes one from whatever it
 is connected to, and the engine propagates that through the graph.
 
+A socket may carry **more than one type**. `format` is the one it HAS — the
+single value the engine negotiates along a connection — and `formats` is the set
+it MAY have:
+
+```ts
+{ type: 'in', formats: ['number', 'point'] }   // takes either
+{ type: 'in', format: 'number' }               // takes one
+{ type: 'in' }                                 // takes anything, until told
+```
+
+Two sockets connect when either takes anything or their sets overlap; a
+connection that narrows the overlap to exactly one type settles both ends on it.
+In the editor, the types on offer are the ones **the flow you are in** deals in,
+gathered from its nodes — a subflow has its own vocabulary and does not inherit
+its parent's.
+
 A socket's `color` is **optional**: it is an aid for telling sockets apart while
 configuring a node, not how a reader knows which is which. That is the arrow
 drawn inside every socket, which points the way values move and turns with the

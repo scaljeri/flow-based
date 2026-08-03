@@ -4,11 +4,15 @@ import {
   FbNodeState,
   FbSocket,
   FbSocketSide,
+  formatsOf,
   isVerticalSide,
   sideOf,
 } from '@scaljeri/flow-based-core';
 import { FbEditor } from './editor';
 import { socketArrow } from './socket-icon';
+
+/** Unique per instance, so a label points at this select and not another's. */
+let nextFormatsId = 0;
 
 const ICON_TRASH = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>`;
@@ -311,6 +315,42 @@ export class FbNodeSettingsElement extends LitElement {
     .socket-editor .direction svg {
       height: 14px;
       width: 14px;
+    }
+
+    .socket-editor .formats {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      box-sizing: border-box;
+      color: #fff;
+      font: inherit;
+      margin-bottom: 12px;
+      padding: 2px;
+      width: 100%;
+    }
+
+    .socket-editor .formats option {
+      background: var(--fb-node-background, rgba(0, 0, 0, 0.95));
+      padding: 3px 6px;
+    }
+
+    /*
+     * A chosen type has to LOOK chosen.
+     *
+     * The browser paints a selected option with the system highlight colour,
+     * which on this panel came out dark grey on near-black and read as disabled
+     * rather than selected. An inset shadow is the one way to repaint an
+     * option's background in Chrome; the background property alone is ignored
+     * on :checked. (No backticks here — tagged CSS template literal.)
+     */
+    .socket-editor .formats option:checked {
+      box-shadow: inset 0 0 0 100px var(--fb-active-color, #fa0);
+      color: #000;
+    }
+
+    .socket-editor .none {
+      margin: 0 0 12px;
+      opacity: 0.45;
     }
 
     .socket-editor .swatch {
@@ -926,6 +966,14 @@ export class FbNodeSettingsElement extends LitElement {
             @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>
         </label>
 
+        <!--
+          Which data types this socket carries, from the ones this flow deals in.
+          Several is allowed: an input that takes a number or a point says both,
+          and settles on whichever it is wired to.
+        -->
+        <label for=${`${this.formatsId}`}>Type</label>
+        ${this.renderFormats(socket)}
+
         <label class="swatch">
           Colour
           <input
@@ -946,6 +994,52 @@ export class FbNodeSettingsElement extends LitElement {
   private removeSocket(socket: FbSocket): void {
     this.closeSocket();
     this.editor.removeSocket(socket);
+  }
+
+  private readonly formatsId = `fb-formats-${nextFormatsId++}`;
+
+  /**
+   * The types on offer, and which of them this socket carries.
+   *
+   * A multiple select rather than a set of checkboxes: it is one control for one
+   * question, it says how many are chosen without being read item by item, and
+   * it is the native thing — so it arrives keyboard-operable and with a picker
+   * of the platform's own on a phone.
+   *
+   * The list is what the FLOW deals in, plus whatever this socket already
+   * carries. That last part matters when a subflow's socket was typed before the
+   * node that gave it that type was removed: the type is still true of the
+   * socket, and dropping it from the list would silently drop it from the model
+   * the next time anything was changed.
+   */
+  private renderFormats(socket: FbSocket) {
+    const mine = formatsOf(socket);
+    const available = [...new Set([...this.editor.formatsInScope(), ...mine])].sort();
+
+    if (!available.length) {
+      return html`
+        <p class="none">
+          This flow deals in no types yet — they come from the nodes in it.
+        </p>
+      `;
+    }
+
+    return html`
+      <select
+        id=${this.formatsId}
+        class="formats"
+        multiple
+        size=${Math.min(available.length, 5)}
+        @change=${(e: Event) => this.onFormats(socket, e.target as HTMLSelectElement)}>
+        ${available.map(format => html`
+          <option value=${format} ?selected=${mine.includes(format)}>${format}</option>
+        `)}
+      </select>
+    `;
+  }
+
+  private onFormats(socket: FbSocket, select: HTMLSelectElement): void {
+    this.editor.setSocketFormats(socket, [...select.selectedOptions].map(o => o.value));
   }
 }
 

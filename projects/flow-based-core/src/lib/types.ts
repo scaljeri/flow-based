@@ -40,6 +40,14 @@ export interface FbSocket {
   /** The data type carried by this socket. `null` means "not yet negotiated". */
   format?: string | null;
   /**
+   * The types this socket MAY carry, for one that accepts more than one.
+   *
+   * `format` is what it has; this is what it is allowed to have. Absent or empty
+   * means the single `format`, or anything when there is none either — which is
+   * what every flow saved before this existed says. See `formatsOf`.
+   */
+  formats?: string[];
+  /**
    * Which edge this socket sits on. Absent means the default for its `type` —
    * `in` on the left, `out` on the right — which is what every flow saved before
    * this existed means, and what a node type that does not care still gets.

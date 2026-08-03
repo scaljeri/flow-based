@@ -933,6 +933,27 @@ sockets of the same format are the same colour whichever way they point, and a
 colour is optional anyway. It is an aid for telling sockets apart while
 configuring a node, not how the graph is read.
 
+## Stage 14 — a socket can carry more than one type
+
+`format` is what a socket HAS; `formats` is the set it MAY have. One type is
+stored as the plain `format` the engine has always negotiated, so a socket with a
+single type is indistinguishable from one written before this existed — in the
+JSON as much as in the code. An empty set still means "anything", which is what
+an absent format has always meant.
+
+Compatibility becomes overlap rather than equality (`formatsCompatible`), and a
+connection whose overlap is exactly one type settles both ends on it — two
+overlapping sets still leave a real choice, and guessing is worse than leaving it
+for the next connection to settle. Retyping a socket cuts the connections its new
+set cannot carry (`Flow.pruneIncompatible`).
+
+**The vocabulary is per flow, and that is the point.** `formatsInScope()` gathers
+the types from the nodes of the flow ON SCREEN — so a subflow deals in its own,
+and neither inherits its parent's nor leaks into it. A type exists here only in
+the sense that something in this flow carries it; a graph where any node could
+claim a type its grandparent had heard of would make the vocabulary global, which
+is what nesting is supposed to avoid.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a
