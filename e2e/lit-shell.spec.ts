@@ -1950,17 +1950,24 @@ test('pressing a socket on the rim opens that socket', async ({ page }) => {
     return {
       open: !!dialog?.open,
       fields: [...(dialog?.querySelectorAll('input') ?? [])].map(i => i.type),
-      // Stated, not offered: which way a socket carries is fixed when it is made.
-      direction: dialog?.querySelector('.direction')?.textContent?.trim(),
+      /*
+       * The title says WHICH socket, so the dialog is anchored to something
+       * even when the socket has no name yet. Stated, not offered: which way a
+       * socket carries is fixed when it is made.
+       */
+      title: dialog?.querySelector('header strong')?.textContent?.replace(/\s+/g, ' ').trim(),
       offersAChoice: !!dialog?.querySelector('.choice'),
+      // And the dot it came from stays lit, so you can see which one you picked.
+      lit: [...(dialog?.getRootNode() as ShadowRoot).querySelectorAll('.rim .dot.editing')].length,
     };
   });
 
   expect(editor).toEqual({
     open: true,
     fields: ['text', 'color'],
-    direction: 'Takes values in',
+    title: 'Socket in',
     offersAChoice: false,
+    lit: 1,
   });
 });
 

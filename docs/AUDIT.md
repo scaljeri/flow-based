@@ -921,6 +921,11 @@ The socket's dialog STATES its direction rather than offering it. Making it
 editable was my mistake and was reverted: an `in` is always an `in`, and every
 connection through it was formed on that promise.
 
+The socket dialog is titled **Socket in** or **Socket out**, and the dot it came
+from **stays lit** in the same amber the shell uses for a socket waiting to be
+connected. The dialog covers the middle of the panel and a new socket has no
+name yet, so without both there was nothing saying which socket was being edited.
+
 **Every socket draws an arrow**, and it turns with the edge it sits on — an `in`
 on the top of a node points down into it, an `out` on the bottom points down out
 of it. Colour cannot carry this: it comes from a socket's `format`, so two

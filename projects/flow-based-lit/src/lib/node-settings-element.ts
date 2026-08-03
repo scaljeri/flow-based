@@ -125,6 +125,23 @@ export class FbNodeSettingsElement extends LitElement {
       box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
     }
 
+    /*
+     * The one whose dialog is open.
+     *
+     * That dialog covers the middle of the panel and says nothing about WHICH
+     * socket it belongs to beyond its name, which a new socket does not have —
+     * so the dot it came from stays lit. The same amber the shell uses for a
+     * socket waiting to be connected, because it means the same thing here:
+     * this is the one you picked.
+     */
+    .rim .dot.editing {
+      background: var(--fb-active-color, #fa0);
+      border-color: var(--fb-active-color, #fa0);
+      box-shadow: 0 0 0 5px rgba(255, 170, 0, 0.3);
+      /* Above its neighbours, for a crowded edge where the dots overlap. */
+      z-index: 3;
+    }
+
     .rim .dot.dragging {
       cursor: grabbing;
       z-index: 2;
@@ -283,12 +300,12 @@ export class FbNodeSettingsElement extends LitElement {
       background: rgba(0, 0, 0, 0.3);
     }
 
+    /* The header says which socket this is, with the mark that names it. */
     .socket-editor .direction {
       align-items: center;
       display: flex;
-      gap: 8px;
-      margin: 0 0 12px;
-      opacity: 0.75;
+      gap: 6px;
+      text-transform: capitalize;
     }
 
     .socket-editor .direction svg {
@@ -690,6 +707,7 @@ export class FbNodeSettingsElement extends LitElement {
 
   private renderDot(socket: FbSocket, sockets: FbSocket[]) {
     const held = this.dragging?.id === socket.id;
+    const open = this.editing === socket.id;
     const side = held ? this.dragging!.side : sideOf(socket);
     const group = sockets.filter(s => sideOf(s) === side && s.id !== socket.id);
     const index = held
@@ -715,7 +733,7 @@ export class FbNodeSettingsElement extends LitElement {
 
     return html`
       <span
-        class="dot ${socket.type} ${held ? 'dragging' : ''}"
+        class="dot ${socket.type} ${held ? 'dragging' : ''} ${open ? 'editing' : ''}"
         style=${`${place}${colour ? `border-color:${colour};` : ''}`}
         data-socket-id=${String(socket.id)}
         title=${`${socket.name || socket.format || socket.type} — tap to edit, drag to move`}
@@ -893,7 +911,7 @@ export class FbNodeSettingsElement extends LitElement {
         @keydown=${(e: Event) => e.stopPropagation()}
         @close=${() => { this.editing = undefined; this.requestUpdate(); }}>
         <header>
-          <strong>Socket</strong>
+          <strong class="direction">${socketArrow(socket)} Socket ${socket.type}</strong>
           <button type="button" title="Close" aria-label="Close"
                   @click=${() => this.closeSocket()}>×</button>
         </header>
@@ -907,17 +925,6 @@ export class FbNodeSettingsElement extends LitElement {
             placeholder=${socket.format ?? 'name'}
             @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>
         </label>
-
-        <!--
-          Stated, not offered. Which way a socket carries is fixed when it is
-          made: an in-socket is always an in-socket, and every connection through
-          it was formed on that promise. (No backticks in here — it sits inside a
-          tagged template literal.)
-        -->
-        <p class="direction">
-          ${socketArrow(socket)}
-          ${socket.type === 'in' ? 'Takes values in' : 'Sends values out'}
-        </p>
 
         <label class="swatch">
           Colour
