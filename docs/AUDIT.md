@@ -921,6 +921,13 @@ The socket's dialog STATES its direction rather than offering it. Making it
 editable was my mistake and was reverted: an `in` is always an `in`, and every
 connection through it was formed on that promise.
 
+Neither dialog reaches for its text field when it opens. It used to focus and
+select the title so a new subflow could be renamed by typing — and on a phone
+that summons the keyboard over half the panel the moment it appears, including
+when the panel was opened to change a socket, which is most of the time.
+`showModal` puts focus on the first focusable thing, the close button, which asks
+for nothing.
+
 The socket dialog is titled **Socket in** or **Socket out**, and the dot it came
 from **stays lit** in the same amber the shell uses for a socket waiting to be
 connected. The dialog covers the middle of the panel and a new socket has no

@@ -562,7 +562,6 @@ export class FbNodeSettingsElement extends LitElement {
 
     if (this.editing !== undefined && !dialog.open) {
       dialog.showModal();
-      dialog.querySelector<HTMLInputElement>('input[type=text]')?.select();
     } else if (this.editing === undefined && dialog.open) {
       dialog.close();
     }
@@ -583,17 +582,16 @@ export class FbNodeSettingsElement extends LitElement {
     }
 
     if (this.open && !dialog.open) {
-      dialog.showModal();
-
       /*
-       * With the title SELECTED, not just focused, so typing replaces it.
+       * Opened WITHOUT reaching for the title field.
        *
-       * A new subflow opens this panel by itself and arrives called "Subflow" —
-       * a placeholder, and the reason the panel opened at all. Appending to it
-       * gave "SubflowSmoothing". Done once on open rather than on every focus,
-       * so clicking into the field later still puts the caret where you clicked.
+       * It used to focus and select it, so a new subflow could be renamed by
+       * typing. On a phone that summons the keyboard over half the panel the
+       * moment it appears — including when the panel was opened to change a
+       * socket, which is most of the time. `showModal` puts focus on the first
+       * focusable thing, the close button, which asks for nothing.
        */
-      dialog.querySelector<HTMLInputElement>('input[type=text]')?.select();
+      dialog.showModal();
     } else if (!this.open && dialog.open) {
       dialog.close();
     }
@@ -674,7 +672,6 @@ export class FbNodeSettingsElement extends LitElement {
           Title
           <input
             type="text"
-            autofocus
             .value=${state.title ?? ''}
             @input=${(e: Event) => this.editor.setTitle(state.id!, (e.target as HTMLInputElement).value)}>
         </label>
@@ -960,7 +957,6 @@ export class FbNodeSettingsElement extends LitElement {
           Name
           <input
             type="text"
-            autofocus
             .value=${socket.name ?? ''}
             placeholder=${socket.format ?? 'name'}
             @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>

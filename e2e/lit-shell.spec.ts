@@ -1602,12 +1602,13 @@ test('the subflow header follows it onto the canvas', async ({ page }) => {
  *
  * It opens in full, because at small an empty subflow is an icon of nothing and
  * the only reason to have added one is to put something in it. Its settings open
- * with it, with the name selected, because every subflow arrives called
- * "Subflow" and a trail of those says nothing. And when you come back out it
- * draws its type's own icon rather than the nothing it used to: a subflow
+ * with it, because every subflow arrives called "Subflow" and a trail of those
+ * says nothing — but the panel does NOT reach for the title field, which on a
+ * phone would summon the keyboard over half of itself. And when you come back
+ * out it draws its type's own icon rather than the nothing it used to: a subflow
  * normally draws one of its children, and it has none yet.
  */
-test('a new subflow opens inside itself, ready to be named', async ({ page }) => {
+test('a new subflow opens inside itself, with its settings up', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
@@ -1621,24 +1622,33 @@ test('a new subflow opens inside itself, ready to be named', async ({ page }) =>
   await expect(page.locator('fb-flow-canvas .head')).toHaveCount(1);
 
   /*
-   * And the panel is open with the placeholder name selected, so typing
-   * replaces it rather than appending to it.
+   * The panel is open on the placeholder name — and nothing is focused inside
+   * it, so no keyboard appears until the field is actually tapped.
    */
   const ready = await page.evaluate(() => {
-    const dialog = document.querySelector('fb-flow-canvas')!.shadowRoot!
-      .querySelector('fb-node-settings')!.shadowRoot!
-      .querySelector('dialog.config') as HTMLDialogElement;
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-node-settings')!.shadowRoot!;
+    const dialog = root.querySelector('dialog.config') as HTMLDialogElement;
     const input = dialog.querySelector<HTMLInputElement>('input[type=text]')!;
 
     return {
       open: dialog.open,
       value: input.value,
-      selected: input.selectionStart === 0 && input.selectionEnd === input.value.length,
+      focusedField: root.activeElement === input,
     };
   });
 
-  expect(ready).toEqual({ open: true, value: 'Group', selected: true });
+  expect(ready).toEqual({ open: true, value: 'Group', focusedField: false });
 
+  // Renaming still works; it just takes tapping the field first.
+  await page.evaluate(() => {
+    const input = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector<HTMLInputElement>('dialog.config input[type=text]')!;
+
+    input.focus();
+    input.select();
+  });
   await page.keyboard.type('Smoothing');
 
   // The name lands in the model and in the trail that leads back out.
