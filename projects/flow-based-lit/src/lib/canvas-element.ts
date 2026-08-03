@@ -1,11 +1,12 @@
 import { LitElement, PropertyValues, css, html, nothing, render, svg } from 'lit';
-import { FbNodeState, FbPosition } from '@scaljeri/flow-based-core';
+import { FbNodeState, FbPosition, FbSocket, boundarySocketPosition } from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
 import { FbEditor, FbEditorChange } from './editor';
 
 import './connections-element';
 import './node-settings-element';
 import './node-element';
+import { socketArrow } from './socket-icon';
 /*
  * The same two icons the node header uses, drawn here rather than shared through
  * a module: they are eight lines of path data, and an import between two sibling
@@ -145,6 +146,61 @@ export class FbFlowCanvasElement extends LitElement {
       .head svg {
         height: 18px;
         width: 18px;
+      }
+    }
+
+    /*
+     * The flow's own sockets, on the edges of the surface.
+     *
+     * Inside a subflow the surface IS the node, so its sockets sit on the
+     * boundary — centred on it, half showing on the inside — and are pressed
+     * like any other socket. This is how the nodes within are connected to the
+     * flow outside.
+     */
+    .boundary-socket {
+      align-items: center;
+      background-color: #fff;
+      border: 2px solid var(--fb-socket-border, #999);
+      border-radius: 50%;
+      box-sizing: border-box;
+      cursor: pointer;
+      display: flex;
+      height: 22px;
+      justify-content: center;
+      position: absolute;
+      transform: translate(-50%, -50%);
+      transition: transform 120ms ease-out, background-color 120ms linear;
+      width: 22px;
+      z-index: 30;
+    }
+
+    .boundary-socket svg {
+      color: rgba(0, 0, 0, 0.65);
+      height: 100%;
+      pointer-events: none;
+      width: 100%;
+    }
+
+    .boundary-socket.is-active {
+      background-color: var(--fb-active-color, #fa0);
+      border-color: var(--fb-active-color, #fa0);
+      box-shadow: 0 0 0 4px rgba(255, 170, 0, 0.25);
+      transform: translate(-50%, -50%) scale(1.5);
+    }
+
+    .boundary-socket.is-accepting {
+      background-color: var(--fb-accept-color, #bada55);
+    }
+
+    .boundary-socket.is-rejecting {
+      background-color: var(--fb-reject-color, #f06);
+      pointer-events: none;
+    }
+
+    @media (pointer: coarse) {
+      .boundary-socket {
+        height: 30px;
+        width: 30px;
       }
     }
 
@@ -528,6 +584,55 @@ export class FbFlowCanvasElement extends LitElement {
    * them inside the zoom/pan transform.
    */
   /**
+   * The sockets of the flow on screen, drawn on the surface's edges.
+   *
+   * Only inside a subflow: the root is the document and its socket list is
+   * empty. Half of each dot shows on the inside — the centre sits exactly on
+   * the boundary — and pressing one starts or completes a connection exactly as
+   * a node's socket does, with the direction read from the inside: an in-socket
+   * FEEDS the children here, so its arrow points on in.
+   */
+  private renderBoundarySockets() {
+    const flow = this.editor.state;
+
+    if (!this.editor.canLeave || !flow?.sockets?.length) {
+      return nothing;
+    }
+
+    const plane = this.editor.viewport.planeSize;
+    const pending = this.editor.pending;
+
+    return flow.sockets.map(socket => {
+      const at = boundarySocketPosition(flow, socket, plane);
+
+      if (!at) {
+        return nothing;
+      }
+
+      const isActive = pending?.socket.id === socket.id;
+      const accepts = this.editor.accepts(socket, flow.id!);
+      const colour = socket.color ? `border-color:${socket.color};` : '';
+
+      return html`
+        <div
+          class="boundary-socket ${isActive ? 'is-active' : ''} ${accepts === true ? 'is-accepting' : ''} ${accepts === false ? 'is-rejecting' : ''}"
+          style=${`left:${at.x}px;top:${at.y}px;${colour}`}
+          data-socket-id=${String(socket.id)}
+          title=${socket.name || socket.format || socket.type}
+          @pointerdown=${(e: PointerEvent) => this.onBoundarySocketDown(e, socket)}>
+          ${socketArrow(socket)}
+        </div>
+      `;
+    });
+  }
+
+  private onBoundarySocketDown(event: PointerEvent, socket: FbSocket): void {
+    // The canvas would otherwise read this as a background press and pan.
+    event.stopPropagation();
+    this.editor.socketClicked(socket, this.editor.state.id!);
+  }
+
+  /**
    * The header of the subflow you are inside. Absent at the root, which is not
    * a node and has nothing to go back to.
    *
@@ -656,6 +761,7 @@ export class FbFlowCanvasElement extends LitElement {
         @pointerup=${this.onPointerUp}
         @pointercancel=${this.onPointerUp}
         @connection-remove=${this.onConnectionRemove}>
+        ${this.renderBoundarySockets()}
         ${this.marquee
           ? html`<div
               class="marquee"

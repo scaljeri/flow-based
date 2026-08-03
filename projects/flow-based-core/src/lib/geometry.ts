@@ -167,6 +167,51 @@ export class FbGeometry {
 }
 
 /**
+ * Where a flow's OWN socket sits while that flow fills the surface.
+ *
+ * Inside a subflow the surface is the node: its edges are the node's edges, and
+ * its sockets sit ON them — centred on the boundary, so half of each dot shows
+ * on the inside. That is what makes them connectable from within, which is how
+ * values get into and out of a subflow at all.
+ *
+ * The spread along each edge is the same space-around rule socketPosition uses,
+ * so a socket keeps its neighbours in the same order inside and out. No offsets
+ * and no header inset: the boundary is the plane's edge, and there is no chrome
+ * on it.
+ */
+export function boundarySocketPosition(
+  flow: FbNodeState,
+  socket: FbSocket,
+  planeSize: FbSize,
+  layout: FbSocketLayout = FB_DEFAULT_SOCKET_LAYOUT,
+): FbPosition | undefined {
+  const side = sideOf(socket);
+  const group = (flow.sockets ?? []).filter(s => sideOf(s) === side);
+  const index = group.findIndex(s => s.id === socket.id);
+
+  if (index === -1) {
+    return undefined;
+  }
+
+  const along = (length: number): number => {
+    const run = Math.max(0, length - layout.inset * 2);
+
+    return layout.inset + (run * (index + 0.5)) / group.length;
+  };
+
+  switch (side) {
+    case 'top':
+      return { x: along(planeSize.width), y: 0 };
+    case 'bottom':
+      return { x: along(planeSize.width), y: planeSize.height };
+    case 'right':
+      return { x: planeSize.width, y: along(planeSize.height) };
+    default:
+      return { x: 0, y: along(planeSize.height) };
+  }
+}
+
+/**
  * Which edge a socket sits on, filling in the default for one that says nothing.
  *
  * `in` on the left and `out` on the right is where they have always been, so a

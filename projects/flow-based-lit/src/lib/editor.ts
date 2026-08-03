@@ -21,6 +21,7 @@ import {
   Flow,
   IdGenerator,
   alignNodes,
+  boundarySocketPosition,
   copyNodes,
   distributeNodes,
   formatsCompatible,
@@ -850,21 +851,29 @@ export class FbEditor {
     let best: FbPendingSocket | undefined;
     let nearest = within;
 
+    const consider = (socket: FbSocket, nodeId: number, at: FbPosition | undefined) => {
+      if (!at) {
+        return;
+      }
+
+      const distance = Math.hypot(at.x - point.x, at.y - point.y);
+
+      if (distance <= nearest) {
+        nearest = distance;
+        best = { socket, nodeId };
+      }
+    };
+
     for (const node of this.children) {
       for (const socket of node.sockets ?? []) {
-        const at = this.geometry.socketPosition(node, socket, plane);
-
-        if (!at) {
-          continue;
-        }
-
-        const distance = Math.hypot(at.x - point.x, at.y - point.y);
-
-        if (distance <= nearest) {
-          nearest = distance;
-          best = { socket, nodeId: node.id! };
-        }
+        consider(socket, node.id!, this.geometry.socketPosition(node, socket, plane));
       }
+    }
+
+    // The boundary of the flow on screen: inside a subflow, its own sockets sit
+    // on the plane's edges and are as droppable as any other.
+    for (const socket of this.state?.sockets ?? []) {
+      consider(socket, this.state.id!, boundarySocketPosition(this.state, socket, plane));
     }
 
     return best;
@@ -887,18 +896,37 @@ export class FbEditor {
       return null;
     }
 
-    // Same direction, or the same node: never valid.
-    if (pending.socket.type === socket.type || pending.nodeId === nodeId) {
+    // Same effective direction, or the same node: never valid. Effective,
+    // because a subflow's boundary reverses — its in-socket feeds the children.
+    if (this.effectiveType(pending.socket, pending.nodeId) === this.effectiveType(socket, nodeId)
+      || pending.nodeId === nodeId) {
       return false;
     }
 
     // An input takes ONE connection; see isTaken.
-    if (this.isTaken(socket) || this.isTaken(pending.socket)) {
+    if (this.isTaken(socket, nodeId) || this.isTaken(pending.socket, pending.nodeId)) {
       return false;
     }
 
     // Compatible when either takes anything, or their declared sets overlap.
     return formatsCompatible(pending.socket, socket);
+  }
+
+  /**
+   * Which way a socket carries, seen from the flow ON SCREEN.
+   *
+   * A subflow's boundary reverses: its `in` socket receives from outside and
+   * FEEDS the children, so from within it behaves as an output — and its `out`
+   * collects from a child, so within it is an input. The engine already stores
+   * it that way (an inner connection's `in` field holds the subflow's out
+   * socket); this is the editor learning the same grammar.
+   */
+  private effectiveType(socket: FbSocket, nodeId: number): FbSocketType {
+    if (nodeId !== this.state?.id) {
+      return socket.type;
+    }
+
+    return socket.type === 'in' ? 'out' : 'in';
   }
 
   /**
@@ -915,24 +943,34 @@ export class FbEditor {
    * stopped arriving. A node that wants several inputs asks for several sockets,
    * which is what its settings panel is for.
    */
-  private isTaken(socket: FbSocket): boolean {
-    if (socket.type !== 'in') {
+  private isTaken(socket: FbSocket, nodeId: number): boolean {
+    if (this.effectiveType(socket, nodeId) !== 'in') {
       return false;
     }
 
+    // An inner connection to the boundary stores the subflow's socket in the
+    // same field an ordinary input uses, so one test covers both.
     return this.connections.some(c => c.in === socket.id);
   }
 
   private buildConnection(a: FbPendingSocket, b: FbPendingSocket): FbConnection | null {
-    const [out, inn] = a.socket.type === 'out' ? [a, b] : [b, a];
+    /*
+     * Sorted by EFFECTIVE direction, so a subflow's in-socket can stand at the
+     * `from` end of an inner connection — which is exactly how the engine
+     * stores the bridge: the boundary socket keeps its own id in the field its
+     * outer role uses, whichever end of the inner connection it is.
+     */
+    const aType = this.effectiveType(a.socket, a.nodeId);
+    const bType = this.effectiveType(b.socket, b.nodeId);
+    const [out, inn] = aType === 'out' ? [a, b] : [b, a];
 
-    if (out.socket.type !== 'out' || inn.socket.type !== 'in') {
+    if (aType === bType) {
       return null;
     }
 
     // Checked here as well as in `accepts`, which is only the highlight: a
     // connection can also be made by dropping the loose end on a socket.
-    if (this.isTaken(inn.socket)) {
+    if (this.isTaken(inn.socket, inn.nodeId)) {
       return null;
     }
 

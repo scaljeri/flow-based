@@ -2,8 +2,11 @@ import { LitElement, PropertyValues, css, html, svg, nothing } from 'lit';
 import {
   FbAnyConnection,
   FbConnection,
+  FbNodeState,
   FbPosition,
+  FbSocket,
   FbSocketSide,
+  boundarySocketPosition,
   derivative,
   gradient,
   normal,
@@ -324,7 +327,10 @@ export class FbConnectionsElement extends LitElement {
       return nothing;
     }
 
-    const anchor = this.editor.geometry.socketPosition(node, pending.socket, this.editor.viewport.planeSize);
+    const onBoundary = node.id === this.editor.state?.id;
+    const anchor = onBoundary
+      ? boundarySocketPosition(node, pending.socket, this.editor.viewport.planeSize)
+      : this.editor.geometry.socketPosition(node, pending.socket, this.editor.viewport.planeSize);
 
     if (!anchor) {
       return nothing;
@@ -336,13 +342,17 @@ export class FbConnectionsElement extends LitElement {
      * of the anchored one — which is what makes the half-drawn line leave the
      * socket the way a finished one would.
      */
-    const side = sideOf(pending.socket);
-    const opposite: Record<FbSocketSide, FbSocketSide> =
+    const opp: Record<FbSocketSide, FbSocketSide> =
       { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+    // A boundary socket faces inward, and carries the other way there too.
+    const side = onBoundary ? opp[sideOf(pending.socket)] : sideOf(pending.socket);
+    const outward = onBoundary
+      ? pending.socket.type === 'in'
+      : pending.socket.type === 'out';
 
-    const route = pending.socket.type === 'out'
-      ? this.route(anchor, pointer, side, opposite[side])
-      : this.route(pointer, anchor, opposite[side], side);
+    const route = outward
+      ? this.route(anchor, pointer, side, opp[side])
+      : this.route(pointer, anchor, opp[side], side);
 
     return svg`
       <path class="connection pointer-path"
@@ -540,16 +550,31 @@ export class FbConnectionsElement extends LitElement {
       return null;
     }
 
-    const start = geometry.socketPosition(fromNode, out, plane);
-    const end = geometry.socketPosition(toNode, inn, plane);
+    /*
+     * An end on the flow ON SCREEN is on its boundary: inside a subflow, a
+     * connection to one of its own sockets runs to the plane's edge. Its curve
+     * leaves INWARD — the opposite of the side the socket names — because the
+     * inside of the boundary faces the other way.
+     */
+    const opposite: Record<FbSocketSide, FbSocketSide> =
+      { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+    const boundaryId = this.editor.state?.id;
+
+    const endpoint = (node: FbNodeState, socket: FbSocket): { at?: FbPosition; side: FbSocketSide } =>
+      node.id === boundaryId
+        ? { at: boundarySocketPosition(node, socket, plane), side: opposite[sideOf(socket)] }
+        : { at: geometry.socketPosition(node, socket, plane), side: sideOf(socket) };
+
+    const from = endpoint(fromNode, out);
+    const to = endpoint(toNode, inn);
 
     // Undefined until both nodes have been measured, which is a real state on
     // the first frame. Drawing anyway would peg the line to the plane origin.
-    if (!start || !end) {
+    if (!from.at || !to.at) {
       return null;
     }
 
-    return { start, end, from: sideOf(out), to: sideOf(inn) };
+    return { start: from.at, end: to.at, from: from.side, to: to.side };
   }
 
   /**

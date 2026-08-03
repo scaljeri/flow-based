@@ -1064,6 +1064,27 @@ panel's host with the SAME element injector as the node's drawing — so it shar
 one `NodeService`, and therefore one state and one worker. Two services over one
 node would be two views of one thing that could disagree.
 
+## Stage 20 — a subflow's boundary, from the inside
+
+Inside a subflow its own sockets now sit on the surface's edges — centred on the
+boundary, half of each dot showing on the inside — and connect to the nodes
+within. The engine has bridged streams across the boundary since the beginning
+(`FlowWorker` republishes on socket id, and an inner connection stores the
+subflow's own socket in the field its outer role uses); this is the editor
+finally drawing the place where the bridge lands.
+
+Direction reverses at the boundary. The subflow's `in` receives from outside and
+FEEDS the children, so within it behaves as an output — `effectiveType` in the
+editor, used by `accepts`, `buildConnection` and the one-connection-per-input
+rule, which all now speak the same grammar the engine stores. Curves to a
+boundary socket leave INWARD, the opposite of the edge the socket names, because
+the inside of the boundary faces the other way.
+
+`boundarySocketPosition` in the core lays them out with the same space-around
+rule as `socketPosition`, so a socket keeps its neighbours in the same order
+inside and out. Verified end to end on the demo: generator outside → subflow.in
+→ logger inside received live values.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

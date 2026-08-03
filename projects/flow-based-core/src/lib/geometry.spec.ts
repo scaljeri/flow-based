@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FB_DEFAULT_SOCKET_LAYOUT, FbGeometry } from './geometry';
+import { FB_DEFAULT_SOCKET_LAYOUT, FbGeometry, boundarySocketPosition } from './geometry';
 import { FbNodeState } from './types';
 
 const PLANE = { width: 1000, height: 800 };
@@ -301,5 +301,56 @@ describe('sockets and the header above the content', () => {
     geometry.setNodeSize(10, { width: 200, height: 120, contentTop: 30 });
 
     expect(geometry.socketPosition(n, n.sockets![0], PLANE)!.y).toBeGreaterThan(before);
+  });
+});
+
+describe('boundarySocketPosition', () => {
+  /*
+   * Inside a subflow the surface IS the node: its sockets sit centred on the
+   * plane's edges, half showing on the inside, where the children can reach
+   * them. Same space-around spread as socketPosition, so a socket keeps its
+   * neighbours in the same order inside and out.
+   */
+  const flow: FbNodeState = {
+    id: 1,
+    type: 'flow',
+    sockets: [
+      { id: 10, type: 'in' },
+      { id: 11, type: 'in' },
+      { id: 20, type: 'out' },
+    ],
+    children: [],
+  };
+
+  it('puts an in-socket centred on the left edge', () => {
+    const inset = FB_DEFAULT_SOCKET_LAYOUT.inset;
+    const run = 800 - inset * 2;
+
+    expect(boundarySocketPosition(flow, flow.sockets![0], PLANE))
+      .toEqual({ x: 0, y: inset + run * 0.25 });
+    expect(boundarySocketPosition(flow, flow.sockets![1], PLANE))
+      .toEqual({ x: 0, y: inset + run * 0.75 });
+  });
+
+  it('puts an out-socket centred on the right edge', () => {
+    const inset = FB_DEFAULT_SOCKET_LAYOUT.inset;
+    const run = 800 - inset * 2;
+
+    expect(boundarySocketPosition(flow, flow.sockets![2], PLANE))
+      .toEqual({ x: 1000, y: inset + run * 0.5 });
+  });
+
+  it('follows a socket that names another side', () => {
+    const sided: FbNodeState = {
+      ...flow,
+      sockets: [{ id: 30, type: 'in', side: 'top' }],
+    };
+
+    expect(boundarySocketPosition(sided, sided.sockets![0], PLANE))
+      .toEqual({ x: 500, y: 0 });
+  });
+
+  it('is undefined for a socket the flow does not have', () => {
+    expect(boundarySocketPosition(flow, { id: 99, type: 'in' }, PLANE)).toBeUndefined();
   });
 });

@@ -2334,3 +2334,96 @@ test('an input socket refuses a second connection', async ({ page }) => {
   expect(fanned).toBe(true);
   await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
 });
+
+/* ==========================================================================
+   The boundary of a subflow, from the inside
+   ========================================================================== */
+
+/**
+ * Inside a subflow, its own sockets sit on the surface's edges — half of each
+ * dot showing on the inside — and connect to the nodes within. That is how
+ * values get into and out of a subflow at all: the engine has bridged streams
+ * across the boundary all along, and this is the editor finally drawing the
+ * place where the bridge lands.
+ *
+ * Direction reverses at the boundary: the subflow's IN socket receives from
+ * outside and FEEDS the children, so within it behaves as an output. The whole
+ * chain is asserted — outer source, boundary, inner sink — because the point of
+ * the boundary is what crosses it.
+ */
+test('a subflow\'s sockets are connectable from inside, and the stream crosses', async ({ page }) => {
+  await page.goto(`${HARNESS}?subflow=1`);
+  await expect(canvas(page)).toBeVisible();
+
+  // The Group arrives with one in-socket; go inside it.
+  await page.evaluate(() => {
+    const group = window.fbEditor.children.find(n => n.title === 'Group')!;
+
+    window.fbEditor.enter(group.id!);
+  });
+
+  // Its boundary dots are on the plane's edges, centred — half inside.
+  const dots = await page.evaluate(() => {
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+    const plane = root.querySelector('.plane')!.getBoundingClientRect();
+
+    return [...root.querySelectorAll<HTMLElement>('.boundary-socket')].map(dot => {
+      const r = dot.getBoundingClientRect();
+
+      return Math.round(r.left + r.width / 2 - plane.left);
+    });
+  });
+
+  expect(dots).toEqual([0]);
+
+  /*
+   * Connect the boundary to a fresh sink inside. The boundary's in-socket is
+   * the SOURCE end here, so the editor must accept the pair even though both
+   * sockets are type `in` — direction reverses at the boundary. The inner
+   * scope will not do as a target: the inner source already feeds it, and an
+   * input takes one connection.
+   */
+  const wired = await page.evaluate(() => {
+    const flow = window.fbEditor.state;
+    const sink = window.fbEditor.addNode('sink')!;
+    const boundary = flow.sockets!.find(s => s.type === 'in')!;
+
+    window.fbEditor.socketClicked(boundary, flow.id!);
+
+    const accepts = window.fbEditor.accepts(sink.sockets![0], sink.id!);
+
+    window.fbEditor.socketClicked(sink.sockets![0], sink.id!);
+
+    return {
+      accepts,
+      // Stored the way the engine bridges: the subflow at the `from` end, its
+      // own in-socket in the `out` field.
+      inner: flow.connections!.map(c => `${c.from}->${c.to}`),
+      sinkId: sink.id,
+    };
+  });
+
+  expect(wired.accepts).toBe(true);
+  expect(wired.inner).toContain(`50->${wired.sinkId}`);
+
+  /*
+   * And the connection is DRAWN to the boundary: one endpoint of some curve
+   * lands on the plane's left edge, where the dot sits. The stream itself
+   * crossing the boundary is the engine's bridge, covered by the core spec —
+   * the harness's node types have no workers to listen with.
+   */
+  const reachesEdge = await page.evaluate(() => {
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+    const paths = root.querySelector('fb-connections')!.shadowRoot!
+      .querySelectorAll<SVGPathElement>('path.connection');
+
+    return [...paths].some(path => {
+      const start = path.getPointAtLength(0);
+      const end = path.getPointAtLength(path.getTotalLength());
+
+      return Math.min(Math.abs(start.x), Math.abs(end.x)) < 1;
+    });
+  });
+
+  expect(reachesEdge).toBe(true);
+});
