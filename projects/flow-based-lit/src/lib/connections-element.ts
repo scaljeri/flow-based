@@ -48,15 +48,61 @@ export class FbConnectionsElement extends LitElement {
 
     path.connection {
       fill: none;
-      pointer-events: stroke;
+      /*
+       * Paint only. Everything a pointer does to a connection goes through the
+       * wide invisible path below, so a 3px curve never has to be hit.
+       */
+      pointer-events: none;
       stroke-linecap: round;
       stroke-width: 3px;
     }
 
-    path.connection:not(.pointer-path):hover {
+    /*
+     * The part you can actually press.
+     *
+     * A connection is a 3px curve, and pressing it used to mean landing within
+     * two pixels of it — awkward with a mouse and guesswork with a finger, which
+     * covers about forty. So the curve is drawn once and pressed somewhere else:
+     * an invisible stroke along the same path, wide enough to aim at.
+     */
+    path.hit {
+      fill: none;
+      pointer-events: stroke;
+      stroke: transparent;
+      stroke-linecap: round;
+      stroke-width: 22px;
+    }
+
+    path.hit:hover {
       cursor: pointer;
+    }
+
+    /* A finger is not a cursor. Same path, a target it can hit. */
+    @media (pointer: coarse) {
+      path.hit {
+        stroke-width: 44px;
+      }
+    }
+
+    /* Adjacent, so hovering the hit path lights the curve it belongs to. */
+    path.hit:hover + path.connection {
       stroke: var(--fb-active-color, #fa0);
       stroke-width: 5px;
+    }
+
+    /*
+     * Being held, and about to go.
+     *
+     * The width is animated over exactly the press it takes, so the line is its
+     * own progress bar: it thickens under your finger and then it is gone. Red
+     * from the first frame, because what is being confirmed is a deletion and
+     * finding that out at the end is too late.
+     */
+    path.connection.arming,
+    path.hit:hover + path.connection.arming {
+      stroke: var(--fb-reject-color, #f06);
+      stroke-width: 14px;
+      transition: stroke-width var(--fb-longpress, 500ms) linear;
     }
 
     path.arrow {
@@ -82,6 +128,8 @@ export class FbConnectionsElement extends LitElement {
   override disconnectedCallback(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
+    // Its listeners are on `window` and would outlive this element otherwise.
+    this.cancelArming();
     super.disconnectedCallback();
   }
 
@@ -150,7 +198,10 @@ export class FbConnectionsElement extends LitElement {
 
     return `${fp.x},${fp.y},${fs?.width},${fs?.height},${tp.x},${tp.y},${ts?.width},${ts?.height},`
       + `${connection.out},${connection.in},${plane.width},${plane.height},`
-      + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing}`;
+      + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing},`
+      // Whether this line is being held. Without it `guard` sees an unchanged
+      // key and skips the very re-render that turns the line red.
+      + `${this.arming?.id === connection.id}`;
   }
 
   private renderConnection(connection: FbConnection) {
@@ -162,7 +213,14 @@ export class FbConnectionsElement extends LitElement {
 
     const route = this.route(ends.start, ends.end);
     const id = `fb-grad-${connection.id}`;
+    const arming = this.arming?.id === connection.id;
 
+    /*
+     * The hit path comes FIRST and the curve straight after it, because the
+     * hover style is an adjacent-sibling rule: pressing and lighting up are two
+     * different paths, and this is what keeps them talking to each other without
+     * a render for every pointer that crosses a line.
+     */
     return svg`
       <defs>
         <linearGradient id=${id}>
@@ -170,10 +228,17 @@ export class FbConnectionsElement extends LitElement {
           <stop offset="100%" stop-color=${this.socketColour(connection.in)}></stop>
         </linearGradient>
       </defs>
-      <path class="connection"
+      <path class="hit"
             d=${route.d}
-            stroke=${`url(#${id})`}
-            @pointerdown=${(e: PointerEvent) => this.onLineClick(e, connection)}></path>
+            @pointerdown=${(e: PointerEvent) => this.onLinePress(e, connection)}></path>
+      <!--
+        The gradient stays on the attribute even while arming: an SVG
+        presentation attribute sits below every CSS rule, so the red in the
+        stylesheet wins on its own and there is no second place to keep in step.
+      -->
+      <path class="connection ${arming ? 'arming' : ''}"
+            d=${route.d}
+            stroke=${`url(#${id})`}></path>
       <path class="arrow" d="M0 5 L 5 0 L0 -5z" transform=${route.arrow}></path>
     `;
   }
@@ -233,9 +298,95 @@ export class FbConnectionsElement extends LitElement {
     `;
   }
 
-  private onLineClick(event: PointerEvent, connection: FbAnyConnection): void {
-    event.stopPropagation();
-    this.dispatchEvent(new CustomEvent('line-click', { detail: connection, bubbles: true, composed: true }));
+  /* ----------------------------------------------------------------------
+     Removing a connection
+     ----------------------------------------------------------------------
+     A press and hold, not a click.
+
+     A click removed it on `pointerdown` — gone the instant you touched it, with
+     no way to change your mind and, on a touch screen, no hover beforehand to
+     say the line was even pressable. The first you knew of it was a connection
+     that had disappeared. Holding is deliberate by construction: it takes time,
+     it says what it is about to do while you can still stop it, and letting go
+     or sliding away is the escape.
+
+     The press deliberately does NOT stop propagating. The canvas reads it as a
+     background press, which is what it is until the hold completes — so dragging
+     from a line still pans, and moving is exactly what cancels the delete.
+   */
+
+  /** How long the line has to be held. Also the width animation's duration. */
+  private static readonly HOLD_MS = 500;
+
+  /** Sliding this far means you are panning, not deleting. */
+  private static readonly SLOP = 8;
+
+  private arming?: { id: number; pointerId: number; from: FbPosition; timer: number };
+
+  private onLinePress(event: PointerEvent, connection: FbAnyConnection): void {
+    // An element-to-element line is decoration a node owns, not a graph edge.
+    if (typeof connection.from !== 'number' || connection.id === undefined) {
+      return;
+    }
+
+    this.cancelArming();
+
+    const id = connection.id;
+
+    this.arming = {
+      id,
+      pointerId: event.pointerId,
+      from: { x: event.clientX, y: event.clientY },
+      // Torn down through cancelArming, so the window listeners come off by the
+      // same path whether the hold completed or was abandoned.
+      timer: window.setTimeout(() => {
+        this.cancelArming();
+        this.dispatchEvent(new CustomEvent('connection-remove', {
+          detail: connection,
+          bubbles: true,
+          composed: true,
+        }));
+      }, FbConnectionsElement.HOLD_MS),
+    };
+
+    window.addEventListener('pointermove', this.onArmingMove);
+    window.addEventListener('pointerup', this.onArmingEnd);
+    window.addEventListener('pointercancel', this.onArmingEnd);
+
+    this.requestUpdate();
+  }
+
+  private readonly onArmingMove = (event: PointerEvent): void => {
+    if (!this.arming || event.pointerId !== this.arming.pointerId) {
+      return;
+    }
+
+    const { from } = this.arming;
+
+    if (Math.hypot(event.clientX - from.x, event.clientY - from.y) > FbConnectionsElement.SLOP) {
+      this.cancelArming();
+    }
+  };
+
+  private readonly onArmingEnd = (event: PointerEvent): void => {
+    if (this.arming && event.pointerId === this.arming.pointerId) {
+      this.cancelArming();
+    }
+  };
+
+  private cancelArming(): void {
+    if (!this.arming) {
+      return;
+    }
+
+    clearTimeout(this.arming.timer);
+    this.arming = undefined;
+
+    window.removeEventListener('pointermove', this.onArmingMove);
+    window.removeEventListener('pointerup', this.onArmingEnd);
+    window.removeEventListener('pointercancel', this.onArmingEnd);
+
+    this.requestUpdate();
   }
 
   private endpoints(connection: FbConnection): { start: FbPosition; end: FbPosition } | null {

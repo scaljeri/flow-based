@@ -1241,3 +1241,135 @@ test('a half-drawn connection does not survive a change to the graph', async ({ 
   await page.evaluate(() => (window.fbEditor as unknown as { undo(): void }).undo());
   expect(await pending()).toBe(false);
 });
+
+/* ==========================================================================
+   Removing a connection
+   ========================================================================== */
+
+/** The midpoint of the first connection, in page coordinates. */
+async function connectionMidpoint(page: Page): Promise<{ x: number; y: number }> {
+  return page.evaluate(() => {
+    const layer = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!;
+    const path = layer.shadowRoot!.querySelector<SVGPathElement>('path.connection')!;
+    const point = path.getPointAtLength(path.getTotalLength() / 2);
+    const rect = layer.getBoundingClientRect();
+
+    return { x: rect.left + point.x, y: rect.top + point.y };
+  });
+}
+
+async function connectionCount(page: Page): Promise<number> {
+  return (await connectionPaths(page)).length;
+}
+
+/**
+ * A connection is removed by HOLDING it, not by clicking it.
+ *
+ * A click removed it on `pointerdown` — gone the instant you touched it, with no
+ * way to change your mind, and on a touch screen no hover beforehand to say the
+ * line was even pressable. The first you knew of it was a connection that had
+ * disappeared.
+ *
+ * The three tests below are the three ways a hold can end, and all three matter:
+ * a delete that cannot be called off is no better than the click it replaced.
+ */
+test('removes a connection when it is held, turning it red first', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await connectionCount(page);
+  expect(before).toBeGreaterThan(0);
+
+  const mid = await connectionMidpoint(page);
+
+  await page.mouse.move(mid.x, mid.y);
+  await page.mouse.down();
+
+  // It says what it is about to do while there is still time to stop it.
+  await expect
+    .poll(() => page.evaluate(() => {
+      const path = document.querySelector('fb-flow-canvas')!.shadowRoot!
+        .querySelector('fb-connections')!.shadowRoot!
+        .querySelector<SVGPathElement>('path.connection.arming');
+
+      return path ? getComputedStyle(path).stroke : null;
+    }))
+    .toBe('rgb(255, 0, 102)');
+
+  await expect.poll(() => connectionCount(page)).toBe(before - 1);
+  await page.mouse.up();
+});
+
+test('a quick click on a connection leaves it alone', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await connectionCount(page);
+  const mid = await connectionMidpoint(page);
+
+  await page.mouse.click(mid.x, mid.y);
+  await page.waitForTimeout(700);
+
+  expect(await connectionCount(page)).toBe(before);
+});
+
+test('sliding off a held connection calls it off, and pans instead', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await connectionCount(page);
+  const mid = await connectionMidpoint(page);
+
+  const transform = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('.plane') as HTMLElement).style.transform);
+
+  const planeBefore = await transform();
+
+  await page.mouse.move(mid.x, mid.y);
+  await page.mouse.down();
+  await page.mouse.move(mid.x + 70, mid.y + 40, { steps: 8 });
+  // Well past the hold, to prove the countdown was cancelled rather than delayed.
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+
+  expect(await connectionCount(page)).toBe(before);
+  /*
+   * And the press was not swallowed on the way. The hold deliberately does not
+   * stop propagating: until it completes it is an ordinary background press, so
+   * dragging from a line still pans — which is also what cancels the delete.
+   */
+  expect(await transform()).not.toBe(planeBefore);
+});
+
+test('a connection can be hit without hitting a 3px curve', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const mid = await connectionMidpoint(page);
+
+  /*
+   * The curve is 3px, so pressing it used to mean landing within two pixels of
+   * it. What you press is a wide invisible stroke along the same path — measured
+   * here rather than asserted from the stylesheet, because a hit area is only
+   * real if the browser agrees a point is inside it.
+   */
+  const reach = await page.evaluate(({ x, y }) => {
+    const layer = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!;
+    const hit = layer.shadowRoot!.querySelector('path.hit');
+    const offsets: number[] = [];
+
+    for (let dy = -20; dy <= 20; dy++) {
+      if (layer.shadowRoot!.elementFromPoint(x, y + dy) === hit) {
+        offsets.push(dy);
+      }
+    }
+
+    return offsets;
+  }, mid);
+
+  expect(Math.min(...reach)).toBeLessThanOrEqual(-8);
+  expect(Math.max(...reach)).toBeGreaterThanOrEqual(8);
+});

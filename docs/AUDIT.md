@@ -781,7 +781,42 @@ the control grows a finger-sized thumb on a touch screen.
 The demo's four Material sliders are gone with it, and `custom-code`, `fractal`
 and `zoom-canvas` now say `fbNoDrag` instead of the string.
 
+## Stage 9 — a connection is removed by holding it
+
+Clicking a line deleted it on `pointerdown`: gone the instant you touched it,
+with no way to change your mind and — on a touch screen, where there is no hover
+— nothing beforehand to say a line was pressable at all. The first you knew of it
+was a connection that had disappeared.
+
+Now it is a press and hold. The line turns red and thickens over the half second
+it takes, so it is its own progress bar and says what it is about to do while
+there is still time to stop it. Letting go or sliding away calls it off.
+
+Two things made that possible rather than merely nicer:
+
+- **What you press is not what you see.** The curve is 3px, so hitting it meant
+  landing within two pixels — awkward with a mouse, guesswork with a finger. An
+  invisible 22px stroke follows the same path (44px on a coarse pointer), and the
+  visible curve is `pointer-events: none`. The hover highlight is an
+  adjacent-sibling rule between the two, so it costs no render.
+- **The press deliberately does not stop propagating.** Until the hold completes
+  it is an ordinary background press, so dragging from a line still pans — and
+  moving is exactly what cancels the delete, which makes one gesture do both
+  jobs without a mode.
+
+The `line-click` event became `connection-remove`, since it no longer describes
+a click, and the arming flag joins the `guard` key — otherwise the memoised
+sub-template skips the very re-render that turns the line red.
+
 ### Still open
+- **`a drag does not cost work proportional to the size of the graph` is flaky**,
+  around one run in five even with a single worker. Measured, not guessed: the
+  ratios it asserts came out 2.66 / 2.74 / 3.73 against a limit of 4 before Stage
+  9 and 2.82 / 2.49 / 3.14 after, so the extra path per connection is not the
+  cause. The denominator is a ~0.15 ms measurement, small enough that noise in it
+  moves the threshold more than a real regression would — which the test's own
+  comment predicted. Best of three runs is not enough; it needs a floor under the
+  fast measurement, or to assert absolute work rather than a ratio.
 - `ng lint` reports 0 errors but ~265 warnings, concentrated in four families
   (`no-explicit-any`, `prefer-inject`, `prefer-control-flow`,
   `no-empty-function`) that Stages 3–4 remove. `config: any` is the big one: node

@@ -503,7 +503,7 @@ export class FbFlowCanvasElement extends LitElement {
         @pointermove=${this.onPointerMove}
         @pointerup=${this.onPointerUp}
         @pointercancel=${this.onPointerUp}
-        @line-click=${this.onLineClick}>
+        @connection-remove=${this.onConnectionRemove}>
         ${this.marquee
           ? html`<div
               class="marquee"
@@ -522,7 +522,14 @@ export class FbFlowCanvasElement extends LitElement {
     return `${size}transform:${transform};`;
   }
 
-  private onLineClick = (event: Event): void => {
+  /**
+   * A connection was held long enough to mean it.
+   *
+   * The connection layer decides WHEN — it owns the press, the countdown and the
+   * line turning red under it — and this decides what that means for the graph.
+   * Undoable, like every other removal here.
+   */
+  private onConnectionRemove = (event: Event): void => {
     const connection = (event as CustomEvent).detail;
 
     if (connection && typeof connection.from === 'number') {
