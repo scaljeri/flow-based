@@ -665,6 +665,42 @@ export class FbNodeElement extends LitElement {
   }
 
   /**
+   * Room for the sockets, whatever the content asks for.
+   *
+   * A socket's position is derived from the node's size — n of them share an
+   * edge in slots of (length / n) — so a node shorter than its own socket count
+   * folds them into an overlapping fan, which is what a fresh subflow with five
+   * inputs looked like. The content keeps deciding how BIG the node is; this
+   * only sets the floor under it, one slot of a socket's width plus breathing
+   * room per socket on the fullest edge.
+   *
+   * On the body rather than the box, because sockets are spread over the
+   * CONTENT — the box includes the header, which the geometry already excludes.
+   */
+  private bodyFloor(): string {
+    const SLOT = 24;
+    const counts = { left: 0, right: 0, top: 0, bottom: 0 };
+
+    for (const socket of this.state?.sockets ?? []) {
+      counts[sideOf(socket)]++;
+    }
+
+    const rows = Math.max(counts.left, counts.right);
+    const cols = Math.max(counts.top, counts.bottom);
+    const parts: string[] = [];
+
+    if (rows > 1) {
+      parts.push(`min-height:${rows * SLOT}px;`);
+    }
+
+    if (cols > 1) {
+      parts.push(`min-width:${cols * SLOT}px;`);
+    }
+
+    return parts.join('');
+  }
+
+  /**
    * The drawing for the view this node is in.
    *
    * A type may register one component for every view or one per view; this is
@@ -1061,7 +1097,7 @@ export class FbNodeElement extends LitElement {
       <div class="box" @pointerdown=${this.onPointerDown} @dblclick=${this.onDoubleClick}>
         ${this.renderHeader()}
 
-        <div class="body">
+        <div class="body" style=${this.bodyFloor()}>
           <slot></slot>
         </div>
 

@@ -1085,6 +1085,17 @@ rule as `socketPosition`, so a socket keeps its neighbours in the same order
 inside and out. Verified end to end on the demo: generator outside → subflow.in
 → logger inside received live values.
 
+## Stage 21 — a node grows to hold its sockets
+
+Socket positions are derived from the node's size — n share an edge in slots of
+length/n — so a node shorter than its own socket count folded them into an
+overlapping fan: a fresh subflow with five inputs was a 50px icon wearing five
+dots on one spot. The body now carries a floor of one 24px slot per socket on the
+fullest edge (height for the sides, width for top and bottom), set on the BODY
+because that is what the geometry spreads sockets over — the box includes the
+header, which the geometry already excludes. Content keeps deciding how big a
+node is; this is only the floor, and one or zero sockets add none.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

@@ -2427,3 +2427,46 @@ test('a subflow\'s sockets are connectable from inside, and the stream crosses',
 
   expect(reachesEdge).toBe(true);
 });
+
+/**
+ * A node grows to hold its sockets.
+ *
+ * Their positions are derived from the node's size — n share an edge in slots
+ * of length/n — so a node shorter than its own socket count folds them into an
+ * overlapping fan, which is what a fresh subflow with five inputs looked like.
+ * The content keeps deciding how big a node is; this is only the floor.
+ */
+test('a node is never shorter than its fullest edge of sockets', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    for (let i = 0; i < 5; i++) {
+      window.fbEditor.addSocket(sink.id!, 'in');
+    }
+  });
+
+  const spread = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const box = node.getBoundingClientRect();
+    const centres = [...node.shadowRoot!.querySelectorAll('.socket')]
+      .map(dot => dot.getBoundingClientRect())
+      .filter(r => r.left < box.left + 20)
+      .map(r => r.top + r.height / 2)
+      .sort((a, b) => a - b);
+
+    return {
+      sockets: centres.length,
+      // The tightest pair: overlap is what the floor exists to prevent.
+      minGap: Math.min(...centres.slice(1).map((y, i) => y - centres[i])),
+      height: box.height,
+    };
+  });
+
+  expect(spread.sockets).toBe(6);
+  expect(spread.minGap).toBeGreaterThanOrEqual(20);
+  expect(spread.height).toBeGreaterThanOrEqual(6 * 20);
+});
