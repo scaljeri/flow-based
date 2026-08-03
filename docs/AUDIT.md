@@ -1096,6 +1096,22 @@ because that is what the geometry spreads sockets over — the box includes the
 header, which the geometry already excludes. Content keeps deciding how big a
 node is; this is only the floor, and one or zero sockets add none.
 
+## Stage 22 — a connection's colour is its type, and the type now arrives
+
+A line's colour has always meant the FORMAT crossing it (via the app's socket
+palette), with white meaning "no type negotiated yet". A white line in the
+middle of an all-number chain — generator, subflow, logger — was therefore not a
+styling quirk but a propagation bug, twice over, both introduced in Stage 14:
+
+- the engine narrowed the connected socket BEFORE the app's helpers ran, so a
+  helper like the demo's tap rule — which spreads a format across all of a
+  node's sockets while the connected one is still empty — found its condition
+  already false and never fired. Helpers run first now, on the sockets as they
+  actually are;
+- the propagation worklist only revisited connections touching the changed
+  connection's own two sockets, so a THIRD socket changed by a helper never
+  propagated onward. A change now requeues everything touching either node.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

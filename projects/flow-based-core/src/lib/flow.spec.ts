@@ -145,7 +145,9 @@ describe('Flow socket-format propagation (the "leveling" rule)', () => {
       },
     };
 
-    new Flow(flowTypes() as any, helpers as any).initialize(root);
+    const types = { ...flowTypes(), pass: { worker: RecordingWorker, settings: { isFlow: false, title: 'Pass', config: {}, sockets: [] } } };
+
+    new Flow(types as any, helpers as any).initialize(root);
 
     expect(calls).toHaveLength(1);
     expect(calls[0].out.id).toBe(100);
@@ -680,5 +682,65 @@ describe('Flow.addSocket', () => {
     flow.addSocket(a.sockets[0], a.id);
 
     expect(a.sockets).toHaveLength(before);
+  });
+});
+
+describe('format propagation through an app helper', () => {
+  /*
+   * The demo's tap rule in miniature: a passthrough node whose sockets all share
+   * one format, spread by a helper the moment any of them learns it. Two things
+   * broke here once, and each hid the other:
+   *
+   * - the engine narrowed the connected socket BEFORE the helper ran, so the
+   *   helper's "still empty" condition was already false and the spread never
+   *   fired;
+   * - the worklist only revisited connections touching the changed CONNECTION's
+   *   own sockets, so a third socket changed by the helper never propagated on.
+   *
+   * The symptom was an untyped white line in the middle of an all-number chain.
+   */
+  it('carries a format through a node whose helper types all its sockets at once', () => {
+    const source: any = { id: 10, type: 'source', sockets: [{ id: 100, type: 'out', format: 'number' }] };
+    const pass: any = { id: 20, type: 'pass', sockets: [{ id: 200, type: 'in' }, { id: 201, type: 'out' }] };
+    const sink: any = { id: 30, type: 'sink', sockets: [{ id: 300, type: 'in' }] };
+    const root: any = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [source, pass, sink],
+      connections: [
+        { id: 1000, from: 10, to: 20, out: 100, in: 200 },
+        { id: 1001, from: 20, to: 30, out: 201, in: 300 },
+      ],
+    };
+
+    const helpers = {
+      resetSockets: () => undefined,
+      connect(outSocket: any, inSocket: any, fromNode: any, toNode: any): boolean {
+        for (const node of [fromNode, toNode]) {
+          if (node.type !== 'pass') {
+            continue;
+          }
+
+          const known = outSocket.format ?? inSocket.format;
+
+          if (known && node.sockets.some((s: any) => !s.format)) {
+            node.sockets.forEach((s: any) => (s.format = known));
+
+            return true;
+          }
+        }
+
+        return false;
+      },
+    };
+
+    const types = { ...flowTypes(), pass: { worker: RecordingWorker, settings: { isFlow: false, title: 'Pass', config: {}, sockets: [] } } };
+
+    new Flow(types as any, helpers as any).initialize(root);
+
+    expect(pass.sockets.map((s: any) => s.format)).toEqual(['number', 'number']);
+    // The far end heard about it too: the spread propagated onward.
+    expect(sink.sockets[0].format).toBe('number');
   });
 });

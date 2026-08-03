@@ -393,11 +393,31 @@ export class Flow {
 
       changedAny = true;
 
-      for (const socketId of [connection.out, connection.in]) {
-        if (socketId === undefined) {
-          continue;
-        }
+      /*
+       * Revisit everything touching EITHER NODE, not just this connection's own
+       * two sockets. A helper may change a third socket — the demo's tap rule
+       * spreads a format across all of a node's sockets at once — and a change
+       * the worklist cannot see is a change that never propagates: the tap's
+       * out-socket turned `number` and the connection hanging off it was never
+       * reconsidered, leaving an untyped line in the middle of a typed chain.
+       */
+      const touched = new Set<number>();
 
+      for (const nodeId of [connection.from, connection.to]) {
+        for (const socket of this.getNode(nodeId as number)?.state.sockets ?? []) {
+          if (socket.id !== undefined) {
+            touched.add(socket.id);
+          }
+        }
+      }
+
+      for (const socketId of [connection.out, connection.in]) {
+        if (socketId !== undefined) {
+          touched.add(socketId);
+        }
+      }
+
+      for (const socketId of touched) {
         for (const neighbour of bySocket.get(socketId) ?? []) {
           if (!queued.has(neighbour.id)) {
             queued.add(neighbour.id);
@@ -517,7 +537,24 @@ export class Flow {
     }
 
     /*
-     * Narrow to what both ends can carry.
+     * The app's helpers run FIRST, on the sockets as they actually are.
+     *
+     * The order is load-bearing, and getting it wrong was a real bug: a helper
+     * like the demo's tap rule spreads a format across ALL of a node's sockets,
+     * but only while the connected one is still empty. The narrowing below
+     * fills that socket — so with the narrowing first, the helper's condition
+     * was already false, the spread never fired, and a tap's out-socket stayed
+     * untyped while its in-socket carried numbers. Downstream that drew as a
+     * white "no type yet" line in the middle of an all-number chain.
+     */
+    let isChanged = false;
+
+    if (this.helpers) {
+      isChanged = this.helpers.connect(outSocket, inSocket, from.state, to.state);
+    }
+
+    /*
+     * Then narrow to what both ends can carry.
      *
      * A socket declaring several types has not chosen one yet; a connection to
      * something narrower chooses for it. Only when exactly ONE type is left —
@@ -525,7 +562,6 @@ export class Flow {
      * worse than leaving it open for the next connection to settle.
      */
     const common = commonFormats(outSocket, inSocket);
-    let isChanged = false;
 
     if (common.length === 1) {
       for (const socket of [outSocket, inSocket]) {
@@ -534,10 +570,6 @@ export class Flow {
           isChanged = true;
         }
       }
-    }
-
-    if (this.helpers) {
-      isChanged = this.helpers.connect(outSocket, inSocket, from.state, to.state) || isChanged;
     }
 
     return isChanged;
