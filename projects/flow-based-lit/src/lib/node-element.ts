@@ -9,7 +9,9 @@ import {
   FbPosition,
   FbSocket,
   componentFor,
+  isVerticalSide,
   previewChild,
+  sideOf,
   stepView,
   supportedViews,
   viewOf,
@@ -1184,7 +1186,10 @@ export class FbNodeElement extends LitElement {
    * constants, so this cannot drift from where the dots actually are.
    */
   private socketGap(socket: FbSocket, point: FbPosition): number | undefined {
-    const group = (this.state?.sockets ?? []).filter(s => s.type === socket.type);
+    const side = sideOf(socket);
+    // Its neighbours are the sockets on ITS EDGE, whichever way each of them
+    // carries: what shares an edge is what it can be confused with.
+    const group = (this.state?.sockets ?? []).filter(s => sideOf(s) === side);
 
     // Nothing to collide with, so nothing to cap.
     if (group.length < 2) {
@@ -1193,6 +1198,8 @@ export class FbNodeElement extends LitElement {
 
     const { geometry, viewport } = this.editor;
     const plane = viewport.planeSize;
+    // Along the edge: down it on the sides, across it on the top and bottom.
+    const vertical = isVerticalSide(side);
     let nearest = Infinity;
 
     for (const other of group) {
@@ -1203,7 +1210,7 @@ export class FbNodeElement extends LitElement {
       const p = geometry.socketPosition(this.state, other, plane);
 
       if (p) {
-        nearest = Math.min(nearest, Math.abs(p.y - point.y));
+        nearest = Math.min(nearest, Math.abs(vertical ? p.y - point.y : p.x - point.x));
       }
     }
 

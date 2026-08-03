@@ -22,6 +22,16 @@ export interface FbSize {
 
 export type FbSocketType = 'in' | 'out';
 
+/**
+ * Which edge of the node a socket sits on.
+ *
+ * Separate from `type`, which says which WAY the data goes. The two were the
+ * same thing while every input was on the left and every output on the right,
+ * and that is only a default: a node whose inputs arrive from above reads better
+ * with them on top, and nothing about the engine cares.
+ */
+export type FbSocketSide = 'top' | 'right' | 'bottom' | 'left';
+
 export interface FbSocket {
   type: FbSocketType;
   id?: number;
@@ -29,6 +39,12 @@ export interface FbSocket {
   name?: string;
   /** The data type carried by this socket. `null` means "not yet negotiated". */
   format?: string | null;
+  /**
+   * Which edge this socket sits on. Absent means the default for its `type` —
+   * `in` on the left, `out` on the right — which is what every flow saved before
+   * this existed means, and what a node type that does not care still gets.
+   */
+  side?: FbSocketSide;
   position?: number;
   description?: string;
   aux?: string;

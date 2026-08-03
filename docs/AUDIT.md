@@ -873,6 +873,37 @@ the editor showing a graph that is no longer in the document.
 what the shell's panel does better — names, colours, reordering, removal — and
 the component is now just the icon.
 
+## Stage 12 — a socket sits on an edge, and you drag it there
+
+`in` on the left and `out` on the right was never a rule, only a default —
+`type` says which way the data goes, `side` says which edge it arrives at, and a
+node whose input comes from above reads better with it on top. `FbSocket.side`
+is `top | right | bottom | left`, absent meaning the default for its type, so
+every saved flow reads exactly as it did.
+
+- **Geometry groups by EDGE rather than by direction.** What shares an edge is
+  what has to share the room along it, so `socketPosition` spreads each group
+  along its own edge — down the height on the sides, across the width on the top
+  and bottom.
+- **The panel's border IS the node's outline.** Sockets are dots on the dialog's
+  rim, dragged around it to another edge or further along the one they are on.
+  Nearest edge wins, so a drop does not have to land on the border itself, and
+  the move is committed once on release rather than once per pointermove. The
+  alternative — a dropdown reading "top / right / bottom / left" — describes a
+  picture instead of being one.
+- **Curves leave and arrive along the edge.** The control points were purely
+  horizontal, which was the same thing while every socket was on a left or right
+  edge: those are the outward normals of those two edges. Stated as the rule it
+  always was, a line into a top socket now drops in from above instead of
+  arriving sideways as if it had missed.
+
+Two bugs found by measuring rather than looking. `guard()` memoises each path on
+a key that did not mention which edge its sockets were on, so the first fix to
+the curve shape changed nothing — the old path was reused, 50px from the socket.
+And the test that was meant to catch it sampled the tangent 20px back along the
+arc, where a hard-turning cubic has already swung off its final direction; at 3px
+the same curve reads 0.4 across against 3 down.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

@@ -12,6 +12,7 @@ import {
   viewOf,
 } from './views';
 import { FbNodeSettings, FbNodeState } from './types';
+import { sideOf } from './geometry';
 
 const plain: FbNodeSettings = { title: 'Plain' };
 const flow: FbNodeSettings = { title: 'Flow', isFlow: true };
@@ -177,14 +178,23 @@ describe('moveSocket', () => {
     ],
   });
 
+  /*
+   * Asserted per EDGE rather than on the flat array. Only the relative order of
+   * the sockets sharing a side reaches the screen — the geometry filters by side
+   * and lays each group out along its own edge — so pinning the exact array made
+   * the test about an implementation detail it had no reason to care about.
+   */
+  const onSide = (n: FbNodeState, side: string) =>
+    n.sockets!.filter(s => sideOf(s) === side).map(s => s.id);
+
   it('reorders within one side and leaves the other side alone', () => {
     const n = node();
 
     // Move in-socket 4 (third of its side) to the front of its side.
     expect(moveSocket(n, 4, 0)).toBe(true);
-    expect(n.sockets!.map(s => s.id)).toEqual([4, 2, 1, 3]);
-    // The out-socket kept its slot, so nothing on the other edge moved.
-    expect(n.sockets![1].id).toBe(2);
+    expect(onSide(n, 'left')).toEqual([4, 1, 3]);
+    expect(onSide(n, 'right')).toEqual([2]);
+    expect(n.sockets).toHaveLength(4);
   });
 
   it('reports a move that changes nothing, so undo is not pushed for it', () => {
@@ -198,6 +208,38 @@ describe('moveSocket', () => {
     const n = node();
 
     expect(moveSocket(n, 1, 99)).toBe(true);
-    expect(n.sockets!.filter(s => s.type === 'in').map(s => s.id)).toEqual([3, 4, 1]);
+    expect(onSide(n, 'left')).toEqual([3, 4, 1]);
+  });
+
+  it('moves a socket to another edge, keeping its direction', () => {
+    const n = node();
+
+    // An in-socket can sit on top: which way the data goes and which edge it
+    // arrives at are different questions.
+    expect(moveSocket(n, 3, 0, 'top')).toBe(true);
+    expect(onSide(n, 'top')).toEqual([3]);
+    expect(onSide(n, 'left')).toEqual([1, 4]);
+    expect(n.sockets!.find(s => s.id === 3)!.type).toBe('in');
+  });
+
+  it('lands where it was dropped among the sockets already on that edge', () => {
+    const n = node();
+
+    moveSocket(n, 3, 0, 'right');
+    // Ahead of the out-socket that was already there.
+    expect(onSide(n, 'right')).toEqual([3, 2]);
+
+    moveSocket(n, 4, 9, 'right');
+    // Clamped to the end rather than dropped.
+    expect(onSide(n, 'right')).toEqual([3, 2, 4]);
+    expect(onSide(n, 'left')).toEqual([1]);
+  });
+
+  it('counts a change of edge as a move even at the same index', () => {
+    const n = node();
+
+    // Index 0 of `top` and index 0 of `left` are different places.
+    expect(moveSocket(n, 1, 0, 'top')).toBe(true);
+    expect(onSide(n, 'top')).toEqual([1]);
   });
 });

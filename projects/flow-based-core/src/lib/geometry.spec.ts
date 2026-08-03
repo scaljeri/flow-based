@@ -168,3 +168,72 @@ describe('FbGeometry size bookkeeping', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('sockets on the other two edges', () => {
+  let geometry: FbGeometry;
+
+  beforeEach(() => {
+    geometry = new FbGeometry();
+    geometry.setNodeSize(10, { width: 200, height: 120 });
+  });
+
+  const sided = (): FbNodeState => ({
+    id: 10,
+    type: 'source',
+    position: { x: 25, y: 50 },
+    sockets: [
+      { id: 100, type: 'in', side: 'top' },
+      { id: 101, type: 'in', side: 'top' },
+      { id: 200, type: 'out', side: 'bottom' },
+      { id: 201, type: 'in' },
+    ],
+  });
+
+  it('spreads a top edge across the width, not down the height', () => {
+    const n = sided();
+    const first = geometry.socketPosition(n, n.sockets![0], PLANE)!;
+    const second = geometry.socketPosition(n, n.sockets![1], PLANE)!;
+
+    // Both sit above the node's top edge, and differ along x.
+    expect(first.y).toBe(400 - FB_DEFAULT_SOCKET_LAYOUT.inOffset);
+    expect(second.y).toBe(first.y);
+    expect(second.x).toBeGreaterThan(first.x);
+
+    // Spread across the width the way the sides spread down the height.
+    const inset = FB_DEFAULT_SOCKET_LAYOUT.inset;
+    const run = 200 - inset * 2;
+    expect(first.x).toBeCloseTo(250 + inset + run * 0.25, 6);
+    expect(second.x).toBeCloseTo(250 + inset + run * 0.75, 6);
+  });
+
+  it('places a bottom socket just inside the lower edge', () => {
+    const n = sided();
+    const p = geometry.socketPosition(n, n.sockets![2], PLANE)!;
+
+    expect(p.y).toBe(400 + 120 - FB_DEFAULT_SOCKET_LAYOUT.outOffset);
+    // Alone on its edge, so centred along it.
+    expect(p.x).toBeCloseTo(250 + 100, 6);
+  });
+
+  /*
+   * The group a socket shares its room with is the one on ITS EDGE. Moving two
+   * in-sockets to the top has to leave the third one centred on the left rather
+   * than still sharing the left edge three ways.
+   */
+  it('groups by edge rather than by direction', () => {
+    const n = sided();
+    const left = geometry.socketPosition(n, n.sockets![3], PLANE)!;
+
+    expect(left.x).toBe(250 - FB_DEFAULT_SOCKET_LAYOUT.inOffset);
+    expect(left.y).toBeCloseTo(400 + 60, 6);
+  });
+
+  it('leaves a socket that names no side where it has always been', () => {
+    const n = node();
+    const inSocket = geometry.socketPosition(n, n.sockets![0], PLANE)!;
+    const outSocket = geometry.socketPosition(n, n.sockets![2], PLANE)!;
+
+    expect(inSocket.x).toBe(250 - FB_DEFAULT_SOCKET_LAYOUT.inOffset);
+    expect(outSocket.x).toBe(250 + 200 - FB_DEFAULT_SOCKET_LAYOUT.outOffset);
+  });
+});

@@ -3,14 +3,25 @@ import {
   FbAnyConnection,
   FbConnection,
   FbPosition,
+  FbSocketSide,
   derivative,
   gradient,
   normal,
   orthogonalRoute,
   roundedPath,
   routeMidpoint,
+  isVerticalSide,
+  sideOf,
 } from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
+
+/** Both ends of a connection, and the edge each of them leaves from. */
+interface FbEnds {
+  start: FbPosition;
+  end: FbPosition;
+  from: FbSocketSide;
+  to: FbSocketSide;
+}
 import { guard } from 'lit/directives/guard.js';
 import { FbEditor, FbEditorChange } from './editor';
 
@@ -196,8 +207,19 @@ export class FbConnectionsElement extends LitElement {
     const ts = to.id === undefined ? undefined : geometry.getNodeSize(to.id);
     const plane = this.editor.viewport.planeSize;
 
+    /*
+     * The EDGE each end sits on, not just which socket it is. Moving a socket
+     * around the node changes where the curve has to start and which way it
+     * leaves, and neither is visible in the node's position or its size — so
+     * without this the memoised path was reused and the line stayed pinned to
+     * where the socket used to be.
+     */
+    const outSide = from.sockets?.find(s => s.id === connection.out);
+    const inSide = to.sockets?.find(s => s.id === connection.in);
+
     return `${fp.x},${fp.y},${fs?.width},${fs?.height},${tp.x},${tp.y},${ts?.width},${ts?.height},`
       + `${connection.out},${connection.in},${plane.width},${plane.height},`
+      + `${outSide && sideOf(outSide)},${inSide && sideOf(inSide)},`
       + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing},`
       // Whether this line is being held. Without it `guard` sees an unchanged
       // key and skips the very re-render that turns the line red.
@@ -211,7 +233,7 @@ export class FbConnectionsElement extends LitElement {
       return nothing;
     }
 
-    const route = this.route(ends.start, ends.end);
+    const route = this.route(ends.start, ends.end, ends.from, ends.to);
     const id = `fb-grad-${connection.id}`;
     const arming = this.arming?.id === connection.id;
 
@@ -250,7 +272,12 @@ export class FbConnectionsElement extends LitElement {
    * the pending line, the arrow, the click target — needs to know which is in
    * use. Branching at each of those instead is how the two shapes drift apart.
    */
-  private route(start: FbPosition, end: FbPosition): { d: string; arrow: string } {
+  private route(
+    start: FbPosition,
+    end: FbPosition,
+    from: FbSocketSide = 'right',
+    to: FbSocketSide = 'left',
+  ): { d: string; arrow: string } {
     if (this.editor.routing === 'orthogonal') {
       const points = orthogonalRoute(start, end);
       const mid = routeMidpoint(points);
@@ -261,7 +288,7 @@ export class FbConnectionsElement extends LitElement {
       };
     }
 
-    const points = this.curve(start, end);
+    const points = this.curve(start, end, from, to);
 
     return { d: this.pathOf(points), arrow: this.arrowOf(points) };
   }
@@ -286,9 +313,18 @@ export class FbConnectionsElement extends LitElement {
     }
 
     // Draw out-to-in, whichever end the user grabbed.
+    /*
+     * The free end has no socket and therefore no edge, so it takes the opposite
+     * of the anchored one — which is what makes the half-drawn line leave the
+     * socket the way a finished one would.
+     */
+    const side = sideOf(pending.socket);
+    const opposite: Record<FbSocketSide, FbSocketSide> =
+      { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+
     const route = pending.socket.type === 'out'
-      ? this.route(anchor, pointer)
-      : this.route(pointer, anchor);
+      ? this.route(anchor, pointer, side, opposite[side])
+      : this.route(pointer, anchor, opposite[side], side);
 
     return svg`
       <path class="connection pointer-path"
@@ -389,7 +425,7 @@ export class FbConnectionsElement extends LitElement {
     this.requestUpdate();
   }
 
-  private endpoints(connection: FbConnection): { start: FbPosition; end: FbPosition } | null {
+  private endpoints(connection: FbConnection): FbEnds | null {
     const { geometry, viewport } = this.editor;
     const plane = viewport.planeSize;
 
@@ -416,24 +452,50 @@ export class FbConnectionsElement extends LitElement {
       return null;
     }
 
-    return { start, end };
+    return { start, end, from: sideOf(out), to: sideOf(inn) };
   }
 
-  /** Horizontal-ish cubic, mirroring the original editor's shape. */
-  private curve(start: FbPosition, end: FbPosition): FbPosition[] {
-    const cx1 = Math.round(start.x + Math.abs(start.x - end.x) / 2);
-    const cx2 = Math.round(end.x - Math.abs(start.x - end.x) / 2);
+  /**
+   * A cubic that LEAVES and ARRIVES along each socket's own edge.
+   *
+   * The control points used to be purely horizontal, which was the same thing
+   * while every socket was on a left or right edge — an out-socket's control
+   * point went right, an in-socket's went left, and those are the outward
+   * normals of those two edges. Now that a socket can sit on the top or bottom,
+   * the rule is stated as what it always was: push out along the edge's normal.
+   *
+   * A line into a socket on the top of a node otherwise arrived from the side and
+   * looked like it had missed.
+   */
+  private curve(start: FbPosition, end: FbPosition, from: FbSocketSide, to: FbSocketSide): FbPosition[] {
+    /*
+     * How far the curve reaches before it turns, taken from the distance along
+     * whichever axis each end leaves on — so a short hop bends gently and a long
+     * one keeps the same shape it always had. Floored, or two sockets almost on
+     * top of each other produce a straight line with a kink in it.
+     */
+    const dx = Math.abs(end.x - start.x);
+    const dy = Math.abs(end.y - start.y);
 
-    let cy1 = start.y;
-    let cy2 = end.y;
+    const reach = (side: FbSocketSide): number =>
+      Math.max(30, (isVerticalSide(side) ? dx : dy) / 2);
 
-    // Doubling back: bow the curve vertically so it does not fold onto itself.
-    if (end.x < start.x) {
-      cy1 = start.y + (end.y - start.y) / 2;
-      cy2 = end.y - (end.y - start.y) / 2;
-    }
+    const push = (point: FbPosition, side: FbSocketSide): FbPosition => {
+      const d = reach(side);
 
-    return [start, { x: cx1, y: cy1 }, { x: cx2, y: cy2 }, end];
+      switch (side) {
+        case 'left':
+          return { x: point.x - d, y: point.y };
+        case 'right':
+          return { x: point.x + d, y: point.y };
+        case 'top':
+          return { x: point.x, y: point.y - d };
+        default:
+          return { x: point.x, y: point.y + d };
+      }
+    };
+
+    return [start, push(start, from), push(end, to), end];
   }
 
   private pathOf(p: FbPosition[]): string {

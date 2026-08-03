@@ -1,4 +1,5 @@
-import { FbNodeSettings, FbNodeState } from './types';
+import { FbNodeSettings, FbNodeState, FbSocketSide } from './types';
+import { sideOf } from './geometry';
 
 /**
  * How much room a node is given.
@@ -213,18 +214,26 @@ export function previewChild(node: FbNodeState): FbNodeState | undefined {
 }
 
 /**
- * Move a socket to another place among the sockets on its own side.
+ * Move a socket to a place on one of the node's edges.
  *
- * `sockets` holds both directions in one array, and the shell lays each side out
- * by position WITHIN its side — so reordering has to happen inside the group and
- * leave the other group where it was. Rebuilding the array by refilling the slots
- * each group already occupied does that: the in-sockets keep their slots, the
- * out-sockets keep theirs, and only the order within one of them changes.
+ * `sockets` is one flat array holding every edge, and the geometry lays each edge
+ * out by position WITHIN that edge — so what matters is only the relative order
+ * of the sockets sharing a side. This therefore lifts the socket out, finds the
+ * one it should land in front of, and puts it back there: every socket on another
+ * edge keeps its place without being touched.
+ *
+ * `toSide` moves it to a different edge, which is what dragging a dot around the
+ * node's outline does. Omitted, it stays where it is and only the order changes.
  *
  * Returns whether anything moved, so a caller can avoid pushing a no-op onto the
  * undo stack.
  */
-export function moveSocket(node: FbNodeState, socketId: number, toIndex: number): boolean {
+export function moveSocket(
+  node: FbNodeState,
+  socketId: number,
+  toIndex: number,
+  toSide?: FbSocketSide,
+): boolean {
   const sockets = node.sockets ?? [];
   const socket = sockets.find(s => s.id === socketId);
 
@@ -232,21 +241,26 @@ export function moveSocket(node: FbNodeState, socketId: number, toIndex: number)
     return false;
   }
 
-  const group = sockets.filter(s => s.type === socket.type);
-  const from = group.indexOf(socket);
-  const to = Math.max(0, Math.min(group.length - 1, toIndex));
+  const side = toSide ?? sideOf(socket);
+  const before = sockets.filter(s => sideOf(s) === side).indexOf(socket);
+  const sameSide = side === sideOf(socket);
+  const rest = sockets.filter(s => s !== socket);
+  const group = rest.filter(s => sideOf(s) === side);
+  const to = Math.max(0, Math.min(group.length, toIndex));
 
-  if (from === to) {
+  if (sameSide && before === to) {
     return false;
   }
 
-  group.splice(from, 1);
-  group.splice(to, 0, socket);
+  socket.side = side;
 
-  // Refill the slots this group already occupied, in the new order.
-  let next = 0;
+  // Inserted in front of whoever currently holds that place on this edge, or at
+  // the end when there is nobody after it.
+  const anchor = group[to];
+  const at = anchor ? rest.indexOf(anchor) : rest.length;
 
-  node.sockets = sockets.map(s => (s.type === socket.type ? group[next++] : s));
+  rest.splice(at, 0, socket);
+  node.sockets = rest;
 
   return true;
 }

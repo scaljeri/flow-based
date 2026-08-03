@@ -1,5 +1,12 @@
 import { LitElement, PropertyValues, css, html, svg } from 'lit';
-import { FB_DRAG_IGNORE, FbNodeState, FbSocket } from '@scaljeri/flow-based-core';
+import {
+  FB_DRAG_IGNORE,
+  FbNodeState,
+  FbSocket,
+  FbSocketSide,
+  isVerticalSide,
+  sideOf,
+} from '@scaljeri/flow-based-core';
 import { FbEditor } from './editor';
 
 const ICON_TRASH = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -45,15 +52,96 @@ export class FbNodeSettingsElement extends LitElement {
       box-sizing: border-box;
       color: #fff;
       font: 12px system-ui, sans-serif;
-      max-height: 80vh;
       max-width: 90vw;
-      overflow: auto;
+      /* The sockets sit ON this border, so nothing may be clipped at it. */
+      overflow: visible;
       padding: 16px;
+      /* The rim is placed against it, so it has to be a containing block. */
+      position: relative;
       width: 320px;
     }
 
     .config::backdrop {
       background: rgba(0, 0, 0, 0.45);
+    }
+
+    /*
+     * The panel scrolls, the dialog does not.
+     *
+     * The dialog's edge IS the node's outline — the sockets are dots on it — and
+     * an edge that scrolls away takes them with it. So the height limit and the
+     * overflow moved inwards, onto the content.
+     */
+    .panel {
+      max-height: calc(80vh - 32px);
+      overflow: auto;
+    }
+
+    /*
+     * The node's outline, and the sockets on it.
+     *
+     * Which edge a socket sits on is a property of the node, so the panel that
+     * edits the node shows it the way the node does: as a rim you can put a dot
+     * on and drag around. The alternative — two lists and a dropdown reading
+     * "top / right / bottom / left" — describes a picture instead of being one.
+     *
+     * It covers the dialog exactly and passes pointer events through, so only
+     * the dots themselves are interactive.
+     */
+    .rim {
+      inset: 0;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    .rim .dot {
+      background: #fff;
+      border: 3px solid var(--fb-socket-border, #999);
+      border-radius: 50%;
+      box-sizing: border-box;
+      cursor: grab;
+      height: 18px;
+      pointer-events: auto;
+      position: absolute;
+      touch-action: none;
+      transform: translate(-50%, -50%);
+      width: 18px;
+    }
+
+    /* An in-socket is hollow and an out-socket filled, as on the node itself. */
+    .rim .dot.out {
+      background: var(--fb-socket-border, #999);
+    }
+
+    .rim .dot:hover,
+    .rim .dot.dragging {
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+
+    .rim .dot.dragging {
+      cursor: grabbing;
+      z-index: 2;
+    }
+
+    /* A finger needs more than eighteen pixels, and this one gets dragged. */
+    @media (pointer: coarse) {
+      .rim .dot {
+        height: 26px;
+        width: 26px;
+      }
+    }
+
+    .rim .hint {
+      color: #fff;
+      font-size: 10px;
+      left: 50%;
+      opacity: 0.45;
+      pointer-events: none;
+      position: absolute;
+      text-align: center;
+      top: -18px;
+      transform: translateX(-50%);
+      white-space: nowrap;
     }
 
     .config header {
@@ -430,6 +518,10 @@ export class FbNodeSettingsElement extends LitElement {
         @pointerdown=${(e: Event) => e.stopPropagation()}
         @keydown=${(e: Event) => e.stopPropagation()}
         @close=${() => this.onClosed()}>
+
+        ${this.renderRim(sockets)}
+
+        <div class="panel">
         <header>
           <strong>Settings</strong>
           <button type="button" title="Close" aria-label="Close"
@@ -472,9 +564,169 @@ export class FbNodeSettingsElement extends LitElement {
               </button>
             </div>`
           : html``}
+        </div>
       </dialog>
     `;
   }
+
+  /* ----------------------------------------------------------------------
+     The rim: which edge each socket sits on
+     ----------------------------------------------------------------------
+     The dialog's border stands in for the node's outline, and each socket is a
+     dot on it — dragged around the rim to put it on another edge, or further
+     along the one it is on. Adding a socket therefore puts a dot on the rim,
+     which is the whole of what "add" needs to mean.
+   */
+
+  /** Where the drag is now, so the dot follows the pointer before it lands. */
+  private dragging?: { id: number; side: FbSocketSide; index: number; pointerId: number };
+
+  private renderRim(sockets: FbSocket[]) {
+    if (!sockets.length) {
+      return html`<div class="rim"><span class="hint">no sockets yet</span></div>`;
+    }
+
+    return html`
+      <div class="rim">
+        <span class="hint">drag a socket to move it around the node</span>
+        ${sockets.map(socket => this.renderDot(socket, sockets))}
+      </div>
+    `;
+  }
+
+  private renderDot(socket: FbSocket, sockets: FbSocket[]) {
+    const held = this.dragging?.id === socket.id;
+    const side = held ? this.dragging!.side : sideOf(socket);
+    const group = sockets.filter(s => sideOf(s) === side && s.id !== socket.id);
+    const index = held
+      ? this.dragging!.index
+      : sockets.filter(s => sideOf(s) === side).indexOf(socket);
+
+    /*
+     * The same fraction the geometry uses, so the panel is a picture of where
+     * the socket actually is: n items share the edge, each centred in its slot.
+     */
+    const count = held ? group.length + 1 : group.length + 1;
+    const fraction = (index + 0.5) / Math.max(1, count);
+    const along = `${fraction * 100}%`;
+
+    const place = {
+      left: `left:0;top:${along};`,
+      right: `left:100%;top:${along};`,
+      top: `top:0;left:${along};`,
+      bottom: `top:100%;left:${along};`,
+    }[side];
+
+    const colour = socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? '';
+
+    return html`
+      <span
+        class="dot ${socket.type} ${held ? 'dragging' : ''}"
+        style=${`${place}${colour ? `border-color:${colour};` : ''}`}
+        data-socket-id=${String(socket.id)}
+        title=${`${socket.name || socket.format || socket.type} — drag to move`}
+        @pointerdown=${(e: PointerEvent) => this.onDotDown(e, socket)}></span>
+    `;
+  }
+
+  private onDotDown(event: PointerEvent, socket: FbSocket): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (socket.id === undefined) {
+      return;
+    }
+
+    const sockets = this.state?.sockets ?? [];
+    const side = sideOf(socket);
+
+    this.dragging = {
+      id: socket.id,
+      side,
+      index: sockets.filter(s => sideOf(s) === side).indexOf(socket),
+      pointerId: event.pointerId,
+    };
+
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+    window.addEventListener('pointermove', this.onDotMove);
+    window.addEventListener('pointerup', this.onDotUp);
+    window.addEventListener('pointercancel', this.onDotUp);
+
+    this.requestUpdate();
+  }
+
+  /**
+   * Which edge the pointer is over, and how far along it.
+   *
+   * Nearest edge wins, so the dot goes where you are pointing rather than where
+   * you have crossed a line — dragging towards the top edge moves it there
+   * before you reach the border, which is the only way a 320px dialog can be
+   * driven with a finger.
+   */
+  private readonly onDotMove = (event: PointerEvent): void => {
+    if (!this.dragging || event.pointerId !== this.dragging.pointerId) {
+      return;
+    }
+
+    const dialog = this.dialog;
+
+    if (!dialog) {
+      return;
+    }
+
+    const rect = dialog.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+
+    const distances: { side: FbSocketSide; distance: number }[] = [
+      { side: 'left', distance: x },
+      { side: 'right', distance: rect.width - x },
+      { side: 'top', distance: y },
+      { side: 'bottom', distance: rect.height - y },
+    ];
+
+    const side = distances.sort((a, b) => a.distance - b.distance)[0].side;
+    const fraction = isVerticalSide(side)
+      ? y / Math.max(1, rect.height)
+      : x / Math.max(1, rect.width);
+
+    const others = (this.state?.sockets ?? [])
+      .filter(s => sideOf(s) === side && s.id !== this.dragging!.id);
+
+    this.dragging = {
+      ...this.dragging,
+      side,
+      index: Math.max(0, Math.min(others.length, Math.round(fraction * (others.length + 1) - 0.5))),
+    };
+
+    this.requestUpdate();
+  };
+
+  /**
+   * Committed on release, not on every move.
+   *
+   * A model write per pointermove would be one undo entry per pixel, and the
+   * dot has to follow the pointer either way — so the drag is drawn from local
+   * state and the graph hears about it once.
+   */
+  private readonly onDotUp = (event: PointerEvent): void => {
+    if (!this.dragging || event.pointerId !== this.dragging.pointerId) {
+      return;
+    }
+
+    const { id, side, index } = this.dragging;
+
+    this.dragging = undefined;
+    window.removeEventListener('pointermove', this.onDotMove);
+    window.removeEventListener('pointerup', this.onDotUp);
+    window.removeEventListener('pointercancel', this.onDotUp);
+
+    if (this.state?.id !== undefined) {
+      this.editor.moveSocket(this.state.id, id, index, side);
+    }
+
+    this.requestUpdate();
+  };
 
   /** Closed first: the dialog is in the top layer and its node is about to go. */
   private deleteNode(): void {

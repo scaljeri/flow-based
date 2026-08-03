@@ -148,6 +148,13 @@ connection validity and colour: sockets only connect when their formats agree, o
 when at least one is unset. A socket with no `format` takes one from whatever it
 is connected to, and the engine propagates that through the graph.
 
+A socket also has a **`side`** — `top`, `right`, `bottom` or `left` — which is
+where on the node it is drawn. Omit it and an `in` sits on the left and an `out`
+on the right, which is where they have always been. `type` says which way the
+data goes; `side` says which edge it arrives at, and they are different
+questions. Users move sockets around the node in its settings panel, by dragging
+them along the panel's own border.
+
 ---
 
 ## Views

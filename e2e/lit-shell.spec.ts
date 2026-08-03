@@ -1730,3 +1730,137 @@ test('adding a socket shows up in the panel, not only in the model', async ({ pa
   // And on the node itself, which is the point of adding one.
   expect(after.dots).toBe(before.dots + 1);
 });
+
+/* ==========================================================================
+   Which edge a socket sits on
+   ========================================================================== */
+
+/**
+ * A socket is dragged around the node's outline, which the panel draws as its
+ * own border.
+ *
+ * `in` on the left and `out` on the right was only ever a default. Which way the
+ * data goes and which edge it arrives at are different questions, and a node
+ * whose input comes from above reads better with it on top.
+ *
+ * The gesture is the whole feature, so this drives it rather than calling the
+ * model: press the dot on the rim, drag it to the top edge, let go.
+ */
+test('a socket is dragged around the rim onto another edge', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await openNode(page, 'Sink');
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+  });
+
+  const grip = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const settings = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+    const dot = settings.querySelector('.dot')!;
+    const dialog = settings.querySelector('dialog.config')!;
+    const d = dot.getBoundingClientRect();
+    const box = dialog.getBoundingClientRect();
+
+    return {
+      from: { x: d.left + d.width / 2, y: d.top + d.height / 2 },
+      // A little inside the top edge: nearest edge wins, so the drop does not
+      // have to land on the border itself.
+      top: { x: box.left + box.width / 2, y: box.top + 6 },
+    };
+  });
+
+  await page.mouse.move(grip.from.x, grip.from.y);
+  await page.mouse.down();
+  await page.mouse.move(grip.top.x, grip.top.y, { steps: 12 });
+  await page.mouse.up();
+
+  const moved = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const state = (node as unknown as { state: { sockets: { type: string; side?: string }[] } }).state;
+
+    return state.sockets.map(s => `${s.type}:${s.side ?? '(default)'}`);
+  });
+
+  expect(moved).toEqual(['in:top']);
+
+  /*
+   * And the node itself followed. The dot has to be ABOVE the node's top edge,
+   * where before it was outside its left one — a panel that moved a socket only
+   * in the panel would be a picture of nothing.
+   */
+  const placed = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const box = node.getBoundingClientRect();
+    const dot = node.shadowRoot!.querySelector('.socket')!.getBoundingClientRect();
+
+    return {
+      aboveTop: dot.top + dot.height / 2 < box.top + 2,
+      withinWidth: dot.left + dot.width / 2 > box.left && dot.left + dot.width / 2 < box.right,
+    };
+  });
+
+  expect(placed).toEqual({ aboveTop: true, withinWidth: true });
+});
+
+/**
+ * ...and the connection follows it, arriving along the edge it now sits on.
+ *
+ * Two failures hid here, and each looked like the other's absence. The curve's
+ * control points were purely horizontal, so a line into a top socket arrived
+ * from the side as if it had missed. And the connection layer memoises each path
+ * on a key that did not mention which edge a socket was on, so the first attempt
+ * at fixing the shape changed nothing at all: the old path was reused.
+ */
+test('a connection follows a socket to its new edge', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const endpoint = () => page.evaluate(() => {
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+    const path = root.querySelector('fb-connections')!.shadowRoot!
+      .querySelector<SVGPathElement>('path.connection')!;
+    const end = path.getPointAtLength(path.getTotalLength());
+
+    const editor = window.fbEditor;
+    const sink = editor.children.find(n => n.title === 'Sink')!;
+    const socket = sink.sockets!.find(s => s.type === 'in')!;
+    const want = editor.geometry.socketPosition(sink, socket, editor.viewport.planeSize)!;
+
+    return {
+      offBy: Math.hypot(end.x - want.x, end.y - want.y),
+      /*
+       * Which way the curve came in, read from its TANGENT — three pixels back
+       * along the arc, not twenty. A cubic that turns hard near its end has
+       * already swung well off its final direction by then: at 20px this curve
+       * measured 15 across against 9 down and read as horizontal, while at 3px
+       * it is 0.4 against 3.
+       */
+      approach: (() => {
+        const just = path.getPointAtLength(path.getTotalLength() - 3);
+
+        return Math.abs(just.y - end.y) > Math.abs(just.x - end.x) ? 'vertical' : 'horizontal';
+      })(),
+    };
+  });
+
+  const before = await endpoint();
+  expect(before.offBy).toBeLessThan(1);
+  expect(before.approach).toBe('horizontal');
+
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.moveSocket(sink.id!, sink.sockets![0].id!, 0, 'top');
+  });
+
+  await expect.poll(async () => (await endpoint()).approach).toBe('vertical');
+  expect((await endpoint()).offBy).toBeLessThan(1);
+});

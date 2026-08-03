@@ -13,6 +13,7 @@ import {
   FbNodeTypes,
   FbPosition,
   FbSocket,
+  FbSocketSide,
   FbSocketType,
   FbNodeView,
   FbSize,
@@ -380,7 +381,8 @@ export class FbEditor {
    * overwritten by the next propagation without explanation.
    */
   /** Reorder a socket among those on its own side of the node. */
-  moveSocket(nodeId: number, socketId: number, toIndex: number): void {
+  /** `toSide` moves it to another edge; omitted, it stays on the one it is on. */
+  moveSocket(nodeId: number, socketId: number, toIndex: number, toSide?: FbSocketSide): void {
     const node = this.nodeById(nodeId);
 
     if (!node) {
@@ -391,7 +393,7 @@ export class FbEditor {
     // ends where it started must not cost an undo step.
     this.history.capture(this.root);
 
-    if (moveSocket(node, socketId, toIndex)) {
+    if (moveSocket(node, socketId, toIndex, toSide)) {
       this.changes.emit({ kind: 'sockets' });
     } else {
       this.history.undo(this.root);

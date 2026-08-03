@@ -1,5 +1,5 @@
 import { FbEmitter } from './change-emitter';
-import { FbNodeState, FbPosition, FbSize, FbSocket } from './types';
+import { FbNodeState, FbPosition, FbSize, FbSocket, FbSocketSide } from './types';
 
 /**
  * Where sockets sit relative to their node's box, in CSS pixels.
@@ -107,7 +107,10 @@ export class FbGeometry {
       return undefined;
     }
 
-    const group = (node.sockets ?? []).filter(s => s.type === socket.type);
+    const side = sideOf(socket);
+    // Grouped by SIDE, not by type: what shares an edge is what has to share
+    // the room along it, whichever direction each of them carries.
+    const group = (node.sockets ?? []).filter(s => sideOf(s) === side);
     const index = group.findIndex(s => s.id === socket.id);
 
     if (index === -1) {
@@ -117,15 +120,42 @@ export class FbGeometry {
     const origin = this.nodeOrigin(node, planeSize);
     const { inOffset, outOffset, inset } = this.layout;
 
-    // `justify-content: space-around` gives each of n items a slot of
-    // (height - 2*inset)/n, centred within it.
-    const column = Math.max(0, size.height - inset * 2);
-    const y = origin.y + inset + (column * (index + 0.5)) / group.length;
+    /*
+     * `justify-content: space-around` gives each of n items a slot of
+     * (length - 2*inset)/n, centred within it. The length is the edge this
+     * socket is on — the node's height down the sides, its width across the top
+     * and bottom.
+     */
+    const along = (length: number): number => {
+      const run = Math.max(0, length - inset * 2);
 
-    const x = socket.type === 'in'
-      ? origin.x - inOffset
-      : origin.x + size.width - outOffset;
+      return inset + (run * (index + 0.5)) / group.length;
+    };
 
-    return { x, y };
+    switch (side) {
+      case 'top':
+        return { x: origin.x + along(size.width), y: origin.y - inOffset };
+      case 'bottom':
+        return { x: origin.x + along(size.width), y: origin.y + size.height - outOffset };
+      case 'right':
+        return { x: origin.x + size.width - outOffset, y: origin.y + along(size.height) };
+      default:
+        return { x: origin.x - inOffset, y: origin.y + along(size.height) };
+    }
   }
+}
+
+/**
+ * Which edge a socket sits on, filling in the default for one that says nothing.
+ *
+ * `in` on the left and `out` on the right is where they have always been, so a
+ * flow saved before sockets had a side reads exactly as it did.
+ */
+export function sideOf(socket: FbSocket): FbSocketSide {
+  return socket.side ?? (socket.type === 'in' ? 'left' : 'right');
+}
+
+/** Whether an edge runs down the node's side rather than across it. */
+export function isVerticalSide(side: FbSocketSide): boolean {
+  return side === 'left' || side === 'right';
 }
