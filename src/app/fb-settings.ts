@@ -1,5 +1,7 @@
 import { FbNodeTypes, nodeMount } from '@scaljeri/flow-based';
-import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.component';
+import { RandomNumbersSmallComponent } from './nodes/random-numbers/random-numbers-small.component';
+import { RandomNumbersNormalComponent } from './nodes/random-numbers/random-numbers-normal.component';
+import { RandomNumbersSettingsComponent } from './nodes/random-numbers/random-numbers-settings.component';
 import { RANDOM_NUMBER_SETTINGS, RandomNumbersWorker } from './workers/random-numbers';
 import { StatsComponent } from './nodes/stats/stats.component';
 import { STATS_SETTINGS, StatsWorker } from './workers/stats';
@@ -23,7 +25,20 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
 import { CANVAS_SETTINGS, CanvasWorker } from './workers/canvas';
 
 export const FB_CONFIG: FbNodeTypes = {
-  'random-numbers': {component: RandomNumbersComponent, settings: RANDOM_NUMBER_SETTINGS, worker: RandomNumbersWorker},
+  /*
+   * Small and normal say nearly the same thing — the number it just produced —
+   * because everything a generator can be TOLD lives in its settings now, which
+   * `settingsComponent` contributes to the shell's panel.
+   */
+  'random-numbers': {
+    component: {
+      small: RandomNumbersSmallComponent,
+      normal: RandomNumbersNormalComponent,
+    },
+    settingsComponent: RandomNumbersSettingsComponent,
+    settings: RANDOM_NUMBER_SETTINGS,
+    worker: RandomNumbersWorker,
+  },
   'stats': {component: StatsComponent, settings: STATS_SETTINGS, worker: StatsWorker},
   'basic-graph': {component: BasicGraphComponent, settings: BASIC_GRAPH_CONFIG, worker: BasicGraphWorker},
   'merge-streams': {component: MergeStreamsComponent, settings: MERGE_STREAMS_SETTINGS, worker: MergeStreamsWorker},

@@ -34,7 +34,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
-import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.component';
+import { RandomNumbersSmallComponent } from './nodes/random-numbers/random-numbers-small.component';
+import { RandomNumbersNormalComponent } from './nodes/random-numbers/random-numbers-normal.component';
+import { RandomNumbersSettingsComponent } from './nodes/random-numbers/random-numbers-settings.component';
 import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
 import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
 import { FB_CONFIG, FB_SOCKET_PALETTE } from './fb-settings';
@@ -51,7 +53,9 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
 @NgModule({
   declarations: [
     AppComponent,
-    RandomNumbersComponent,
+    RandomNumbersSmallComponent,
+    RandomNumbersNormalComponent,
+    RandomNumbersSettingsComponent,
     TapSmallComponent,
     TapNormalComponent,
     TapFullComponent,

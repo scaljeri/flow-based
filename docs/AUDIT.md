@@ -1041,6 +1041,22 @@ Refused in `accepts`, so an occupied input shows as rejecting while a connection
 is being drawn, and again in `buildConnection`, since the loose end can be
 dropped straight onto a socket without ever passing through the highlight.
 
+## Stage 19 — a node type's settings go in the panel
+
+The generator drew its range, interval and integers switch beside its reading, so
+the node was a form: 500px wide whether or not anyone was configuring it. Those
+moved into the shell's settings panel, and its two views now say nearly the same
+thing — the number it just produced — because that is all a generator has to
+show. It went from 514px to 255px.
+
+**Angular node types could not contribute settings at all.**
+`FbNodeHandle.mountSettings` has been in the contract since it was written and
+the Angular adapter never offered it, so only a framework-free type could use it.
+`FbNodeType.settingsComponent` declares one, and the adapter builds it into the
+panel's host with the SAME element injector as the node's drawing — so it shares
+one `NodeService`, and therefore one state and one worker. Two services over one
+node would be two views of one thing that could disagree.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

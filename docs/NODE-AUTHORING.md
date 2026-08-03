@@ -225,6 +225,29 @@ around whatever comes out, so a small drawing can be forty pixels wide and a
 normal one three hundred. At `full` the drawing is handed the surface, and
 `width: 100%` / `height: 100%` fill it.
 
+### Your own settings
+
+The panel edits what every node has — title, sockets, colours — because that is
+model. Anything beyond it belongs to the type, and goes in the same panel rather
+than into the node:
+
+```ts
+'random-numbers': {
+  component: { small: ReadingSmall, normal: ReadingNormal },
+  settingsComponent: RandomNumbersSettings,   // Angular
+  settings: RANDOM_NUMBER_SETTINGS,
+  worker: RandomNumbersWorker,
+},
+```
+
+The settings component shares the node's `NodeService`, so it reads the same
+state and drives the same worker. A framework-free type does the same thing by
+returning `mountSettings` on its handle.
+
+Keeping configuration out of the node is what lets a node at rest be an icon. The
+generator used to draw its sliders beside its reading and was 500px wide before
+it had said anything.
+
 One component for the whole type still works and covers every view:
 
 ```ts

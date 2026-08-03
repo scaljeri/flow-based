@@ -175,6 +175,20 @@ export interface FbNodeType<TComponent = unknown> {
    * with no entry is a view the node does not have. See `FbViewComponents`.
    */
   component: TComponent | import('./views').FbViewComponents<TComponent>;
+  /**
+   * What draws this type's OWN settings, inside the shell's settings panel.
+   *
+   * Title and sockets are model and the panel edits them for every node; this is
+   * the part only a type knows — which fractal to draw, what range to generate.
+   * Keeping it in the panel rather than in the node means a node at rest stays an
+   * icon, and there is one place to configure anything rather than a config
+   * screen per node type.
+   *
+   * A framework-free type can skip this and return `mountSettings` on its handle
+   * instead; this is how a type declares one when its drawing is a component and
+   * the adapter has to build it.
+   */
+  settingsComponent?: TComponent;
   settings: FbNodeSettings;
   type?: string;
   /** Absent for subflow ("flow") types, which get the built-in FlowWorker. */

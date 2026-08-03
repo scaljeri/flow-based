@@ -21,7 +21,11 @@ import { NodeService } from './node/node-service';
  * the same service and call the same methods, and it is now a facade over a
  * framework-free contract instead of a reach into an Angular view.
  */
-export function angularNodeMount(component: Type<unknown>, environmentInjector: EnvironmentInjector): FbNodeMount {
+export function angularNodeMount(
+  component: Type<unknown>,
+  environmentInjector: EnvironmentInjector,
+  settingsComponent?: Type<unknown>,
+): FbNodeMount {
   return (host, { api }) => {
     const appRef = environmentInjector.get(ApplicationRef);
 
@@ -50,6 +54,30 @@ export function angularNodeMount(component: Type<unknown>, environmentInjector: 
 
     return {
       update: () => ref.changeDetectorRef.markForCheck(),
+      /*
+       * The type's own settings, built into the panel's host when it opens.
+       *
+       * The SAME element injector, so the settings component gets the same
+       * NodeService — and therefore the same state and the same worker — as the
+       * node's drawing. A second service over the same node would be two views
+       * of one thing that could disagree.
+       */
+      mountSettings: settingsComponent
+        ? (settingsHost: HTMLElement) => {
+          const settings = createComponent(settingsComponent, {
+            environmentInjector,
+            elementInjector,
+            hostElement: settingsHost,
+          });
+
+          appRef.attachView(settings.hostView);
+
+          return () => {
+            appRef.detachView(settings.hostView);
+            settings.destroy();
+          };
+        }
+        : undefined,
       destroy: () => {
         appRef.detachView(ref.hostView);
         ref.destroy();
@@ -71,9 +99,17 @@ export function angularNodeTypes(
   const mounted: FbCoreNodeTypes<FbNodeMount> = {};
 
   for (const [name, type] of Object.entries(types)) {
+    /*
+     * `settingsComponent` does not travel with the translated type: the adapter
+     * has already folded it into `mountSettings` on the handle, which is the
+     * only form the shell knows. Leaving it on would be an Angular component in
+     * a registry whose components are all mount functions.
+     */
+    const { settingsComponent, ...rest } = type;
+
     mounted[name] = {
-      ...type,
-      component: toMounts(type.component, environmentInjector),
+      ...rest,
+      component: toMounts(type.component, environmentInjector, settingsComponent),
     };
   }
 
@@ -91,6 +127,7 @@ export function angularNodeTypes(
 function toMounts(
   component: FbNodeComponent | FbViewComponents<FbNodeComponent>,
   environmentInjector: EnvironmentInjector,
+  settings?: FbNodeComponent,
 ): FbNodeMount | FbViewComponents<FbNodeMount> {
   if (isViewComponents<FbNodeComponent>(component)) {
     const perView: FbViewComponents<FbNodeMount> = {};
@@ -99,18 +136,34 @@ function toMounts(
       // An explicitly undefined entry is a view the type does NOT have, and
       // carrying the key through would claim it does.
       if (drawing) {
-        perView[view as keyof FbViewComponents<FbNodeMount>] = toMount(drawing, environmentInjector);
+        perView[view as keyof FbViewComponents<FbNodeMount>] =
+          toMount(drawing, environmentInjector, settings);
       }
     }
 
     return perView;
   }
 
-  return toMount(component, environmentInjector);
+  return toMount(component, environmentInjector, settings);
 }
 
-function toMount(component: FbNodeComponent, environmentInjector: EnvironmentInjector): FbNodeMount {
-  return isMountedNode(component)
-    ? component.mount
-    : angularNodeMount(component, environmentInjector);
+function toMount(
+  component: FbNodeComponent,
+  environmentInjector: EnvironmentInjector,
+  settings?: FbNodeComponent,
+): FbNodeMount {
+  /*
+   * A settings component only reaches a drawing the adapter builds. One that
+   * arrived as a mount function already owns its handle, and says what it wants
+   * there — see FbNodeHandle.mountSettings.
+   */
+  if (isMountedNode(component)) {
+    return component.mount;
+  }
+
+  return angularNodeMount(
+    component,
+    environmentInjector,
+    settings && !isMountedNode(settings) ? settings : undefined,
+  );
 }

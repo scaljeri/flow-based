@@ -482,9 +482,25 @@ test('a slider inside a node moves its thumb and nothing else', async ({ page })
   await page.goto('/');
   await waitUntilReady(page);
 
+  /*
+   * The Statistics node, because its column-width slider is still IN the node.
+   * The generator's used to be, and its settings moved into the panel — where
+   * the question does not arise, since a modal dialog is not the canvas.
+   */
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await expect(palette).toBeVisible();
+  await palette.locator('input[type="search"]').fill('stat');
+  await palette.locator('input[type="search"]').press('Enter');
+
+  await expect
+    .poll(() => page.evaluate(() => [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .some(n => (n as unknown as { state?: { type?: string } }).state?.type === 'stats')))
+    .toBe(true);
+
   await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
-      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'stats')!;
 
     node.shadowRoot!.querySelector('.box')!
       .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
@@ -593,4 +609,90 @@ test('merge streams has no full view, and wires itself when opened', async ({ pa
   await expect.poll(async () => (await node()).view).toBe('normal');
   expect((await node()).steps).toEqual(['Show smaller (small)']);
   await expect.poll(async () => (await node()).wires).toBeGreaterThan(0);
+});
+
+/**
+ * A node type's own settings live in the shell's panel, not in the node.
+ *
+ * The generator used to draw its range, interval and integers switch beside its
+ * reading, which made the node a form — 500px wide whether or not anyone was
+ * configuring it. The panel already edits what every node has; this is the part
+ * only this type knows, contributed through `settingsComponent` on its registry
+ * entry. Angular node types could not do that at all before: the hook was in the
+ * contract and the adapter never offered it.
+ */
+test('a node type contributes its own settings to the panel', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const node = () => page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+
+    return {
+      width: Math.round(box.getBoundingClientRect().width),
+      text: box.querySelector('.fb-node-content')?.textContent?.replace(/\s+/g, ' ').trim(),
+      sliders: box.querySelectorAll('fb-slider').length,
+    };
+  });
+
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  });
+
+  // Opened, it still just shows its reading — and is a fraction of its old width.
+  await expect.poll(async () => (await node()).sliders).toBe(0);
+  expect((await node()).width).toBeLessThan(300);
+
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+
+    box.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+  });
+
+  const own = await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+    const section = box.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('.own')!;
+
+    return {
+      sliders: [...section.querySelectorAll('fb-slider label')].map(l => l.textContent!.trim()),
+      switches: section.querySelectorAll('input[type=checkbox]').length,
+    };
+  });
+
+  expect(own).toEqual({ sliders: ['Start', 'End', 'Interval'], switches: 1 });
+
+  /*
+   * And it drives the same worker the node's drawing reads. The settings
+   * component shares the node's NodeService — two services over one node would
+   * be two views of one thing that could disagree.
+   */
+  const interval = () => page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const gen = editor.children.find((n: any) => n.type === 'random-numbers');
+
+    return editor.flow.getWorker(gen.id).interval;
+  });
+
+  const before = await interval();
+
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+    const range = box.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelectorAll<HTMLInputElement>('.own input[type=range]')[2];
+
+    range.value = '4000';
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await expect.poll(interval).toBe(4000);
+  expect(before).not.toBe(4000);
 });
