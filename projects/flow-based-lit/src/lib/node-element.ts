@@ -532,6 +532,13 @@ export class FbNodeElement extends LitElement {
 
     this.notifiedView = view;
 
+    /*
+     * Re-measure: opening a node adds the header, and the sockets are spread
+     * over what is below it. The ResizeObserver catches the size change that
+     * comes with it, but not a header that appears at the same height.
+     */
+    this.measure();
+
     for (const listener of [...this.viewListeners]) {
       listener(view);
     }
@@ -831,22 +838,58 @@ export class FbNodeElement extends LitElement {
     // The plane is scaled, so client rects are too; work in unscaled pixels.
     const zoom = this.editor?.viewport.zoom || 1;
 
-    const centre = (el: Element) => {
+    /** An element's box in this node's own unscaled coordinates. */
+    const boxOf = (el: Element) => {
       const rect = el.getBoundingClientRect();
 
       return {
-        x: (rect.left + rect.width / 2 - origin.left) / zoom,
-        y: (rect.top + rect.height / 2 - origin.top) / zoom,
+        left: (rect.left - origin.left) / zoom,
+        top: (rect.top - origin.top) / zoom,
+        width: rect.width / zoom,
+        height: rect.height / zoom,
       };
     };
 
+    /**
+     * Where a line between two boxes should touch the first of them.
+     *
+     * Its EDGE, on the side the other box is on — not its centre, which is where
+     * these used to start and end. A line drawn centre to centre is buried in
+     * both elements for half its length, so it crossed whatever they contained:
+     * on the merge node it ran straight over the numbers it was pointing at.
+     *
+     * Snapped to one axis rather than aimed exactly at the far centre, because
+     * these lines leave horizontally — the curve below bends that way — and an
+     * edge point chosen on a diagonal would put the start somewhere the curve
+     * does not actually go.
+     */
+    const edge = (box: ReturnType<typeof boxOf>, towards: ReturnType<typeof boxOf>) => {
+      const cx = box.left + box.width / 2;
+      const cy = box.top + box.height / 2;
+      const other = towards.left + towards.width / 2;
+
+      return { x: other >= cx ? box.left + box.width : box.left, y: cy };
+    };
+
     const paths = [...this.wires.values()].map(({ from, to }) => {
-      const a = centre(from);
-      const b = centre(to);
+      const fromBox = boxOf(from);
+      const toBox = boxOf(to);
+      const a = edge(fromBox, toBox);
+      const b = edge(toBox, fromBox);
       const bend = Math.max(20, Math.abs(b.x - a.x) / 2);
+      /*
+       * Both control points push AWAY from their own box. Fixed signs assumed
+       * the line always ran left to right; drawn the other way they pushed into
+       * the elements instead of out of them, and the curve doubled back on
+       * itself before setting off.
+       */
+      const away = b.x >= a.x ? 1 : -1;
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M${a.x},${a.y} C${a.x + bend},${a.y} ${b.x - bend},${b.y} ${b.x},${b.y}`);
+      path.setAttribute(
+        'd',
+        `M${a.x},${a.y} C${a.x + bend * away},${a.y} ${b.x - bend * away},${b.y} ${b.x},${b.y}`,
+      );
 
       return path;
     });
@@ -869,9 +912,18 @@ export class FbNodeElement extends LitElement {
       return;
     }
 
+    /*
+     * The header's height goes with the size, so the geometry can spread the
+     * sockets over the CONTENT rather than the whole box. A node that lays its
+     * inputs out down a column then has them opposite the sockets they belong
+     * to, instead of shifted down by however tall its header happens to be.
+     */
+    const head = this.renderRoot.querySelector<HTMLElement>('.head');
+
     this.editor.geometry.setNodeSize(this.state.id, {
       width: this.offsetWidth,
       height: this.offsetHeight,
+      contentTop: head ? head.offsetHeight : 0,
     });
   }
 

@@ -999,6 +999,31 @@ drawn at all. And they are redrawn when the cards change: a card exists per
 value, so every line is stale the moment its card is replaced. That subscription
 was already there, with an empty body.
 
+## Stage 17 — a node's own lines stop at its elements
+
+Three things made the merge node look like a scribble.
+
+**The lines were drawn centre to centre**, so half of each one was buried inside
+the elements it joined — it ran straight over the numbers it was pointing at.
+They stop at the EDGE now, on the side the other element is on, and both control
+points push away from their own box rather than assuming the line runs left to
+right.
+
+**Sockets are spread over a node's CONTENT, not its whole box.** An open node
+carries a header, so a column of inputs started below where the sockets did and
+every line had to drop across to meet its card. `FbGeometry` takes a
+`contentTop` with the measured size and insets the left and right edges by it;
+the top and bottom are untouched, since nothing is in the way there. Zero for a
+node at rest, which is every node without a header.
+
+**And the node drew each line twice.** It cleared immediately and added a frame
+later, so two calls in quick succession — a value arriving as the node opens —
+cleared once and added twice. The clear moved inside the timeout, and a pending
+one is cancelled first.
+
+The merge node's own layout follows the same `space-around` rule the sockets do,
+so card i sits opposite socket i however many inputs are added in the settings.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

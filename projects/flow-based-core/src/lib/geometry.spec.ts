@@ -237,3 +237,69 @@ describe('sockets on the other two edges', () => {
     expect(outSocket.x).toBe(250 + 200 - FB_DEFAULT_SOCKET_LAYOUT.outOffset);
   });
 });
+
+describe('sockets and the header above the content', () => {
+  let geometry: FbGeometry;
+
+  const two = (): FbNodeState => ({
+    id: 10,
+    type: 'source',
+    position: { x: 25, y: 50 },
+    sockets: [{ id: 100, type: 'in' }, { id: 101, type: 'in' }],
+  });
+
+  beforeEach(() => {
+    geometry = new FbGeometry();
+  });
+
+  /*
+   * An open node carries a header bar, and its own drawing starts below it. The
+   * sockets are spread over that content rather than the whole box, so a node
+   * laying its inputs out down a column has them opposite the sockets they
+   * belong to instead of shifted down by however tall the header happens to be.
+   */
+  it('spreads the side sockets over the content, below the header', () => {
+    const n = two();
+    geometry.setNodeSize(10, { width: 200, height: 120, contentTop: 30 });
+
+    const inset = FB_DEFAULT_SOCKET_LAYOUT.inset;
+    const run = 120 - 30 - inset * 2;
+
+    expect(geometry.socketPosition(n, n.sockets![0], PLANE)!.y)
+      .toBeCloseTo(400 + 30 + inset + run * 0.25, 6);
+    expect(geometry.socketPosition(n, n.sockets![1], PLANE)!.y)
+      .toBeCloseTo(400 + 30 + inset + run * 0.75, 6);
+  });
+
+  it('changes nothing for a node with no header, which is every node at rest', () => {
+    const n = two();
+    geometry.setNodeSize(10, { width: 200, height: 120 });
+
+    const inset = FB_DEFAULT_SOCKET_LAYOUT.inset;
+    const run = 120 - inset * 2;
+
+    expect(geometry.socketPosition(n, n.sockets![0], PLANE)!.y)
+      .toBeCloseTo(400 + inset + run * 0.25, 6);
+  });
+
+  it('leaves the top and bottom edges alone, where nothing is in the way', () => {
+    const n: FbNodeState = {
+      ...two(),
+      sockets: [{ id: 100, type: 'in', side: 'top' }],
+    };
+    geometry.setNodeSize(10, { width: 200, height: 120, contentTop: 30 });
+
+    // Centred across the full width, header or no header.
+    expect(geometry.socketPosition(n, n.sockets![0], PLANE)!.x).toBeCloseTo(250 + 100, 6);
+  });
+
+  it('notices a header appearing at an unchanged size', () => {
+    const n = two();
+    geometry.setNodeSize(10, { width: 200, height: 120 });
+    const before = geometry.socketPosition(n, n.sockets![0], PLANE)!.y;
+
+    geometry.setNodeSize(10, { width: 200, height: 120, contentTop: 30 });
+
+    expect(geometry.socketPosition(n, n.sockets![0], PLANE)!.y).toBeGreaterThan(before);
+  });
+});

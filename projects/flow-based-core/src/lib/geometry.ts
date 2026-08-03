@@ -24,6 +24,19 @@ export interface FbSocketLayout {
   inset: number;
 }
 
+/**
+ * A node's measured box, and where its content begins inside it.
+ *
+ * `contentTop` is how far down the node's own drawing starts — the height of the
+ * header bar an open node carries. Sockets on the left and right are spread over
+ * the CONTENT rather than the whole box, so a node that lays its inputs out down
+ * a column has them opposite the sockets they belong to instead of shifted by
+ * the header. Zero for a node with no header, which is every node at rest.
+ */
+export interface FbNodeBox extends FbSize {
+  contentTop?: number;
+}
+
 export const FB_DEFAULT_SOCKET_LAYOUT: FbSocketLayout = {
   inOffset: 4,
   outOffset: 2,
@@ -45,7 +58,7 @@ export const FB_DEFAULT_SOCKET_LAYOUT: FbSocketLayout = {
  * testable without a browser, and independent of when the browser last laid out.
  */
 export class FbGeometry {
-  private readonly sizes = new Map<number, FbSize>();
+  private readonly sizes = new Map<number, FbNodeBox>();
 
   /**
    * Fires with the node whose size changed, or `undefined` when positions moved
@@ -58,11 +71,14 @@ export class FbGeometry {
   constructor(readonly layout: FbSocketLayout = FB_DEFAULT_SOCKET_LAYOUT) {}
 
   /** Report a node's rendered size. Called from a ResizeObserver. */
-  setNodeSize(nodeId: number, size: FbSize): void {
+  setNodeSize(nodeId: number, size: FbNodeBox): void {
     const known = this.sizes.get(nodeId);
 
     // Sub-pixel jitter would otherwise redraw every connection on every frame.
-    if (known && Math.abs(known.width - size.width) < 0.5 && Math.abs(known.height - size.height) < 0.5) {
+    if (known
+      && Math.abs(known.width - size.width) < 0.5
+      && Math.abs(known.height - size.height) < 0.5
+      && Math.abs((known.contentTop ?? 0) - (size.contentTop ?? 0)) < 0.5) {
       return;
     }
 
@@ -70,7 +86,7 @@ export class FbGeometry {
     this.changes.emit(nodeId);
   }
 
-  getNodeSize(nodeId: number): FbSize | undefined {
+  getNodeSize(nodeId: number): FbNodeBox | undefined {
     return this.sizes.get(nodeId);
   }
 
@@ -126,11 +142,16 @@ export class FbGeometry {
      * socket is on — the node's height down the sides, its width across the top
      * and bottom.
      */
-    const along = (length: number): number => {
-      const run = Math.max(0, length - inset * 2);
+    const along = (length: number, from = 0): number => {
+      const run = Math.max(0, length - from - inset * 2);
 
-      return inset + (run * (index + 0.5)) / group.length;
+      return from + inset + (run * (index + 0.5)) / group.length;
     };
+
+    // Down the sides, the run starts where the node's content does — below its
+    // header, if it has one. Across the top and bottom there is nothing in the
+    // way, so those span the full width.
+    const top = size.contentTop ?? 0;
 
     switch (side) {
       case 'top':
@@ -138,9 +159,9 @@ export class FbGeometry {
       case 'bottom':
         return { x: origin.x + along(size.width), y: origin.y + size.height - outOffset };
       case 'right':
-        return { x: origin.x + size.width - outOffset, y: origin.y + along(size.height) };
+        return { x: origin.x + size.width - outOffset, y: origin.y + along(size.height, top) };
       default:
-        return { x: origin.x - inOffset, y: origin.y + along(size.height) };
+        return { x: origin.x - inOffset, y: origin.y + along(size.height, top) };
     }
   }
 }

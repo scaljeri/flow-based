@@ -39,11 +39,20 @@ footer {
   @include fb-position(absolute, 0 0 8px 50%);
 }
 
+/*
+ * Inputs down the left, the merged value on the right, and the two columns
+ * spread over the same height — because the SOCKETS are, and the lines between
+ * them should run straight across rather than diagonally down.
+ */
 .main {
-  align-items: center;
+  align-items: stretch;
   display: flex;
+  gap: 28px;
   height: 100%;
-  justify-content: center;
+  justify-content: space-between;
+  /* Room on the left for the incoming lines to bend in rather than kink. */
+  min-height: 170px;
+  padding: 10px 10px 10px 30px;
 }
 
 mat-card {
@@ -57,20 +66,40 @@ mat-card {
 
 .socket {
   background-color: #fff;
-  flex: 1;
-  margin: 16px;
   position: relative;
   z-index: 10;
 }
 
+/*
+ * `space-around` gives each of n cards a slot of the column's height, centred
+ * within it — the same rule FbGeometry lays the sockets out by. With the two
+ * following one rule, card i sits opposite socket i however many there are, and
+ * adding an input in the settings keeps them lined up rather than drifting.
+ */
 .inputs {
-  width: 150px;
+  display: flex;
+  flex-direction: column;
+  /* A gap as well, or two cards that fill the column end up touching. */
+  gap: 12px;
+  justify-content: space-around;
+  width: 130px;
+}
+
+.inputs .socket {
+  padding: 8px 0;
+  text-align: center;
 }
 
 .output {
+  align-items: center;
   display: flex;
-  margin-left: 100px;
-  @include fb-size(200px, 150px);
+  width: 180px;
+
+  .socket {
+    flex: 1;
+    padding: 24px 0;
+    text-align: center;
+  }
 
   mat-card-content {
     font-size: 30px;

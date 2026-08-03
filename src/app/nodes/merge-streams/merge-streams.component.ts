@@ -47,6 +47,7 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    clearTimeout(this.redraw);
     this.subscriptions.forEach(s => s.unsubscribe());
   }
 
@@ -71,10 +72,23 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  createConnections(): void {
-    this.service.removeConnections();
+  private redraw?: ReturnType<typeof setTimeout>;
 
-    setTimeout(() => {
+  /**
+   * Draw a line from each input socket to its card, and from each card to the
+   * output.
+   *
+   * The clear happens INSIDE the timeout, and any pending one is cancelled
+   * first. It used to clear immediately and add a frame later, so two calls in
+   * quick succession — a value arriving as the node opens — cleared once and
+   * added twice, leaving every line drawn on top of itself.
+   */
+  createConnections(): void {
+    clearTimeout(this.redraw);
+
+    this.redraw = setTimeout(() => {
+      this.service.removeConnections();
+
       this.inputs.forEach((s, i) => {
         // `dataset.socketId` is a string; the socket registry is keyed by id, so
         // convert rather than relying on JS object keys coercing.
@@ -97,7 +111,6 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
         this.service.addConnection(this.output.nativeElement, outDetails.element);
       }
 
-      // this.cdr.detectChanges();
     });
   }
 
