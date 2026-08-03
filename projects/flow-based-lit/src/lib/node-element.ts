@@ -6,6 +6,7 @@ import {
   FbNodeMount,
   FbNodeState,
   FbNodeView,
+  FbPosition,
   FbSocket,
   componentFor,
   previewChild,
@@ -509,12 +510,74 @@ export class FbNodeElement extends LitElement {
       height: var(--fb-socket-size, 14px);
       position: absolute;
       transform: translate(-50%, -50%) rotate(45deg);
+      /* Only the growth is animated; the position is written every frame. */
+      transition: transform 120ms ease-out, background-color 120ms linear;
       width: var(--fb-socket-size, 14px);
       z-index: 30;
     }
 
+    /*
+     * What you press is bigger than what you see.
+     *
+     * A socket is a 14px dot, and connecting two of them means hitting both. A
+     * dot that small is fiddly with a mouse and a coin toss with a finger — and
+     * the cost of missing is not nothing, since a press that lands on the node
+     * instead starts dragging it.
+     *
+     * So the dot keeps its size and grows an invisible circle around it. It is a
+     * pseudo-element rather than a second element: an event inside it reports the
+     * socket itself as its target, so nothing downstream has to know it exists.
+     */
+    .socket::before {
+      border-radius: 50%;
+      content: '';
+      /*
+       * Sized and centred outright rather than by a negative inset, which is
+       * measured from the PADDING box and so came out six pixels short — the
+       * dot's border, counted twice. A width says what it means. (No backticks
+       * in here: it is inside a tagged CSS template literal.)
+       *
+       * Never smaller than the dot itself, since at full view the dot is 42px and
+       * would otherwise be given a target inside it. Never wider than
+       * --fb-socket-gap, which the element sets to the distance to the nearest
+       * socket on the same side: a target that reaches its neighbour connects the
+       * wrong socket, which is worse than a small one.
+       */
+      height: var(--fb-socket-hit);
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: var(--fb-socket-hit);
+    }
+
+    .socket {
+      --fb-socket-hit: max(
+        var(--fb-socket-size, 14px),
+        min(var(--fb-socket-target, 30px), var(--fb-socket-gap, 999px))
+      );
+    }
+
+    /* A finger covers about forty pixels. Give it something to land on. */
+    @media (pointer: coarse) {
+      .socket {
+        --fb-socket-target: 44px;
+      }
+    }
+
+    /*
+     * The socket you pressed, waiting for its partner.
+     *
+     * Bigger as well as coloured. It is the one thing on screen the next click
+     * depends on, and while a connection is being drawn the line already leaves
+     * from it — so it should be the easiest thing to see, and to press again to
+     * change your mind.
+     */
     .socket.is-active {
       background-color: var(--fb-active-color, #fa0);
+      border-color: var(--fb-active-color, #fa0);
+      box-shadow: 0 0 0 4px rgba(255, 170, 0, 0.25);
+      transform: translate(-50%, -50%) rotate(45deg) scale(1.6);
     }
 
     .socket.is-accepting {
@@ -1514,8 +1577,49 @@ export class FbNodeElement extends LitElement {
     }
 
     const origin = geometry.nodeOrigin(this.state, plane);
+    const gap = this.socketGap(socket, point);
 
-    return `${colour}left:${point.x - origin.x}px;top:${point.y - origin.y}px;`;
+    return `${colour}left:${point.x - origin.x}px;top:${point.y - origin.y}px;`
+      + (gap === undefined ? '' : `--fb-socket-gap:${gap}px;`);
+  }
+
+  /**
+   * How far it is to the next socket on the same side.
+   *
+   * The press target grows to this at most, because sockets share a column whose
+   * spacing shrinks as they are added — `(height - 12) / n`, so four of them on a
+   * short node sit fifteen pixels apart. A target that reached its neighbour
+   * would connect the wrong socket, and a connection made by mistake is worse
+   * than one that took two tries.
+   *
+   * Measured between computed positions rather than derived from the layout
+   * constants, so this cannot drift from where the dots actually are.
+   */
+  private socketGap(socket: FbSocket, point: FbPosition): number | undefined {
+    const group = (this.state?.sockets ?? []).filter(s => s.type === socket.type);
+
+    // Nothing to collide with, so nothing to cap.
+    if (group.length < 2) {
+      return undefined;
+    }
+
+    const { geometry, viewport } = this.editor;
+    const plane = viewport.planeSize;
+    let nearest = Infinity;
+
+    for (const other of group) {
+      if (other.id === socket.id) {
+        continue;
+      }
+
+      const p = geometry.socketPosition(this.state, other, plane);
+
+      if (p) {
+        nearest = Math.min(nearest, Math.abs(p.y - point.y));
+      }
+    }
+
+    return Number.isFinite(nearest) ? nearest : undefined;
   }
 
   private onSocketDown(event: PointerEvent, socket: FbSocket): void {

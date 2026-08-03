@@ -1373,3 +1373,136 @@ test('a connection can be hit without hitting a 3px curve', async ({ page }) => 
   expect(Math.min(...reach)).toBeLessThanOrEqual(-8);
   expect(Math.max(...reach)).toBeGreaterThanOrEqual(8);
 });
+
+/* ==========================================================================
+   Hitting a socket
+   ========================================================================== */
+
+/** The socket dot, and how far from its centre a press still lands on it. */
+async function socketTarget(page: Page, title: string, type: 'in' | 'out'): Promise<{
+  dot: number;
+  reach: number;
+}> {
+  return page.evaluate(([t, kind]) => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
+    const dot = node.shadowRoot!.querySelector(`.socket-${kind}`)!;
+    const rect = dot.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    let reach = 0;
+
+    for (let d = 1; d <= 40; d++) {
+      if (node.shadowRoot!.elementFromPoint(cx, cy + d) !== dot) {
+        break;
+      }
+      reach = d;
+    }
+
+    return { dot: rect.width, reach: reach * 2 };
+  }, [title, type]);
+}
+
+/**
+ * A socket is a 14px dot, and connecting means hitting two of them.
+ *
+ * The dot stays small — it is a marker on the node's edge, not a button — so
+ * what grows is an invisible circle around it. Measured through
+ * `elementFromPoint` rather than read off the stylesheet, because a press target
+ * is only real if the browser agrees a point is inside it.
+ */
+test('a socket can be pressed well outside its dot', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const { dot, reach } = await socketTarget(page, 'Source', 'out');
+
+  expect(dot).toBeLessThan(24);
+  expect(reach).toBeGreaterThan(dot * 1.4);
+});
+
+/**
+ * ...but never so far that it reaches the socket next to it.
+ *
+ * Sockets share a column whose spacing shrinks as they are added, so a fixed
+ * target would start connecting the wrong one — and a connection made by mistake
+ * is worse than one that took two tries.
+ */
+test('a crowded socket column caps the press target at the gap', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const roomy = await socketTarget(page, 'Sink', 'in');
+
+  // Crowd the same side until the sockets are closer than the target would be.
+  await page.evaluate(() => {
+    const node = window.fbEditor.children
+      .find(n => n.title === 'Sink')!;
+
+    for (let i = 0; i < 5; i++) {
+      window.fbEditor.addSocket(node.id!, 'in');
+    }
+  });
+
+  const crowded = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const dots = [...node.shadowRoot!.querySelectorAll('.socket-in')];
+    const centres = dots.map(d => {
+      const r = d.getBoundingClientRect();
+
+      return r.top + r.height / 2;
+    });
+
+    return {
+      count: dots.length,
+      gap: Math.abs(centres[1] - centres[0]),
+      target: parseFloat(getComputedStyle(dots[0], '::before').width),
+    };
+  });
+
+  expect(crowded.count).toBe(6);
+  expect(crowded.gap).toBeLessThan(roomy.reach);
+  // Never reaching past the neighbour is the whole point.
+  expect(crowded.target).toBeLessThanOrEqual(Math.max(crowded.gap, 14) + 0.5);
+});
+
+/**
+ * The socket you pressed is the one the next click depends on, so it says so.
+ */
+test('the socket waiting for a partner grows and colours', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const dotWidth = () => page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const dot = node.shadowRoot!.querySelector('.socket-out')!;
+
+    return {
+      width: dot.getBoundingClientRect().width,
+      colour: getComputedStyle(dot).backgroundColor,
+      active: dot.classList.contains('is-active'),
+    };
+  });
+
+  const before = await dotWidth();
+  expect(before.active).toBe(false);
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+
+    node.shadowRoot!.querySelector('.socket-out')!
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  });
+
+  // Polled on the width, not on the class: the growth is a 120ms transition, so
+  // the class is set well before the socket has finished getting bigger.
+  await expect.poll(async () => (await dotWidth()).width > before.width * 1.3).toBe(true);
+
+  const after = await dotWidth();
+  expect(after.active).toBe(true);
+  expect(after.colour).not.toBe(before.colour);
+});

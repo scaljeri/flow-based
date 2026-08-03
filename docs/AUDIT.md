@@ -808,6 +808,28 @@ The `line-click` event became `connection-remove`, since it no longer describes
 a click, and the arming flag joins the `guard` key — otherwise the memoised
 sub-template skips the very re-render that turns the line red.
 
+## Stage 10 — sockets you can hit
+
+A socket is a 14px dot, and connecting means hitting two of them. The dot stays
+that size — it is a marker on the node's edge, not a button — so what grew is an
+invisible circle around it: 30px with a mouse, 44px on a coarse pointer, as a
+`::before` so an event inside it still reports the socket as its target.
+
+It is **capped at the distance to the nearest socket on the same side**, which
+the element measures and passes down as `--fb-socket-gap`. Sockets share a column
+whose spacing is `(height - 12) / n`, so five of them on a short node sit four
+pixels apart; a fixed target would quietly connect the wrong one, and a
+connection made by mistake is worse than one that took two tries. The floor is
+the dot itself, since at `full` view the dot is 42px.
+
+The active socket — the one waiting for a partner — now grows 1.6× and takes a
+halo as well as its colour. It is the one thing on screen the next click depends
+on.
+
+Sized with an explicit width rather than a negative `inset`, which is measured
+from the padding box and came out six pixels short: the dot's border, counted
+twice.
+
 ### Still open
 - **`a drag does not cost work proportional to the size of the graph` is flaky**,
   around one run in five even with a single worker. Measured, not guessed: the
