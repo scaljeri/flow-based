@@ -904,6 +904,26 @@ And the test that was meant to catch it sampled the tangent 20px back along the
 arc, where a hard-turning cubic has already swung off its final direction; at 3px
 the same curve reads 0.4 across against 3 down.
 
+## Stage 13 — a socket is edited by pressing the socket
+
+The panel carried a list of socket rows AND the dots on its rim, which said
+everything twice — and the row was the copy that could not show which edge its
+socket was on. The list is gone. What is left is two buttons, `+ in` on the left
+and `+ out` on the right because that is where those sockets appear, and the dots
+themselves for everything else.
+
+A press that never travelled is a tap and opens that socket's own dialog — name,
+direction, colour, remove. One that did is a move around the rim. Both start with
+the same pointerdown, so the difference is made on release with a few pixels of
+slop, exactly as a node's own click/drag is.
+
+Direction is editable now, and changing it **disconnects the socket**:
+`Flow.disconnectSocket()` was extracted from `removeSocket` for it. A connection
+is a direction, so an `in` that becomes an `out` leaves every line through it
+describing something no longer true — better cut than left pointing the wrong
+way. It scans the whole connection index rather than one flow's list, because a
+subflow's own sockets are connected in its parent.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

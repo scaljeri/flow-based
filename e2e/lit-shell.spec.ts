@@ -981,7 +981,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
       // stacking context of its own.
       visible: !!config?.open && (config.getBoundingClientRect().height ?? 0) > 0,
       title: config?.querySelector<HTMLInputElement>('input[type=text]')?.value,
-      rows: config?.querySelectorAll('.socket-row').length,
+      dots: config?.querySelectorAll('.rim .dot').length,
     };
   });
 
@@ -990,7 +990,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
    * them — so editing them belongs to the editor. It used to live in the demo
    * app, which meant every consumer of the library had to rebuild it.
    */
-  expect(panel).toMatchObject({ present: true, visible: true, title: 'Sink', rows: 1 });
+  expect(panel).toMatchObject({ present: true, visible: true, title: 'Sink', dots: 1 });
 
   // Typing goes straight through to the state that gets serialised.
   await page.evaluate(() => {
@@ -1013,7 +1013,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
 
     // The out column's own add button; in and out are separate columns because
     // that is which edge of the node they appear on.
-    node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .column-out .add-socket')!.click();
+    node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelectorAll<HTMLButtonElement>('dialog.config .add-socket')[1]!.click();
   });
 
   expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')!.sockets!.length))
@@ -1066,7 +1066,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
     .toBe(before);
 });
 
-test('drags sockets into order, and the node redraws them in that order', async ({ page }) => {
+test('drags a socket into order along the rim, and the node follows', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
@@ -1099,15 +1099,34 @@ test('drags sockets into order, and the node redraws them in that order', async 
     node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
   });
 
-  await page.evaluate(() => {
+  /*
+   * Dragged along the rim rather than in a list. The dots ARE the order — the
+   * one nearest the top of the left edge is the first in-socket — so moving the
+   * third one up past the first is the same gesture as reordering a list, minus
+   * the list.
+   */
+  const grip = await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
-    const rows = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelectorAll('dialog.config .column-in .socket-row');
-    const dataTransfer = new DataTransfer();
+    const settings = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+    const box = settings.querySelector('dialog.config')!.getBoundingClientRect();
+    const dots = [...settings.querySelectorAll('.rim .dot')]
+      .map(d => ({ d, r: d.getBoundingClientRect() }))
+      .filter(({ r }) => r.left < box.left + box.width / 2)
+      .sort((a, b) => a.r.top - b.r.top);
+    const last = dots[dots.length - 1].r;
 
-    rows[2].dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer }));
-    rows[0].dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }));
+    return {
+      from: { x: last.left + last.width / 2, y: last.top + last.height / 2 },
+      // Above the first one, which is where the top of the left edge is.
+      to: { x: box.left + 1, y: box.top + 4 },
+    };
   });
+
+  await page.mouse.move(grip.from.x, grip.from.y);
+  await page.mouse.down();
+  await page.mouse.move(grip.to.x, grip.to.y, { steps: 12 });
+  await page.mouse.up();
 
   expect(await order()).toEqual(['gamma', 'alpha', 'beta']);
 
@@ -1708,7 +1727,7 @@ test('adding a socket shows up in the panel, not only in the model', async ({ pa
 
     return {
       model: (node as unknown as { state: { sockets?: unknown[] } }).state.sockets!.length,
-      rows: dialog.querySelectorAll('.socket-row').length,
+      dots: dialog.querySelectorAll('.rim .dot').length,
       dots: node.shadowRoot!.querySelectorAll('.socket').length,
     };
   });
@@ -1720,10 +1739,10 @@ test('adding a socket shows up in the panel, not only in the model', async ({ pa
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
     node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
-      .querySelector<HTMLButtonElement>('.column-out .add-socket')!.click();
+      .querySelectorAll<HTMLButtonElement>('.add-socket')[1]!.click();
   });
 
-  await expect.poll(async () => (await counts()).rows).toBe(before.rows + 1);
+  await expect.poll(async () => (await counts()).dots).toBe(before.dots + 1);
 
   const after = await counts();
   expect(after.model).toBe(before.model + 1);
@@ -1863,4 +1882,108 @@ test('a connection follows a socket to its new edge', async ({ page }) => {
 
   await expect.poll(async () => (await endpoint()).approach).toBe('vertical');
   expect((await endpoint()).offBy).toBeLessThan(1);
+});
+
+/**
+ * A socket is edited by pressing the socket.
+ *
+ * The panel used to carry a list of rows as well as the dots on its rim, which
+ * said everything twice — and the row was the copy that could not show which
+ * edge its socket was on. What is left is two buttons to add one, and the dots
+ * themselves for everything else.
+ *
+ * A press that never travelled is a tap and opens the socket; one that did is a
+ * move. Both start with the same pointerdown, so this drives the real gesture.
+ */
+test('pressing a socket on the rim opens that socket', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await openNode(page, 'Sink');
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+  });
+
+  const settings = () => page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    return node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+  });
+
+  // Two buttons and no rows: in on the left, out on the right.
+  const buttons = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const root = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+
+    return {
+      add: [...root.querySelectorAll('.add-socket')].map(b => b.textContent!.trim()),
+      rows: root.querySelectorAll('.socket-row').length,
+    };
+  });
+
+  expect(buttons).toEqual({ add: ['+ in', '+ out'], rows: 0 });
+
+  const dot = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const r = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('.rim .dot')!.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.move(dot.x, dot.y);
+  await page.mouse.down();
+  await page.mouse.up();
+
+  const editor = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const dialog = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('dialog.socket-editor') as HTMLDialogElement | null;
+
+    return {
+      open: !!dialog?.open,
+      fields: [...(dialog?.querySelectorAll('input') ?? [])].map(i => i.type),
+      direction: [...(dialog?.querySelectorAll('.choice button') ?? [])]
+        .map(b => `${b.textContent!.trim()}${b.classList.contains('on') ? '*' : ''}`),
+    };
+  });
+
+  expect(editor).toEqual({
+    open: true,
+    fields: ['text', 'color'],
+    direction: ['in*', 'out'],
+  });
+});
+
+/**
+ * Turning a socket around cuts what ran through it.
+ *
+ * A connection is a direction. An `in` that becomes an `out` leaves every line
+ * through it describing something that is no longer true, and a graph the engine
+ * would have to keep pretending about is worse than one that lost a line.
+ */
+test('changing a socket direction disconnects it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = (await connectionPaths(page)).length;
+  expect(before).toBeGreaterThan(0);
+
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.setSocketType(sink.sockets![0], 'out');
+  });
+
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before - 1);
+
+  expect(await page.evaluate(() =>
+    window.fbEditor.children.find(n => n.title === 'Sink')!.sockets![0].type)).toBe('out');
 });

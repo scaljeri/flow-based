@@ -139,12 +139,38 @@ export class Flow {
 
     node.state.sockets = node.state.sockets!.filter(s => s.id !== socket.id);
 
+    this.disconnectSocket(socket.id!);
+
+    // The socket is gone from its node, so it must go from the index too.
+    delete this.sockets[socket.id!];
+
+    if (doRebuild) {
+      this.rebuildNodeConnections();
+    }
+
+    this.changes.emit('sockets');
+  }
+
+  /**
+   * Drop every connection through a socket, leaving the socket itself alone.
+   *
+   * Removing a socket needs this, and so does changing which way one carries:
+   * a connection is a direction, and an `out` that becomes an `in` makes every
+   * line through it describe something that is no longer true. Better cut than
+   * left pointing the wrong way.
+   *
+   * Scans the whole index rather than one flow's list, because a subflow's own
+   * sockets are connected in its PARENT — the flow on screen is not necessarily
+   * the one holding the connection.
+   */
+  disconnectSocket(socketId: number): void {
     const keys = Object.keys(this.connections);
+
     for (let i = keys.length - 1; i >= 0; i--) {
       const key = keys[i],
             connection = this.connections[key].connection;
 
-      if (connection.in === socket.id || connection.out === socket.id) {
+      if (connection.in === socketId || connection.out === socketId) {
         this.connections[key].state.connections =
           this.connections[key].state.connections!.filter(item => item.id !== connection.id);
         delete this.connections[key];
@@ -158,15 +184,6 @@ export class Flow {
         }
       }
     }
-
-    // The socket is gone from its node, so it must go from the index too.
-    delete this.sockets[socket.id!];
-
-    if (doRebuild) {
-      this.rebuildNodeConnections();
-    }
-
-    this.changes.emit('sockets');
   }
 
   addNode(nodeState: FbNodeState, flowState: FbNodeState): void {

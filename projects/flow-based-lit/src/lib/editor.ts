@@ -405,6 +405,25 @@ export class FbEditor {
     this.changes.emit({ kind: 'sockets' });
   }
 
+  /**
+   * Turn a socket around, cutting whatever ran through it.
+   *
+   * A connection is a direction, so an `out` that becomes an `in` leaves every
+   * line through it describing something that is no longer true. Cutting them is
+   * the honest answer; the alternative is a graph the engine would have to keep
+   * pretending about. Undoable, like every other edit here.
+   */
+  setSocketType(socket: FbSocket, type: FbSocketType): void {
+    if (socket.type === type || socket.id === undefined) {
+      return;
+    }
+
+    this.history.capture(this.root);
+    this.flow.disconnectSocket(socket.id);
+    socket.type = type;
+    this.changes.emit({ kind: 'sockets' });
+  }
+
   /* ----------------------------------------------------------------------
      Selection
      ---------------------------------------------------------------------- */

@@ -166,6 +166,45 @@ export class FbNodeSettingsElement extends LitElement {
       padding: 2px 6px;
     }
 
+    .socket-editor header {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .socket-editor header strong {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .socket-editor header button {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px 6px;
+    }
+
+    .socket-editor label {
+      display: block;
+      margin-bottom: 8px;
+      opacity: 0.7;
+    }
+
+    .socket-editor input[type='text'] {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      box-sizing: border-box;
+      color: #fff;
+      font: inherit;
+      padding: 4px 6px;
+      width: 100%;
+    }
+
     .config label {
       display: block;
       margin-bottom: 8px;
@@ -191,63 +230,88 @@ export class FbNodeSettingsElement extends LitElement {
       text-transform: uppercase;
     }
 
-    .sockets {
-      display: grid;
-      gap: 14px;
-      grid-template-columns: 1fr 1fr;
-      margin-top: 4px;
-    }
-
-    .none {
-      margin: 0 0 6px;
-      opacity: 0.45;
-    }
-
-    .socket-row {
-      align-items: center;
-      border-radius: 4px;
+    /*
+     * In on the left, out on the right — the same arrangement the node has, so
+     * pressing the left button puts a dot on the left rim.
+     */
+    .add-sockets {
       display: flex;
-      gap: 4px;
-      margin-bottom: 6px;
-    }
-
-    .socket-row[draggable='true'] {
-      cursor: grab;
-    }
-
-    .grip {
-      cursor: grab;
-      letter-spacing: -2px;
-      opacity: 0.4;
-      user-select: none;
-    }
-
-    .socket-row input[type='text'] {
-      min-width: 0;
+      justify-content: space-between;
+      margin-top: 12px;
     }
 
     .add-socket {
-      white-space: nowrap;
-    }
-
-    .socket-row input[type='color'] {
-      background: none;
-      border: none;
-      block-size: 22px;
-      cursor: pointer;
-      inline-size: 26px;
-      padding: 0;
-    }
-
-    .socket-row button,
-    .config .add-socket {
       background: rgba(255, 255, 255, 0.12);
       border: none;
       border-radius: 4px;
       color: #fff;
       cursor: pointer;
       font: inherit;
-      padding: 3px 8px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+
+    /*
+     * One socket's own dialog, opened by pressing its dot.
+     *
+     * A second modal on top of the first. The top layer stacks, so it lands
+     * above the panel that opened it and Escape closes this one first —
+     * which is the behaviour a nested panel should have and the reason not to
+     * hand-roll a popover.
+     */
+    .socket-editor {
+      background: var(--fb-node-background, rgba(0, 0, 0, 0.95));
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 10px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      box-sizing: border-box;
+      color: #fff;
+      font: 12px system-ui, sans-serif;
+      max-width: 90vw;
+      padding: 16px;
+      width: 260px;
+    }
+
+    .socket-editor::backdrop {
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .socket-editor .choice {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .socket-editor .choice button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      flex: 1;
+      font: inherit;
+      padding: 5px 0;
+      text-transform: uppercase;
+    }
+
+    .socket-editor .choice button.on {
+      background: rgba(255, 255, 255, 0.22);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+
+    .socket-editor .swatch {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+    }
+
+    .socket-editor input[type='color'] {
+      background: none;
+      border: none;
+      block-size: 26px;
+      cursor: pointer;
+      inline-size: 40px;
+      padding: 0;
     }
 
     /* Whatever the node type contributes for its own settings. */
@@ -265,13 +329,13 @@ export class FbNodeSettingsElement extends LitElement {
      * could not be deleted from the node itself. A node's own existence is model,
      * like its title and its sockets, so the panel that edits those owns it.
      */
-    .config .danger {
+    .danger {
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       margin-top: 14px;
       padding-top: 10px;
     }
 
-    .config .delete {
+    .delete {
       align-items: center;
       background: rgba(255, 0, 68, 0.16);
       border: 1px solid rgba(255, 0, 68, 0.5);
@@ -284,7 +348,7 @@ export class FbNodeSettingsElement extends LitElement {
       padding: 5px 10px;
     }
 
-    .config .delete svg {
+    .delete svg {
       height: 14px;
       width: 14px;
     }
@@ -430,7 +494,24 @@ export class FbNodeSettingsElement extends LitElement {
 
   protected override updated(_changed: PropertyValues<this>): void {
     this.syncDialog();
+    this.syncSocketDialog();
     this.mountOwnSettings();
+  }
+
+  /** The same showModal() dance as the panel, for the socket's own dialog. */
+  private syncSocketDialog(): void {
+    const dialog = this.socketDialog;
+
+    if (!dialog) {
+      return;
+    }
+
+    if (this.editing !== undefined && !dialog.open) {
+      dialog.showModal();
+      dialog.querySelector<HTMLInputElement>('input[type=text]')?.select();
+    } else if (this.editing === undefined && dialog.open) {
+      dialog.close();
+    }
   }
 
   /**
@@ -545,16 +626,24 @@ export class FbNodeSettingsElement extends LitElement {
         </label>
 
         <!--
-          Two columns, in on the left and out on the right, because that is where
-          they are on the node. A single list ordered by whatever the array
-          happens to hold makes the reader work out which side each one is on.
+          Two buttons, and that is all: in on the left and out on the right,
+          because that is where those sockets appear. Everything about a socket
+          is edited by pressing the socket — the list of rows that used to be
+          here said the same things twice, and neither copy showed which edge a
+          socket was actually on.
         -->
-        <div class="sockets">
-          ${this.renderSocketColumn('in', state.id!, sockets)}
-          ${this.renderSocketColumn('out', state.id!, sockets)}
+        <div class="add-sockets">
+          <button type="button" class="add-socket" @click=${() => this.editor.addSocket(state.id!, 'in')}>
+            + in
+          </button>
+          <button type="button" class="add-socket" @click=${() => this.editor.addSocket(state.id!, 'out')}>
+            + out
+          </button>
         </div>
 
         <div class="own"></div>
+
+        ${this.renderSocketEditor(sockets)}
 
         ${this.deletable
           ? html`
@@ -579,7 +668,15 @@ export class FbNodeSettingsElement extends LitElement {
    */
 
   /** Where the drag is now, so the dot follows the pointer before it lands. */
-  private dragging?: { id: number; side: FbSocketSide; index: number; pointerId: number };
+  private dragging?: {
+    id: number;
+    side: FbSocketSide;
+    index: number;
+    pointerId: number;
+    from: { x: number; y: number };
+    /** Whether the pointer has travelled far enough to mean a move. */
+    moved: boolean;
+  };
 
   private renderRim(sockets: FbSocket[]) {
     if (!sockets.length) {
@@ -588,7 +685,7 @@ export class FbNodeSettingsElement extends LitElement {
 
     return html`
       <div class="rim">
-        <span class="hint">drag a socket to move it around the node</span>
+        <span class="hint">tap a socket to edit it, drag it to move it</span>
         ${sockets.map(socket => this.renderDot(socket, sockets))}
       </div>
     `;
@@ -624,7 +721,7 @@ export class FbNodeSettingsElement extends LitElement {
         class="dot ${socket.type} ${held ? 'dragging' : ''}"
         style=${`${place}${colour ? `border-color:${colour};` : ''}`}
         data-socket-id=${String(socket.id)}
-        title=${`${socket.name || socket.format || socket.type} — drag to move`}
+        title=${`${socket.name || socket.format || socket.type} — tap to edit, drag to move`}
         @pointerdown=${(e: PointerEvent) => this.onDotDown(e, socket)}></span>
     `;
   }
@@ -645,6 +742,8 @@ export class FbNodeSettingsElement extends LitElement {
       side,
       index: sockets.filter(s => sideOf(s) === side).indexOf(socket),
       pointerId: event.pointerId,
+      from: { x: event.clientX, y: event.clientY },
+      moved: false,
     };
 
     (event.target as Element).setPointerCapture?.(event.pointerId);
@@ -693,10 +792,17 @@ export class FbNodeSettingsElement extends LitElement {
     const others = (this.state?.sockets ?? [])
       .filter(s => sideOf(s) === side && s.id !== this.dragging!.id);
 
+    const travelled = Math.hypot(
+      event.clientX - this.dragging.from.x,
+      event.clientY - this.dragging.from.y,
+    );
+
     this.dragging = {
       ...this.dragging,
       side,
       index: Math.max(0, Math.min(others.length, Math.round(fraction * (others.length + 1) - 0.5))),
+      // A few pixels of slop, so a tap with an unsteady finger is still a tap.
+      moved: this.dragging.moved || travelled > 6,
     };
 
     this.requestUpdate();
@@ -714,14 +820,25 @@ export class FbNodeSettingsElement extends LitElement {
       return;
     }
 
-    const { id, side, index } = this.dragging;
+    const { id, side, index, moved } = this.dragging;
 
     this.dragging = undefined;
     window.removeEventListener('pointermove', this.onDotMove);
     window.removeEventListener('pointerup', this.onDotUp);
     window.removeEventListener('pointercancel', this.onDotUp);
 
-    if (this.state?.id !== undefined) {
+    /*
+     * A press that never travelled is a tap, and a tap opens the socket. The
+     * distinction is made here rather than with a `click` listener because a
+     * drag that happens to end where it started would fire one too.
+     */
+    if (!moved) {
+      const socket = (this.state?.sockets ?? []).find(s => s.id === id);
+
+      if (socket) {
+        this.editSocket(socket);
+      }
+    } else if (this.state?.id !== undefined) {
       this.editor.moveSocket(this.state.id, id, index, side);
     }
 
@@ -739,72 +856,97 @@ export class FbNodeSettingsElement extends LitElement {
     }
   }
 
-  private draggingSocket?: FbSocket;
+  /* ----------------------------------------------------------------------
+     One socket
+     ----------------------------------------------------------------------
+     Press a socket and edit that socket: its name, which way it carries, and
+     its colour. A panel-wide list of every socket said all of it twice — once
+     as a row and once as a dot on the rim — and the row was the copy that could
+     not show which edge the socket was on.
+   */
 
-  private onSocketDragStart(event: DragEvent, socket: FbSocket): void {
-    this.draggingSocket = socket;
-    event.dataTransfer?.setData('text/plain', String(socket.id));
+  /** Which socket's own dialog is open, if any. */
+  private editing?: number;
 
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-    }
+  private editSocket(socket: FbSocket): void {
+    this.editing = socket.id;
+    this.requestUpdate();
   }
 
-  private onSocketDrop(event: DragEvent, toIndex: number): void {
-    event.preventDefault();
-
-    const socket = this.draggingSocket;
-
-    this.draggingSocket = undefined;
-
-    if (socket?.id !== undefined && this.state?.id !== undefined) {
-      this.editor.moveSocket(this.state.id, socket.id, toIndex);
-    }
+  private closeSocket(): void {
+    this.socketDialog?.close();
   }
 
-  private renderSocketColumn(type: 'in' | 'out', nodeId: number, sockets: FbSocket[]) {
-    const mine = sockets.filter(socket => socket.type === type);
+  private get socketDialog(): HTMLDialogElement | null {
+    return this.renderRoot.querySelector('dialog.socket-editor');
+  }
+
+  private renderSocketEditor(sockets: FbSocket[]) {
+    const socket = sockets.find(s => s.id === this.editing);
+
+    if (!socket) {
+      return html``;
+    }
+
+    const colour = socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? '#999999';
 
     return html`
-      <section class="socket-column column-${type}">
-        <h4>${type === 'in' ? 'In' : 'Out'}</h4>
-        ${mine.length
-          ? mine.map((socket, index) => this.renderSocketRow(socket, index))
-          : html`<p class="none">none</p>`}
-        <button type="button" class="add-socket" @click=${() => this.editor.addSocket(nodeId, type)}>
-          + add ${type}
-        </button>
-      </section>
+      <dialog
+        class="socket-editor"
+        @keydown=${(e: Event) => e.stopPropagation()}
+        @close=${() => { this.editing = undefined; this.requestUpdate(); }}>
+        <header>
+          <strong>Socket</strong>
+          <button type="button" title="Close" aria-label="Close"
+                  @click=${() => this.closeSocket()}>×</button>
+        </header>
+
+        <label>
+          Name
+          <input
+            type="text"
+            autofocus
+            .value=${socket.name ?? ''}
+            placeholder=${socket.format ?? 'name'}
+            @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>
+        </label>
+
+        <!--
+          Which way it carries. Turning a socket around cuts whatever ran through
+          it — a connection is a direction, and one through a socket that has
+          reversed describes something no longer true.
+        -->
+        <label>Direction</label>
+        <div class="choice">
+          ${(['in', 'out'] as const).map(type => html`
+            <button
+              type="button"
+              class=${socket.type === type ? 'on' : ''}
+              aria-pressed=${socket.type === type ? 'true' : 'false'}
+              @click=${() => this.editor.setSocketType(socket, type)}>${type}</button>
+          `)}
+        </div>
+
+        <label class="swatch">
+          Colour
+          <input
+            type="color"
+            .value=${colour}
+            @input=${(e: Event) => this.editor.updateSocket(socket, { color: (e.target as HTMLInputElement).value })}>
+        </label>
+
+        <div class="danger">
+          <button type="button" class="delete" @click=${() => this.removeSocket(socket)}>
+            ${ICON_TRASH} Remove socket
+          </button>
+        </div>
+      </dialog>
     `;
   }
 
-  private renderSocketRow(socket: FbSocket, index: number) {
-    /*
-     * Native drag and drop rather than pointer maths: the browser already knows
-     * what dragging a row looks like, and the drag image, the cursor and the
-     * cancel-on-Escape all come for free.
-     */
-    return html`
-      <div
-        class="socket-row"
-        draggable="true"
-        data-index=${index}
-        @dragstart=${(e: DragEvent) => this.onSocketDragStart(e, socket)}
-        @dragover=${(e: DragEvent) => e.preventDefault()}
-        @drop=${(e: DragEvent) => this.onSocketDrop(e, index)}>
-        <span class="grip" title="Drag to reorder">⋮⋮</span>
-        <input
-          type="text"
-          .value=${socket.name ?? ''}
-          placeholder=${socket.format ?? 'name'}
-          @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>
-        <input
-          type="color"
-          .value=${socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? '#999999'}
-          @input=${(e: Event) => this.editor.updateSocket(socket, { color: (e.target as HTMLInputElement).value })}>
-        <button type="button" title="Remove socket" @click=${() => this.editor.removeSocket(socket)}>×</button>
-      </div>
-    `;
+  private removeSocket(socket: FbSocket): void {
+    this.closeSocket();
+    this.editor.removeSocket(socket);
   }
 }
 
