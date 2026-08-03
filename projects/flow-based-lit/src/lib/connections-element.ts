@@ -125,6 +125,24 @@ export class FbConnectionsElement extends LitElement {
     path.pointer-path {
       pointer-events: none;
     }
+
+    /*
+     * The loose end of a half-drawn connection, and the only part of it you can
+     * press. Big enough for a finger, since dragging it is the whole point.
+     */
+    circle.pending-handle {
+      cursor: grab;
+      pointer-events: auto;
+      stroke: #fff;
+      stroke-width: 2;
+      touch-action: none;
+    }
+
+    @media (pointer: coarse) {
+      circle.pending-handle {
+        r: 16px;
+      }
+    }
   `;
 
   declare editor: FbEditor;
@@ -331,7 +349,86 @@ export class FbConnectionsElement extends LitElement {
             d=${route.d}
             stroke=${this.colourOf(pending.socket.format)}
             stroke-width="5"></path>
+
+      <!--
+        The loose end, with something to pick it up by.
+        See onHandleDown.
+      -->
+      <circle class="pending-handle"
+              cx=${pointer.x}
+              cy=${pointer.y}
+              r="10"
+              fill=${this.colourOf(pending.socket.format)}
+              @pointerdown=${this.onHandleDown}></circle>
     `;
+  }
+
+  /* ----------------------------------------------------------------------
+     The loose end of a half-drawn connection
+     ----------------------------------------------------------------------
+     Tapping a socket starts a connection and the line follows the pointer, but
+     a finger that lifts leaves it hanging in mid-air with nothing to grab: the
+     only way to move it again was to press the canvas, which pans the graph
+     while the line trails along behind.
+
+     So the end gets a handle. Press it and drag, and only the line moves; let go
+     over a socket and the connection is made, which is the gesture people try
+     first anyway.
+   */
+
+  private handlePointerId: number | null = null;
+
+  private onHandleDown = (event: PointerEvent): void => {
+    // The canvas would otherwise read this as a background press and pan.
+    event.stopPropagation();
+    event.preventDefault();
+
+    this.handlePointerId = event.pointerId;
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+
+    window.addEventListener('pointermove', this.onHandleMove);
+    window.addEventListener('pointerup', this.onHandleUp);
+    window.addEventListener('pointercancel', this.onHandleUp);
+  };
+
+  private readonly onHandleMove = (event: PointerEvent): void => {
+    if (event.pointerId !== this.handlePointerId) {
+      return;
+    }
+
+    this.editor.setPointer(this.toPlane(event));
+  };
+
+  private readonly onHandleUp = (event: PointerEvent): void => {
+    if (event.pointerId !== this.handlePointerId) {
+      return;
+    }
+
+    this.handlePointerId = null;
+    window.removeEventListener('pointermove', this.onHandleMove);
+    window.removeEventListener('pointerup', this.onHandleUp);
+    window.removeEventListener('pointercancel', this.onHandleUp);
+
+    /*
+     * Dropped on a socket, that is the other end. Found through the editor's
+     * geometry rather than the document, because a socket lives in its node's
+     * shadow root and `elementFromPoint` stops at the host.
+     */
+    const target = this.editor.socketAt(this.toPlane(event));
+
+    if (target) {
+      this.editor.socketClicked(target.socket, target.nodeId);
+    }
+  };
+
+  /** Where a pointer is, in the plane's own coordinates. */
+  private toPlane(event: { clientX: number; clientY: number }): FbPosition {
+    const rect = this.getBoundingClientRect();
+
+    return this.editor.viewport.toPlane({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    });
   }
 
   /* ----------------------------------------------------------------------

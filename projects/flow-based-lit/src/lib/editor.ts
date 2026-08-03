@@ -833,6 +833,43 @@ export class FbEditor {
     this.changes.emit({ kind: 'interaction' });
   }
 
+  /**
+   * The socket nearest a point on the plane, if one is close enough.
+   *
+   * Asked of the MODEL rather than the document: sockets live in each node's
+   * shadow root, and `elementFromPoint` stops at the host — so hit-testing the
+   * DOM would return the node and never the dot on it. Every socket's position
+   * is computed here anyway, which makes this both possible and exact.
+   *
+   * `within` is generous on purpose. Dropping a connection is aiming at a 16px
+   * dot with a line already under your finger, and the cost of missing is losing
+   * the connection you were drawing.
+   */
+  socketAt(point: FbPosition, within = 26): FbPendingSocket | undefined {
+    const plane = this.viewport.planeSize;
+    let best: FbPendingSocket | undefined;
+    let nearest = within;
+
+    for (const node of this.children) {
+      for (const socket of node.sockets ?? []) {
+        const at = this.geometry.socketPosition(node, socket, plane);
+
+        if (!at) {
+          continue;
+        }
+
+        const distance = Math.hypot(at.x - point.x, at.y - point.y);
+
+        if (distance <= nearest) {
+          nearest = distance;
+          best = { socket, nodeId: node.id! };
+        }
+      }
+    }
+
+    return best;
+  }
+
   setPointer(point: FbPosition | null): void {
     this.pointer = point;
     this.changes.emit({ kind: 'interaction' });

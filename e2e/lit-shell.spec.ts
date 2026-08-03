@@ -2187,3 +2187,78 @@ test('a subflow takes its inputs from outside and its outputs from within', asyn
     return window.fbEditor.formatsFor(node, node.sockets![0]);
   })).toEqual(['heat', 'number']);
 });
+
+/**
+ * A half-drawn connection has something to pick it up by.
+ *
+ * Tapping a socket starts one and the line follows the pointer — but a finger
+ * that lifts leaves it hanging in mid-air, and the only way to move it again was
+ * to press the canvas, which pans the graph and drags the line along behind it.
+ *
+ * So the loose end gets a handle: press it and only the line moves, let go over
+ * a socket and the connection is made. Driven as the real gesture, because the
+ * whole point is that it is one.
+ */
+test('the loose end of a connection can be picked up and dropped on a socket', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const handle = () => page.evaluate(() => {
+    const circle = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector('circle.pending-handle');
+
+    if (!circle) {
+      return null;
+    }
+
+    const r = circle.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  // Nothing to grab until a connection is being drawn.
+  expect(await handle()).toBeNull();
+
+  const before = (await connectionPaths(page)).length;
+
+  // A fresh sink to aim at, so the connection drawn here is a new one.
+  await page.locator('#add').click();
+  await expect.poll(() => nodeCount(page)).toBe(4);
+
+  const start = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const r = node.shadowRoot!.querySelector('.socket-out')!.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  // Somewhere to be, so the free end is not still on top of the socket.
+  await page.mouse.move(start.x + 80, start.y + 80);
+
+  const grip = await handle();
+  expect(grip).not.toBeNull();
+
+  // Drag the loose end onto the new sink's input and let go.
+  const target = await page.evaluate(() => {
+    const node = document.querySelectorAll('fb-flow-canvas fb-node-box')[3];
+    const r = node.shadowRoot!.querySelector('.socket-in')!.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.move(grip!.x, grip!.y);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y, { steps: 12 });
+  await page.mouse.up();
+
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
+
+  // The connection is finished, so there is no loose end left to grab.
+  expect(await handle()).toBeNull();
+  expect(await worstEndpointError(page)).toBeLessThan(1);
+});

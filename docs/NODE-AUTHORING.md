@@ -289,6 +289,7 @@ For reference, since these are the gestures your content shares the surface with
 | press a node | selects it; dragging moves it |
 | double-click a small node | opens it to `normal` |
 | press a socket, then another | connects them; the first grows and turns orange |
+| drag the loose end's handle | moves the half-drawn line; drop it on a socket to connect |
 | **hold a connection** | removes it — it turns red and thickens first |
 | press the background | pans; shift-drag draws a selection marquee |
 

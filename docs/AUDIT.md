@@ -964,6 +964,26 @@ sockets are its boundary rather than something inside it. That is what keeps a
 subflow's types its own: they reach the outside through its outputs, and nothing
 reaches in but through its inputs.
 
+## Stage 15 — a half-drawn connection has something to pick it up by
+
+Tapping a socket starts a connection and the line follows the pointer, but a
+finger that lifts left it hanging in mid-air with nothing to grab: the only way
+to move it again was to press the canvas, which pans the graph and drags the line
+along behind it.
+
+The loose end now carries a handle — press it and only the line moves, let go
+over a socket and the connection is made, which is the gesture people try first
+anyway. Both ways still work: tapping a second socket connects as before.
+
+What is under the pointer is found through the editor's geometry
+(`FbEditor.socketAt`) rather than the document. A socket lives in its node's
+shadow root and `elementFromPoint` stops at the host, so hit-testing the DOM
+returns the node and never the dot on it — and every socket's position is
+computed here anyway, which makes the model both the easier and the exact answer.
+Its radius is generous: dropping a connection means aiming at a 16px dot with a
+line already under your finger, and the cost of missing is losing the connection
+you were drawing.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a
