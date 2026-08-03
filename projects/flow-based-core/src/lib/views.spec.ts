@@ -147,23 +147,23 @@ describe('stepView', () => {
 });
 
 describe('previewChild', () => {
-  const composite = (config?: unknown): FbNodeState => ({
+  const subflow = (config?: unknown): FbNodeState => ({
     type: 'flow',
     config,
     children: [{ type: 'a', id: 1 }, { type: 'b', id: 2 }],
   });
 
   it('uses the child named in config', () => {
-    expect(previewChild(composite({ preview: 2 }))?.id).toBe(2);
+    expect(previewChild(subflow({ preview: 2 }))?.id).toBe(2);
   });
 
   it('falls back to the first child, so older flows still show something', () => {
-    expect(previewChild(composite())?.id).toBe(1);
+    expect(previewChild(subflow())?.id).toBe(1);
     // Named child gone: the fallback still applies rather than showing nothing.
-    expect(previewChild(composite({ preview: 99 }))?.id).toBe(1);
+    expect(previewChild(subflow({ preview: 99 }))?.id).toBe(1);
   });
 
-  it('has nothing to show for an empty composite', () => {
+  it('has nothing to show for an empty subflow', () => {
     expect(previewChild({ type: 'flow', children: [] })).toBeUndefined();
   });
 });

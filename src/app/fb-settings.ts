@@ -12,7 +12,7 @@ import { TapNormalComponent } from './nodes/tap/tap-normal.component';
 import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { TAP_SETTINGS, TapWorker } from './workers/tap';
 import { METER_SETTINGS, meterNormal, meterSmall } from './nodes/meter/meter.node';
-import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
+import { SubflowComponent } from './nodes/subflow/subflow.component';
 import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
 import { CUSTOM_CODE_SETTINGS, CustomCodeWorker } from './workers/custom-code';
 import { FractalComponent } from './nodes/fractal/fractal.component';
@@ -48,7 +48,11 @@ export const FB_CONFIG: FbNodeTypes = {
   'fractals': {component: FractalComponent, settings: FRACTALS_SETTINGS, worker: FractalsWorker},
   'zoomcanvas': {component: ZoomCanvasComponent, settings: ZOOM_CANVAS_SETTINGS, worker: ZoomCanvasWorker},
   'canvas': {component: CanvasComponent, settings: CANVAS_SETTINGS, worker: CanvasWorker},
-  'flow': {component: DefaultFlowComponent, settings: {title: 'Composite Unit', isFlow: true}},
+  /*
+   * A subflow: a node that is itself a flow. The type key stays `flow` because
+   * it is in every saved file; only what it is CALLED changed.
+   */
+  'flow': {component: SubflowComponent, settings: {title: 'Subflow', isFlow: true}},
 
   /*
    * A node type with no framework in it — plain DOM against FbNodeApi, sitting

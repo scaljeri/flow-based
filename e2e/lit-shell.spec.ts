@@ -901,7 +901,7 @@ test('deletes a node from its settings, which every node type has', async ({ pag
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .delete')!.click();
+    node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .delete')!.click();
   });
 
   await expect
@@ -913,14 +913,14 @@ test('deletes a node from its settings, which every node type has', async ({ pag
   expect(await connectionPaths(page)).toHaveLength(linesBefore - 1);
 });
 
-test('a composite shows a child until it is full, then becomes the flow itself', async ({ page }) => {
-  // The composite is opt-in, so the other tests keep asserting counts against a
+test('a subflow shows a child until it is full, then becomes the flow itself', async ({ page }) => {
+  // The subflow is opt-in, so the other tests keep asserting counts against a
   // fixture this feature does not change.
-  await page.goto(`${HARNESS}?composite=1`);
+  await page.goto(`${HARNESS}?subflow=1`);
   await expect(canvas(page)).toBeVisible();
 
   /*
-   * At rest the composite draws the child named by `config.preview` — the inner
+   * At rest the subflow draws the child named by `config.preview` — the inner
    * scope, which is the one that draws to a canvas.
    */
   const preview = await page.evaluate(() => {
@@ -938,7 +938,7 @@ test('a composite shows a child until it is full, then becomes the flow itself',
   await stepView(page, 'Group', 'grow');
 
   /*
-   * Full for a composite is its own graph, and showing that is navigation: one
+   * Full for a subflow is its own graph, and showing that is navigation: one
    * editor moves to the child flow rather than a node growing to hold an editor
    * of its own.
    */
@@ -971,7 +971,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
   const panel = await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
-    const config = node.shadowRoot!.querySelector('dialog.config') as HTMLDialogElement | null;
+    const config = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelector('dialog.config') as HTMLDialogElement | null;
 
     return {
       present: !!config,
@@ -996,7 +996,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
   await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
-    const input = node.shadowRoot!.querySelector<HTMLInputElement>('dialog.config input[type=text]')!;
+    const input = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelector<HTMLInputElement>('dialog.config input[type=text]')!;
 
     input.value = 'Output';
     input.dispatchEvent(new Event('input'));
@@ -1013,7 +1013,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
 
     // The out column's own add button; in and out are separate columns because
     // that is which edge of the node they appear on.
-    node.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .column-out .add-socket')!.click();
+    node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelector<HTMLButtonElement>('dialog.config .column-out .add-socket')!.click();
   });
 
   expect(await page.evaluate(() => window.fbEditor.children.find(c => c.title === 'Output')!.sockets!.length))
@@ -1043,7 +1043,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
 
-    node.shadowRoot!.querySelector<HTMLInputElement>('dialog.config input[type=text]')!.focus();
+    node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelector<HTMLInputElement>('dialog.config input[type=text]')!.focus();
   });
   await page.keyboard.press('Delete');
   expect(await page.evaluate(() => window.fbEditor.children.length)).toBe(nodesBefore);
@@ -1056,7 +1056,7 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Output')!;
 
-    return node.shadowRoot!.querySelector<HTMLDialogElement>('dialog.config')?.open ?? false;
+    return node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelector<HTMLDialogElement>('dialog.config')?.open ?? false;
   });
   expect(closed).toBe(false);
 
@@ -1102,7 +1102,7 @@ test('drags sockets into order, and the node redraws them in that order', async 
   await page.evaluate(() => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
-    const rows = node.shadowRoot!.querySelectorAll('dialog.config .column-in .socket-row');
+    const rows = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!.querySelectorAll('dialog.config .column-in .socket-row');
     const dataTransfer = new DataTransfer();
 
     rows[2].dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer }));
@@ -1505,4 +1505,115 @@ test('the socket waiting for a partner grows and colours', async ({ page }) => {
   const after = await dotWidth();
   expect(after.active).toBe(true);
   expect(after.colour).not.toBe(before.colour);
+});
+
+/* ==========================================================================
+   Subflows
+   ========================================================================== */
+
+/**
+ * A subflow's `full` view is its graph, so the header has to follow it there.
+ *
+ * Stepping a subflow to full does not grow a node — the editor goes inside it,
+ * and the node box is no longer on screen. Everything the header offered has to
+ * arrive on the canvas with it, or entering a subflow means losing its title,
+ * its settings and the way back in one gesture.
+ */
+test('the subflow header follows it onto the canvas', async ({ page }) => {
+  await page.goto(`${HARNESS}?subflow=1`);
+  await expect(canvas(page)).toBeVisible();
+
+  // No header at the root: it is not a node and there is nowhere to go back to.
+  await expect(page.locator('fb-flow-canvas .head')).toHaveCount(0);
+
+  await stepView(page, 'Group', 'grow');
+  await stepView(page, 'Group', 'grow');
+
+  const head = await page.evaluate(() => {
+    const bar = document.querySelector('fb-flow-canvas')!.shadowRoot!.querySelector('.head')!;
+
+    return {
+      crumbs: bar.querySelector('.crumbs')!.textContent!.replace(/\s+/g, ' ').trim(),
+      buttons: [...bar.querySelectorAll('button[aria-label]')].map(b => b.getAttribute('aria-label')),
+    };
+  });
+
+  expect(head.crumbs).toBe('Signals and scopes › Group');
+  // Settings and the way out. No "bigger": full is where you already are.
+  expect(head.buttons).toEqual(['Settings', 'Show smaller (normal)']);
+
+  /*
+   * The settings panel is the same one the node header opens, on the flow you
+   * are inside — which is the only place a subflow's own sockets can be edited,
+   * since its node box is not on screen.
+   */
+  await page.evaluate(() => {
+    document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+  });
+
+  const panel = await page.evaluate(() => {
+    const settings = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-node-settings')!;
+    const dialog = settings.shadowRoot!.querySelector('dialog.config') as HTMLDialogElement;
+
+    return {
+      open: dialog.open,
+      title: dialog.querySelector<HTMLInputElement>('input[type=text]')!.value,
+      // Not offered: removing the ground you are standing on would leave the
+      // editor showing a graph that is no longer in the document.
+      deletable: !!dialog.querySelector('.delete'),
+    };
+  });
+
+  expect(panel).toEqual({ open: true, title: 'Group', deletable: false });
+
+  // And the way out puts the node back, at normal.
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => {
+    document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector<HTMLButtonElement>('.head button.step')!.click();
+  });
+
+  await expect.poll(() => viewsOf(page)).toContain('normal:Group');
+});
+
+/**
+ * A new subflow is empty, and both halves of that need answering.
+ *
+ * It opens in full, because at small an empty subflow is an icon of nothing and
+ * the only reason to have added one is to put something in it. And when you come
+ * back out it draws its type's own icon rather than the nothing it used to: a
+ * subflow normally draws one of its children, and it has none yet.
+ */
+test('a new subflow opens inside itself, and draws an icon when empty', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await nodeCount(page);
+
+  await page.evaluate(() => window.fbEditor.addNode('group'));
+  await page.waitForTimeout(100);
+
+  // Inside it: the root's nodes are gone from the canvas and the header is up.
+  await expect.poll(() => nodeCount(page)).toBe(0);
+  await expect(page.locator('fb-flow-canvas .head')).toHaveCount(1);
+
+  await page.evaluate(() => window.fbEditor.leave());
+
+  await expect.poll(() => nodeCount(page)).toBe(before + 1);
+
+  const drawn = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'group')!;
+
+    return {
+      children: (node as unknown as { state: { children?: unknown[] } }).state.children!.length,
+      // Its own drawing, because there is no child to stand in for it.
+      content: node.querySelector('.fb-node-content')?.textContent?.trim() ?? '',
+    };
+  });
+
+  expect(drawn.children).toBe(0);
+  expect(drawn.content).toBe('Group');
 });

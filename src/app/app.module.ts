@@ -6,7 +6,7 @@ import { AppComponent } from './app.component';
 import { TapSmallComponent } from './nodes/tap/tap-small.component';
 import { TapNormalComponent } from './nodes/tap/tap-normal.component';
 import { TapFullComponent } from './nodes/tap/tap-full.component';
-import { DefaultFlowComponent } from './nodes/default-flow/default-flow.component';
+import { SubflowComponent } from './nodes/subflow/subflow.component';
 import { FlowComponent } from './flow/flow.component';
 import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
@@ -36,7 +36,6 @@ import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@an
 import { ComponentSelectionService } from './component-selection.service';
 import { RandomNumbersComponent } from './nodes/random-numbers/random-numbers.component';
 import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
-import { AddSocketComponent } from './nodes/default-flow/add-socket/add-socket.component';
 import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
 import { FB_CONFIG, FB_SOCKET_PALETTE } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
@@ -52,12 +51,11 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
 @NgModule({
   declarations: [
     AppComponent,
-    AddSocketComponent,
     RandomNumbersComponent,
     TapSmallComponent,
     TapNormalComponent,
     TapFullComponent,
-    DefaultFlowComponent,
+    SubflowComponent,
     FlowComponent,
     DefaultFrontComponent,
     ComponentSelectionComponent,

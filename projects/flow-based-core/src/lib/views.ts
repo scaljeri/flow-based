@@ -192,7 +192,7 @@ export function stepView(
 /**
  * Which child a flow node shows when it is not big enough to show its graph.
  *
- * A composite node still has to look like something at `small` and `normal`, and
+ * A subflow still has to look like something at `small` and `normal`, and
  * the honest answer is one of the things it contains. `config.preview` names it;
  * without that it is the first child, so flows written before this existed still
  * show something rather than an empty box.

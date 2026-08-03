@@ -1,9 +1,22 @@
-import { LitElement, PropertyValues, css, html, nothing, render } from 'lit';
+import { LitElement, PropertyValues, css, html, nothing, render, svg } from 'lit';
 import { FbNodeState, FbPosition } from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
 import { FbEditor, FbEditorChange } from './editor';
+
 import './connections-element';
+import './node-settings-element';
 import './node-element';
+/*
+ * The same two icons the node header uses, drawn here rather than shared through
+ * a module: they are eight lines of path data, and an import between two sibling
+ * elements to save that is a dependency for nothing.
+ */
+const ICON_CONFIG = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="8" cy="7" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="17" r="2" fill="currentColor"/></svg>`;
+
+const ICON_SHRINK = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h6V4M10 10L4 4M20 14h-6v6M14 14l6 6"/></svg>`;
+
 
 /**
  * The editor surface: viewport, plane, zoom and pan.
@@ -39,21 +52,36 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     /*
-     * Breadcrumb, shown only inside a composite. It is the way back out, so it
-     * sits above the plane rather than in it — it must not pan away.
+     * The header of the subflow you are inside.
+     *
+     * A subflow's full view is its graph, so when you step it to full the node
+     * box goes away and this canvas becomes the subflow. Its header has to come
+     * with it — the same bar, the same buttons, applied to the flow now filling
+     * the surface: where you are, its settings, and the way back out.
+     *
+     * Above the plane rather than in it, so it does not pan away. (No backticks
+     * in here: it sits inside a tagged CSS template literal.)
      */
-    .crumbs {
-      background: rgba(0, 0, 0, 0.55);
-      border-radius: 16px;
+    .head {
+      align-items: center;
+      background: rgba(0, 0, 0, 0.65);
+      border-radius: 8px;
       color: #fff;
       display: flex;
       font: 12px system-ui, sans-serif;
-      gap: 4px;
+      gap: 2px;
       left: 12px;
-      padding: 5px 10px;
+      padding: 4px 5px 4px 10px;
       position: absolute;
       top: 12px;
       z-index: 60;
+    }
+
+    .crumbs {
+      align-items: center;
+      display: flex;
+      gap: 4px;
+      margin-right: 6px;
     }
 
     .crumbs button {
@@ -69,6 +97,55 @@ export class FbFlowCanvasElement extends LitElement {
     .crumbs span[aria-current] {
       opacity: 0.7;
       text-decoration: none;
+    }
+
+    /* Deliberately the node header's buttons, because it is the same header. */
+    .head button.step,
+    .head button.config-toggle {
+      align-items: center;
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      flex: 0 0 auto;
+      height: 20px;
+      justify-content: center;
+      opacity: 0.75;
+      padding: 0;
+      text-decoration: none;
+      width: 20px;
+    }
+
+    .head button.step:hover,
+    .head button.step:focus-visible,
+    .head button.config-toggle:hover,
+    .head button.config-toggle:focus-visible {
+      opacity: 1;
+    }
+
+    .head svg {
+      height: 13px;
+      width: 13px;
+    }
+
+    @media (pointer: coarse) {
+      .head {
+        gap: 4px;
+      }
+
+      .head button.step,
+      .head button.config-toggle {
+        height: 34px;
+        opacity: 0.9;
+        width: 34px;
+      }
+
+      .head svg {
+        height: 18px;
+        width: 18px;
+      }
     }
 
     .marquee {
@@ -441,24 +518,76 @@ export class FbFlowCanvasElement extends LitElement {
    * where a node author's CSS behaves the way they wrote it, while the slot keeps
    * them inside the zoom/pan transform.
    */
-  /** The way back out of a composite. Absent at the root, where there is none. */
-  private renderCrumbs() {
+  /**
+   * The header of the subflow you are inside. Absent at the root, which is not
+   * a node and has nothing to go back to.
+   *
+   * The same three things the node header carries, for the flow that has taken
+   * the surface: where you are, its settings, and the way out. There is no
+   * "bigger" \u2014 a subflow's full view is this, and you are in it.
+   */
+  private renderHead() {
     const path = this.editor.path;
 
     if (path.length < 2) {
       return nothing;
     }
 
+    const flow = this.editor.state;
+
     return html`
-      <nav class="crumbs" aria-label="Flow">
-        ${path.map((node, depth) => html`
-          ${depth > 0 ? html`<span aria-hidden="true">\u203a</span>` : nothing}
-          ${depth === path.length - 1
-            ? html`<span aria-current="true">${node.title ?? node.type}</span>`
-            : html`<button type="button" @click=${() => this.editor.goTo(depth)}>${node.title ?? node.type}</button>`}
-        `)}
-      </nav>
+      <div class="head">
+        <nav class="crumbs" aria-label="Flow">
+          ${path.map((node, depth) => html`
+            ${depth > 0 ? html`<span aria-hidden="true">\u203a</span>` : nothing}
+            ${depth === path.length - 1
+              ? html`<span aria-current="true">${node.title ?? node.type}</span>`
+              : html`<button type="button" @click=${() => this.editor.goTo(depth)}>${node.title ?? node.type}</button>`}
+          `)}
+        </nav>
+
+        <button
+          type="button"
+          class="config-toggle"
+          title="Settings"
+          aria-label="Settings"
+          aria-pressed=${this.settingsOpen ? 'true' : 'false'}
+          @click=${() => this.toggleSettings()}>${ICON_CONFIG}</button>
+
+        <button
+          type="button"
+          class="step"
+          title="Show smaller (normal)"
+          aria-label="Show smaller (normal)"
+          @click=${() => this.editor.leave()}>${ICON_SHRINK}</button>
+      </div>
+
+      <!--
+        Not deletable: this is the flow you are standing in, and removing it
+        would leave the editor showing a graph that is no longer in the document.
+        Leave it first, then delete the node.
+      -->
+      <fb-node-settings
+        .editor=${this.editor}
+        .state=${flow}
+        .deletable=${false}
+        .open=${this.settingsOpen}
+        @settings-close=${() => this.onSettingsClosed()}></fb-node-settings>
     `;
+  }
+
+  private settingsOpen = false;
+
+  private toggleSettings(): void {
+    const panel = this.renderRoot.querySelector('fb-node-settings');
+
+    this.settingsOpen = !panel?.isOpen;
+    this.requestUpdate();
+  }
+
+  private onSettingsClosed(): void {
+    this.settingsOpen = false;
+    this.requestUpdate();
   }
 
   private renderNodes(): void {
@@ -493,7 +622,7 @@ export class FbFlowCanvasElement extends LitElement {
     const transform = full ? 'none' : viewport.transform();
 
     return html`
-      ${this.renderCrumbs()}
+      ${this.renderHead()}
       <div
         class="plane"
         data-full=${full ? 'true' : 'false'}

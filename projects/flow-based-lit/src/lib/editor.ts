@@ -103,9 +103,9 @@ export class FbEditor {
   flow!: Flow;
 
   /**
-   * The flow being viewed — the root, or a composite node the user has entered.
+   * The flow being viewed — the root, or a subflow the user has entered.
    *
-   * Separate from {@link root} because entering a composite changes what the
+   * Separate from {@link root} because entering a subflow changes what the
    * canvas draws, not what the document IS. Undo, serialisation and the engine
    * all work on the root; only the view moves.
    */
@@ -219,7 +219,7 @@ export class FbEditor {
   }
 
   /* ----------------------------------------------------------------------
-     Entering a composite node
+     Entering a subflow
      ---------------------------------------------------------------------- */
 
   /** The trail from the root to the flow on screen, for a breadcrumb. */
@@ -232,7 +232,7 @@ export class FbEditor {
   }
 
   /**
-   * Show a composite node's own graph.
+   * Show a subflow's own graph.
    *
    * This is what `full` means for a flow node, and it is navigation rather than
    * a size: one editor moves to a different flow. The alternative — mounting an
@@ -613,6 +613,19 @@ export class FbEditor {
     };
 
     this.flow.addNode(node, this.state);
+
+    /*
+     * A new subflow opens in its full view, which for a subflow means going
+     * inside it.
+     *
+     * Everything else opens small, because a screen of nodes at full size is
+     * unreadable. A subflow is the exception because a new one is EMPTY: at
+     * small it is an icon of nothing, and the only reason to have added it is to
+     * put something in it. So the editor goes where the work is.
+     */
+    if (settings.isFlow && node.id !== undefined) {
+      this.enter(node.id);
+    }
 
     return node;
   }

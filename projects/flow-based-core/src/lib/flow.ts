@@ -185,7 +185,7 @@ export class Flow {
       return;
     }
 
-    // Depth-first, so a composite node's children release their own workers and
+    // Depth-first, so a subflow's children release their own workers and
     // sockets before the parent goes.
     if (node.state.children) {
       for (let i = node.state.children.length - 1; i >= 0; i--) {
@@ -206,7 +206,7 @@ export class Flow {
       });
     }
 
-    // A composite node owns its own connection list, which nothing used to clean.
+    // A subflow owns its own connection list, which nothing used to clean.
     [...(node.state.connections ?? [])].forEach((c: FbConnection) => {
       this.removeConnection(c, node.state, false);
     });

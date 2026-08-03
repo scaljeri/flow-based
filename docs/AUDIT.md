@@ -830,7 +830,46 @@ Sized with an explicit width rather than a negative `inset`, which is measured
 from the padding box and came out six pixels short: the dot's border, counted
 twice.
 
+## Stage 11 — the Composite Unit becomes a Subflow
+
+Renamed, and made usable. It was neither before: a fresh one had no sockets, no
+children, and therefore **nothing to draw at all** — `contentSource()` always
+returned a preview child, and an empty flow has none. It rendered an empty box,
+and the component written to give it its first sockets never mounted, so those
+buttons could not be found by anyone.
+
+Four things, all of them the same idea — a subflow is a node until you go inside
+it, and then it is the editor:
+
+- **Empty, it draws its own type's icon.** `previewChild(state) ?? state`: the
+  fallback is the thing itself.
+- **`small` and `normal` are a node in the subflow**, which is what
+  `previewChild` already did — one of its children standing in for it.
+- **`full` is the flow itself**, with its connections. Unchanged: it is
+  `editor.enter()`, navigation rather than a size.
+- **A new subflow opens in full**, because at small an empty one is an icon of
+  nothing and the only reason to add one is to put something in it.
+
+**The header follows it onto the canvas.** Stepping a subflow to full removes its
+node box, and everything the header offered went with it. The canvas now draws
+the same bar for the flow it is showing: the path, its settings, and the way back
+out. There is no "bigger" — full is where you are.
+
+That needed the settings panel to stop being part of the node box, so it is now
+`<fb-node-settings>`. What it edits — a title and a set of sockets — is model
+rather than anything about a node box, and this is what makes a subflow's own
+sockets editable at all: its node box is not on screen when you are inside it.
+Deleting is withheld there, since removing the ground you are standing on leaves
+the editor showing a graph that is no longer in the document.
+
+`DefaultFlowComponent` and its add-socket dialog are gone. The dialog duplicated
+what the shell's panel does better — names, colours, reordering, removal — and
+the component is now just the icon.
+
 ### Still open
+- **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
+  subflow does not unsubscribe its streams. `removeStream` still carries a
+  `TODO: Is if needed`.
 - **`a drag does not cost work proportional to the size of the graph` is flaky**,
   around one run in five even with a single worker. Measured, not guessed: the
   ratios it asserts came out 2.66 / 2.74 / 3.73 against a limit of 4 before Stage

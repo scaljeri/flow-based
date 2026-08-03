@@ -15,6 +15,7 @@ import {
   viewOf,
 } from '@scaljeri/flow-based-core';
 import { FbEditor, FbEditorChange } from './editor';
+import { FbNodeSettingsElement } from './node-settings-element';
 
 /**
  * One node: chrome, dragging, socket dots, and a host element into which the
@@ -33,9 +34,6 @@ import { FbEditor, FbEditorChange } from './editor';
  */
 const ICON_OPEN = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>`;
-
-const ICON_TRASH = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-  stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>`;
 
 const ICON_GROW = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4v6M4 4l6 6M14 20h6v-6M20 20l-6-6"/></svg>`;
@@ -189,189 +187,6 @@ export class FbNodeElement extends LitElement {
     .head svg {
       height: 13px;
       width: 13px;
-    }
-
-    /*
-     * The settings panel. Title, sockets and socket colours are MODEL — the JSON
-     * holds them and the engine reads them — so editing them belongs to the
-     * editor rather than to whichever app is hosting it.
-     */
-    /*
-     * A modal <dialog>, so it lands in the document's top layer.
-     *
-     * Nodes overlap, and an inline panel is clipped by its own node and covered
-     * by whatever is painted after it. The top layer escapes overflow, z-index
-     * and stacking contexts entirely — which no amount of z-index on an inline
-     * panel can do once a sibling establishes its own context.
-     */
-    .config {
-      background: var(--fb-node-background, rgba(0, 0, 0, 0.9));
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 10px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-      box-sizing: border-box;
-      color: #fff;
-      font: 12px system-ui, sans-serif;
-      max-height: 80vh;
-      max-width: 90vw;
-      overflow: auto;
-      padding: 16px;
-      width: 320px;
-    }
-
-    .config::backdrop {
-      background: rgba(0, 0, 0, 0.45);
-    }
-
-    .config header {
-      align-items: center;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .config header strong {
-      font-size: 13px;
-      font-weight: 500;
-    }
-
-    .config header button {
-      background: none;
-      border: none;
-      color: #fff;
-      cursor: pointer;
-      font-size: 16px;
-      line-height: 1;
-      padding: 2px 6px;
-    }
-
-    .config label {
-      display: block;
-      margin-bottom: 8px;
-      opacity: 0.7;
-    }
-
-    .config input[type='text'] {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 4px;
-      box-sizing: border-box;
-      color: #fff;
-      font: inherit;
-      padding: 4px 6px;
-      width: 100%;
-    }
-
-    .config h4 {
-      font-size: 11px;
-      letter-spacing: 0.06em;
-      margin: 12px 0 6px;
-      opacity: 0.6;
-      text-transform: uppercase;
-    }
-
-    .sockets {
-      display: grid;
-      gap: 14px;
-      grid-template-columns: 1fr 1fr;
-      margin-top: 4px;
-    }
-
-    .none {
-      margin: 0 0 6px;
-      opacity: 0.45;
-    }
-
-    .socket-row {
-      align-items: center;
-      border-radius: 4px;
-      display: flex;
-      gap: 4px;
-      margin-bottom: 6px;
-    }
-
-    .socket-row[draggable='true'] {
-      cursor: grab;
-    }
-
-    .grip {
-      cursor: grab;
-      letter-spacing: -2px;
-      opacity: 0.4;
-      user-select: none;
-    }
-
-    .socket-row input[type='text'] {
-      min-width: 0;
-    }
-
-    .add-socket {
-      white-space: nowrap;
-    }
-
-    .socket-row input[type='color'] {
-      background: none;
-      border: none;
-      block-size: 22px;
-      cursor: pointer;
-      inline-size: 26px;
-      padding: 0;
-    }
-
-    .socket-row button,
-    .config .add-socket {
-      background: rgba(255, 255, 255, 0.12);
-      border: none;
-      border-radius: 4px;
-      color: #fff;
-      cursor: pointer;
-      font: inherit;
-      padding: 3px 8px;
-    }
-
-    .config .add {
-      display: flex;
-      gap: 6px;
-      margin-top: 10px;
-    }
-
-    /* Whatever the node type contributes for its own settings. */
-    .config .own:not(:empty) {
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
-      margin-top: 12px;
-      padding-top: 10px;
-    }
-
-    /*
-     * Deleting lives here rather than in the header.
-     *
-     * It used to be a button the DEMO's node chrome drew, which meant node types
-     * that did not use that chrome — anything not written for this app — simply
-     * could not be deleted from the node itself. A node's own existence is model,
-     * like its title and its sockets, so the panel that edits those owns it.
-     */
-    .config .danger {
-      border-top: 1px solid rgba(255, 255, 255, 0.15);
-      margin-top: 14px;
-      padding-top: 10px;
-    }
-
-    .config .delete {
-      align-items: center;
-      background: rgba(255, 0, 68, 0.16);
-      border: 1px solid rgba(255, 0, 68, 0.5);
-      border-radius: 4px;
-      color: #ff89a6;
-      cursor: pointer;
-      display: flex;
-      font: inherit;
-      gap: 6px;
-      padding: 5px 10px;
-    }
-
-    .config .delete svg {
-      height: 14px;
-      width: 14px;
     }
 
     .box {
@@ -589,50 +404,6 @@ export class FbNodeElement extends LitElement {
       pointer-events: none;
     }
 
-    /*
-     * One column below this. Two columns of a name field, a colour swatch and a
-     * remove button do not fit a phone: the fields collapse to a few characters
-     * and the layout stops being a map of the node, which was the point of the
-     * two columns in the first place.
-     */
-    @media (max-width: 460px) {
-      .config {
-        width: min(320px, 88vw);
-      }
-
-      .sockets {
-        gap: 4px;
-        grid-template-columns: 1fr;
-      }
-
-      /*
-       * Written with the parent, so this wins on SPECIFICITY rather than on
-       * source order. A media query adds none, and the base .column-out rules
-       * happen to come later in this stylesheet — so the obvious version was
-       * silently overridden and the column stayed mirrored on a phone.
-       */
-      .config .column-out {
-        text-align: left;
-      }
-
-      .config .column-out .socket-row {
-        flex-direction: row;
-      }
-    }
-
-    /*
-     * Named column-out, not socket-out: a socket DOT is .socket.socket-out, and
-     * giving the dialog's column the same name meant one selector matched both a
-     * form column and a dot on the node. No backticks in this comment: it sits
-     * inside a tagged CSS template literal, and one would close it early.
-     */
-    .column-out {
-      text-align: right;
-    }
-
-    .column-out .socket-row {
-      flex-direction: row-reverse;
-    }
   `;
 
   declare editor: FbEditor;
@@ -653,7 +424,6 @@ export class FbNodeElement extends LitElement {
   private mountedMount?: FbNodeMount;
   private showLabel = true;
   private configOpen = false;
-  private settingsTeardown?: () => void;
   /** The view the content was last told about; see notifyView(). */
   private notifiedView?: FbNodeView;
   private readonly clickListeners = new Set<(event: PointerEvent) => void>();
@@ -700,7 +470,7 @@ export class FbNodeElement extends LitElement {
     ) {
       /*
        * The view decides WHAT is mounted, not only how much room it gets — a
-       * composite shows one of its children until it is big enough for its graph,
+       * subflow shows one of its children until it is big enough for its graph,
        * and a type with a per-view component draws a different one at each size.
        *
        * Both are caught by comparing the resolved mount function rather than the
@@ -715,8 +485,6 @@ export class FbNodeElement extends LitElement {
     this.applySelected();
     this.setAttribute('view', this.view);
     this.notifyView();
-    this.syncDialog();
-    this.mountOwnSettings();
     this.drawWires();
   }
 
@@ -751,30 +519,6 @@ export class FbNodeElement extends LitElement {
      * anything arriving on a socket.
      */
     this.handle?.update?.();
-  }
-
-  /**
-   * Let the node type fill the panel's own section.
-   *
-   * Mounted after the panel renders, because the host element only exists then,
-   * and torn down when the panel closes so a node type's settings do not keep
-   * running behind a closed panel.
-   */
-  private mountOwnSettings(): void {
-    const host = this.configOpen ? this.renderRoot.querySelector<HTMLElement>('.config .own') : null;
-
-    if (!host) {
-      this.settingsTeardown?.();
-      this.settingsTeardown = undefined;
-
-      return;
-    }
-
-    if (this.settingsTeardown || !this.handle?.mountSettings) {
-      return;
-    }
-
-    this.settingsTeardown = this.handle.mountSettings(host) ?? (() => undefined);
   }
 
   private get settings() {
@@ -870,14 +614,19 @@ export class FbNodeElement extends LitElement {
   /**
    * Whose content this node draws.
    *
-   * Its own, except for a composite that is not full: a flow node has to look
-   * like something at small and normal, and the honest answer is one of the
-   * things it contains. Returns the node whose type supplies the mount function,
-   * so a change of view can be detected as a change of source.
+   * Its own, except for a subflow that is not full: a subflow has to look like
+   * something at small and normal, and the honest answer is one of the things it
+   * contains. Returns the node whose type supplies the mount function, so a
+   * change of view can be detected as a change of source.
+   *
+   * An EMPTY subflow falls back to its own drawing. It used to fall back to
+   * nothing at all — `previewChild` has nothing to return — so a newly added one
+   * rendered an empty box, and the component written to give it its first
+   * sockets never mounted to be found.
    */
   private contentSource(): FbNodeState | undefined {
     if (this.state?.children && this.view !== 'full') {
-      return previewChild(this.state);
+      return previewChild(this.state) ?? this.state;
     }
 
     return this.state;
@@ -888,8 +637,8 @@ export class FbNodeElement extends LitElement {
    *
    * A type may register one component for every view or one per view; this is
    * where the difference stops mattering. Resolved against the SOURCE's type and
-   * this element's view, which for a composite's preview child means the child's
-   * drawing at the composite's size — the size the child is actually given.
+   * this element's view, which for a subflow's preview child means the child's
+   * drawing at the subflow's size — the size the child is actually given.
    */
   private mountFor(): FbNodeMount | undefined {
     const source = this.contentSource();
@@ -929,8 +678,6 @@ export class FbNodeElement extends LitElement {
   }
 
   private unmountContent(): void {
-    this.settingsTeardown?.();
-    this.settingsTeardown = undefined;
     this.handle?.destroy();
     this.handle = undefined;
     this.mountedFor = undefined;
@@ -950,8 +697,8 @@ export class FbNodeElement extends LitElement {
   /** The framework-agnostic handle a node's content is given. */
   private api(source: FbNodeState = this.state): FbNodeApi {
     const editor = this.editor;
-    // The PREVIEW child when a composite is showing one, so its content reads
-    // its own state and its own worker rather than the composite's.
+    // The PREVIEW child when a subflow is showing one, so its content reads
+    // its own state and its own worker rather than the subflow's.
     const state = source;
 
     return {
@@ -970,7 +717,7 @@ export class FbNodeElement extends LitElement {
       setView: (view: FbNodeView) => this.requestView(view),
       /*
        * Reports the view of the node this content is DRAWN IN, which for a
-       * composite's preview child is the composite's rather than the child's own.
+       * subflow's preview child is the subflow's rather than the child's own.
        * That is the one the content's size actually follows.
        */
       onViewChange: listener => {
@@ -1261,14 +1008,19 @@ export class FbNodeElement extends LitElement {
 
       ${sockets.map(s => this.renderSocket(s))}
 
-      ${this.renderConfig()}
+      <fb-node-settings
+        .editor=${this.editor}
+        .state=${this.state}
+        .mountOwn=${this.handle?.mountSettings?.bind(this.handle)}
+        .open=${this.configOpen}
+        @settings-close=${() => this.onSettingsClosed()}></fb-node-settings>
     `;
   }
 
   /**
-   * Step this node's view, or enter it when it is a composite going full.
+   * Step this node's view, or enter it when it is a subflow going full.
    *
-   * A composite's full view is its graph, and showing that is navigation rather
+   * A subflow's full view is its graph, and showing that is navigation rather
    * than a size — the editor moves to the child flow instead of the node growing
    * to hold an editor of its own.
    */
@@ -1362,194 +1114,6 @@ export class FbNodeElement extends LitElement {
     }
   };
 
-  private toggleConfig(): void {
-    /*
-     * The dialog's own `open` is the truth, not a boolean beside it.
-     *
-     * Keeping both meant Escape — which the browser handles without asking —
-     * closed the dialog while the flag still said open, so the next press tried
-     * to close something already closed and nothing happened.
-     */
-    if (this.dialog?.open) {
-      this.closeConfig();
-
-      return;
-    }
-
-    this.configOpen = true;
-    this.requestUpdate();
-  }
-
-  /** Called however the dialog was dismissed: the button, Escape, or code. */
-  private onDialogClosed(): void {
-    this.configOpen = false;
-    this.settingsTeardown?.();
-    this.settingsTeardown = undefined;
-    this.requestUpdate();
-  }
-
-  private closeConfig(): void {
-    this.dialog?.close();
-  }
-
-  private get dialog(): HTMLDialogElement | null {
-    return this.renderRoot.querySelector('dialog.config');
-  }
-
-  /**
-   * Opened with showModal(), not by rendering it visible.
-   *
-   * Only a modal dialog is promoted to the top layer, and the top layer is the
-   * whole point: nodes overlap, so a panel painted inside its own node is
-   * clipped by it and covered by whatever comes after.
-   */
-  private syncDialog(): void {
-    const dialog = this.dialog;
-
-    if (!dialog) {
-      return;
-    }
-
-    if (this.configOpen && !dialog.open) {
-      dialog.showModal();
-    } else if (!this.configOpen && dialog.open) {
-      dialog.close();
-    }
-  }
-
-  /**
-   * The node's own settings.
-   *
-   * Deliberately generic: it edits `title` and the sockets, which every node has
-   * because they are part of the model rather than of any node type. A type with
-   * settings of its own contributes them through `mountSettings` on the handle it
-   * returned, so there is one panel and one way in rather than a config screen
-   * per node type.
-   */
-  private renderConfig() {
-    const state = this.state;
-    const sockets = state.sockets ?? [];
-
-    return html`
-      <dialog
-        class="config ${FB_DRAG_IGNORE}"
-        @pointerdown=${(e: Event) => e.stopPropagation()}
-        @keydown=${(e: Event) => e.stopPropagation()}
-        @close=${() => this.onDialogClosed()}>
-        <header>
-          <strong>Settings</strong>
-          <button type="button" title="Close" aria-label="Close"
-                  @click=${() => this.closeConfig()}>\u00d7</button>
-        </header>
-
-        <label>
-          Title
-          <input
-            type="text"
-            .value=${state.title ?? ''}
-            @input=${(e: Event) => this.editor.setTitle(state.id!, (e.target as HTMLInputElement).value)}>
-        </label>
-
-        <!--
-          Two columns, in on the left and out on the right, because that is where
-          they are on the node. A single list ordered by whatever the array
-          happens to hold makes the reader work out which side each one is on.
-        -->
-        <div class="sockets">
-          ${this.renderSocketColumn('in', state.id!, sockets)}
-          ${this.renderSocketColumn('out', state.id!, sockets)}
-        </div>
-
-        <div class="own"></div>
-
-        <div class="danger">
-          <button type="button" class="delete" @click=${() => this.deleteNode()}>
-            ${ICON_TRASH} Delete node
-          </button>
-        </div>
-      </dialog>
-    `;
-  }
-
-  /** Closed first: the dialog is in the top layer and its node is about to go. */
-  private deleteNode(): void {
-    const id = this.state?.id;
-
-    this.closeConfig();
-
-    if (id !== undefined) {
-      this.editor.removeNode(id);
-    }
-  }
-
-  private draggingSocket?: FbSocket;
-
-  private onSocketDragStart(event: DragEvent, socket: FbSocket): void {
-    this.draggingSocket = socket;
-    event.dataTransfer?.setData('text/plain', String(socket.id));
-
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-    }
-  }
-
-  private onSocketDrop(event: DragEvent, toIndex: number): void {
-    event.preventDefault();
-
-    const socket = this.draggingSocket;
-
-    this.draggingSocket = undefined;
-
-    if (socket?.id !== undefined && this.state?.id !== undefined) {
-      this.editor.moveSocket(this.state.id, socket.id, toIndex);
-    }
-  }
-
-  private renderSocketColumn(type: 'in' | 'out', nodeId: number, sockets: FbSocket[]) {
-    const mine = sockets.filter(socket => socket.type === type);
-
-    return html`
-      <section class="socket-column column-${type}">
-        <h4>${type === 'in' ? 'In' : 'Out'}</h4>
-        ${mine.length
-          ? mine.map((socket, index) => this.renderSocketRow(socket, index))
-          : html`<p class="none">none</p>`}
-        <button type="button" class="add-socket" @click=${() => this.editor.addSocket(nodeId, type)}>
-          + add ${type}
-        </button>
-      </section>
-    `;
-  }
-
-  private renderSocketRow(socket: FbSocket, index: number) {
-    /*
-     * Native drag and drop rather than pointer maths: the browser already knows
-     * what dragging a row looks like, and the drag image, the cursor and the
-     * cancel-on-Escape all come for free.
-     */
-    return html`
-      <div
-        class="socket-row"
-        draggable="true"
-        data-index=${index}
-        @dragstart=${(e: DragEvent) => this.onSocketDragStart(e, socket)}
-        @dragover=${(e: DragEvent) => e.preventDefault()}
-        @drop=${(e: DragEvent) => this.onSocketDrop(e, index)}>
-        <span class="grip" title="Drag to reorder">\u22ee\u22ee</span>
-        <input
-          type="text"
-          .value=${socket.name ?? ''}
-          placeholder=${socket.format ?? 'name'}
-          @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>
-        <input
-          type="color"
-          .value=${socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? '#999999'}
-          @input=${(e: Event) => this.editor.updateSocket(socket, { color: (e.target as HTMLInputElement).value })}>
-        <button type="button" title="Remove socket" @click=${() => this.editor.removeSocket(socket)}>\u00d7</button>
-      </div>
-    `;
-  }
-
   private renderSocket(socket: FbSocket) {
     const pending = this.editor.pending;
     const isActive = pending?.socket.id === socket.id;
@@ -1562,6 +1126,30 @@ export class FbNodeElement extends LitElement {
         data-socket-id=${String(socket.id)}
         @pointerdown=${(e: PointerEvent) => this.onSocketDown(e, socket)}></div>
     `;
+  }
+
+  /* ----------------------------------------------------------------------
+     Settings
+     ----------------------------------------------------------------------
+     The panel itself is <fb-node-settings>, because what it edits — a title and
+     a set of sockets — is MODEL rather than anything about a node box. A subflow
+     you have entered has no node box on screen and still needs its sockets
+     editing, so the panel had to be reachable from somewhere else too.
+   */
+
+  private toggleConfig(): void {
+    this.configOpen = !this.panel?.isOpen;
+    this.requestUpdate();
+  }
+
+  /** Called however the panel was dismissed: its button, Escape, or code. */
+  private onSettingsClosed(): void {
+    this.configOpen = false;
+    this.requestUpdate();
+  }
+
+  private get panel(): FbNodeSettingsElement | null {
+    return this.renderRoot.querySelector('fb-node-settings');
   }
 
   /** Place the dot exactly where the connection renderer will draw to. */

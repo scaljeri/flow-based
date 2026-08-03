@@ -160,8 +160,10 @@ A node has three sizes, and your type declares which of them it can render:
 | `normal` | opened in place, with a header bar across the top |
 | `full` | the whole editor surface, with zoom and pan suspended |
 
-Every node opens `small`. For a composite (`isFlow: true`), `full` is navigation:
-the editor enters its graph rather than the node growing.
+Every node opens `small`. For a **subflow** (`isFlow: true`), `full` is
+navigation: the editor enters its graph rather than the node growing, and the
+same header follows it onto the canvas. A new subflow opens there directly,
+since an empty one has nothing to show until you have put something in it.
 
 ### A drawing per view
 

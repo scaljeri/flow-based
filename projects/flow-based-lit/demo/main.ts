@@ -125,7 +125,7 @@ const types: FbNodeTypes<FbNodeMount> = {
     settings: { title: 'Scope', sockets: [{ type: 'in', format: 'number' }] },
   },
   /*
-   * A composite. It draws one of its children until it is full, at which point
+   * A subflow. It draws one of its children until it is full, at which point
    * the editor enters it and you see the graph itself.
    */
   group: {
@@ -184,14 +184,14 @@ editor.load({
 });
 
 /*
- * `?composite=1` adds a composite node.
+ * `?subflow=1` adds a subflow.
  *
  * Kept out of the default fixture on purpose: the other tests assert node counts
  * against this graph, and a demo fixture that grows with every feature makes
  * every one of them a count that has to be maintained rather than an assertion
  * about behaviour.
  */
-if (new URLSearchParams(location.search).has('composite')) {
+if (new URLSearchParams(location.search).has('subflow')) {
   editor.state.children!.splice(2, 0, {
     id: 50, type: 'group', title: 'Group', position: { x: 8, y: 60 },
     sockets: [{ id: 500, type: 'in' }],

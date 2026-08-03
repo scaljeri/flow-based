@@ -153,7 +153,7 @@ export interface FbNodeType<TComponent = unknown> {
   component: TComponent | import('./views').FbViewComponents<TComponent>;
   settings: FbNodeSettings;
   type?: string;
-  /** Absent for composite ("flow") types, which get the built-in FlowWorker. */
+  /** Absent for subflow ("flow") types, which get the built-in FlowWorker. */
   worker?: FbNodeWorkerCtor;
 }
 

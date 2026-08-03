@@ -117,7 +117,7 @@ describe('Flow.initialize', () => {
 });
 
 describe('Flow socket-format propagation (the "leveling" rule)', () => {
-  it('gives an unformatted composite-node socket the format of its inner peer', () => {
+  it('gives an unformatted subflow socket the format of its inner peer', () => {
     const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
     // socket 400 starts with NO format; it must adopt 'number' from socket 300.
     const inner: any = {
@@ -156,7 +156,7 @@ describe('Flow socket-format propagation (the "leveling" rule)', () => {
 });
 
 describe('Flow nested flows (FlowWorker bridging)', () => {
-  it('bridges a stream from an inner leaf, through the composite node, to an outer sink', () => {
+  it('bridges a stream from an inner leaf, through the subflow, to an outer sink', () => {
     const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
     const inner: any = {
       id: 40,
@@ -255,7 +255,7 @@ describe('Flow.removeNode', () => {
     expect(root.connections).toEqual([]);
   });
 
-  it('recursively removes the children of a deleted composite node', () => {
+  it('recursively removes the children of a deleted subflow', () => {
     const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
     const inner: any = { id: 40, type: 'flow', sockets: [], children: [leaf], connections: [] };
     const root: any = { id: 1, type: 'flow', sockets: [], children: [inner], connections: [] };
@@ -319,7 +319,7 @@ describe('resource release on removal (AUDIT.md §3.3)', () => {
     expect(flow.getSocket(100)).toBeUndefined();
   });
 
-  it('destroys the workers of a removed composite node\'s children', () => {
+  it('destroys the workers of a removed subflow\'s children', () => {
     const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
     const inner: any = { id: 40, type: 'flow', sockets: [], children: [leaf], connections: [] };
     const root: any = { id: 1, type: 'flow', sockets: [], children: [inner], connections: [] };
@@ -466,7 +466,7 @@ describe('format propagation (AUDIT.md §3.7)', () => {
     expect(report.steps).toBeGreaterThan(0);
   });
 
-  it('propagates a format across a chain of composite nodes', () => {
+  it('propagates a format across a chain of subflows', () => {
     // leaf(out:number) -> innerA(no format) -> innerB(no format) -> sink
     const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
     const innerA: any = {
