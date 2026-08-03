@@ -268,6 +268,7 @@ export class FbNodeSettingsElement extends LitElement {
   declare open: boolean;
 
   private ownTeardown?: () => void;
+  private unsubscribe?: () => void;
 
   constructor() {
     super();
@@ -275,9 +276,40 @@ export class FbNodeSettingsElement extends LitElement {
     this.open = false;
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.subscribe();
+  }
+
   override disconnectedCallback(): void {
     this.releaseOwn();
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
     super.disconnectedCallback();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('editor')) {
+      this.subscribe();
+    }
+  }
+
+  /**
+   * Redraw when the thing being edited changes.
+   *
+   * The panel edits the node's state IN PLACE — adding a socket pushes onto the
+   * array it was handed — so `state` never becomes a different object and Lit
+   * has nothing to notice. Without this the add buttons worked perfectly and
+   * appeared not to: the socket landed in the model and the panel kept showing
+   * the list it had drawn before.
+   */
+  private subscribe(): void {
+    this.unsubscribe?.();
+    this.unsubscribe = this.editor?.changes.subscribe(change => {
+      if (change.kind === 'sockets' || change.kind === 'structure' || change.kind === 'formats') {
+        this.requestUpdate();
+      }
+    });
   }
 
   show(): void {

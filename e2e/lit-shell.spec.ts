@@ -1677,3 +1677,56 @@ test('an untitled root flow is called main', async ({ page }) => {
 
   await expect.poll(crumbs).toBe('main › Group');
 });
+
+/**
+ * Adding a socket has to be VISIBLE in the panel that added it.
+ *
+ * The panel edits the node's state in place — adding a socket pushes onto the
+ * array it was handed — so `state` never becomes a different object and Lit has
+ * nothing to notice. The buttons worked perfectly and appeared not to: the
+ * socket landed in the model and the panel kept showing the list it had drawn
+ * before. Asserting on both, because the model alone passed the whole time.
+ */
+test('adding a socket shows up in the panel, not only in the model', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await openNode(page, 'Sink');
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+  });
+
+  const counts = () => page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+    const dialog = node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('dialog.config')!;
+
+    return {
+      model: (node as unknown as { state: { sockets?: unknown[] } }).state.sockets!.length,
+      rows: dialog.querySelectorAll('.socket-row').length,
+      dots: node.shadowRoot!.querySelectorAll('.socket').length,
+    };
+  });
+
+  const before = await counts();
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
+
+    node.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector<HTMLButtonElement>('.column-out .add-socket')!.click();
+  });
+
+  await expect.poll(async () => (await counts()).rows).toBe(before.rows + 1);
+
+  const after = await counts();
+  expect(after.model).toBe(before.model + 1);
+  // And on the node itself, which is the point of adding one.
+  expect(after.dots).toBe(before.dots + 1);
+});
