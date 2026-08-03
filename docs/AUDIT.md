@@ -1024,6 +1024,23 @@ one is cancelled first.
 The merge node's own layout follows the same `space-around` rule the sockets do,
 so card i sits opposite socket i however many inputs are added in the settings.
 
+## Stage 18 — an input takes one connection
+
+Two connections could land on one input socket. The merge node then drew three
+value cards against two sockets — which is what made it look wrong — and the
+engine was worse off than the picture: `FlowWorker.setStream` keys its
+subscription by SOCKET id, so the second stream silently replaced the first
+without unsubscribing it. A leak, and a stream that stopped arriving.
+
+An output may still feed many — that is fan-out, and the engine copies the stream
+to each. Two things arriving at one input is not a merge; it is a question with
+no answer. A node that wants several inputs asks for several sockets, which is
+what its settings panel is for.
+
+Refused in `accepts`, so an occupied input shows as rejecting while a connection
+is being drawn, and again in `buildConnection`, since the loose end can be
+dropped straight onto a socket without ever passing through the highlight.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

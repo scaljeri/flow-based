@@ -2262,3 +2262,65 @@ test('the loose end of a connection can be picked up and dropped on a socket', a
   expect(await handle()).toBeNull();
   expect(await worstEndpointError(page)).toBeLessThan(1);
 });
+
+/**
+ * An input takes ONE connection.
+ *
+ * An output may feed many — that is fan-out, and the engine copies the stream to
+ * each — but two things arriving at one input is not a merge, it is a question
+ * with no answer: which value is the value?
+ *
+ * The engine says the same thing in code. `FlowWorker.setStream` keys its
+ * subscription by SOCKET id, so a second stream into one input silently replaced
+ * the first without unsubscribing it — a leak, and a stream that stopped
+ * arriving. A node wanting several inputs asks for several sockets.
+ */
+test('an input socket refuses a second connection', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = (await connectionPaths(page)).length;
+
+  // The Sink's input is already fed by the Source.
+  const state = await page.evaluate(() => {
+    const source = window.fbEditor.children.find(n => n.title === 'Source')!;
+    const scope = window.fbEditor.children.find(n => n.title === 'Scope')!;
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    // Arm from the Scope... it has no output, so use the Source's again.
+    window.fbEditor.socketClicked(source.sockets![0], source.id!);
+
+    const taken = window.fbEditor.accepts(sink.sockets![0], sink.id!);
+
+    window.fbEditor.socketClicked(sink.sockets![0], sink.id!);
+
+    return { taken, free: scope.id };
+  });
+
+  // The occupied input reports itself as rejecting, and nothing was added.
+  expect(state.taken).toBe(false);
+  expect(await connectionPaths(page)).toHaveLength(before);
+
+  /*
+   * An output is not limited the same way. The Source already feeds two things;
+   * a third is fan-out, which the engine copies rather than contests.
+   */
+  const fanned = await page.evaluate(() => {
+    const source = window.fbEditor.children.find(n => n.title === 'Source')!;
+
+    window.fbEditor.addNode('sink');
+
+    const fresh = window.fbEditor.children[window.fbEditor.children.length - 1];
+
+    window.fbEditor.socketClicked(source.sockets![0], source.id!);
+
+    const allowed = window.fbEditor.accepts(fresh.sockets![0], fresh.id!);
+
+    window.fbEditor.socketClicked(fresh.sockets![0], fresh.id!);
+
+    return allowed;
+  });
+
+  expect(fanned).toBe(true);
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
+});

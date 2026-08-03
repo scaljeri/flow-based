@@ -892,14 +892,47 @@ export class FbEditor {
       return false;
     }
 
+    // An input takes ONE connection; see isTaken.
+    if (this.isTaken(socket) || this.isTaken(pending.socket)) {
+      return false;
+    }
+
     // Compatible when either takes anything, or their declared sets overlap.
     return formatsCompatible(pending.socket, socket);
+  }
+
+  /**
+   * Whether a socket already carries all it can.
+   *
+   * An INPUT takes one connection. An output may feed many — that is fan-out,
+   * and the engine copies the stream to each — but two things arriving at one
+   * input is not a merge, it is a question with no answer: which value is the
+   * value?
+   *
+   * The engine says the same thing in code. `FlowWorker.setStream` keys its
+   * subscription by SOCKET id, so a second stream into one input silently
+   * replaced the first without unsubscribing it — a leak, and a stream that
+   * stopped arriving. A node that wants several inputs asks for several sockets,
+   * which is what its settings panel is for.
+   */
+  private isTaken(socket: FbSocket): boolean {
+    if (socket.type !== 'in') {
+      return false;
+    }
+
+    return this.connections.some(c => c.in === socket.id);
   }
 
   private buildConnection(a: FbPendingSocket, b: FbPendingSocket): FbConnection | null {
     const [out, inn] = a.socket.type === 'out' ? [a, b] : [b, a];
 
     if (out.socket.type !== 'out' || inn.socket.type !== 'in') {
+      return null;
+    }
+
+    // Checked here as well as in `accepts`, which is only the highlight: a
+    // connection can also be made by dropping the loose end on a socket.
+    if (this.isTaken(inn.socket)) {
       return null;
     }
 
