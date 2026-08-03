@@ -984,6 +984,21 @@ Its radius is generous: dropping a connection means aiming at a 16px dot with a
 line already under your finger, and the cost of missing is losing the connection
 you were drawing.
 
+## Stage 16 — Merge streams has no full view
+
+It draws its own lines — socket to value card, card to output — with `api.wire`,
+and those are MEASURED between elements rather than computed from the graph. On
+the whole surface its cards landed hundreds of pixels from the sockets they
+belong to, which are pinned to the editor's edges, so every line became a long
+sweep across an empty middle. What it has to show fits in a panel, so it declares
+`views: ['small', 'normal']`.
+
+The lines are drawn when the node OPENS now. They used to hang off `maxSize`,
+which fires for the full view — so removing that view would have left them never
+drawn at all. And they are redrawn when the cards change: a card exists per
+value, so every line is stale the moment its card is replaced. That subscription
+was already there, with an empty body.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

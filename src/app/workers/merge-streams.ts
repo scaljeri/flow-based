@@ -4,6 +4,16 @@ import { map } from 'rxjs/operators';
 
 export const MERGE_STREAMS_SETTINGS: FbNodeSettings = {
   title: 'Merge streams',
+  /*
+   * No full view.
+   *
+   * This node draws its own lines between its own elements — socket to card,
+   * card to output — and those are MEASURED, not computed from the graph. On the
+   * whole surface the cards land hundreds of pixels from the sockets they belong
+   * to, which are pinned to the editor's edges, so every line became a long
+   * sweep across an empty middle. What it has to show fits in a panel.
+   */
+  views: ['small', 'normal'],
   sockets: [
     {
       type: 'in',

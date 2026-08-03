@@ -54,9 +54,20 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
     // TODO
   }
 
-  onMaxSize(isMaxSize: boolean): void {
-    if (isMaxSize) {
+  /**
+   * Wire up when the node OPENS, not when it takes the surface.
+   *
+   * It used to hang off `maxSize`, which fires for the full view — and this node
+   * has none any more, so the lines were simply never drawn. What they connect
+   * exists as soon as the node is open, which is when they should appear.
+   */
+  onActive(isActive: boolean): void {
+    this.isActive = isActive;
+
+    if (isActive) {
       this.createConnections();
+    } else {
+      this.service.removeConnections();
     }
   }
 
@@ -94,15 +105,19 @@ export class MergeStreamsComponent implements OnInit, OnDestroy, AfterViewInit {
     this.service.deleteSelf();
   }
 
-  onClose(): void {
-    this.service.setMaxSize(false);
-    this.service.unregister('blur');
-    this.isActive = false;
-  }
-
+  /**
+   * A card per value, so the cards come and go as values arrive.
+   *
+   * The lines point at ELEMENTS, so every one of them is stale the moment its
+   * card is replaced — this subscription was here already, with an empty body,
+   * which is exactly the redraw that was missing.
+   */
   ngAfterViewInit(): void {
-    this.inputs.changes.subscribe(() => {
-    });
+    this.subscriptions.push(this.inputs.changes.subscribe(() => {
+      if (this.isActive) {
+        this.createConnections();
+      }
+    }));
   }
 
   get title(): string {

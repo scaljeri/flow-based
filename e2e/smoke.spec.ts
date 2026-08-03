@@ -526,3 +526,71 @@ test('a slider inside a node moves its thumb and nothing else', async ({ page })
   expect(after.transform).toBe(before.transform);
   expect(after.nodes).toEqual(before.nodes);
 });
+
+/**
+ * A node that draws its own lines keeps them where it can see them.
+ *
+ * Merge streams wires socket → value card → output with `api.wire`, and those
+ * lines are MEASURED between elements rather than computed from the graph. On
+ * the whole surface its cards landed hundreds of pixels from the sockets they
+ * belong to — those are pinned to the editor's edges — so every line became a
+ * long sweep across an empty middle. It offers no full view now.
+ *
+ * And the lines are drawn when the node OPENS. They used to hang off the full
+ * view, so removing that would have left them never drawn at all.
+ */
+test('merge streams has no full view, and wires itself when opened', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await expect(palette).toBeVisible();
+  await palette.locator('input[type="search"]').fill('merge');
+  await palette.locator('input[type="search"]').press('Enter');
+
+  /*
+   * Found by node TYPE, not by an `fb-merge-streams` element: the adapter mounts
+   * the component with the content host AS its host element, so the selector's
+   * own tag is never created.
+   */
+  await expect
+    .poll(() => page.evaluate(() => [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .some(n => (n as unknown as { state?: { type?: string } }).state?.type === 'merge-streams')))
+    .toBe(true);
+
+  const node = () => page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'merge-streams')!;
+    const head = box.shadowRoot!.querySelector('.head');
+
+    return {
+      view: box.getAttribute('view'),
+      steps: [...(head?.querySelectorAll('button.step') ?? [])].map(b => b.getAttribute('aria-label')),
+      wires: box.shadowRoot!.querySelectorAll('.wires path').length,
+    };
+  });
+
+  // Feed it, so it has a value to draw a card for.
+  await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const gen = editor.children.find((n: any) => n.type === 'random-numbers');
+    const merge = editor.children.find((n: any) => n.type === 'merge-streams');
+
+    editor.socketClicked(gen.sockets.find((s: any) => s.type === 'out'), gen.id);
+    editor.socketClicked(merge.sockets.filter((s: any) => s.type === 'in')[0], merge.id);
+  });
+
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'merge-streams')!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  });
+
+  // Open, with no way further out — and wired.
+  await expect.poll(async () => (await node()).view).toBe('normal');
+  expect((await node()).steps).toEqual(['Show smaller (small)']);
+  await expect.poll(async () => (await node()).wires).toBeGreaterThan(0);
+});
