@@ -54,6 +54,14 @@ export class SamplerWorker implements FbNodeWorker {
   constructor(private readonly config: SamplerConfig = {}) {
   }
 
+  /*
+   * No setConfigValue here, deliberately: every document input today targets
+   * the formula, whose re-emit already reaches this sampler over the wire.
+   * Whoever adds it must make a write to from/to/step also set the matching
+   * `touched` flag — without that, the next formula emit treats the written
+   * value as an untouched default and silently reverts it.
+   */
+
   destroy(): void {
     clearInterval(this.timer);
     Object.values(this.subscriptions).forEach(s => s.unsubscribe());

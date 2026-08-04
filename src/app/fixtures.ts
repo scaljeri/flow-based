@@ -296,11 +296,12 @@ export const showcase =
 /**
  * The demo a fresh browser opens with: every part of the story on one screen.
  *
- * A generator feeds a time-series plot and a logger — values flowing and two
- * ways of reading them. A formula produces f(x) = x^2, and the derivative
- * node turns it into f'(x) = 2x, symbolically: the orange line carries a
- * FUNCTION, not numbers. It needs the math and graphs modules, which the app
- * enables before loading it.
+ * A formula produces e^((b·i − a)·x), and the derivative node turns it into
+ * its symbolic slope: the orange lines carry FUNCTIONS, not numbers. Samplers
+ * make those functions data for two time-series plots and the complex plane,
+ * and a second, minimal chain draws the pure circle e^(i·b·x) — the document
+ * leans on it where Euler's formula needs a picture. It needs the math and
+ * graphs modules, which the app enables before loading it.
  *
  * A function, because ids must be fresh per creation — the demo can be
  * recreated next to flows that already borrowed these numbers.
@@ -310,15 +311,17 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 5 },
+  config: { seedVersion: 6 },
   /*
-   * The flow, read as a document: a short course in imaginary numbers, taught
-   * by the flow's own nodes. The figures are not screenshots — each one mounts
+   * The flow, read as a document: a true "imaginary numbers 101", taught by
+   * the flow's own nodes. The figures are not screenshots — each one mounts
    * the node's live content, so the spiral in the prose is the spiral the
-   * editor draws, still computing. The ladder: what i is → multiplying rotates
-   * → e^(iθ) walks a circle → add decay and it spirals → the plots are that
-   * same object projected. Headings stay plain text (no inline parsing there);
-   * formulas live in the paragraphs as $...$ and $$...$$.
+   * editor draws, still computing. The ladder: an impossible equation → the
+   * powers of i loop → the plane resolves the loop → adding shifts,
+   * multiplying turns → e aims growth sideways and circles → add decay and
+   * it spirals → the plots are that spiral's shadows. Headings stay plain
+   * text (no inline parsing there); formulas live in the paragraphs as
+   * $...$ and $$...$$.
    */
   document: {
     title: 'Imaginary numbers, drawn',
@@ -327,116 +330,157 @@ export const demo = () => ({
         type: 'text',
         text:
           'Every figure on this page is alive: it is one of the flow’s own nodes, ' +
-          'still computing while you read. The whole flow draws a single function, ' +
-          '`e^((b*i - a)*x)` — and to see why that innocent expression waves, dies out ' +
-          'and spirals, start with what $i$ is.',
+          'still computing while you read. The whole page draws one function, ' +
+          '`e^((b*i - a)*x)`. Right now that is noise — by the last section you ' +
+          'will read it at a glance.',
       },
+      { type: 'node', nodeId: 400, float: 'right', width: '300px', caption: 'The page’s one formula, live' },
 
-      { type: 'heading', text: 'A number with two parts', level: 2 },
-      { type: 'node', nodeId: 400, float: 'right', width: '300px', caption: 'The formula — live; its output is a function, not numbers' },
+      { type: 'heading', text: 'A number the line does not hold', level: 2 },
       {
         type: 'text',
         text:
-          'No real number squares to a negative — so mathematics names one into ' +
-          'existence: $i$ is *defined* by $i^2 = -1$. A **complex number** is a real ' +
-          'part plus so many $i$:\n' +
+          'Try to solve $x^2 = -1$. No real number answers it: positives square to ' +
+          'positives, negatives square to positives, zero squares to zero. The real ' +
+          'numbers form a line, and every point on that line fails.\n' +
+          '\n' +
+          'Mathematics has a move for this. Name a new number into existence, define ' +
+          'it by the one property you need, and check that arithmetic survives:\n' +
+          '\n' +
+          '$$i^2 = -1$$\n' +
+          '\n' +
+          'That is the whole definition. But if $i$ is a number and it is not on the ' +
+          'line, it must live somewhere *off* the line.',
+      },
+
+      { type: 'heading', text: 'The powers of i go in circles', level: 2 },
+      {
+        type: 'text',
+        text:
+          'Before asking where, just multiply. $i^1 = i$. $i^2 = -1$, by definition. ' +
+          '$i^3 = i^2 \\cdot i = -i$. And $i^4 = (i^2)^2 = 1$ — back to the start:\n' +
+          '\n' +
+          '$$i,\\quad i^2 = -1,\\quad i^3 = -i,\\quad i^4 = 1$$\n' +
+          '\n' +
+          'Then it repeats, forever, with period four. That is strange. Powers of a ' +
+          'real number shoot off or die out; the powers of $i$ walk in a loop. The ' +
+          'next section makes the loop obvious.',
+      },
+
+      { type: 'heading', text: 'A place to live: the plane', level: 2 },
+      {
+        type: 'text',
+        text:
+          'Put $i$ one unit *above* the line. Real axis across, imaginary axis up, ' +
+          'and every combination of the two is a point:\n' +
           '\n' +
           '$$z = a + b\\,i$$\n' +
           '\n' +
-          '$\\mathrm{Re}(z) = a$ and $\\mathrm{Im}(z) = b$ are simply its two coordinates: ' +
-          '$z$ is a point in a plane, real axis across, imaginary axis up. Nothing mystical ' +
-          'travels the wires below either — a complex value is the pair `{re, im}`, and one ' +
-          'sample of a function is `[x, re, im]`, where $x$ is the parameter, not part of ' +
-          'the number.',
-      },
-
-      { type: 'heading', text: 'Multiplying is turning', level: 2 },
-      {
-        type: 'text',
-        text:
-          'Multiply by $2$ and a number stretches away from the origin. Multiply by $i$ ' +
-          'and something better happens: $1$ goes to $i$, and $i$ goes to $i^2 = -1$ — ' +
-          'every point turns a quarter circle. Multiplying by a complex number is a ' +
-          'rotation plus a stretch.\n' +
+          '— $a$ across, $b$ up. $\\mathrm{Re}(z) = a$ and $\\mathrm{Im}(z) = b$ are ' +
+          'simply its two coordinates. Nothing mystical: on this page a complex value ' +
+          'is literally the pair `{re, im}`.\n' +
           '\n' +
-          'The simplest complex function, $(a + b\\,i)\\,x$ with $x$ running over the reals, ' +
-          'only ever scales one fixed number — a straight ray through the origin, both ' +
-          'parts growing in step: $\\mathrm{Re} = a\\,x$, $\\mathrm{Im} = b\\,x$. For a curve, ' +
-          'the turning has to compound.',
+          'Now the puzzle dissolves. $1$, $i$, $-1$ and $-i$ are the four compass ' +
+          'points of the plane — and each multiplication by $i$ moved the answer a ' +
+          'quarter turn on.',
       },
 
-      { type: 'heading', text: 'Growth in an imaginary direction', level: 2 },
+      { type: 'heading', text: 'Adding shifts, multiplying turns', level: 2 },
       {
         type: 'text',
         text:
-          'Compounding is what $e$ does: $e^x$ means “keep growing in proportion to where ' +
-          'you are”. Aim that growth in an imaginary direction and growing becomes turning: ' +
-          'the step is always at a right angle to where you stand, which changes your ' +
-          'direction and never your distance. That is **Euler’s formula**:\n' +
+          'Two rules pay for everything that follows. Adding is coordinate-wise, ' +
+          'a shift: $(a + b\\,i) + (c + d\\,i) = (a+c) + (b+d)\\,i$. Multiplying by ' +
+          '$i$ is the quarter turn you just watched: $i\\,(a + b\\,i) = -b + a\\,i$ — ' +
+          'check it on $1$, which goes to $i$. Multiplying by $2$ stretches. ' +
+          'Multiplying by a general complex number does both at once: **rotate and ' +
+          'stretch**.\n' +
+          '\n' +
+          'One quarter turn is crude. For a curve, the turning has to happen ' +
+          'continuously — and that is a job for $e$.',
+      },
+
+      { type: 'heading', text: 'Growth aimed sideways', level: 2 },
+      { type: 'node', nodeId: 1200, float: 'right', caption: 'e to an imaginary power: turning, never stretching' },
+      {
+        type: 'text',
+        text:
+          '$e^x$ means “grow in proportion to where you are”: the step you take points ' +
+          '*along* where you stand. Put $i$ in the exponent and each step instead turns ' +
+          'a right angle to where you stand — it changes your direction and never your ' +
+          'distance. Compounded, that is pure turning at constant radius: a circle. It ' +
+          'has a famous name:\n' +
           '\n' +
           '$$e^{i\\theta} = \\cos\\theta + i\\,\\sin\\theta$$\n' +
           '\n' +
-          'So $e^{i\\,b\\,x}$ walks the unit circle, $b$ setting the speed. Its shadow on the ' +
-          'real axis is $\\cos(b\\,x)$; on the imaginary axis, $\\sin(b\\,x)$. A circle seen ' +
-          'from the side is a wave.',
+          'So $e^{i\\,b\\,x}$ walks the unit circle as $x$ runs, with $b$ setting the ' +
+          'speed. The figure beside this text is exactly that function, drawn live by ' +
+          'the flow.',
       },
 
       { type: 'heading', text: 'Shrink while you turn', level: 2 },
-      { type: 'node', nodeId: 900, float: 'right', caption: 'The path: every step rotates a little and pulls a little inward' },
+      { type: 'node', nodeId: 900, float: 'right', caption: 'Turning and shrinking at once — a logarithmic spiral' },
       {
         type: 'text',
         text:
-          'The demo’s formula adds one knob:\n' +
+          'The page’s formula adds one knob to Euler:\n' +
           '\n' +
           '$$e^{(b\\,i - a)\\,x} = e^{-a\\,x}\\,\\bigl(\\cos b\\,x + i\\,\\sin b\\,x\\bigr)$$\n' +
           '\n' +
-          'The $b\\,i$ turns, the $-a$ shrinks. Turning and shrinking at once traces a ' +
-          '**logarithmic spiral** into the origin — here with $a =$ {{400:params.a}} and ' +
-          '$b =$ {{400:params.b}}. Those two values are yours to change: make $a$ ' +
-          'negative and the spiral grows outward instead of decaying; raise $b$ and it ' +
-          'winds faster. Every picture on this page follows as you type.',
+          'The $b\\,i$ turns, the $-a$ shrinks; together they trace a **logarithmic ' +
+          'spiral** into the origin — here with $a =$ {{400:params.a}} and $b =$ ' +
+          '{{400:params.b}}. Both are yours: type a value, or drag one sideways.\n' +
+          '\n' +
+          'Set $a$ to $0$. The shrinking stops, and the spiral relaxes into the unit ' +
+          'circle of the last section — that *is* $e^{i\\,b\\,x}$. Make $a$ negative ' +
+          'and decay becomes growth: the spiral winds outward. Set $b$ to $0$ and the ' +
+          'turning stops: pure $e^{-a\\,x}$, a march straight down the real axis. ' +
+          'Every complex behaviour on this page is these two dials, mixed.',
       },
 
-      { type: 'heading', text: 'One object, three angles', level: 2 },
-      { type: 'node', nodeId: 200, float: 'left', caption: 'Wave: the spiral’s shadow on the real axis' },
+      { type: 'heading', text: 'A circle seen from the side is a wave', level: 2 },
+      { type: 'node', nodeId: 200, float: 'left', caption: 'The spiral’s shadow on the real axis' },
       {
         type: 'text',
         text:
-          'The plots are not new functions — they are the spiral looked at from the side. ' +
-          'Project it onto the real axis and you get the damped cosine the **Wave** plot ' +
-          'draws:\n' +
+          'The plots are not new functions — they are shadows. Project the spiral onto ' +
+          'the real axis and you get the damped cosine the **Wave** plot draws:\n' +
           '\n' +
           '$$\\mathrm{Re}\\bigl(e^{(b\\,i - a)\\,x}\\bigr) = e^{-a\\,x}\\cos b\\,x$$\n' +
           '\n' +
-          'The imaginary part is the matching damped sine, a quarter turn behind. Wave, ' +
-          'Slope and the complex plane are the same object seen from three angles: two ' +
-          'projections — $x \\to \\mathrm{Re}$, $x \\to \\mathrm{Im}$ — and the path itself, ' +
-          'with $x$ surviving only as time.',
-      },
-      { type: 'node', nodeId: 800, float: 'right', caption: 'Slope: the symbolic derivative, sampled' },
-      {
-        type: 'text',
-        text:
-          'The **Slope** plot is the derivative — and it is computed *symbolically*, not by ' +
-          'finite differences: the derivative node receives the function as an expression ' +
-          'and differentiates the expression. For an exponential the answer is famous — the ' +
-          'derivative of $e^{k\\,x}$ is $k\\,e^{k\\,x}$, the same spiral scaled and rotated by ' +
-          'its own $k = b\\,i - a$. Decay and oscillation are one phenomenon; the complex ' +
-          'exponent just lets you read the two faces separately.',
+          'The imaginary part is the matching damped sine, a quarter turn behind. That ' +
+          'is why oscillation and decay show up together all over physics: they are one ' +
+          'complex object, watched from the side. The plots watch $x$ from $0$ to ' +
+          '{{400:x.to}} — extend it and more of the story fits in the frame.',
       },
 
-      { type: 'heading', text: 'The machinery', level: 2 },
-      { type: 'node', nodeId: 500, float: 'right', width: '300px', caption: 'The derivative, as an expression' },
+      { type: 'heading', text: 'The spiral knows its own slope', level: 2 },
+      { type: 'node', nodeId: 800, float: 'right', caption: 'The derivative — the same spiral, times k' },
       {
         type: 'text',
         text:
-          'Between the formula and its pictures sit two samplers, because a function is ' +
-          'not numbers yet: each sweeps the declared domain — $x$ from $0$ to ' +
-          '{{400:x.to}}, another value you can edit — and ' +
-          'emits the run of `[x, re, im]` samples. Only data travels the wires, never code; ' +
-          'the plots know nothing of $e$ or $i$, they draw what arrives. Flip back to the ' +
-          'flow view to see the wiring itself — this document and that graph are two ' +
-          'readings of the same JSON.',
+          'One more rung, for free. The derivative of an exponential is the function ' +
+          'multiplied by its own exponent:\n' +
+          '\n' +
+          '$$\\frac{d}{dx}\\,e^{k\\,x} = k\\,e^{k\\,x}$$\n' +
+          '\n' +
+          'Here $k = b\\,i - a$ — and multiplying, you now know, is rotate-and-stretch. ' +
+          'So the **Slope** plot is the Wave’s story shifted in phase and scaled, ' +
+          'nothing more. No finite differences were harmed: the derivative node ' +
+          'differentiates the *expression* and hands on a new function.',
+      },
+
+      { type: 'heading', text: 'Backstage', level: 2 },
+      { type: 'node', nodeId: 500, float: 'right', width: '300px', caption: 'A function travelled this wire, not numbers' },
+      {
+        type: 'text',
+        text:
+          'One paragraph of machinery. Between the formulas and their pictures sit ' +
+          'samplers: each sweeps the declared domain and emits the run of `[x, re, im]` ' +
+          'samples. Only data crosses the wires, never code — the plots know nothing of ' +
+          '$e$ or $i$, they draw what arrives. Flip back to the flow view to see the ' +
+          'wiring itself: that graph and this document are two readings of the same ' +
+          'JSON.',
       },
     ],
   },
@@ -515,12 +559,52 @@ export const demo = () => ({
       sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
       position: { x: 27, y: 48 },
     },
+    {
+      type: 'math-formula',
+      title: 'Unit circle',
+      id: 1000,
+      /*
+       * The pure circle e^(i·b·x), fixed at b = 1. The document's Euler
+       * section needs a picture of turning WITHOUT shrinking, and the
+       * showpiece cannot provide it while its a stays nonzero — so a small
+       * separate chain draws the circle permanently, and the spiral's
+       * "set a to 0" moment gets a reference to relax into.
+       */
+      config: {
+        expr: 'e^(i*b*x)',
+        params: { b: 1 },
+        // Just past 2π, so the circle closes.
+        x: { from: 0, to: 6.3, step: 0.02 },
+      },
+      sockets: [{ id: 1010, type: 'out', format: 'function' }],
+      position: { x: 78, y: 4 },
+    },
+    {
+      type: 'math-sampler',
+      title: 'Sampler circle',
+      id: 1100,
+      config: { mode: 'sweep' },
+      sockets: [
+        { id: 1110, type: 'in', format: 'function' },
+        { id: 1111, type: 'out', format: 'point' },
+      ],
+      position: { x: 80, y: 20 },
+    },
+    {
+      type: 'graph-complex',
+      title: 'Unit circle',
+      id: 1200,
+      sockets: [{ id: 1210, type: 'in', formats: ['number', 'point'] }],
+      position: { x: 77, y: 34 },
+    },
   ],
   /*
-   * Two sampled chains side by side — the wave and its slope — and the same
-   * function once more as a path through the complex plane. The samplers run
-   * in sweep mode, so every picture stands complete the moment the page
-   * opens. Nothing else: the demo is the complex story now.
+   * Two sampled chains side by side — the wave and its slope — the same
+   * function once more as a path through the complex plane, and a third,
+   * minimal chain drawing the pure circle e^(i·b·x) for the document's
+   * Euler section. The samplers run in sweep mode, so every picture stands
+   * complete the moment the page opens. Nothing else: the demo is the
+   * complex story now.
    */
   connections: [
     { id: 1002, from: 400, to: 500, out: 410, in: 510 },
@@ -529,5 +613,7 @@ export const demo = () => ({
     { id: 1005, from: 600, to: 200, out: 611, in: 210 },
     { id: 1007, from: 600, to: 900, out: 611, in: 910 },
     { id: 1006, from: 700, to: 800, out: 711, in: 810 },
+    { id: 1008, from: 1000, to: 1100, out: 1010, in: 1110 },
+    { id: 1009, from: 1100, to: 1200, out: 1111, in: 1210 },
   ],
 });

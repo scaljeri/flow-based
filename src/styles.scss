@@ -160,18 +160,16 @@ fb-root {
 /*
  * Figures in the document view.
  *
- * Node content is styled for the editor's dark canvas — the formula views are
- * white KaTeX, the plots draw pale lines — and on the document's white page
- * that was literally invisible. The mount hosts live in the LIGHT DOM (that is
- * how Angular's stylesheets reach node content at all), but they are created
- * at runtime by the document element, so Angular's scoped selectors never
- * match them: this has to be a global rule. The backing echoes
- * --fb-node-background, so a figure reads as the node it is.
+ * Node content is styled for the editor's dark canvas, and the document page
+ * is now just as dark — the shadow's .figure-body owns the well and the frame,
+ * because framing a figure is the document's own decision. The mount hosts
+ * live in the LIGHT DOM (that is how Angular's stylesheets reach node content
+ * at all), but they are created at runtime by the document element, so
+ * Angular's scoped selectors never match them: this has to stay a global rule,
+ * and all it does is space the content off that frame.
  */
 fb-flow-document .fb-node-content {
-  background-color: rgba(0, 0, 0, 0.85);
-  border-radius: 8px;
-  padding: 8px;
+  padding: 10px;
 }
 
 /*
