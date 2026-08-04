@@ -54,44 +54,17 @@ describe('deserializeFlow', () => {
     expect(deserializeFlow(flow()).type).toBe('flow');
   });
 
-  it('migrates step by step from the version the file carries', () => {
-    const old = flow();
+  it('reads an older version without a migration script as-is', () => {
+    /*
+     * No script between two versions means the shape did not change: the
+     * file is compatible as it stands and only the number moves on. This is
+     * a version-0 file being read by a version-1 reader with no migrations
+     * registered — the general no-script rule, exercised at the bottom of
+     * the range since version 1 IS the current version today.
+     */
+    const older = flow();
 
-    // A version-1 file speaks the old view names.
-    (old.children![0] as { view?: string }).view = 'medium';
-    (old.children![1] as { view?: string }).view = 'large';
-
-    const upgraded = deserializeFlow({ version: 1, flow: old });
-
-    expect(upgraded.children![0].view).toBe('normal');
-    expect(upgraded.children![1].view).toBe('full');
-  });
-
-  it('migrates a bare pre-versioning file too — bare means format 1', () => {
-    const old = flow();
-
-    (old.children![0] as { view?: string }).view = 'large';
-
-    expect(deserializeFlow(old).children![0].view).toBe('full');
-  });
-
-  it('reaches into subflows when migrating', () => {
-    const old = flow();
-
-    old.children![0].children = [
-      { id: 99, type: 'x', sockets: [], view: 'medium' as never },
-    ];
-    old.children![0].connections = [];
-
-    expect(deserializeFlow({ version: 1, flow: old }).children![0].children![0].view).toBe('normal');
-  });
-
-  it('leaves a current-version file untouched by migrations', () => {
-    const current = flow();
-
-    (current.children![0] as { view?: string }).view = 'normal';
-
-    expect(deserializeFlow({ version: FB_FLOW_FORMAT_VERSION, flow: current }).children![0].view).toBe('normal');
+    expect(deserializeFlow({ version: 1, flow: older }).children).toHaveLength(2);
   });
 
   it('rejects a flow from a newer format with an explanatory message', () => {

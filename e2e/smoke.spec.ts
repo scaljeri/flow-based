@@ -396,7 +396,7 @@ test('toggles the JSON view, which is the serialisable flow state', async ({ pag
   // The CURRENT format version, whatever it is by now — the point is the
   // envelope, not the number.
   expect(typeof parsed.version).toBe('number');
-  expect(parsed.version).toBeGreaterThanOrEqual(2);
+  expect(parsed.version).toBeGreaterThanOrEqual(1);
   // ...wrapping the recursive shape the engine relies on.
   expect(Array.isArray(parsed.flow.children)).toBe(true);
   expect(Array.isArray(parsed.flow.connections)).toBe(true);

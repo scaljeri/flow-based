@@ -7,10 +7,8 @@ import { FbNodeState } from './types';
  *     `position` as percentages of the graph plane. Files saved before versioning
  *     existed carry no `version` field and are read as 1, because the shape did
  *     not change when the viewport was introduced (see FbViewportService).
- * 2 — the view names `medium` and `large` became `normal` and `full`. Readers
- *     translated the old names at runtime; the file now says what it means.
  */
-export const FB_FLOW_FORMAT_VERSION = 2;
+export const FB_FLOW_FORMAT_VERSION = 1;
 
 export interface FbSerializedFlow {
   version: number;
@@ -30,28 +28,11 @@ export class FbFlowFormatError extends Error {
  * time — 1 to 2, 2 to 3 — so every migration only ever reasons about two
  * adjacent shapes, never about history.
  *
- * A migration receives a clone and may mutate it freely.
+ * A migration receives a clone and may mutate it freely. A version WITHOUT a
+ * migration is a version whose shape did not change: the file is read as it
+ * is and simply adopts the current number on its next save.
  */
-const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
-  /* 1 → 2: the view names medium/large became normal/full. */
-  1: flow => {
-    const renames: Record<string, string> = { medium: 'normal', large: 'full' };
-
-    const walk = (node: FbNodeState): void => {
-      const view = node.view as string | undefined;
-
-      if (view && renames[view]) {
-        node.view = renames[view] as FbNodeState['view'];
-      }
-
-      node.children?.forEach(walk);
-    };
-
-    walk(flow);
-
-    return flow;
-  },
-};
+const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {};
 
 export function serializeFlow(flow: FbNodeState): FbSerializedFlow {
   return { version: FB_FLOW_FORMAT_VERSION, flow: structuredClone(flow) };
@@ -101,11 +82,13 @@ export function deserializeFlow(input: unknown): FbNodeState {
   while (version < FB_FLOW_FORMAT_VERSION) {
     const migrate = MIGRATIONS[version];
 
-    if (!migrate) {
-      throw new FbFlowFormatError(`No migration from flow format ${version} to ${version + 1}.`);
-    }
-
-    flow = migrate(flow);
+    /*
+     * No script means no shape change between these versions: the file is
+     * compatible as it stands, and the number alone moves on. Refusing here —
+     * which is what this did — would turn a bumped version constant into a
+     * reader that rejects its own old files for no structural reason.
+     */
+    flow = migrate ? migrate(flow) : flow;
     version++;
   }
 
