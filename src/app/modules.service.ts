@@ -9,7 +9,7 @@ import {
   angularNodeTypes,
   prepareModule,
 } from '@scaljeri/flow-based';
-import { FbSocketColors } from '@scaljeri/flow-based-core';
+import { FB_BASE_SHAPES, FbSocketColors } from '@scaljeri/flow-based-core';
 import { FB_SOCKET_PALETTE } from './fb-settings';
 
 export type { FbModule };
@@ -64,6 +64,15 @@ export class ModulesService {
   readonly formats = new FbFormatRegistry();
 
   constructor() {
+    /*
+     * The framework's base types first — number, boolean, string, object,
+     * array, as core defines them — then the app's palette on top. Every
+     * refinement chain a module brings ends on one of these names.
+     */
+    for (const name of Object.keys(FB_BASE_SHAPES)) {
+      this.formats.seed({ name });
+    }
+
     for (const [name, color] of Object.entries(FB_SOCKET_PALETTE)) {
       this.formats.seed({ name, color });
     }
