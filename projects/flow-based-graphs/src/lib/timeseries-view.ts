@@ -120,12 +120,19 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
       return;
     }
 
-    // Match the bitmap to the element, so the line is crisp at every size.
-    const rect = canvas.getBoundingClientRect();
+    /*
+     * Match the bitmap to the LAYOUT size, so the line is crisp at every
+     * size. clientWidth, not getBoundingClientRect: the node lives on a
+     * zoomed plane, and the bounding rect is scaled by that zoom — measured
+     * through it, a zoomed-out plot got a miniature bitmap that the layout
+     * then stretched back up into a blur of overlapping labels.
+     */
+    const layoutW = canvas.clientWidth;
+    const layoutH = canvas.clientHeight;
 
-    if (rect.width && (canvas.width !== Math.round(rect.width) || canvas.height !== Math.round(rect.height))) {
-      canvas.width = Math.round(rect.width);
-      canvas.height = Math.round(rect.height);
+    if (layoutW && (canvas.width !== layoutW || canvas.height !== layoutH)) {
+      canvas.width = layoutW;
+      canvas.height = layoutH;
     }
 
     const ctx = canvas.getContext('2d')!;
