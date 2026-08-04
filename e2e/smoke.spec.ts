@@ -1136,3 +1136,37 @@ test('a complex function samples as [x, re, im] on the unit circle', async ({ pa
     expect(Math.hypot(re, im)).toBeCloseTo(1, 6);
   }
 });
+
+/**
+ * The demo flow, read as a document.
+ *
+ * The Doc button swaps the canvas for <fb-flow-document>: the seeded demo
+ * carries an authored document, its formulas typeset as MathML (KaTeX arrives
+ * by dynamic import), and the figures are the nodes' LIVE content — the Wave
+ * plot in the prose is a canvas the worker is still drawing on. The canvas is
+ * hidden rather than destroyed, so flipping back costs nothing.
+ */
+test('the demo reads as a document with typeset math and live figures', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.click('button.doc');
+
+  const doc = page.locator('fb-flow-document');
+
+  await expect(doc).toBeVisible();
+  await expect(doc.locator('h1')).toHaveText('Imaginary numbers, drawn');
+
+  // KaTeX rendered to MathML — the browser's own maths, no stylesheet needed.
+  await expect.poll(() => doc.locator('math').count()).toBeGreaterThan(10);
+
+  // The figures are mounted node content, not screenshots: the Wave plot's
+  // canvas lives in the light DOM, assigned to the figure's slot.
+  await expect.poll(() => page.locator('fb-flow-document .fb-node-content canvas').count())
+    .toBeGreaterThanOrEqual(3);
+
+  // Back to the flow: the editor was hidden, not destroyed, and still stands.
+  await page.click('button.doc');
+  await expect(page.locator('fb-node-box').first()).toBeVisible();
+  await expect(doc).toHaveCount(0);
+});

@@ -310,7 +310,134 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 3 },
+  config: { seedVersion: 4 },
+  /*
+   * The flow, read as a document: a short course in imaginary numbers, taught
+   * by the flow's own nodes. The figures are not screenshots — each one mounts
+   * the node's live content, so the spiral in the prose is the spiral the
+   * editor draws, still computing. The ladder: what i is → multiplying rotates
+   * → e^(iθ) walks a circle → add decay and it spirals → the plots are that
+   * same object projected. Headings stay plain text (no inline parsing there);
+   * formulas live in the paragraphs as $...$ and $$...$$.
+   */
+  document: {
+    title: 'Imaginary numbers, drawn',
+    blocks: [
+      {
+        type: 'text',
+        text:
+          'Every figure on this page is alive: it is one of the flow’s own nodes, ' +
+          'still computing while you read. The whole flow draws a single function, ' +
+          '`e^((b*i - a)*x)` — and to see why that innocent expression waves, dies out ' +
+          'and spirals, start with what $i$ is.',
+      },
+
+      { type: 'heading', text: 'A number with two parts', level: 2 },
+      { type: 'node', nodeId: 400, float: 'right', width: '300px', caption: 'The formula — live; its output is a function, not numbers' },
+      {
+        type: 'text',
+        text:
+          'No real number squares to a negative — so mathematics names one into ' +
+          'existence: $i$ is *defined* by $i^2 = -1$. A **complex number** is a real ' +
+          'part plus so many $i$:\n' +
+          '\n' +
+          '$$z = a + b\\,i$$\n' +
+          '\n' +
+          '$\\mathrm{Re}(z) = a$ and $\\mathrm{Im}(z) = b$ are simply its two coordinates: ' +
+          '$z$ is a point in a plane, real axis across, imaginary axis up. Nothing mystical ' +
+          'travels the wires below either — a complex value is the pair `{re, im}`, and one ' +
+          'sample of a function is `[x, re, im]`, where $x$ is the parameter, not part of ' +
+          'the number.',
+      },
+
+      { type: 'heading', text: 'Multiplying is turning', level: 2 },
+      {
+        type: 'text',
+        text:
+          'Multiply by $2$ and a number stretches away from the origin. Multiply by $i$ ' +
+          'and something better happens: $1$ goes to $i$, and $i$ goes to $i^2 = -1$ — ' +
+          'every point turns a quarter circle. Multiplying by a complex number is a ' +
+          'rotation plus a stretch.\n' +
+          '\n' +
+          'The simplest complex function, $(a + b\\,i)\\,x$ with $x$ running over the reals, ' +
+          'only ever scales one fixed number — a straight ray through the origin, both ' +
+          'parts growing in step: $\\mathrm{Re} = a\\,x$, $\\mathrm{Im} = b\\,x$. For a curve, ' +
+          'the turning has to compound.',
+      },
+
+      { type: 'heading', text: 'Growth in an imaginary direction', level: 2 },
+      {
+        type: 'text',
+        text:
+          'Compounding is what $e$ does: $e^x$ means “keep growing in proportion to where ' +
+          'you are”. Aim that growth in an imaginary direction and growing becomes turning: ' +
+          'the step is always at a right angle to where you stand, which changes your ' +
+          'direction and never your distance. That is **Euler’s formula**:\n' +
+          '\n' +
+          '$$e^{i\\theta} = \\cos\\theta + i\\,\\sin\\theta$$\n' +
+          '\n' +
+          'So $e^{i\\,b\\,x}$ walks the unit circle, $b$ setting the speed. Its shadow on the ' +
+          'real axis is $\\cos(b\\,x)$; on the imaginary axis, $\\sin(b\\,x)$. A circle seen ' +
+          'from the side is a wave.',
+      },
+
+      { type: 'heading', text: 'Shrink while you turn', level: 2 },
+      { type: 'node', nodeId: 900, float: 'right', caption: 'The path: every step rotates a little and pulls a little inward' },
+      {
+        type: 'text',
+        text:
+          'The demo’s formula adds one knob:\n' +
+          '\n' +
+          '$$e^{(b\\,i - a)\\,x} = e^{-a\\,x}\\,\\bigl(\\cos b\\,x + i\\,\\sin b\\,x\\bigr)$$\n' +
+          '\n' +
+          'The $b\\,i$ turns, the $-a$ shrinks. Turning and shrinking at once traces a ' +
+          '**logarithmic spiral** into the origin — here with $a = 0.3$ and $b = 4$, so it ' +
+          'rotates fast and decays gently. Nudge the parameters in the formula node’s ' +
+          'settings and every picture on this page follows.',
+      },
+
+      { type: 'heading', text: 'One object, three angles', level: 2 },
+      { type: 'node', nodeId: 200, float: 'left', caption: 'Wave: the spiral’s shadow on the real axis' },
+      {
+        type: 'text',
+        text:
+          'The plots are not new functions — they are the spiral looked at from the side. ' +
+          'Project it onto the real axis and you get the damped cosine the **Wave** plot ' +
+          'draws:\n' +
+          '\n' +
+          '$$\\mathrm{Re}\\bigl(e^{(b\\,i - a)\\,x}\\bigr) = e^{-a\\,x}\\cos b\\,x$$\n' +
+          '\n' +
+          'The imaginary part is the matching damped sine, a quarter turn behind. Wave, ' +
+          'Slope and the complex plane are the same object seen from three angles: two ' +
+          'projections — $x \\to \\mathrm{Re}$, $x \\to \\mathrm{Im}$ — and the path itself, ' +
+          'with $x$ surviving only as time.',
+      },
+      { type: 'node', nodeId: 800, float: 'right', caption: 'Slope: the symbolic derivative, sampled' },
+      {
+        type: 'text',
+        text:
+          'The **Slope** plot is the derivative — and it is computed *symbolically*, not by ' +
+          'finite differences: the derivative node receives the function as an expression ' +
+          'and differentiates the expression. For an exponential the answer is famous — the ' +
+          'derivative of $e^{k\\,x}$ is $k\\,e^{k\\,x}$, the same spiral scaled and rotated by ' +
+          'its own $k = b\\,i - a$. Decay and oscillation are one phenomenon; the complex ' +
+          'exponent just lets you read the two faces separately.',
+      },
+
+      { type: 'heading', text: 'The machinery', level: 2 },
+      { type: 'node', nodeId: 500, float: 'right', width: '300px', caption: 'The derivative, as an expression' },
+      {
+        type: 'text',
+        text:
+          'Between the formula and its pictures sit two samplers, because a function is ' +
+          'not numbers yet: each sweeps the declared domain — $x$ from $0$ to $8$ — and ' +
+          'emits the run of `[x, re, im]` samples. Only data travels the wires, never code; ' +
+          'the plots know nothing of $e$ or $i$, they draw what arrives. Flip back to the ' +
+          'flow view to see the wiring itself — this document and that graph are two ' +
+          'readings of the same JSON.',
+      },
+    ],
+  },
   sockets: [],
   children: [
     {

@@ -45,8 +45,23 @@ export class AppComponent implements OnInit, AfterViewInit {
   activeOverlay: OverlayRef | null = null;
   readonly version = APP_VERSION;
   showJson = false;
+  showDoc = false;
   flow: FbNodeState = data.basic as FbNodeState;
   loadError: string | null = null;
+
+  /**
+   * How the document view typesets TeX. Set the first time the view opens —
+   * KaTeX arrives by dynamic import, so flows without formulas never download
+   * it. MathML output on purpose: it is the browser's own maths rendering and
+   * needs no stylesheet, so the document element's shadow root needs nothing
+   * adopted into it (the same trick as the math module's panels).
+   */
+  mathRenderer?: (tex: string, display: boolean) => string;
+
+  /** The live editor, for the document view's figures. */
+  get editor() {
+    return this.flowService.editor;
+  }
 
   openModules(): void {
     this.dialog.open(ModulesDialogComponent, { width: '340px' });
@@ -369,6 +384,29 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   showJSON(): void {
     this.showJson = !this.showJson;
+    this.showDoc = false;
+  }
+
+  /**
+   * The same flow, read as a document.
+   *
+   * The canvas stays in the DOM, merely hidden: destroying it would destroy the
+   * editor and its workers, and the document's figures are those workers' live
+   * output — a document over a dead flow would show empty plots.
+   */
+  async toggleDoc(): Promise<void> {
+    if (!this.showDoc && !this.mathRenderer) {
+      const { default: katex } = await import('katex');
+
+      this.mathRenderer = (tex, display) =>
+        katex.renderToString(tex, { displayMode: display, throwOnError: false, output: 'mathml' });
+    }
+
+    this.showDoc = !this.showDoc;
+    this.showJson = false;
+    // zone.js does not patch dynamic import(); after the await we are outside
+    // the zone and nothing schedules a tick (see restoreFlow).
+    this.cdr.detectChanges();
   }
 
   get flowJson(): string {
@@ -379,6 +417,8 @@ export class AppComponent implements OnInit, AfterViewInit {
   escape(): void {
     if (this.showJson) {
       this.showJson = false;
+    } else if (this.showDoc) {
+      this.showDoc = false;
     } else if (this.activeOverlay) {
       this.activeOverlay.dispose();
 

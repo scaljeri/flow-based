@@ -1,6 +1,6 @@
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
-import { NgModule } from '@angular/core';
+import { CUSTOM_ELEMENTS_SCHEMA, NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
 import { TapSmallComponent } from './nodes/tap/tap-small.component';
@@ -161,6 +161,9 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
    * components without pre-registration, which is what the node registry
    * (FB_CONFIG -> DynamicComponentDirective) relies on.
    */
+  // For <fb-flow-document> in the app template — a web component, registered by
+  // the lit package the editor wrapper already imports.
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   bootstrap: [AppComponent]
 })
 export class AppModule {

@@ -113,10 +113,27 @@ fb-thunder {
 main {
   display: flex;
   flex: 1;
+  // A flex child's min-height is its content by default, so a tall document or
+  // JSON dump grew this row past the viewport — under the host's
+  // `overflow: hidden` nothing scrolled. Pinned, the views scroll themselves.
+  min-height: 0;
+  overflow: hidden;
 
   fb-flow-based {
     // border: 3px solid lightgray;
     border-radius: 3px;
+  }
+
+  // Hidden while the JSON or document view is up — NOT destroyed, because the
+  // editor and its running workers live under this component.
+  fb-flow.view-hidden {
+    display: none;
+  }
+
+  .flow-as-doc {
+    background-color: #fff;
+    color: #111;
+    flex: 1;
   }
 
   .flow-as-json {
