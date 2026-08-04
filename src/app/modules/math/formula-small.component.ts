@@ -38,7 +38,8 @@ export class FormulaSmallComponent implements OnInit, OnDestroy {
       const target = this.host.nativeElement.querySelector('.tex') as HTMLElement | null;
 
       if (target) {
-        renderTex(target, value.tex);
+        // A formula introduces itself as one: f(x) = ..., not a bare expression.
+        renderTex(target, `f(x) = ${value.tex}`);
       }
 
       this.cdr.detectChanges();

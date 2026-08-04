@@ -9,6 +9,7 @@ import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { SubflowComponent } from './nodes/subflow/subflow.component';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
+import { FlowsDialogComponent } from './components/flows/flows-dialog.component';
 import { FlowComponent } from './flow/flow.component';
 import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
 
@@ -73,6 +74,7 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
     SubflowComponent,
     TypeColorsComponent,
     ModulesDialogComponent,
+    FlowsDialogComponent,
     FlowComponent,
     ComponentSelectionComponent,
     BasicGraphSmallComponent,

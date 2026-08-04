@@ -101,6 +101,11 @@ the download, upload, warning and JSON buttons.
     <mat-divider></mat-divider>
 
     <!-- Editor-wide settings live here; backends and the like will join them. -->
+    <button type="button" mat-menu-item class="flows" (click)="openFlows()">
+      <mat-icon>folder_open</mat-icon>
+      <span>Flows</span>
+    </button>
+
     <button type="button" mat-menu-item class="modules" (click)="openModules()">
       <mat-icon>extension</mat-icon>
       <span>Modules</span>

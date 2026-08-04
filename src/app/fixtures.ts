@@ -285,3 +285,83 @@ export const showcase =
       }
     ]
   }
+
+/**
+ * The demo a fresh browser opens with: every part of the story on one screen.
+ *
+ * A generator feeds a time-series plot and a logger — values flowing and two
+ * ways of reading them. A formula produces f(x) = x^2, and the derivative
+ * node turns it into f'(x) = 2x, symbolically: the orange line carries a
+ * FUNCTION, not numbers. It needs the math and graphs modules, which the app
+ * enables before loading it.
+ *
+ * A function, because ids must be fresh per creation — the demo can be
+ * recreated next to flows that already borrowed these numbers.
+ */
+export const demo = () => ({
+  id: 1,
+  type: 'flow',
+  title: 'demo',
+  sockets: [],
+  children: [
+    {
+      type: 'random-numbers',
+      title: 'Random number generator',
+      id: 100,
+      config: {
+        min: 0,
+        max: 100,
+        start: 0,
+        end: 10,
+        intervalMax: 10000,
+        intervalMin: 100,
+        interval: 800,
+        integer: true,
+      },
+      sockets: [{ id: 110, type: 'out', format: 'number' }],
+      position: { x: 6, y: 8 },
+    },
+    {
+      type: 'graph-timeseries',
+      title: 'Time series',
+      id: 200,
+      config: { style: 'area' },
+      sockets: [{ id: 210, type: 'in', format: 'number' }],
+      position: { x: 52, y: 6 },
+    },
+    {
+      type: 'tap',
+      title: 'Logger',
+      id: 300,
+      config: { expanded: false },
+      sockets: [
+        { id: 310, type: 'in' },
+        { id: 311, type: 'out' },
+      ],
+      position: { x: 30, y: 36 },
+    },
+    {
+      type: 'math-formula',
+      title: 'Formula',
+      id: 400,
+      config: { expr: 'x^2' },
+      sockets: [{ id: 410, type: 'out', format: 'function' }],
+      position: { x: 6, y: 62 },
+    },
+    {
+      type: 'math-derivative',
+      title: 'Derivative',
+      id: 500,
+      sockets: [
+        { id: 510, type: 'in', format: 'function' },
+        { id: 511, type: 'out', format: 'function' },
+      ],
+      position: { x: 52, y: 62 },
+    },
+  ],
+  connections: [
+    { id: 1000, from: 100, to: 200, out: 110, in: 210 },
+    { id: 1001, from: 100, to: 300, out: 110, in: 310 },
+    { id: 1002, from: 400, to: 500, out: 410, in: 510 },
+  ],
+});

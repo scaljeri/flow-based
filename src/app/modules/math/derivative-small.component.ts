@@ -38,7 +38,7 @@ export class DerivativeSmallComponent implements OnInit, OnDestroy {
       const target = this.host.nativeElement.querySelector('.tex') as HTMLElement | null;
 
       if (target) {
-        renderTex(target, value.tex);
+        renderTex(target, `f'(x) = ${value.tex}`);
       }
 
       this.cdr.detectChanges();

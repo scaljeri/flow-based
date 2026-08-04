@@ -47,6 +47,19 @@ async function deleteNode(page: import('@playwright/test').Page, index = 0): Pro
 }
 
 async function waitUntilReady(page: import('@playwright/test').Page): Promise<void> {
+  /*
+   * The demo flow arrives ASYNCHRONOUSLY on a fresh profile — the app first
+   * shows the basic fixture, then downloads the math/graphs modules and swaps
+   * the demo in. Interacting before the swap is a race the suite kept losing:
+   * a deleted node came back, counts changed mid-assertion. Readiness starts
+   * at "the demo is the flow on screen".
+   */
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+        ?.editor?.state?.title), { timeout: 15_000 })
+    .toBe('demo');
+
   await expect(page.locator('fb-node-box').first()).toBeVisible();
 
   await expect.poll(
@@ -748,12 +761,14 @@ test('data type colours are set from the menu, and can be switched off', async (
   const dialog = page.locator('fb-type-colors');
   await expect(dialog).toBeVisible();
 
-  // Only the types actually in use: the starting flow deals in `number` alone.
-  await expect(dialog.locator('li .name')).toHaveText(['number']);
+  // Only the types actually in use: the demo deals in numbers and functions.
+  await expect(dialog.locator('li .name')).toHaveText(['function', 'number']);
 
-  // Pick a new colour for the type, and every line carrying it follows.
+  // Pick a new colour for `number`, and every line carrying it follows.
   await page.evaluate(() => {
-    const input = document.querySelector<HTMLInputElement>('fb-type-colors li input[type=color]')!;
+    const rows = [...document.querySelectorAll('fb-type-colors li')];
+    const row = rows.find(r => r.querySelector('.name')?.textContent === 'number')!;
+    const input = row.querySelector<HTMLInputElement>('input[type=color]')!;
 
     input.value = '#2244ff';
     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -856,4 +871,62 @@ test('a formula flows into a derivative and comes out differentiated', async ({ 
   });
 
   expect(derived.expr.replace(/\s/g, '')).toBe('2*x');
+});
+
+/**
+ * Flows live in localStorage: a fresh browser opens the demo (downloading the
+ * math and graphs modules it speaks), a change survives reload, and the Flows
+ * dialog creates and switches flows.
+ */
+test('the demo flow appears first, changes survive a reload, and new flows can be created', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  // A fresh profile: the demo builds itself, modules included.
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+        ?.editor?.state?.title), { timeout: 15_000 })
+    .toBe('demo');
+
+  // f(x) = x^2 stands on the canvas as notation, not as source.
+  await expect
+    .poll(() => page.evaluate(() => [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .some(n => (n as unknown as { state?: { type?: string } }).state?.type === 'math-formula')))
+    .toBe(true);
+
+  // Move a node, let the autosave write, reload: the move holds.
+  await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    editor.children[0].position = { x: 21, y: 21 };
+    editor.geometry.changes.emit(undefined);
+  });
+  await page.waitForTimeout(1200);
+  await page.reload();
+
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { children?: { position?: { x: number } }[] } })
+        ?.editor?.children?.[0]?.position?.x), { timeout: 15_000 })
+    .toBe(21);
+
+  // A new flow from the dialog: empty canvas, and both flows on the shelf.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  const dialog = page.locator('fb-flows-dialog');
+  await expect(dialog).toBeVisible();
+
+  await dialog.locator('input').fill('Scratch');
+  await dialog.locator('button[type=submit]').click();
+
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+        ?.editor?.state?.title))
+    .toBe('Scratch');
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  await expect(page.locator('fb-flows-dialog li')).toHaveCount(2);
 });
