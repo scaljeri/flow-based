@@ -61,6 +61,14 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     return this.service.state.config?.style ?? 'line';
   }
 
+  /** The open views draw axes; the sparkline stays bare. */
+  protected readonly axes: boolean = false;
+
+  /** The series' own title, for the open views to put above the plot. */
+  get title(): string {
+    return this.worker?.buffer.labels?.title ?? '';
+  }
+
   protected draw(): void {
     const canvas = this.plot?.nativeElement;
 
@@ -95,23 +103,34 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     const xs = points.map(p => p[0]);
     const ys = points.map(p => p[1]);
     const minX = Math.min(...xs);
-    const spanX = Math.max(...xs) - minX || 1;
+    const maxX = Math.max(...xs);
+    const spanX = maxX - minX || 1;
     const minY = Math.min(...ys);
-    const spanY = Math.max(...ys) - minY || 1;
-    const pad = 6;
+    const maxY = Math.max(...ys);
+    const spanY = maxY - minY || 1;
 
-    const x = (v: number) => pad + ((v - minX) / spanX) * (width - pad * 2);
-    const y = (v: number) => height - pad - ((v - minY) / spanY) * (height - pad * 2);
+    // Room for the axes when they are drawn; a hair of padding otherwise.
+    const pad = 6;
+    const left = this.axes ? 44 : pad;
+    const bottom = this.axes ? 34 : pad;
+    const top = this.axes ? 10 : pad;
+
+    const x = (v: number) => left + ((v - minX) / spanX) * (width - left - pad);
+    const y = (v: number) => height - bottom - ((v - minY) / spanY) * (height - bottom - top);
+
+    if (this.axes) {
+      this.drawAxes(ctx, { width, height, left, bottom, top, pad, minX, maxX, minY, maxY });
+    }
 
     ctx.strokeStyle = '#bada55';
     ctx.fillStyle = 'rgba(186, 218, 85, 0.35)';
     ctx.lineWidth = 2;
 
     if (this.style === 'bars') {
-      const barWidth = Math.max(1, (width - pad * 2) / points.length - 1);
+      const barWidth = Math.max(1, (width - left - pad) / points.length - 1);
 
       for (const point of points) {
-        ctx.fillRect(x(point[0]) - barWidth / 2, y(point[1]), barWidth, height - pad - y(point[1]));
+        ctx.fillRect(x(point[0]) - barWidth / 2, y(point[1]), barWidth, height - bottom - y(point[1]));
       }
 
       return;
@@ -122,10 +141,67 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     ctx.stroke();
 
     if (this.style === 'area') {
-      ctx.lineTo(x(points[points.length - 1][0]), height - pad);
-      ctx.lineTo(x(points[0][0]), height - pad);
+      ctx.lineTo(x(points[points.length - 1][0]), height - bottom);
+      ctx.lineTo(x(points[0][0]), height - bottom);
       ctx.closePath();
       ctx.fill();
     }
+  }
+
+  /**
+   * Axes, end values, labels and the title — the words come from the series
+   * itself (set at the formula, travelling with the samples), with f(x) and
+   * x as the honest defaults for a series that never introduced itself.
+   */
+  private drawAxes(
+    ctx: CanvasRenderingContext2D,
+    m: { width: number; height: number; left: number; bottom: number; top: number; pad: number;
+         minX: number; maxX: number; minY: number; maxY: number },
+  ): void {
+    const labels = this.worker.buffer.labels;
+    const xLabel = labels?.x ?? (this.worker.buffer.xy ? 'x' : '');
+    const yLabel = labels?.y ?? (this.worker.buffer.xy ? 'f(x)' : '');
+    const axisY = m.height - m.bottom;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.lineWidth = 1;
+    ctx.font = '10px system-ui, sans-serif';
+
+    ctx.beginPath();
+    ctx.moveTo(m.left, m.top);
+    ctx.lineTo(m.left, axisY);
+    ctx.lineTo(m.width - m.pad, axisY);
+    ctx.stroke();
+
+    const fmt = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(Math.abs(v) < 10 ? 2 : 1);
+
+    // End values on each axis: the honest minimum that makes a graph readable.
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fmt(m.maxY), m.left - 4, m.top + 4);
+    ctx.fillText(fmt(m.minY), m.left - 4, axisY);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(fmt(m.minX), m.left, axisY + 4);
+    // Right-aligned, or half the number falls off the canvas edge.
+    ctx.textAlign = 'right';
+    ctx.fillText(fmt(m.maxX), m.width - m.pad, axisY + 4);
+    ctx.textAlign = 'center';
+
+    if (xLabel) {
+      ctx.fillText(xLabel, m.left + (m.width - m.left - m.pad) / 2, axisY + 16);
+    }
+
+    if (yLabel) {
+      ctx.save();
+      ctx.translate(10, m.top + (axisY - m.top) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(yLabel, 0, 0);
+      ctx.restore();
+    }
+
   }
 }

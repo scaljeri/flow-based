@@ -5,12 +5,25 @@ import { TimeseriesView } from './timeseries-view';
 @Component({
   standalone: true,
   selector: 'fb-timeseries-normal',
-  template: `<canvas #plot></canvas>`,
+  template: `
+    @if (title) {
+      <p class="plot-title">{{title}}</p>
+    }
+    <canvas #plot></canvas>
+  `,
   styles: [`
     :host {
       display: block;
       line-height: 0;
       padding: 6px;
+    }
+
+    .plot-title {
+      color: rgba(255, 255, 255, 0.9);
+      font: 12px system-ui, sans-serif;
+      line-height: normal;
+      margin: 0 0 4px;
+      text-align: center;
     }
 
     canvas {
@@ -22,4 +35,6 @@ import { TimeseriesView } from './timeseries-view';
   `]
 })
 export class TimeseriesNormalComponent extends TimeseriesView {
+  protected override readonly axes = true;
+
 }

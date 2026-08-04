@@ -16,6 +16,11 @@ export interface SamplerConfig {
 /** One sample: the coordinates, however many dimensions there are. */
 export type SamplePoint = number[];
 
+/** The labels message a plot listens for between the points. */
+export interface SampleLabels {
+  labels: { title?: string; x?: string; y?: string };
+}
+
 /**
  * A function in, samples out — as POINTS, because a sample without its x is
  * half a fact: a plot fed bare y's could only draw them against arrival
@@ -28,7 +33,7 @@ export type SamplePoint = number[];
  * whenever the function or the settings change.
  */
 export class SamplerWorker implements FbNodeWorker {
-  private readonly subject = new ReplaySubject<SamplePoint | SamplePoint[]>(1);
+  private readonly subject = new ReplaySubject<SamplePoint | SamplePoint[] | SampleLabels>(1);
   private readonly subscriptions: { [id: number]: Subscription } = {};
 
   private fn?: FnValue;
@@ -48,7 +53,7 @@ export class SamplerWorker implements FbNodeWorker {
     this.subject.complete();
   }
 
-  getStream(): Observable<SamplePoint | SamplePoint[]> {
+  getStream(): Observable<SamplePoint | SamplePoint[] | SampleLabels> {
     return this.subject.asObservable();
   }
 
@@ -90,6 +95,10 @@ export class SamplerWorker implements FbNodeWorker {
       return;
     }
 
+    if (this.fn.labels) {
+      this.subject.next({ labels: this.fn.labels });
+    }
+
     if (this.mode === 'sweep') {
       this.emitSweep();
     } else {
@@ -109,6 +118,15 @@ export class SamplerWorker implements FbNodeWorker {
 
     if (this.x > this.to) {
       this.x = this.from;
+
+      /*
+       * Re-announced at every wrap: the stream replays only its LAST value,
+       * so a plot wired up mid-sweep missed the labels sent at the start —
+       * one sweep later it has them.
+       */
+      if (this.fn?.labels) {
+        this.subject.next({ labels: this.fn.labels });
+      }
     }
   }
 

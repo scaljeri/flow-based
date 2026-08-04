@@ -8,6 +8,8 @@ export interface SeriesBuffer {
   /** True when the points carry their own x — drawn as a function graph. */
   xy: boolean;
   points: [number, number][];
+  /** What the series calls itself; sent by the producer, drawn by the plot. */
+  labels?: { title?: string; x?: string; y?: string };
 }
 
 /**
@@ -50,6 +52,12 @@ export class TimeseriesWorker implements FbNodeWorker {
   }
 
   private ingest(value: unknown): boolean {
+    if (value && typeof value === 'object' && 'labels' in (value as object)) {
+      this.buffer.labels = { ...(value as { labels: SeriesBuffer['labels'] }).labels };
+
+      return true;
+    }
+
     if (typeof value === 'number' && Number.isFinite(value)) {
       this.push(false, [this.nextIndex(), value]);
 

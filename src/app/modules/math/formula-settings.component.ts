@@ -55,6 +55,31 @@ import { MathStepperComponent } from './stepper.component';
       </div>
     }
 
+    <!--
+      How a plot introduces this function. Left empty, the plot says the
+      honest defaults: the function itself as title, f(x) and x on the axes.
+    -->
+    <div class="labels">
+      <label class="text-field">
+        <span>Plot title</span>
+        <input type="text" [value]="worker.labels.title ?? ''"
+               [placeholder]="'f(x) = ' + worker.expression"
+               (change)="onLabel('title', $event)">
+      </label>
+
+      <label class="text-field">
+        <span>X-axis label</span>
+        <input type="text" [value]="worker.labels.x ?? ''" placeholder="x"
+               (change)="onLabel('x', $event)">
+      </label>
+
+      <label class="text-field">
+        <span>Y-axis label</span>
+        <input type="text" [value]="worker.labels.y ?? ''" placeholder="f(x)"
+               (change)="onLabel('y', $event)">
+      </label>
+    </div>
+
     <!-- The domain this function is interesting on; a sampler adopts it. -->
     <div class="range">
       <fb-math-stepper label="x from" [value]="worker.xRange.from" [by]="1"
@@ -135,6 +160,32 @@ import { MathStepperComponent } from './stepper.component';
       grid-template-columns: 1fr 1fr;
     }
 
+    .labels {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 8px;
+    }
+
+    .text-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .text-field span {
+      opacity: 0.8;
+    }
+
+    .text-field input {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px 8px;
+    }
+
     .range {
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       padding-top: 8px;
@@ -202,6 +253,11 @@ export class FormulaSettingsComponent implements OnInit, AfterViewInit {
 
   onRange(part: 'from' | 'to' | 'step', value: number): void {
     this.worker.setXRange(part, value);
+    this.cdr.detectChanges();
+  }
+
+  onLabel(part: 'title' | 'x' | 'y', event: Event): void {
+    this.worker.setLabel(part, (event.target as HTMLInputElement).value);
     this.cdr.detectChanges();
   }
 

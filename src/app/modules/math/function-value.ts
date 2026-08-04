@@ -18,4 +18,6 @@ export interface FnValue {
   evaluate: (scope: Record<string, number>) => number;
   params?: Record<string, number>;
   xRange?: { from: number; to: number; step: number };
+  /** How a plot should introduce this function: title and axis labels. */
+  labels?: { title?: string; x?: string; y?: string };
 }

@@ -10,6 +10,8 @@ export interface FormulaConfig {
   params?: Record<string, number>;
   /** The domain the author finds interesting; a sampler adopts it. */
   x?: { from: number; to: number; step: number };
+  /** Plot title and axis labels; absent parts fall back to f(x) and x. */
+  labels?: { title?: string; x?: string; y?: string };
 }
 
 /**
@@ -65,9 +67,15 @@ export function deriveFnValue(source: FnValue, variable = 'x'): FnValue {
     expr: node.toString(),
     tex: node.toTex(),
     evaluate: scope => node.compile().evaluate({ ...params, ...scope }),
-    // What the author declared about the function holds for its derivative.
+    // What the author declared about the function holds for its derivative —
+    // except the y-axis and title, which now describe the derivative.
     params: source.params,
     xRange: source.xRange,
+    labels: {
+      title: `f'(x) = ${node.toString()}`,
+      x: source.labels?.x ?? 'x',
+      y: "f'(x)",
+    },
   };
 }
 
@@ -140,9 +148,25 @@ export class FormulaWorker implements FbNodeWorker {
     this.emit();
   }
 
+  setLabel(part: 'title' | 'x' | 'y', value: string): void {
+    this.config.labels = { ...(this.config.labels ?? {}), [part]: value };
+    this.emit();
+  }
+
   private emit(): void {
     try {
       const value = toFnValue(this.expression, this.config.params ?? {}, this.config.x);
+
+      /*
+       * The author's words where given, the honest defaults where not: the
+       * y-axis reads f(x), the x-axis reads x, and the title is the function
+       * itself — which is what the plot is showing, after all.
+       */
+      value.labels = {
+        title: this.config.labels?.title || `f(x) = ${this.expression}`,
+        x: this.config.labels?.x || 'x',
+        y: this.config.labels?.y || 'f(x)',
+      };
 
       this.error = null;
       this.subject.next(value);
@@ -165,5 +189,9 @@ export class FormulaWorker implements FbNodeWorker {
 
   get xRange(): { from: number; to: number; step: number } {
     return this.config.x ?? { from: 0, to: 10, step: 0.1 };
+  }
+
+  get labels(): { title?: string; x?: string; y?: string } {
+    return this.config.labels ?? {};
   }
 }

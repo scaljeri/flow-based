@@ -5,7 +5,14 @@ import { TimeseriesView } from './timeseries-view';
 @Component({
   standalone: true,
   selector: 'fb-timeseries-full',
-  template: `<canvas #plot></canvas>`,
+  template: `
+    <div class="wrap">
+      @if (title) {
+        <p class="plot-title">{{title}}</p>
+      }
+      <canvas #plot></canvas>
+    </div>
+  `,
   styles: [`
     :host {
       box-sizing: border-box;
@@ -14,6 +21,21 @@ import { TimeseriesView } from './timeseries-view';
       line-height: 0;
       padding: 10px;
       width: 100%;
+    }
+
+    .wrap {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .plot-title {
+      color: rgba(255, 255, 255, 0.9);
+      font: 13px system-ui, sans-serif;
+      line-height: normal;
+      margin: 0 0 6px;
+      text-align: center;
     }
 
     canvas {
@@ -25,4 +47,6 @@ import { TimeseriesView } from './timeseries-view';
   `]
 })
 export class TimeseriesFullComponent extends TimeseriesView {
+  protected override readonly axes = true;
+
 }

@@ -959,8 +959,14 @@ test('the sampler turns a function into points, one by one or as a sweep', async
     // Subscribed BEFORE wiring: the stream replays its latest value, and a
     // subscriber arriving mid-sweep would get one point from the middle first.
     const collected = new Promise<number[][]>(resolve => {
-      worker.getStream().subscribe((value: number[]) => {
-        seen.push(value);
+      worker.getStream().subscribe((value: unknown) => {
+        // The stream also announces labels between the samples; the samples
+        // themselves are plain arrays of numbers.
+        if (!Array.isArray(value) || typeof value[0] !== 'number') {
+          return;
+        }
+
+        seen.push(value as number[]);
 
         if (seen.length === 3) {
           // A copy: this subscription keeps collecting after resolve, and the
@@ -1024,11 +1030,24 @@ test('formula parameters and domain travel with the function', async ({ page }) 
     const derived: { expr: string; params?: Record<string, number> } =
       await new Promise(resolve => editor.flow.getWorker(derivative.id).getStream().subscribe(resolve));
 
+    // The plot downstream hears the labels between the samples.
+    const plot = editor.children.find((n: any) => n.type === 'graph-timeseries');
+    const labels: unknown = await new Promise(resolve => {
+      const worker = editor.flow.getWorker(plot.id);
+      const timer = setInterval(() => {
+        if (worker.buffer.labels) {
+          clearInterval(timer);
+          resolve(worker.buffer.labels);
+        }
+      }, 100);
+    });
+
     return {
       params: formula.config.params,
       derivedExpr: derived.expr.replace(/\s/g, ''),
       derivedAt2: editor.flow.getWorker(derivative.id).current.evaluate({ x: 2 }),
       samplerFrom: sampler.config.from,
+      labels,
     };
   });
 
@@ -1039,4 +1058,6 @@ test('formula parameters and domain travel with the function', async ({ page }) 
   expect(result.derivedAt2).toBe(12);
   // The declared domain reached the sampler.
   expect(result.samplerFrom).toBe(-5);
+  // And the derivative's own introduction reached the plot's buffer.
+  expect((result.labels as { y: string }).y).toBe("f'(x)");
 });
