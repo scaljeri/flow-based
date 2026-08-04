@@ -745,6 +745,15 @@ export class FbNodeElement extends LitElement {
     this.mountedFor = source;
     this.mountedMount = mount;
     this.handle = mount(this.contentHost, { api: this.api(source) });
+
+    /*
+     * The handle is new, and the settings panel's mountOwn BINDING reads it.
+     * Mounting happens outside Lit's render, so without an explicit render the
+     * panel keeps the stale undefined it was given before the content existed —
+     * and a node whose settings opened in that window showed a panel with no
+     * settings in it.
+     */
+    this.requestUpdate();
   }
 
   private unmountContent(): void {
