@@ -172,6 +172,14 @@ export class FormulaSettingsComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.worker = this.service.worker as FormulaWorker;
+
+    /*
+     * A node whose module arrived after the flow briefly has no worker; a
+     * panel that dereferenced it anyway rendered as nothing at all. A
+     * stand-in over the same config keeps the editor usable — it persists,
+     * it just cannot re-emit until the real worker exists.
+     */
+    this.worker ??= new FormulaWorker(this.service.state.config ??= {});
   }
 
   ngAfterViewInit(): void {

@@ -23,7 +23,7 @@ type SamplerKey = 'from' | 'to' | 'step' | 'interval';
   template: `
     <label class="field">
       <span class="label">Mode</span>
-      <select [value]="worker.mode" (change)="onMode($event)">
+      <select [value]="mode" (change)="onMode($event)">
         <option value="point">One point at a time</option>
         <option value="sweep">Whole sweep as one array</option>
       </select>
@@ -116,19 +116,36 @@ export class SamplerSettingsComponent {
     { key: 'interval', label: 'Interval (ms)', by: 10, min: 16 },
   ];
 
-  get worker(): SamplerWorker {
-    return this.service.worker as SamplerWorker;
+  get worker(): SamplerWorker | undefined {
+    return this.service.worker as SamplerWorker | undefined;
   }
 
+  get mode(): SamplerMode {
+    return this.worker?.mode ?? 'point';
+  }
+
+  /*
+   * Read through the worker when it exists, straight from config otherwise. A
+   * node whose module arrived after the flow briefly has no worker, and a
+   * panel that threw on that rendered as NOTHING — no mode, no steppers, no
+   * clue. The settings are config either way; the worker only adds defaults.
+   */
   read(key: SamplerKey): number {
-    return this.worker[key];
+    if (this.worker) {
+      return this.worker[key];
+    }
+
+    const config = (this.service.state.config ?? {}) as SamplerConfig;
+    const defaults = { from: 0, to: 10, step: 0.1, interval: 50 };
+
+    return config[key] ?? defaults[key];
   }
 
   onMode(event: Event): void {
     const config = (this.service.state.config ??= {}) as SamplerConfig;
 
     config.mode = (event.target as HTMLSelectElement).value as SamplerMode;
-    this.worker.restart();
+    this.worker?.restart();
     this.cdr.detectChanges();
   }
 
@@ -156,7 +173,7 @@ export class SamplerSettingsComponent {
     const config = (this.service.state.config ??= {}) as SamplerConfig;
 
     config[field.key] = field.min === undefined ? value : Math.max(field.min, value);
-    this.worker.restart();
+    this.worker?.restart();
     this.cdr.detectChanges();
   }
 }
