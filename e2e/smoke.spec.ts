@@ -696,3 +696,55 @@ test('a node type contributes its own settings to the panel', async ({ page }) =
   await expect.poll(interval).toBe(4000);
   expect(before).not.toBe(4000);
 });
+
+/**
+ * Colours belong to data types, chosen once in a menu.
+ *
+ * A connection's colour is the format crossing it, so choosing it per socket —
+ * where the picker used to be — let one type look like two. The menu lists only
+ * the types in use, colours the whole document at once, and can be switched off
+ * entirely; the per-socket picker is gone.
+ */
+test('data type colours are set from the menu, and can be switched off', async ({ page }) => {
+  // The overflow menu only exists on a narrow screen; on a desktop the actions
+  // sit inline and the hamburger is hidden.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const lineColour = () => page.evaluate(() =>
+    document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector('linearGradient stop')!.getAttribute('stop-color'));
+
+  // The demo palette colours `number` dark green.
+  expect(await lineColour()).toBe('#025d04');
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('button.type-colors').click();
+
+  const dialog = page.locator('fb-type-colors');
+  await expect(dialog).toBeVisible();
+
+  // Only the types actually in use: the starting flow deals in `number` alone.
+  await expect(dialog.locator('li .name')).toHaveText(['number']);
+
+  // Pick a new colour for the type, and every line carrying it follows.
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('fb-type-colors li input[type=color]')!;
+
+    input.value = '#2244ff';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await expect.poll(lineColour).toBe('#2244ff');
+
+  // Off silences every colour; on again remembers the choice.
+  const toggle = dialog.locator('.toggle input');
+
+  await toggle.uncheck();
+  await expect.poll(lineColour).toBe('#fff');
+
+  await toggle.check();
+  await expect.poll(lineColour).toBe('#2244ff');
+});

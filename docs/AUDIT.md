@@ -1112,6 +1112,24 @@ styling quirk but a propagation bug, twice over, both introduced in Stage 14:
   connection's own two sockets, so a THIRD socket changed by a helper never
   propagated onward. A change now requeues everything touching either node.
 
+## Stage 23 — colours belong to data types, chosen in a menu
+
+A connection's colour is the format crossing it, so the colour belongs to the
+TYPE. It was chosen per socket, which let one type look like two; the per-socket
+picker is gone, and a "Data types" entry in the toolbar's overflow menu — where
+later editor-wide concerns such as backends will join it — opens a dialog that
+lists only the types IN USE (document-wide: a colour must mean the same thing on
+both sides of a subflow boundary) with one picker per type, plus a toggle that
+silences all colouring. On by default; the choice survives toggling.
+
+Editor API: `colorsEnabled` / `setColorsEnabled` / `setTypeColor` /
+`formatsInDocument`, and `colorsVersion` — a counter bumped on any colour
+change, for memo keys. The first attempt put the RESOLVED colours in the
+connection layer's guard key, and resolving one scans the nodes: the key is
+built per connection per frame, and the perf test that failed was the exact
+property it exists to protect. A version counter says "something changed" for
+the price of a read.
+
 ### Still open
 - **`FlowWorker.destroy()` is a stub** — literally `console.log`. A removed
   subflow does not unsubscribe its streams. `removeStream` still carries a

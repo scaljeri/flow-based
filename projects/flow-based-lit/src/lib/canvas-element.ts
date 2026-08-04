@@ -611,7 +611,7 @@ export class FbFlowCanvasElement extends LitElement {
 
       const isActive = pending?.socket.id === socket.id;
       const accepts = this.editor.accepts(socket, flow.id!);
-      const colour = socket.color ? `border-color:${socket.color};` : '';
+      const colour = this.editor.colorsEnabled && socket.color ? `border-color:${socket.color};` : '';
 
       return html`
         <div

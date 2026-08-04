@@ -353,20 +353,6 @@ export class FbNodeSettingsElement extends LitElement {
       opacity: 0.45;
     }
 
-    .socket-editor .swatch {
-      align-items: center;
-      display: flex;
-      gap: 8px;
-    }
-
-    .socket-editor input[type='color'] {
-      background: none;
-      border: none;
-      block-size: 26px;
-      cursor: pointer;
-      inline-size: 40px;
-      padding: 0;
-    }
 
     /* Whatever the node type contributes for its own settings. */
     .config .own:not(:empty) {
@@ -766,7 +752,9 @@ export class FbNodeSettingsElement extends LitElement {
       bottom: `top:100%;left:${along};`,
     }[side];
 
-    const colour = socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? '';
+    const colour = this.editor.colorsEnabled
+      ? socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? ''
+      : '';
 
     return html`
       <span
@@ -933,14 +921,17 @@ export class FbNodeSettingsElement extends LitElement {
     return this.renderRoot.querySelector('dialog.socket-editor');
   }
 
+  /*
+   * No colour picker in here. A colour belongs to a data TYPE — it has to mean
+   * the same thing on every socket that carries the type — so it is chosen in
+   * the colours menu, not per socket.
+   */
   private renderSocketEditor(sockets: FbSocket[]) {
     const socket = sockets.find(s => s.id === this.editing);
 
     if (!socket) {
       return html``;
     }
-
-    const colour = socket.color ?? this.editor.socketColors[socket.format ?? ''] ?? '#999999';
 
     return html`
       <dialog
@@ -969,14 +960,6 @@ export class FbNodeSettingsElement extends LitElement {
         -->
         <label for=${`${this.formatsId}`}>Type</label>
         ${this.renderFormats(socket)}
-
-        <label class="swatch">
-          Colour
-          <input
-            type="color"
-            .value=${colour}
-            @input=${(e: Event) => this.editor.updateSocket(socket, { color: (e.target as HTMLInputElement).value })}>
-        </label>
 
         <div class="danger">
           <button type="button" class="delete" @click=${() => this.removeSocket(socket)}>

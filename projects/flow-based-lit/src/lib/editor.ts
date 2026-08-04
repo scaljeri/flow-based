@@ -436,6 +436,79 @@ export class FbEditor {
   }
 
   /**
+   * Every data type in use anywhere in the DOCUMENT.
+   *
+   * The colour menu lists these rather than one flow's vocabulary: a colour is
+   * presentation and has to mean the same thing on both sides of a subflow
+   * boundary, so it is chosen once for the document — even though which types a
+   * SOCKET may take stays scoped to its own flow.
+   */
+  formatsInDocument(): string[] {
+    const seen = new Set<string>();
+    const walk = (node: FbNodeState | undefined) => {
+      for (const socket of node?.sockets ?? []) {
+        for (const format of formatsOf(socket)) {
+          seen.add(format);
+        }
+      }
+
+      for (const child of node?.children ?? []) {
+        walk(child);
+      }
+    };
+
+    walk(this.root);
+
+    return [...seen].sort();
+  }
+
+  /* ----------------------------------------------------------------------
+     Colour by type
+     ----------------------------------------------------------------------
+     A connection's colour is the format crossing it, so the colours belong to
+     the TYPES — they are set per type in a menu, not per socket. On by
+     default, because a graph you can read by colour is the point; off for a
+     screenshot or a colour-blind palette clash, until chosen per-type colours
+     can express that better.
+   */
+
+  /** Whether sockets and connections are coloured by their data type. */
+  colorsEnabled = true;
+
+  /**
+   * Bumped whenever anything about colouring changes.
+   *
+   * For memo keys. The connection layer caches each path behind a key, and
+   * "which colour is this line" must be part of it — but resolving the colour
+   * means scanning nodes, and a key has to be cheap or the cache costs more
+   * than it saves. A counter says "something changed" for the price of a read.
+   */
+  colorsVersion = 0;
+
+  setColorsEnabled(enabled: boolean): void {
+    if (this.colorsEnabled === enabled) {
+      return;
+    }
+
+    this.colorsEnabled = enabled;
+    this.colorsVersion++;
+    // 'sockets' rather than a new kind: it is how sockets look, and both the
+    // nodes and the connection layer already redraw on it.
+    this.changes.emit({ kind: 'sockets' });
+  }
+
+  /** Give a data type its colour, for every socket and line that carries it. */
+  setTypeColor(format: string, color: string): void {
+    if (this.socketColors[format] === color) {
+      return;
+    }
+
+    this.socketColors[format] = color;
+    this.colorsVersion++;
+    this.changes.emit({ kind: 'sockets' });
+  }
+
+  /**
    * The types a particular socket could sensibly carry.
    *
    * A type exists only where something carries it, so which types are on offer

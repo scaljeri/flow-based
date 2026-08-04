@@ -7,6 +7,7 @@ import { TapSmallComponent } from './nodes/tap/tap-small.component';
 import { TapNormalComponent } from './nodes/tap/tap-normal.component';
 import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { SubflowComponent } from './nodes/subflow/subflow.component';
+import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { FlowComponent } from './flow/flow.component';
 import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
 import { DefaultFrontComponent } from './components/default-front/default-front.component';
@@ -60,6 +61,7 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
     TapNormalComponent,
     TapFullComponent,
     SubflowComponent,
+    TypeColorsComponent,
     FlowComponent,
     DefaultFrontComponent,
     ComponentSelectionComponent,

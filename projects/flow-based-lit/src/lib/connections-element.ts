@@ -241,6 +241,13 @@ export class FbConnectionsElement extends LitElement {
     return `${fp.x},${fp.y},${fs?.width},${fs?.height},${tp.x},${tp.y},${ts?.width},${ts?.height},`
       + `${connection.out},${connection.in},${plane.width},${plane.height},`
       + `${outSide && sideOf(outSide)},${inSide && sideOf(inSide)},`
+      /*
+       * The colour VERSION, not the resolved colours: resolving one means
+       * scanning the nodes, and this key is built per connection per frame —
+       * the resolved form made a drag cost work proportional to the graph,
+       * which is the exact property the perf test exists to protect.
+       */
+      + `${this.editor.colorsVersion},${connection.out && this.editor.nodeById(connection.from)?.sockets?.find(s => s.id === connection.out)?.format},`
       + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing},`
       // Whether this line is being held. Without it `guard` sees an unchanged
       // key and skips the very re-render that turns the line red.
@@ -653,6 +660,12 @@ export class FbConnectionsElement extends LitElement {
   }
 
   private colourOf(format: string | null | undefined, explicit?: string): string {
+    // The toggle silences EVERY colour, the per-socket legacy ones included:
+    // "no colours" that still showed some would not read as off.
+    if (!this.editor.colorsEnabled) {
+      return '#fff';
+    }
+
     return explicit || (format ? this.editor.socketColors[format] : undefined) || '#fff';
   }
 }

@@ -1,4 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import {
   FbHistoryService,
   FbNodeState,
@@ -33,7 +35,12 @@ export class AppComponent implements OnInit {
   constructor(private selectionService: ComponentSelectionService,
               private flowService: FlowBasedService,
               public history: FbHistoryService,
-              private overlay: Overlay) {
+              private overlay: Overlay,
+              private dialog: MatDialog) {
+  }
+
+  openTypeColors(): void {
+    this.dialog.open(TypeColorsComponent, { width: '320px' });
   }
 
   ngOnInit(): void {

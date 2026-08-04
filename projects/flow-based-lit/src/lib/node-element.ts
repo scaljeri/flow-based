@@ -1270,7 +1270,7 @@ export class FbNodeElement extends LitElement {
     const { geometry, viewport } = this.editor;
     const plane = viewport.planeSize;
     const point = geometry.socketPosition(this.state, socket, plane);
-    const colour = socket.color ? `border-color:${socket.color};` : '';
+    const colour = this.editor.colorsEnabled && socket.color ? `border-color:${socket.color};` : '';
 
     if (!point) {
       // Not measured yet; park it on the left edge rather than at the origin.

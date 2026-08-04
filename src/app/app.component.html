@@ -93,6 +93,14 @@
       <mat-icon>data_object</mat-icon>
       <span>{{showJson ? 'Show flow' : 'Show JSON'}}</span>
     </button>
+
+    <mat-divider></mat-divider>
+
+    <!-- Editor-wide settings live here; backends and the like will join them. -->
+    <button type="button" mat-menu-item class="type-colors" (click)="openTypeColors()">
+      <mat-icon>palette</mat-icon>
+      <span>Data types</span>
+    </button>
   </mat-menu>
 
   <!-- One file input, shared by the inline button and the menu item. -->
