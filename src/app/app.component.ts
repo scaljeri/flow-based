@@ -3,6 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
 import { ModulesService } from './modules.service';
+import { APP_VERSION } from './version';
 import { FlowStoreService } from './flow-store.service';
 import { FbFlowsAction, FlowsDialogComponent } from './components/flows/flows-dialog.component';
 import {
@@ -42,6 +43,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
 
   activeOverlay: OverlayRef | null = null;
+  readonly version = APP_VERSION;
   showJson = false;
   flow: FbNodeState = data.basic as FbNodeState;
   loadError: string | null = null;
