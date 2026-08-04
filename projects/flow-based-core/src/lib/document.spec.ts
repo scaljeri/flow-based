@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FbDocNodeBlock, documentFor, paragraphsOf } from './document';
+import { FbDocNodeBlock, documentFor, paragraphsOf, readConfigValue, writeConfigValue } from './document';
 import { FbNodeState } from './types';
 
 const flow = (children: FbNodeState[], document?: FbNodeState['document']): FbNodeState => ({
@@ -70,5 +70,38 @@ describe('paragraphsOf', () => {
 
   it('returns nothing for empty text', () => {
     expect(paragraphsOf('   \n\n  ')).toEqual([]);
+  });
+});
+
+describe('readConfigValue / writeConfigValue', () => {
+  it('reads a dotted path, and undefined along a missing branch', () => {
+    expect(readConfigValue({ params: { a: 0.3 } }, 'params.a')).toBe(0.3);
+    expect(readConfigValue({ params: { a: 0.3 } }, 'params.b')).toBeUndefined();
+    expect(readConfigValue({}, 'x.to')).toBeUndefined();
+    expect(readConfigValue(undefined, 'a')).toBeUndefined();
+  });
+
+  it('writes in place, creating the branch as needed', () => {
+    const config: Record<string, unknown> = { params: { a: 1 } };
+
+    expect(writeConfigValue(config, 'params.a', 2)).toBe(true);
+    expect(writeConfigValue(config, 'x.to', 8)).toBe(true);
+    expect(config).toEqual({ params: { a: 2 }, x: { to: 8 } });
+  });
+
+  it('refuses to write through a non-object', () => {
+    const config: Record<string, unknown> = { expr: 'x^2' };
+
+    expect(writeConfigValue(config, 'expr.deep', 1)).toBe(false);
+    expect(config).toEqual({ expr: 'x^2' });
+  });
+
+  it('refuses the prototype escape hatches', () => {
+    const config: Record<string, unknown> = {};
+
+    expect(writeConfigValue(config, '__proto__.polluted', 1)).toBe(false);
+    expect(writeConfigValue(config, 'constructor.prototype.polluted', 1)).toBe(false);
+    expect(readConfigValue(config, '__proto__')).toBeUndefined();
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
   });
 });

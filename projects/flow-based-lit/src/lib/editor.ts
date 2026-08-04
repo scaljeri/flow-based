@@ -32,6 +32,7 @@ import {
   pasteNodes,
   supportedViews,
   viewOf,
+  writeConfigValue,
 } from '@scaljeri/flow-based-core';
 
 /**
@@ -62,7 +63,9 @@ export interface FbEditorChange {
      */
     | 'pointer'
     /** Which nodes are selected. */
-    | 'selection';
+    | 'selection'
+    /** A node's config value changed — a document input, not its own panel. */
+    | 'config';
   nodeId?: number;
 }
 
@@ -418,6 +421,38 @@ export class FbEditor {
     this.history.capture(this.root);
     node.title = title;
     this.changes.emit({ kind: 'structure', nodeId });
+  }
+
+  /**
+   * Write one config value on a node, the way a document's inline input does.
+   *
+   * Through the WORKER when it accepts config writes — only the worker knows
+   * what must happen after a value changes (recompute, re-emit, restart a
+   * sweep). The bare fallback still persists, since a worker holds the very
+   * config object the JSON serialises, but a running worker learns nothing
+   * from it; a type that wants document inputs implements setConfigValue.
+   */
+  setNodeConfigValue(nodeId: number, path: string, value: unknown): boolean {
+    const node = this.nodeById(nodeId);
+
+    if (!node) {
+      return false;
+    }
+
+    const worker = this.flow.getWorker(nodeId);
+    let written = true;
+
+    if (worker?.setConfigValue) {
+      worker.setConfigValue(path, value);
+    } else {
+      written = writeConfigValue((node.config ??= {}) as Record<string, unknown>, path, value);
+    }
+
+    if (written) {
+      this.changes.emit({ kind: 'config', nodeId });
+    }
+
+    return written;
   }
 
   addSocket(nodeId: number, type: FbSocketType): FbSocket | undefined {

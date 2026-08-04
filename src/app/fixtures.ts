@@ -310,7 +310,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 4 },
+  config: { seedVersion: 5 },
   /*
    * The flow, read as a document: a short course in imaginary numbers, taught
    * by the flow's own nodes. The figures are not screenshots — each one mounts
@@ -391,9 +391,10 @@ export const demo = () => ({
           '$$e^{(b\\,i - a)\\,x} = e^{-a\\,x}\\,\\bigl(\\cos b\\,x + i\\,\\sin b\\,x\\bigr)$$\n' +
           '\n' +
           'The $b\\,i$ turns, the $-a$ shrinks. Turning and shrinking at once traces a ' +
-          '**logarithmic spiral** into the origin — here with $a = 0.3$ and $b = 4$, so it ' +
-          'rotates fast and decays gently. Nudge the parameters in the formula node’s ' +
-          'settings and every picture on this page follows.',
+          '**logarithmic spiral** into the origin — here with $a =$ {{400:params.a}} and ' +
+          '$b =$ {{400:params.b}}. Those two values are yours to change: make $a$ ' +
+          'negative and the spiral grows outward instead of decaying; raise $b$ and it ' +
+          'winds faster. Every picture on this page follows as you type.',
       },
 
       { type: 'heading', text: 'One object, three angles', level: 2 },
@@ -430,7 +431,8 @@ export const demo = () => ({
         type: 'text',
         text:
           'Between the formula and its pictures sit two samplers, because a function is ' +
-          'not numbers yet: each sweeps the declared domain — $x$ from $0$ to $8$ — and ' +
+          'not numbers yet: each sweeps the declared domain — $x$ from $0$ to ' +
+          '{{400:x.to}}, another value you can edit — and ' +
           'emits the run of `[x, re, im]` samples. Only data travels the wires, never code; ' +
           'the plots know nothing of $e$ or $i$, they draw what arrives. Flip back to the ' +
           'flow view to see the wiring itself — this document and that graph are two ' +

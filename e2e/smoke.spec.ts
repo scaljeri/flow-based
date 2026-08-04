@@ -1165,6 +1165,31 @@ test('the demo reads as a document with typeset math and live figures', async ({
   await expect.poll(() => page.locator('fb-flow-document .fb-node-content canvas').count())
     .toBeGreaterThanOrEqual(3);
 
+  /*
+   * The inline inputs: the prose carries the formula's a, b and domain end as
+   * editable values. A write goes through the worker (setConfigValue), so the
+   * running flow follows; nonsense is not a write at all and snaps back.
+   */
+  const inputs = doc.locator('.config-input');
+
+  await expect(inputs).toHaveCount(3);
+  await expect(inputs.first()).toHaveValue('0.3');
+
+  await inputs.first().fill('-0.05');
+  await inputs.first().press('Enter');
+
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.nodeById(400).config.params.a)).toBe(-0.05);
+
+  await inputs.first().fill('not a number');
+  await inputs.first().press('Enter');
+
+  await expect(inputs.first()).toHaveValue('-0.05');
+  expect(await page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.nodeById(400).config.params.a)).toBe(-0.05);
+
   // Back to the flow: the editor was hidden, not destroyed, and still stands.
   await page.click('button.doc');
   await expect(page.locator('fb-node-box').first()).toBeVisible();

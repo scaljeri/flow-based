@@ -93,3 +93,77 @@ export function paragraphsOf(text: string): string[] {
     .map(p => p.trim())
     .filter(Boolean);
 }
+
+/*
+ * Dotted-path access into a node's config, for the document's inline inputs.
+ *
+ * The names come out of document JSON, which may not be the reader's own file —
+ * so the segments an object is walked by are checked against the prototype
+ * escape hatches. Everything else is fair game: the paths address exactly what
+ * the node's own settings panel edits.
+ */
+const FORBIDDEN_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function segmentsOf(path: string): string[] | null {
+  const segments = path.split('.');
+
+  return segments.some(segment => !segment || FORBIDDEN_SEGMENTS.has(segment))
+    ? null
+    : segments;
+}
+
+/** The value at a dotted path, or undefined anywhere along a missing branch. */
+export function readConfigValue(config: unknown, path: string): unknown {
+  const segments = segmentsOf(path);
+
+  if (!segments) {
+    return undefined;
+  }
+
+  let current: unknown = config;
+
+  for (const segment of segments) {
+    if (current === null || typeof current !== 'object') {
+      return undefined;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current;
+}
+
+/**
+ * Write a value at a dotted path, creating the branch as needed.
+ *
+ * In PLACE, deliberately: the engine hands a worker its node's config object —
+ * the same one the JSON serialises — so mutating it is what persists (see the
+ * workers' own convention). Returns false when the path is unwritable.
+ */
+export function writeConfigValue(config: Record<string, unknown>, path: string, value: unknown): boolean {
+  const segments = segmentsOf(path);
+
+  if (!segments) {
+    return false;
+  }
+
+  let current = config;
+
+  for (const segment of segments.slice(0, -1)) {
+    const next = current[segment];
+
+    if (next === null || typeof next !== 'object') {
+      if (next !== undefined) {
+        return false;
+      }
+
+      current[segment] = {};
+    }
+
+    current = current[segment] as Record<string, unknown>;
+  }
+
+  current[segments[segments.length - 1]] = value;
+
+  return true;
+}

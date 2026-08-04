@@ -231,6 +231,18 @@ export interface FbNodeWorker {
   removeStream(connection?: FbConnection): void;
 
   destroy(): void;
+
+  /**
+   * Accept a config value written from OUTSIDE the type's own settings panel —
+   * the document view's inline inputs, and whatever wants to poke a node next.
+   *
+   * Optional on purpose. A bare write into `state.config` persists (workers
+   * hold that very object) but tells a running worker nothing; only the worker
+   * knows what has to happen after a value changes — recompute, re-emit,
+   * restart a sweep. A worker that implements this makes those values live;
+   * one that does not is simply not tunable from a document.
+   */
+  setConfigValue?(path: string, value: unknown): void;
 }
 
 export type FbSocketColors = Record<string, string>;

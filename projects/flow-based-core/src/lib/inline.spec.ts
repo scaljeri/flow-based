@@ -66,6 +66,22 @@ describe('parseInline', () => {
 
     expect(tokens).toEqual([{ type: 'math', tex: '\\sum_i x_i', display: true }]);
   });
+
+  it('reads a config input reference', () => {
+    expect(parseInline('with a = {{400:params.a}} here')).toEqual([
+      { type: 'text', text: 'with a = ' },
+      { type: 'input', nodeId: 400, path: 'params.a' },
+      { type: 'text', text: ' here' },
+    ]);
+  });
+
+  it('leaves a malformed config reference as text', () => {
+    // No node id, a path that starts with a digit, an empty path: none of
+    // these are references, and swallowing them would hide the typo.
+    expect(parseInline('{{params.a}}')).toEqual([{ type: 'text', text: '{{params.a}}' }]);
+    expect(parseInline('{{400:1a}}')).toEqual([{ type: 'text', text: '{{400:1a}}' }]);
+    expect(parseInline('{{400:}}')).toEqual([{ type: 'text', text: '{{400:}}' }]);
+  });
 });
 
 describe('isDisplayMath', () => {

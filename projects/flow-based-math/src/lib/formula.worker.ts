@@ -1,4 +1,4 @@
-import { FbNodeWorker } from '@scaljeri/flow-based';
+import { FbNodeWorker, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject } from 'rxjs';
 import * as math from 'mathjs';
 import { derivative, parse } from 'mathjs';
@@ -193,6 +193,23 @@ export class FormulaWorker implements FbNodeWorker {
   setLabel(part: 'title' | 'x' | 'y', value: string): void {
     this.config.labels = { ...(this.config.labels ?? {}), [part]: value };
     this.emit();
+  }
+
+  /**
+   * A config write from outside the settings panel — a document's inline
+   * inputs. Generic on purpose: any config path is a write-then-re-emit,
+   * except the expression, whose setter also refreshes the parameter list.
+   */
+  setConfigValue(path: string, value: unknown): void {
+    if (path === 'expr') {
+      this.setExpression(String(value));
+
+      return;
+    }
+
+    if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
+      this.emit();
+    }
   }
 
   private emit(): void {

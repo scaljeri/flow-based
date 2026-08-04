@@ -6,9 +6,11 @@
  * `innerHTML` — a renderer builds elements from these and sets their textContent,
  * which cannot inject markup no matter what the input says.
  *
- * The syntax is a deliberately small subset of Markdown, plus TeX spans:
+ * The syntax is a deliberately small subset of Markdown, plus TeX spans and
+ * config references:
  *
  *   **bold**   *italic*   `code`   [text](href)   $x^2$   $$\sum_i x_i$$
+ *   {{400:params.a}}
  */
 export type FbInline =
   | { type: 'text'; text: string }
@@ -17,7 +19,17 @@ export type FbInline =
   | { type: 'code'; text: string }
   | { type: 'link'; text: string; href: string }
   /** TeX. `display` is the `$$…$$` form: its own centred block. */
-  | { type: 'math'; tex: string; display: boolean };
+  | { type: 'math'; tex: string; display: boolean }
+  /**
+   * A node's config value, editable in place: `{{nodeId:path}}`.
+   *
+   * This is what makes a document more than an illustrated read — the prose
+   * says "here with a = ⟨0.3⟩" and the reader changes it, watching every live
+   * figure follow. The path is dotted and relative to the node's `config`
+   * (`params.a`, `x.to`), which bounds what a document can reach: exactly the
+   * values that node's own settings panel edits, nothing beyond them.
+   */
+  | { type: 'input'; nodeId: number; path: string };
 
 /*
  * Order matters: the longer opener has to be tried first, or `$$x$$` matches as
@@ -25,6 +37,7 @@ export type FbInline =
  */
 const PATTERN = new RegExp(
   [
+    /\{\{(\d+):([A-Za-z_][A-Za-z0-9_.]*)\}\}/.source,
     /\$\$([\s\S]+?)\$\$/.source,
     /\$([^$\n]+?)\$/.source,
     /`([^`]+?)`/.source,
@@ -90,9 +103,11 @@ export function parseInline(text: string): FbInline[] {
       pushText(text.slice(last, index));
     }
 
-    const [, displayMath, inlineMath, code, strong, em, linkText, linkHref] = match;
+    const [, inputNode, inputPath, displayMath, inlineMath, code, strong, em, linkText, linkHref] = match;
 
-    if (displayMath !== undefined) {
+    if (inputPath !== undefined) {
+      tokens.push({ type: 'input', nodeId: Number(inputNode), path: inputPath });
+    } else if (displayMath !== undefined) {
       tokens.push({ type: 'math', tex: displayMath.trim(), display: true });
     } else if (inlineMath !== undefined) {
       tokens.push({ type: 'math', tex: inlineMath.trim(), display: false });

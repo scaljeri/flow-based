@@ -12,8 +12,10 @@ import {
   isDisplayMath,
   paragraphsOf,
   parseInline,
+  readConfigValue,
 } from '@scaljeri/flow-based-core';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { live } from 'lit/directives/live.js';
 import { FbEditor, FbEditorChange } from './editor';
 
 /**
@@ -85,6 +87,29 @@ export class FbFlowDocumentElement extends LitElement {
     .math-source {
       font-family: ui-monospace, monospace;
       opacity: 0.85;
+    }
+
+    /*
+     * An editable value, sitting IN the sentence. Styled as a quiet pill
+     * rather than a form field: the underline invites the edit, the sizing
+     * follows the value, and the font stays the prose's own so the line does
+     * not jump when one appears.
+     */
+    .config-input {
+      background: rgba(127, 127, 127, 0.12);
+      border: none;
+      border-bottom: 2px solid rgba(127, 127, 127, 0.55);
+      border-radius: 4px 4px 0 0;
+      color: inherit;
+      font: inherit;
+      padding: 0 0.2em;
+      text-align: center;
+    }
+
+    .config-input:focus {
+      background: rgba(127, 127, 127, 0.2);
+      border-bottom-color: currentcolor;
+      outline: none;
     }
 
     figure {
@@ -195,9 +220,10 @@ export class FbFlowDocumentElement extends LitElement {
   private subscribe(): void {
     this.unsubscribe?.();
     this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
-      // A document has no connections and no viewport; only the set of nodes and
-      // their prose can change what it says.
-      if (change.kind === 'structure' || change.kind === 'sockets') {
+      // A document has no connections and no viewport; only the set of nodes,
+      // their prose and their config values can change what it says. 'config'
+      // is what re-syncs every inline input after any one of them commits.
+      if (change.kind === 'structure' || change.kind === 'sockets' || change.kind === 'config') {
         this.requestUpdate();
       }
     });
@@ -446,8 +472,94 @@ export class FbFlowDocumentElement extends LitElement {
       case 'math':
         return this.renderMath(token.tex, token.display);
 
+      case 'input':
+        return this.renderConfigInput(token);
+
       default:
         return html`${token.text}`;
+    }
+  }
+
+  /**
+   * An inline config input: the reader changes a value IN the prose and every
+   * live figure follows — this is what makes the document interactive rather
+   * than merely illustrated.
+   *
+   * The write goes through the editor, which prefers the node's worker
+   * (`setConfigValue`): a bare config write persists but tells a running
+   * worker nothing. The 'config' change the editor emits re-renders this
+   * document, which re-syncs every input — `live()` makes Lit compare against
+   * what is actually in the field, not what it last rendered, so a rejected
+   * value visibly snaps back.
+   */
+  private renderConfigInput(token: { nodeId: number; path: string }) {
+    const node = this.editor.nodeById(token.nodeId);
+    const value = node ? readConfigValue(node.config, token.path) : undefined;
+
+    // A reference into a node that is gone, or at a path that holds nothing —
+    // shown as the source, readable and honest, like a formula without a
+    // typesetter.
+    if (node === undefined || value === undefined || (typeof value === 'object' && value !== null)) {
+      return html`<code>{{${token.nodeId}:${token.path}}}</code>`;
+    }
+
+    const text = String(value);
+
+    return html`<input
+      class="config-input"
+      type="text"
+      inputmode=${typeof value === 'number' ? 'decimal' : 'text'}
+      style="width:${Math.max(3, text.length + 1)}ch"
+      .value=${live(text)}
+      @change=${(event: Event) => this.commitConfigInput(token, event.target as HTMLInputElement)}
+      @keydown=${(event: KeyboardEvent) => this.onConfigInputKey(token, event)}
+    >`;
+  }
+
+  private onConfigInputKey(token: { nodeId: number; path: string }, event: KeyboardEvent): void {
+    const input = event.target as HTMLInputElement;
+
+    if (event.key === 'Enter') {
+      // The native 'change' fires on blur; Enter should commit right here.
+      input.blur();
+    } else if (event.key === 'Escape') {
+      // Cancel the edit — and only the edit: without stopPropagation the
+      // host app's own Escape handling would close the whole document view.
+      event.stopPropagation();
+      input.blur();
+      this.requestUpdate();
+    }
+  }
+
+  private commitConfigInput(token: { nodeId: number; path: string }, input: HTMLInputElement): void {
+    const node = this.editor.nodeById(token.nodeId);
+    const current = node ? readConfigValue(node.config, token.path) : undefined;
+    const raw = input.value.trim();
+
+    let value: unknown = raw;
+
+    /*
+     * The current value decides the type: a number stays a number, with the
+     * decimal comma tolerated — phone keyboards offer it and half the world
+     * writes it. Text that does not parse is not a write at all; the
+     * re-render snaps the field back to the value that still stands.
+     */
+    if (typeof current === 'number') {
+      const parsed = Number(raw.replace(',', '.'));
+
+      if (raw === '' || Number.isNaN(parsed)) {
+        this.requestUpdate();
+
+        return;
+      }
+
+      value = parsed;
+    } else if (typeof current === 'boolean') {
+      value = raw === 'true';
+    }
+
+    if (value !== current) {
+      this.editor.setNodeConfigValue(token.nodeId, token.path, value);
     }
   }
 
