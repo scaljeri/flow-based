@@ -14,19 +14,19 @@
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
 
-  <mat-list>
+  <div class="list">
     @for (group of groups; track group.name) {
-      <div matSubheader class="group">{{group.name}}</div>
+      <section class="group-block">
+        <h3 class="group">{{group.name}}</h3>
 
-      @for (key of group.keys; track key) {
-        <mat-list-item>
-          <button type="button" mat-button (click)="onSelection(key)">{{title(key)}}</button>
-        </mat-list-item>
-      }
+        @for (key of group.keys; track key) {
+          <button type="button" class="item" (click)="onSelection(key)">{{title(key)}}</button>
+        }
+      </section>
     }
-  </mat-list>
 
-  @if (empty) {
-    <p class="no-matches">No flow unit matches &ldquo;{{query}}&rdquo;.</p>
-  }
+    @if (empty) {
+      <p class="no-matches">No flow unit matches &ldquo;{{query}}&rdquo;.</p>
+    }
+  </div>
 </section>

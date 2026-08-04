@@ -156,7 +156,7 @@ test('filters the node palette and adds the match with Enter', async ({ page }) 
   const palette = page.locator('.cdk-overlay-container fb-component-selection');
   await expect(palette).toBeVisible();
 
-  const items = palette.locator('mat-list-item');
+  const items = palette.locator('button.item');
   const total = await items.count();
   expect(total).toBeGreaterThan(1);
 
@@ -807,7 +807,7 @@ test('a module can be enabled from the menu, and its group joins the palette', a
   await expect(palette.locator('.group', { hasText: 'Mathematics' })).toBeVisible();
 
   await palette.locator('input[type="search"]').fill('derivative');
-  await expect(palette.locator('mat-list-item')).toHaveCount(1);
+  await expect(palette.locator('button.item')).toHaveCount(1);
   await palette.locator('input[type="search"]').press('Enter');
 
   await expect

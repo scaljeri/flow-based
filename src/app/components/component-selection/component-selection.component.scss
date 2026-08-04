@@ -19,7 +19,7 @@ mat-toolbar,
 
 mat-toolbar {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .type-selection {
@@ -30,7 +30,7 @@ mat-toolbar {
   overflow: hidden;
 }
 
-mat-list {
+.list {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -48,18 +48,49 @@ mat-list {
   padding: 0 16px 16px;
 }
 
-.group {
-  /* Inherits the dialog's text colour: the panel is light, and a white label
-     on it was invisible. */
-  color: inherit;
-  font: 600 11px system-ui, sans-serif;
-  letter-spacing: 0.08em;
-  opacity: 0.55;
-  padding: 10px 16px 2px;
-  text-transform: uppercase;
+/*
+ * A group is a BAND, not a whisper. The first cut styled the header as small
+ * grey caps between airy Material list rows, and on a phone the headers and
+ * the items read as one undifferentiated column. Now the header is a filled
+ * band with an accent edge, it sticks while its group scrolls under it, and
+ * the items are compact indented rows — the hierarchy is visible at a glance.
+ */
+.group-block + .group-block {
+  margin-top: 4px;
 }
 
-mat-toolbar {
-  display: flex;
-  justify-content: space-between;
+.group {
+  background: #eceef8;
+  border-left: 4px solid #3f51b5;
+  color: #2c3178;
+  font: 700 12px system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  margin: 0;
+  padding: 8px 12px;
+  position: sticky;
+  text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+
+.item {
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  color: rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+  display: block;
+  font: 14px system-ui, sans-serif;
+  padding: 11px 16px 11px 24px;
+  text-align: left;
+  width: 100%;
+}
+
+.item:hover,
+.item:focus-visible {
+  background: rgba(63, 81, 181, 0.08);
+}
+
+.item:last-child {
+  border-bottom: none;
 }
