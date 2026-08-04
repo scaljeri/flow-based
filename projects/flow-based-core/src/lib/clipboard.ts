@@ -55,16 +55,19 @@ export function pasteNodes(
   const nodeIds = new Map<number, number>();
   const socketIds = new Map<number, number>();
 
-  const nodes = structuredClone(clipboard.nodes).map(node => {
-    const previous = node.id!;
-
-    node.id = ids.create();
-    nodeIds.set(previous, node.id);
-
-    node.position = {
-      x: (node.position?.x ?? 0) + offset.x,
-      y: (node.position?.y ?? 0) + offset.y,
-    };
+  /*
+   * Two passes over the WHOLE tree, because a pasted subflow is a tree: its
+   * children have children, and its inner connections reference sockets at two
+   * levels (a bridge connection names the subflow's OWN socket from the
+   * inside). Reissuing one level deep — which is what this did — pasted a
+   * subflow whose entire inside still carried the original ids, so the
+   * document held duplicates and "the node with id 7" meant two things.
+   *
+   * Pass one issues every id so the maps are complete; pass two rewrites the
+   * connections, which may point at ids issued anywhere in the tree.
+   */
+  const reissueIds = (node: FbNodeState): void => {
+    nodeIds.set(node.id!, node.id = ids.create());
 
     node.sockets = (node.sockets ?? []).map(socket => {
       const id = ids.create();
@@ -74,8 +77,51 @@ export function pasteNodes(
       return { ...socket, id };
     });
 
+    (node.children ?? []).forEach(reissueIds);
+  };
+
+  const rewireConnections = (node: FbNodeState): void => {
+    /*
+     * Only rewritten where it exists: the engine reads the PRESENCE of a
+     * `connections` array as "this node is a flow" and then recurses into its
+     * children. Materialising an empty one on a leaf node here made every
+     * pasted node claim to be a flow, and the engine fell over the children it
+     * then expected.
+     */
+    if (!node.connections) {
+      (node.children ?? []).forEach(rewireConnections);
+
+      return;
+    }
+
+    node.connections = node.connections
+      .map(connection => ({
+        ...connection,
+        id: ids.create(),
+        from: nodeIds.get(connection.from)!,
+        to: nodeIds.get(connection.to)!,
+        out: socketIds.get(connection.out!)!,
+        in: socketIds.get(connection.in!)!,
+      }))
+      // A clipboard from an older flow could name sockets that no longer exist;
+      // dropping those beats pasting a connection to nothing.
+      .filter(connection => connection.out !== undefined && connection.in !== undefined);
+
+    (node.children ?? []).forEach(rewireConnections);
+  };
+
+  const nodes = structuredClone(clipboard.nodes).map(node => {
+    reissueIds(node);
+
+    node.position = {
+      x: (node.position?.x ?? 0) + offset.x,
+      y: (node.position?.y ?? 0) + offset.y,
+    };
+
     return node;
   });
+
+  nodes.forEach(rewireConnections);
 
   const connections = structuredClone(clipboard.connections)
     .map(connection => ({
@@ -86,8 +132,6 @@ export function pasteNodes(
       out: socketIds.get(connection.out!)!,
       in: socketIds.get(connection.in!)!,
     }))
-    // A clipboard from an older flow could name sockets that no longer exist;
-    // dropping those beats pasting a connection to nothing.
     .filter(connection => connection.out !== undefined && connection.in !== undefined);
 
   flow.children = [...(flow.children ?? []), ...nodes];

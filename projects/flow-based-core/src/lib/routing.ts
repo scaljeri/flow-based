@@ -1,4 +1,4 @@
-import { FbPosition } from './types';
+import { FbPosition, FbSocketSide } from './types';
 
 /**
  * How connections are drawn.
@@ -43,10 +43,29 @@ export function orthogonalRoute(
   start: FbPosition,
   end: FbPosition,
   stub: number = FB_ROUTE_STUB,
+  from: FbSocketSide = 'right',
+  to: FbSocketSide = 'left',
 ): FbPosition[] {
-  // A straight run needs no corners at all, and inventing some would show as a
-  // visible kink in a line that should be flat.
-  if (Math.abs(start.y - end.y) < 0.5) {
+  /*
+   * Sockets on other edges leave and arrive along THOSE edges. The two shapes
+   * below assume right-to-left — which was every connection until sockets could
+   * sit on any side — so anything else takes the general route: out along its
+   * own edge, across, in along the other's. An orthogonal line into a socket on
+   * the top of a node has to arrive vertically; routed as if the socket were on
+   * the left, it drew a horizontal approach into an edge with no socket on it.
+   */
+  if (from !== 'right' || to !== 'left') {
+    return sidedRoute(start, end, stub, from, to);
+  }
+
+  /*
+   * A straight run needs no corners at all — but only FORWARD. Level endpoints
+   * with the target to the LEFT used to take this shortcut too, and the single
+   * backward segment it returned ran straight through both nodes with the
+   * arrow pointing the wrong way; those fall through to the doubling-back
+   * shape below, exactly as they would if they were a pixel apart in height.
+   */
+  if (Math.abs(start.y - end.y) < 0.5 && end.x >= start.x) {
     return [start, end];
   }
 
@@ -56,7 +75,12 @@ export function orthogonalRoute(
     return [start, { x: midX, y: start.y }, { x: midX, y: end.y }, end];
   }
 
-  const midY = (start.y + end.y) / 2;
+  /*
+   * Level endpoints have no room BETWEEN the two heights for the crossing leg,
+   * so it steps aside by a stub instead of running along the line itself.
+   */
+  const levelled = Math.abs(start.y - end.y) < 0.5;
+  const midY = levelled ? start.y + stub : (start.y + end.y) / 2;
   const outX = start.x + stub;
   const inX = end.x - stub;
 
@@ -68,6 +92,71 @@ export function orthogonalRoute(
     { x: inX, y: end.y },
     end,
   ];
+}
+
+/** One stub out from a point, along its edge's outward normal. */
+function pushOut(point: FbPosition, side: FbSocketSide, stub: number): FbPosition {
+  switch (side) {
+    case 'left':
+      return { x: point.x - stub, y: point.y };
+    case 'right':
+      return { x: point.x + stub, y: point.y };
+    case 'top':
+      return { x: point.x, y: point.y - stub };
+    default:
+      return { x: point.x, y: point.y + stub };
+  }
+}
+
+/**
+ * The general orthogonal route, for ends on arbitrary edges.
+ *
+ * Step a stub out of each socket along its own edge's normal, then join the two
+ * stub points with at most one corner: carry on along the departure axis to the
+ * arrival point's coordinate, then turn. Collinear and duplicate waypoints are
+ * dropped so the rounded path does not stutter over zero-length legs.
+ */
+function sidedRoute(
+  start: FbPosition,
+  end: FbPosition,
+  stub: number,
+  from: FbSocketSide,
+  to: FbSocketSide,
+): FbPosition[] {
+  const a = pushOut(start, from, stub);
+  const b = pushOut(end, to, stub);
+
+  // Departure is horizontal off a left/right edge, vertical off top/bottom;
+  // the corner continues that axis and then turns towards the arrival.
+  const departsHorizontally = from === 'left' || from === 'right';
+  const corner = departsHorizontally ? { x: b.x, y: a.y } : { x: a.x, y: b.y };
+
+  const points = [start, a, corner, b, end];
+  const cleaned: FbPosition[] = [];
+
+  for (const point of points) {
+    const previous = cleaned[cleaned.length - 1];
+
+    if (previous && previous.x === point.x && previous.y === point.y) {
+      continue;
+    }
+
+    // A middle point on the straight line between its neighbours says nothing.
+    const beforePrevious = cleaned[cleaned.length - 2];
+
+    if (
+      previous && beforePrevious
+      && ((beforePrevious.x === previous.x && previous.x === point.x)
+        || (beforePrevious.y === previous.y && previous.y === point.y))
+    ) {
+      cleaned[cleaned.length - 1] = point;
+      continue;
+    }
+
+    cleaned.push(point);
+  }
+
+  return cleaned;
 }
 
 /**

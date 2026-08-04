@@ -2083,9 +2083,10 @@ test('the types on offer are the ones this flow deals in, and no others', async 
 /**
  * A socket may carry several types, and the engine treats overlap as agreement.
  *
- * One type is stored as the plain `format` the engine has always negotiated, so
- * a socket with a single type is indistinguishable from one written before this
- * existed — in the JSON as much as in the code.
+ * A declared type always lives in `formats` — one type as a set of one — while
+ * `format` stays the engine's negotiated value. Kept apart because the engine
+ * clears and re-derives `format` on every rebuild; a declaration stored only
+ * there did not survive its first disconnect.
  */
 test('a socket can carry more than one type', async ({ page }) => {
   await page.goto(HARNESS);
@@ -2097,13 +2098,13 @@ test('a socket can carry more than one type', async ({ page }) => {
     return { format: socket.format ?? null, formats: socket.formats ?? null };
   });
 
-  // One type is a plain format, with no set beside it saying the same thing.
+  // One type: declared as a set of one, and HAD immediately.
   await page.evaluate(() => {
     const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
 
     window.fbEditor.setSocketFormats(sink.sockets![0], ['number']);
   });
-  expect(await read()).toEqual({ format: 'number', formats: null });
+  expect(await read()).toEqual({ format: 'number', formats: ['number'] });
 
   /*
    * Several is a set. `format` says what the socket HAS, so it survives while it
@@ -2129,7 +2130,7 @@ test('a socket can carry more than one type', async ({ page }) => {
   });
 
   await expect.poll(async () => (await connectionPaths(page)).length).toBe(1);
-  expect(await read()).toEqual({ format: 'point', formats: null });
+  expect(await read()).toEqual({ format: 'point', formats: ['point'] });
 });
 
 /**

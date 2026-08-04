@@ -55,6 +55,18 @@ export class FbHistory {
   }
 
   /**
+   * Throw away the most recent capture, for a mutation that turned out to be a
+   * no-op. Undoing it instead — which is what the editor used to do — pushed
+   * the rollback onto the REDO stack, so a drag that ended where it started
+   * left a phantom redo entry.
+   */
+  discard(): void {
+    if (this.past.pop()) {
+      this.changes.emit();
+    }
+  }
+
+  /**
    * Step back. `current` is the live state, which becomes the redo entry.
    * Returns a fresh object, so a shell can treat it as a new value.
    */

@@ -17,6 +17,16 @@ function binomialCoefficient(n: number, i: number): number {
 }
 
 export function gradient(point: FbPosition): number {
+  /*
+   * 0/0 is NaN, and NaN reaches the arrow's rotate() as an invalid transform.
+   * A zero derivative happens at a degenerate curve — both ends on one point —
+   * where any direction is as true as any other, so flat will do. A merely
+   * vertical tangent (x = 0) divides to ±Infinity, which atan handles.
+   */
+  if (point.x === 0 && point.y === 0) {
+    return 0;
+  }
+
   return point.y / point.x;
 }
 

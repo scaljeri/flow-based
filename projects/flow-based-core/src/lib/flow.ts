@@ -91,8 +91,16 @@ export class Flow {
     this.connections[connection.id] = {connection, state};
     this.connectWorkers(connection);
 
+    /*
+     * Propagate from the NEW connection only. Adding one is monotone — it can
+     * add constraints but never invalidate a format already settled — so the
+     * full reset-and-resolve rebuild is wasted work here: it cost a whole-graph
+     * pass per connect, which made wiring a graph up quadratic. Removals keep
+     * the rebuild, because taking a constraint away can genuinely un-settle
+     * sockets.
+     */
     if (this.connect(connection)) {
-      this.rebuildNodeConnections();
+      this.propagateFormats([connection]);
     }
 
     this.changes.emit('connections');
@@ -104,7 +112,14 @@ export class Flow {
 
       if (node.sockets) {
         if (node.children) {
-          node.sockets.forEach(s => s.format = null);
+          /*
+           * Reset to the DECLARED type, not to nothing. `format` is the
+           * negotiated value and re-deriving it is this rebuild's job — but a
+           * socket the user typed as exactly one thing HAS that thing whether
+           * or not anything is wired to it. Nulling it here erased declared
+           * types on subflow boundaries at every graph mutation.
+           */
+          node.sockets.forEach(s => s.format = s.formats?.length === 1 ? s.formats[0] : null);
         } else if (this.helpers) {
           this.helpers.resetSockets(node);
         }
@@ -166,6 +181,7 @@ export class Flow {
    */
   disconnectSocket(socketId: number): void {
     const keys = Object.keys(this.connections);
+    let dropped = false;
 
     for (let i = keys.length - 1; i >= 0; i--) {
       const key = keys[i],
@@ -175,6 +191,7 @@ export class Flow {
         this.connections[key].state.connections =
           this.connections[key].state.connections!.filter(item => item.id !== connection.id);
         delete this.connections[key];
+        dropped = true;
 
         // Guarded, like removeConnection: a node type with neither a worker nor
         // isFlow has no worker at all, and this threw a bare TypeError on it.
@@ -184,6 +201,15 @@ export class Flow {
           worker.removeStream(connection);
         }
       }
+    }
+
+    /*
+     * Announced as what it is. The editor cancels a half-drawn connection on
+     * 'connections' — silently removing some left the pending line anchored to
+     * a socket that no longer existed.
+     */
+    if (dropped) {
+      this.changes.emit('connections');
     }
   }
 
@@ -320,7 +346,8 @@ export class Flow {
       if (node.connections) {
         node.connections.forEach(c => this.connections[c.id] = {connection: c, state: node});
 
-        this.createVirtualFlow(node.children!, node.id!);
+        // A flow with connections but no children yet is odd, not fatal.
+        this.createVirtualFlow(node.children ?? [], node.id!);
       }
     });
   }
@@ -349,7 +376,7 @@ export class Flow {
    * FbNodeHelpers.connect() is free to be non-monotonic — but now that outcome is
    * reported rather than whispered.
    */
-  private propagateFormats(): FbPropagationReport {
+  private propagateFormats(seed?: FbConnection[]): FbPropagationReport {
     const all = this.allConnections();
 
     // socket id -> connections touching it
@@ -371,20 +398,26 @@ export class Flow {
       }
     }
 
-    const queue = [...all];
-    const queued = new Set<number>(all.map(c => c.id));
+    // Seeded with the changed connections when the caller knows them, or with
+    // everything for a rebuild. The worklist itself is the same either way.
+    const initial = seed ?? all;
+    const queue = [...initial];
+    const queued = new Set<number>(initial.map(c => c.id));
     const maxSteps = Math.max(1000, all.length * 8);
+    // A cursor, not shift(): shift moves every remaining element down, which
+    // made a long worklist quadratic in itself.
+    let head = 0;
     let steps = 0;
     let converged = true;
     let changedAny = false;
 
-    while (queue.length) {
+    while (head < queue.length) {
       if (++steps > maxSteps) {
         converged = false;
         break;
       }
 
-      const connection = queue.shift()!;
+      const connection = queue[head++];
       queued.delete(connection.id);
 
       if (!this.connect(connection)) {
@@ -621,7 +654,19 @@ export class Flow {
   }
 
   private createWorker(state: FbNodeState): void {
-    const {worker} = this.flowTypes[state.type],
+    const entry = this.flowTypes[state.type];
+
+    /*
+     * A saved flow can name a type this registry no longer has. Skipping the
+     * worker leaves the node visible and editable — destructuring undefined
+     * threw from the middle of initialize() and the whole document failed to
+     * open, which turns a stale type name into a lost file.
+     */
+    if (!entry) {
+      return;
+    }
+
+    const {worker} = entry,
       id = state.id!;
 
     if (worker) {

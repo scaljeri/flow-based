@@ -54,6 +54,39 @@ describe('orthogonalRoute', () => {
     expect(tight).toHaveLength(6);
     expect(roomy).toHaveLength(4);
   });
+
+  it('never takes the straight shortcut backwards, where it would cross both nodes', () => {
+    const route = orthogonalRoute({ x: 200, y: 50 }, { x: 0, y: 50 }, 20);
+
+    // Level but to the LEFT: this used to come back as one straight segment
+    // through both nodes. It must double back like any other backward route,
+    // stepping aside since there is no height between the ends to cross in.
+    expect(route.length).toBeGreaterThan(2);
+    expect(route[1]).toEqual({ x: 220, y: 50 });
+    expect(route[route.length - 2]).toEqual({ x: -20, y: 50 });
+  });
+
+  it('respects the edge each socket sits on', () => {
+    // Out of a BOTTOM edge into a TOP edge: both legs at the ends are vertical.
+    const route = orthogonalRoute({ x: 0, y: 0 }, { x: 100, y: 200 }, 20, 'bottom', 'top');
+
+    // First and last legs are vertical — leaving the bottom edge downward and
+    // arriving at the top edge downward. (The stub merges into a longer
+    // collinear leg, so the exact waypoints are not pinned down here.)
+    expect(route[0]).toEqual({ x: 0, y: 0 });
+    expect(route[1].x).toBe(0);
+    expect(route[1].y).toBeGreaterThan(0);
+    expect(route[route.length - 2].x).toBe(100);
+    expect(route[route.length - 2].y).toBeLessThan(200);
+    expect(route[route.length - 1]).toEqual({ x: 100, y: 200 });
+
+    // Every consecutive pair shares an x or a y — the route stays orthogonal.
+    for (let i = 1; i < route.length; i++) {
+      const isOrthogonal = route[i].x === route[i - 1].x || route[i].y === route[i - 1].y;
+
+      expect(isOrthogonal).toBe(true);
+    }
+  });
 });
 
 describe('roundedPath', () => {

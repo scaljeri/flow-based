@@ -83,6 +83,25 @@ describe('FbHistoryService', () => {
     expect(history.undo(state('live'))!.title).toBe(`s${FB_HISTORY_LIMIT + 19}`);
   });
 
+  it('discard drops the last capture without creating a redo entry', () => {
+    history.capture(state('a'));
+    history.capture(state('b'));
+
+    history.discard();
+
+    // As if the second capture never happened: one undo left, nothing to redo —
+    // an undo-based rollback would have left b sitting on the redo stack.
+    expect(history.canRedo).toBe(false);
+    expect(history.undo(state('live'))!.title).toBe('a');
+  });
+
+  it('discard on an empty stack is a no-op', () => {
+    history.discard();
+
+    expect(history.canUndo).toBe(false);
+    expect(history.canRedo).toBe(false);
+  });
+
   it('ignores a capture of nothing', () => {
     history.capture(undefined);
     history.capture(null);

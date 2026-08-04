@@ -98,6 +98,52 @@ describe('pasteNodes', () => {
     // The clipboard itself is untouched, so a third paste would work too.
     expect(clip.nodes[0].id).toBe(10);
   });
+
+  it('reissues ids all the way down a pasted subflow, bridges included', () => {
+    const source: FbNodeState = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [{
+        id: 10, type: 'subflow', position: { x: 10, y: 10 },
+        sockets: [{ id: 100, type: 'in' }],
+        children: [
+          { id: 11, type: 'a', sockets: [{ id: 110, type: 'in' }, { id: 111, type: 'out' }] },
+          { id: 12, type: 'b', sockets: [{ id: 120, type: 'in' }] },
+        ],
+        // A bridge names the subflow's OWN socket (100) from the inside, and an
+        // ordinary inner connection joins two children. Both must be rewired.
+        connections: [
+          { id: 1000, from: 10, to: 11, out: 100, in: 110 },
+          { id: 1001, from: 11, to: 12, out: 111, in: 120 },
+        ],
+      }],
+      connections: [],
+    };
+
+    const clip = copyNodes(source, [10]);
+    const ids = new IdGenerator();
+    ids.observeFlow(source);
+
+    const [pasted] = pasteNodes(source, clip, ids);
+
+    // Collect every id in the whole document; none may repeat.
+    const seen: number[] = [];
+    const walk = (node: FbNodeState): void => {
+      seen.push(node.id!, ...(node.sockets ?? []).map(s => s.id!), ...(node.connections ?? []).map(c => c.id));
+      (node.children ?? []).forEach(walk);
+    };
+    walk(source);
+    expect(new Set(seen).size).toBe(seen.length);
+
+    // The pasted bridge points at the pasted subflow's NEW socket and child.
+    const [bridge, inner] = pasted.connections!;
+    expect(bridge.from).toBe(pasted.id);
+    expect(bridge.out).toBe(pasted.sockets![0].id);
+    expect(bridge.in).toBe(pasted.children![0].sockets![0].id);
+    expect(inner.from).toBe(pasted.children![0].id);
+    expect(inner.to).toBe(pasted.children![1].id);
+  });
 });
 
 describe('alignNodes', () => {
