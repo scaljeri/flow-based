@@ -728,16 +728,22 @@ export class FbNodeElement extends LitElement {
       return;
     }
 
-    if (!this.contentHost) {
-      this.contentHost = document.createElement('div');
-      this.contentHost.className = 'fb-node-content';
-      /*
-       * Its display is set in the stylesheet, through ::slotted, rather than
-       * inline here — an inline declaration outranks every rule, so the full
-       * view could not make this stretch and the node's content sat centred in
-       * the middle of a surface it had been given all of.
-       */
-    }
+    /*
+     * A FRESH host for every mount, never a reused one. Angular scopes a
+     * component's styles through attributes it stamps on the host element; a
+     * div that already carries the PREVIOUS view's attributes gives the new
+     * component a host its own :host rules no longer reliably match — the
+     * normal view mounted into the small view's old host rendered with none
+     * of its sizing, and the node clamped to min-content around it.
+     *
+     * Its display is set in the stylesheet, through ::slotted, rather than
+     * inline here — an inline declaration outranks every rule, so the full
+     * view could not make this stretch and the node's content sat centred in
+     * the middle of a surface it had been given all of.
+     */
+    this.contentHost?.remove();
+    this.contentHost = document.createElement('div');
+    this.contentHost.className = 'fb-node-content';
 
     // Re-appended rather than assumed present: a re-mount after the element moved
     // in the DOM has to put the host back.
@@ -777,8 +783,10 @@ export class FbNodeElement extends LitElement {
       this.editor?.events.unregisterAll(sourceId);
     }
 
-    // Anything the content left behind goes with it; the host itself is reused.
-    this.contentHost?.replaceChildren();
+    // The host goes with the content: the next mount builds a fresh one, so
+    // no attribute or style state can leak between views.
+    this.contentHost?.remove();
+    this.contentHost = undefined;
   }
 
   /** The framework-agnostic handle a node's content is given. */
