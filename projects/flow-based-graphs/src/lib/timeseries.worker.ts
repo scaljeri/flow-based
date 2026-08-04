@@ -100,12 +100,22 @@ export class TimeseriesWorker implements FbNodeWorker {
 
     this.buffer.points.push(point);
 
-    if (this.buffer.points.length > TIMESERIES_WINDOW * 2) {
-      this.buffer.points.shift();
+    if (xy) {
+      /*
+       * A function sweep keeps its WHOLE domain — the wrap is its bound, the
+       * cap only a runaway brake. It used to share the rolling cap, so a
+       * fine-stepped sweep lost its oldest points while still being drawn:
+       * the left axis value crept upward as the origin fell off the buffer.
+       */
+      if (this.buffer.points.length > 5000) {
+        this.buffer.points.shift();
+      }
+
+      return;
     }
 
-    // Time readings roll; a function sweep clears on wrap instead.
-    if (!xy && this.buffer.points.length > TIMESERIES_WINDOW) {
+    // Time readings roll: the window IS the story.
+    if (this.buffer.points.length > TIMESERIES_WINDOW) {
       this.buffer.points.shift();
     }
   }

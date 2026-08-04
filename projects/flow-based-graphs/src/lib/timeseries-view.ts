@@ -13,6 +13,38 @@ export type TimeseriesStyle = 'line' | 'area' | 'bars';
  * self-contained. The representation comes from config, where the settings
  * panel writes it.
  */
+/**
+ * Round tick values strictly INSIDE [min, max], on a 1/2/5×10^k step.
+ *
+ * Strictly inside, because the ends are drawn separately as the exact bounds —
+ * a tick on top of an end label would print the same place twice. Returns few
+ * or none when the range is too tight for a single nice step, which is the
+ * honest answer for a tiny plot.
+ */
+function niceTicks(min: number, max: number, maxCount: number): number[] {
+  const span = max - min;
+
+  if (!(span > 0) || maxCount < 1) {
+    return [];
+  }
+
+  const rough = span / (maxCount + 1);
+  const power = Math.pow(10, Math.floor(Math.log10(rough)));
+  const step = [1, 2, 5, 10].map(m => m * power).find(s => span / s <= maxCount + 1) ?? 10 * power;
+
+  const ticks: number[] = [];
+  const margin = span * 0.06;
+
+  for (let v = Math.ceil(min / step) * step; v < max; v += step) {
+    // Skip ticks hugging the ends; the exact bounds already stand there.
+    if (v - min > margin && max - v > margin) {
+      ticks.push(Number(v.toPrecision(12)));
+    }
+  }
+
+  return ticks;
+}
+
 @Directive()
 export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy {
   protected readonly service = inject(NodeService);
@@ -176,14 +208,56 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
 
     const fmt = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(Math.abs(v) < 10 ? 2 : 1);
 
-    // End values on each axis: the honest minimum that makes a graph readable.
+    /*
+     * Round intermediate values wherever there is room — a graph whose axes
+     * only name their ends makes the reader interpolate everything between.
+     * Ticks land on 1/2/5×10^k steps, as many as the pixels comfortably fit,
+     * each with a whisper of a grid line.
+     */
+    const xTicks = niceTicks(m.minX, m.maxX, Math.max(2, Math.floor((m.width - m.left - m.pad) / 70) + 1));
+    const yTicks = niceTicks(m.minY, m.maxY, Math.max(2, Math.floor((axisY - m.top) / 36) + 1));
+
+    const xPos = (v: number) => m.left + ((v - m.minX) / (m.maxX - m.minX || 1)) * (m.width - m.left - m.pad);
+    const yPos = (v: number) => axisY - ((v - m.minY) / (m.maxY - m.minY || 1)) * (axisY - m.top);
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+
+    for (const tick of yTicks) {
+      ctx.beginPath();
+      ctx.moveTo(m.left, yPos(tick));
+      ctx.lineTo(m.width - m.pad, yPos(tick));
+      ctx.stroke();
+    }
+
+    for (const tick of xTicks) {
+      ctx.beginPath();
+      ctx.moveTo(xPos(tick), m.top);
+      ctx.lineTo(xPos(tick), axisY);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
+
+    for (const tick of yTicks) {
+      ctx.fillText(fmt(tick), m.left - 4, yPos(tick));
+    }
+
+    // The ends stay: they are the honest bounds of what is on screen.
     ctx.fillText(fmt(m.maxY), m.left - 4, m.top + 4);
     ctx.fillText(fmt(m.minY), m.left - 4, axisY);
 
-    ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+
+    for (const tick of xTicks) {
+      ctx.fillText(fmt(tick), xPos(tick), axisY + 4);
+    }
+
+    ctx.textAlign = 'left';
     ctx.fillText(fmt(m.minX), m.left, axisY + 4);
     // Right-aligned, or half the number falls off the canvas edge.
     ctx.textAlign = 'right';
