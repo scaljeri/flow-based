@@ -7,7 +7,6 @@ import {
   fbBoolean,
   fbNumber,
   fbObject,
-  fbOpaque,
   fbString,
   shapeFits,
   shapeSignature,
@@ -25,7 +24,6 @@ describe('canonicalShape', () => {
   it('distinguishes shapes that differ in any part', () => {
     expect(shapeSignature(fbArray(fbNumber, 2))).not.toBe(shapeSignature(fbArray(fbNumber)));
     expect(shapeSignature(fbObject({ x: fbNumber }))).not.toBe(shapeSignature(fbObject({ y: fbNumber })));
-    expect(shapeSignature(fbOpaque('function'))).not.toBe(shapeSignature(fbOpaque('imageData')));
   });
 });
 
@@ -59,12 +57,6 @@ describe('shapeFits', () => {
     // An array promising no minimum cannot satisfy a demand for two items.
     expect(shapeFits(fbArray(fbNumber), point)).toBe(false);
     expect(shapeFits(fbArray(fbString, 2), point)).toBe(false);
-  });
-
-  it('matches opaque values only on their own id', () => {
-    expect(shapeFits(fbOpaque('function'), fbOpaque('function'))).toBe(true);
-    expect(shapeFits(fbOpaque('function'), fbOpaque('imageData'))).toBe(false);
-    expect(shapeFits(fbOpaque('function'), fbNumber)).toBe(false);
   });
 
   it('recurses through nesting', () => {

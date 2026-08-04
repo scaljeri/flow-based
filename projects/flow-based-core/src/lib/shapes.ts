@@ -8,14 +8,16 @@
  * - the primitives `number`, `boolean`, `string`;
  * - `array` (a point is an array of numbers, at least two of them);
  * - `object` (named fields, each with a shape of its own);
- * - `opaque` (a runtime value no structure describes, equal only to its own
- *   id — what a module's compiled-function type is made of);
  * - `any` (fits everywhere, demands nothing; composition uses it for "an
  *   array of anything").
  *
- * `array` and `opaque` are CONSTRUCTORS, not types: an array is always an
- * array OF something, and an opaque is always somebody's named thing. Only
- * what stands complete on its own is a base type.
+ * There is deliberately NO shape for the unserialisable: a wire carries data
+ * and nothing else. A function travels as its expression string; whoever
+ * needs to run it compiles it on arrival. Anything a shape cannot describe
+ * has no business on a wire.
+ *
+ * `array` is a CONSTRUCTOR, not a type: an array is always an array OF
+ * something. Only what stands complete on its own is a base type.
  *
  * MEANING is not here on purpose. A temperature and a score are both the
  * `number` shape; telling them apart is the type registry's job (refinements),
@@ -27,8 +29,7 @@ export type FbShape =
   | { kind: 'boolean' }
   | { kind: 'string' }
   | { kind: 'array'; of: FbShape; minItems?: number }
-  | { kind: 'object'; fields: Record<string, FbShape> }
-  | { kind: 'opaque'; id: string };
+  | { kind: 'object'; fields: Record<string, FbShape> };
 
 export const fbAny: FbShape = { kind: 'any' };
 export const fbNumber: FbShape = { kind: 'number' };
@@ -41,10 +42,6 @@ export function fbArray(of: FbShape = fbAny, minItems?: number): FbShape {
 
 export function fbObject(fields: Record<string, FbShape> = {}): FbShape {
   return { kind: 'object', fields };
-}
-
-export function fbOpaque(id: string): FbShape {
-  return { kind: 'opaque', id };
 }
 
 /**
@@ -86,9 +83,6 @@ export function canonicalShape(shape: FbShape): string {
       return `object{${fields.join(',')}}`;
     }
 
-    case 'opaque':
-      return `opaque(${shape.id})`;
-
     default:
       return shape.kind;
   }
@@ -118,7 +112,6 @@ export function shapeSignature(shape: FbShape): string {
  * - `any` demanded takes everything; `any` offered promises nothing and only
  *   satisfies `any`;
  * - primitives match their own kind;
- * - an opaque matches its own id and nothing else;
  * - an array fits when its elements fit and it guarantees at least as many
  *   items as demanded;
  * - an object fits when every demanded field exists and fits — EXTRA fields
@@ -139,9 +132,6 @@ export function shapeFits(offer: FbShape, demand: FbShape): boolean {
   }
 
   switch (demand.kind) {
-    case 'opaque':
-      return (offer as { id: string }).id === demand.id;
-
     case 'array': {
       const offered = offer as { of: FbShape; minItems?: number };
 

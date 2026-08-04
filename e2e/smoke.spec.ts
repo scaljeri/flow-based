@@ -1060,7 +1060,6 @@ test('formula parameters and domain travel with the function', async ({ page }) 
     return {
       params: formula.config.params,
       derivedExpr: derived.expr.replace(/\s/g, ''),
-      derivedAt2: editor.flow.getWorker(derivative.id).current.evaluate({ x: 2 }),
       samplerFrom: sampler.config.from,
       samplerTouchedTo: sampler.config.to,
       samplerFollowedFrom: sampler.config.from,
@@ -1070,10 +1069,9 @@ test('formula parameters and domain travel with the function', async ({ page }) 
   });
 
   expect(result.params).toEqual({ a: 3, b: 1 });
-  // d/dx of a·x² + b is 2·a·x, with a still symbolic...
+  // d/dx of a·x² + b is 2·a·x, with a still symbolic. (Running it with a
+  // baked in is the sampler chain's e2e — the wire itself carries only data.)
   expect(result.derivedExpr).toContain('a');
-  // ...and a = 3 baked into evaluation: 2·3·2 = 12.
-  expect(result.derivedAt2).toBe(12);
   // The touched field is the user's; the untouched one kept following.
   expect(result.samplerTouchedTo).toBe(3);
   expect(result.samplerFollowedFrom).toBe(-2);

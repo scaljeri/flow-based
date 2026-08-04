@@ -1,6 +1,7 @@
 import { FbConnection, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 import { FnValue } from './function-value';
+import { compileExpression } from './formula.worker';
 
 export type SamplerMode = 'point' | 'sweep';
 
@@ -43,6 +44,7 @@ export class SamplerWorker implements FbNodeWorker {
   private readonly subscriptions: { [id: number]: Subscription } = {};
 
   private fn?: FnValue;
+  private evaluate?: (x: number) => number;
   private x = 0;
   private timer?: ReturnType<typeof setInterval>;
 
@@ -65,6 +67,13 @@ export class SamplerWorker implements FbNodeWorker {
   setStream(stream: Observable<FnValue>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => {
       this.fn = value;
+
+      // The wire carries data only; running the function is our own job.
+      try {
+        this.evaluate = compileExpression(value);
+      } catch {
+        this.evaluate = undefined;
+      }
 
       /*
        * The function's declared domain fills every field the user has not
@@ -154,8 +163,12 @@ export class SamplerWorker implements FbNodeWorker {
   }
 
   private sampleAt(x: number): SamplePoint | null {
+    if (!this.evaluate) {
+      return null;
+    }
+
     try {
-      const value = this.fn!.evaluate({ x });
+      const value = this.evaluate(x);
 
       return typeof value === 'number' && Number.isFinite(value) ? [x, value] : null;
     } catch {

@@ -39,34 +39,55 @@ export function paramsOf(expr: string): string[] {
   return [...seen].sort();
 }
 
-/** Compile an expression into the value that flows through a function socket. */
+/** Parse an expression into the DATA that flows through a function socket. */
 export function toFnValue(
   expr: string,
   params: Record<string, number> = {},
   xRange?: FnValue['xRange'],
 ): FnValue {
   const node = parse(expr);
-  const compiled = node.compile();
 
   return {
     expr,
     tex: node.toTex(),
-    // The defaults are baked in; a caller only has to bring x.
-    evaluate: scope => compiled.evaluate({ ...params, ...scope }),
     params: Object.keys(params).length ? { ...params } : undefined,
     xRange,
   };
 }
 
+/*
+ * Compiled evaluators, cached by expression. The wire carries only the
+ * string; whoever needs to RUN the function compiles it here — once per
+ * distinct expression, however many samples follow.
+ */
+const compiled = new Map<string, { evaluate: (scope: Record<string, number>) => number }>();
+
+export function compileExpression(value: FnValue): (x: number) => number {
+  let entry = compiled.get(value.expr);
+
+  if (!entry) {
+    entry = parse(value.expr).compile();
+    compiled.set(value.expr, entry!);
+
+    // A bound, not bookkeeping: expressions are few, but nothing should grow
+    // forever on someone typing in the formula editor all afternoon.
+    if (compiled.size > 200) {
+      compiled.delete(compiled.keys().next().value!);
+    }
+  }
+
+  const params = value.params ?? {};
+
+  return x => entry!.evaluate({ ...params, x });
+}
+
 /** The derivative of an expression, as the same kind of value. */
 export function deriveFnValue(source: FnValue, variable = 'x'): FnValue {
   const node = derivative(source.expr, variable);
-  const params = source.params ?? {};
 
   return {
     expr: node.toString(),
     tex: node.toTex(),
-    evaluate: scope => node.compile().evaluate({ ...params, ...scope }),
     // What the author declared about the function holds for its derivative —
     // except the y-axis and title, which now describe the derivative.
     params: source.params,
