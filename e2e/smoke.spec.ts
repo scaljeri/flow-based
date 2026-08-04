@@ -1033,8 +1033,9 @@ test('formula parameters and domain travel with the function', async ({ page }) 
     const derived: { expr: string; params?: Record<string, number> } =
       await new Promise(resolve => editor.flow.getWorker(derivative.id).getStream().subscribe(resolve));
 
-    // The plot downstream hears the labels between the samples.
-    const plot = editor.children.find((n: any) => n.type === 'graph-timeseries');
+    // The plot downstream OF THE DERIVATIVE hears its labels between the
+    // samples — that is the Slope plot; the Wave plot speaks for the formula.
+    const plot = editor.children.find((n: any) => n.title === 'Slope');
     const labels: unknown = await new Promise(resolve => {
       const worker = editor.flow.getWorker(plot.id);
       const timer = setInterval(() => {
@@ -1071,7 +1072,9 @@ test('formula parameters and domain travel with the function', async ({ page }) 
     };
   });
 
-  expect(result.params).toEqual({ a: 3, b: 1 });
+  // a was set to 3 above; b KEEPS the value the demo's config already gave
+  // it (4) — a symbol that stays keeps what the author set, that is the rule.
+  expect(result.params).toEqual({ a: 3, b: 4 });
   // d/dx of a·x² + b is 2·a·x, with a still symbolic. (Running it with a
   // baked in is the sampler chain's e2e — the wire itself carries only data.)
   expect(result.derivedExpr).toContain('a');

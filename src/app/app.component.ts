@@ -131,6 +131,9 @@ export class AppComponent implements OnInit, AfterViewInit {
   private currentFlowId: string | null = null;
   private saveTimer?: ReturnType<typeof setTimeout>;
 
+  /** The seeded demo's fixed id: one shared flow Luca and the tests both know. */
+  private static readonly DEMO_ID = 'demo-seed';
+
   private async restoreFlow(): Promise<void> {
     /*
      * Modules FIRST, flow second. A saved flow can speak module types, and
@@ -138,6 +141,16 @@ export class AppComponent implements OnInit, AfterViewInit {
      * circle until something forced a re-render.
      */
     await this.modules.restore();
+
+    /*
+     * The demo lives in the store under a FIXED id, seeded from the fixture
+     * whenever it is absent — so a browser that has flows of its own still
+     * gets it in the Flows dialog, and deleting it there resets it to the
+     * fixture on the next visit. One shared, reproducible flow to test on.
+     */
+    if (!this.store.load(AppComponent.DEMO_ID)) {
+      this.store.save(AppComponent.DEMO_ID, data.demo() as FbNodeState);
+    }
 
     const id = this.store.currentId();
     const saved = id ? this.store.load(id) : null;
@@ -160,20 +173,15 @@ export class AppComponent implements OnInit, AfterViewInit {
     await Promise.all([this.modules.enable('math'), this.modules.enable('graphs')]);
 
     /*
-     * Back INSIDE the zone. zone.js does not patch dynamic import(), and the
-     * module downloads above are exactly that — so this continuation runs
-     * outside Angular, and an assignment here changed the field without the
-     * canvas ever hearing about it. The demo was saved and never shown.
-     */
-    /*
      * Back INSIDE the zone — zone.js does not patch dynamic import(), and the
      * module downloads above are exactly that — and then an explicit tick:
      * measured here, re-entering the zone alone did not schedule one, so the
      * demo was saved and never shown until the next unrelated click.
      */
     this.zone.run(() => {
-      this.flow = data.demo() as FbNodeState;
-      this.currentFlowId = this.store.create(this.flow);
+      this.flow = this.store.load(AppComponent.DEMO_ID) ?? (data.demo() as FbNodeState);
+      this.currentFlowId = AppComponent.DEMO_ID;
+      this.store.setCurrent(AppComponent.DEMO_ID);
       this.cdr.detectChanges();
     });
   }

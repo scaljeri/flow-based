@@ -306,11 +306,21 @@ export const demo = () => ({
   children: [
     {
       type: 'math-formula',
-      title: 'Formula',
+      title: 'Damped wave',
       id: 400,
-      config: { expr: 'x^2' },
+      /*
+       * The showpiece: e^(-a·x)·sin(b·x), a wave strangled by its own
+       * envelope. Two parameters to play with in the settings, a domain wide
+       * enough for five crossings, and a derivative that is every bit as
+       * dramatic as the function itself.
+       */
+      config: {
+        expr: 'e^(-a*x) * sin(b*x)',
+        params: { a: 0.4, b: 4 },
+        x: { from: 0, to: 8, step: 0.02 },
+      },
       sockets: [{ id: 410, type: 'out', format: 'function' }],
-      position: { x: 6, y: 6 },
+      position: { x: 4, y: 4 },
     },
     {
       type: 'math-derivative',
@@ -320,26 +330,45 @@ export const demo = () => ({
         { id: 510, type: 'in', format: 'function' },
         { id: 511, type: 'out', format: 'function' },
       ],
-      position: { x: 52, y: 6 },
+      position: { x: 54, y: 4 },
     },
     {
       type: 'math-sampler',
       title: 'Sampler',
       id: 600,
-      config: { from: 0, to: 10, step: 0.1, interval: 50, mode: 'point' },
+      config: { mode: 'sweep' },
       sockets: [
         { id: 610, type: 'in', format: 'function' },
         { id: 611, type: 'out', format: 'point' },
       ],
-      position: { x: 8, y: 32 },
+      position: { x: 6, y: 20 },
+    },
+    {
+      type: 'math-sampler',
+      title: 'Sampler f′',
+      id: 700,
+      config: { mode: 'sweep' },
+      sockets: [
+        { id: 710, type: 'in', format: 'function' },
+        { id: 711, type: 'out', format: 'point' },
+      ],
+      position: { x: 56, y: 20 },
     },
     {
       type: 'graph-timeseries',
-      title: 'Time series',
+      title: 'Wave',
       id: 200,
       config: { style: 'line' },
       sockets: [{ id: 210, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 48, y: 30 },
+      position: { x: 2, y: 34 },
+    },
+    {
+      type: 'graph-timeseries',
+      title: 'Slope',
+      id: 800,
+      config: { style: 'line' },
+      sockets: [{ id: 810, type: 'in', formats: ['number', 'point'] }],
+      position: { x: 52, y: 34 },
     },
     {
       type: 'random-numbers',
@@ -356,7 +385,7 @@ export const demo = () => ({
         integer: true,
       },
       sockets: [{ id: 110, type: 'out', format: 'number' }],
-      position: { x: 6, y: 64 },
+      position: { x: 6, y: 66 },
     },
     {
       type: 'tap',
@@ -367,19 +396,20 @@ export const demo = () => ({
         { id: 310, type: 'in' },
         { id: 311, type: 'out' },
       ],
-      position: { x: 55, y: 64 },
+      position: { x: 55, y: 66 },
     },
   ],
   /*
-   * The top half is one sentence read left to right and down: define f(x) =
-   * x^2, differentiate it, sample the derivative over [0,10], plot the
-   * samples — the straight 2x line on the plot IS the proof it all worked.
-   * The bottom half keeps the original story: values flowing into a reader.
+   * Two sampled chains side by side — the wave and its slope — with the
+   * original numbers-into-a-reader pair below. The samplers run in sweep
+   * mode, so both plots stand complete the moment the page opens.
    */
   connections: [
     { id: 1002, from: 400, to: 500, out: 410, in: 510 },
-    { id: 1003, from: 500, to: 600, out: 511, in: 610 },
-    { id: 1004, from: 600, to: 200, out: 611, in: 210 },
+    { id: 1003, from: 400, to: 600, out: 410, in: 610 },
+    { id: 1004, from: 500, to: 700, out: 511, in: 710 },
+    { id: 1005, from: 600, to: 200, out: 611, in: 210 },
+    { id: 1006, from: 700, to: 800, out: 711, in: 810 },
     { id: 1001, from: 100, to: 300, out: 110, in: 310 },
   ],
 });
