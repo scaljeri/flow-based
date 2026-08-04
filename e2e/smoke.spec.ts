@@ -1195,3 +1195,45 @@ test('the demo reads as a document with typeset math and live figures', async ({
   await expect(page.locator('fb-node-box').first()).toBeVisible();
   await expect(doc).toHaveCount(0);
 });
+
+/**
+ * The embed link: ?embed=doc renders the article alone.
+ *
+ * The share button copies this URL for an <iframe> on someone else's page —
+ * so the toolbar must be gone, the document must open by itself, and Escape
+ * must not reveal the editor the mode exists to hide.
+ */
+test('embed mode shows the article alone, without the toolbar', async ({ page }) => {
+  await page.goto('/?embed=doc');
+
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+  await expect(page.locator('mat-toolbar')).toHaveCount(0);
+
+  // The demo arrives asynchronously; its authored title is what proves the
+  // document — not the derived fallback of the placeholder flow.
+  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers, drawn');
+  await expect.poll(() => page.locator('fb-flow-document .config-input').count()).toBe(3);
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+  await expect(page.locator('mat-toolbar')).toHaveCount(0);
+});
+
+test('the share button appears with the document and confirms the copy', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // No document on screen, no share button — the link it copies IS the document.
+  await expect(page.locator('button.share')).toHaveCount(0);
+
+  await page.click('button.doc');
+  await page.click('button.share');
+
+  await expect(page.locator('button.share mat-icon')).toHaveText('check');
+
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+
+  expect(copied).toContain('?embed=doc');
+  expect(new URL(copied).pathname).toBe(new URL(page.url()).pathname);
+});

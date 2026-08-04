@@ -50,6 +50,20 @@ export class AppComponent implements OnInit, AfterViewInit {
   loadError: string | null = null;
 
   /**
+   * Embed mode: the article alone, with the app's chrome gone.
+   *
+   * `?embed=doc` is what the share button hands out, made for an <iframe> on
+   * someone else's page — a toolbar with Add/undo/JSON inside a quote of the
+   * document would be another product's cockpit in the middle of their text.
+   * The canvas still runs underneath, hidden: the figures are its workers'
+   * live output.
+   */
+  readonly embed = new URLSearchParams(window.location.search).has('embed');
+
+  /** Flipped briefly after a copy, so the share button can say it worked. */
+  shareCopied = false;
+
+  /**
    * How the document view typesets TeX. Set the first time the view opens —
    * KaTeX arrives by dynamic import, so flows without formulas never download
    * it. MathML output on purpose: it is the browser's own maths rendering and
@@ -74,6 +88,12 @@ export class AppComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     // For the e2e harness, which enables modules without walking the dialog.
     (window as unknown as { fbModules: ModulesService }).fbModules = this.modules;
+
+    // Embedded, the document IS the page: open it before the flow even loads,
+    // so the iframe never flashes the editor first.
+    if (this.embed) {
+      void this.toggleDoc();
+    }
 
     void this.restoreFlow();
 
@@ -409,12 +429,47 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.cdr.detectChanges();
   }
 
+  /**
+   * The share button: an URL that renders the article alone.
+   *
+   * A plain link rather than an <iframe> snippet on purpose — a link works
+   * pasted anywhere (chat, mail, address bar) AND dropped into an iframe's
+   * src, while markup only works in the one place that accepts markup.
+   */
+  async copyShareLink(): Promise<void> {
+    const url = `${location.origin}${location.pathname}?embed=doc`;
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // No clipboard permission (or no secure context): show the URL instead,
+      // which is clunky but never silently does nothing.
+      window.prompt('Copy this embed link', url);
+
+      return;
+    }
+
+    this.shareCopied = true;
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.shareCopied = false;
+      this.cdr.detectChanges();
+    }, 2000);
+  }
+
   get flowJson(): string {
     return serializeFlowToJson(this.flow);
   }
 
   @HostListener('document:keydown.escape')
   escape(): void {
+    // Embedded there is nothing to go back TO: closing the document would
+    // reveal the editor this mode exists to hide.
+    if (this.embed) {
+      return;
+    }
+
     if (this.showJson) {
       this.showJson = false;
     } else if (this.showDoc) {

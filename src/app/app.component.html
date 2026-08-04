@@ -3,7 +3,12 @@ The toolbar is a real flex row: buttons, then a title that takes what is left.
 It used to centre the title with the buttons absolutely positioned on top of it,
 so nothing kept them apart — on a landscape phone the title ran straight over
 the download, upload, warning and JSON buttons.
+
+In embed mode (?embed=doc) it is gone entirely: the share link promises the
+article alone, and an iframe on someone else's page has no business showing
+this app's cockpit.
 -->
+@if (!embed) {
 <mat-toolbar [color]="'primary'">
   <div class="actions primary-actions">
     <button type="button" mat-button (click)="openModal()" class="add">Add</button>
@@ -54,6 +59,15 @@ the download, upload, warning and JSON buttons.
 
     <button type="button" mat-button (click)="toggleDoc()" class="doc"
       matTooltip="Read this flow as a document">{{showDoc ? 'Flow' : 'Doc'}}</button>
+
+    <!-- Only while the document is up: the link it copies IS the document. -->
+    @if (showDoc) {
+      <button type="button" mat-button class="share" (click)="copyShareLink()"
+        matTooltip="Copy an embed link — the article alone, no toolbar"
+        aria-label="Copy an embed link to this document">
+        <mat-icon>{{shareCopied ? 'check' : 'share'}}</mat-icon>
+      </button>
+    }
   </div>
 
   <button type="button" mat-icon-button class="overflow" [matMenuTriggerFor]="overflowMenu"
@@ -106,6 +120,13 @@ the download, upload, warning and JSON buttons.
       <span>{{showDoc ? 'Show flow' : 'Show document'}}</span>
     </button>
 
+    @if (showDoc) {
+      <button type="button" mat-menu-item (click)="copyShareLink()">
+        <mat-icon>{{shareCopied ? 'check' : 'share'}}</mat-icon>
+        <span>Copy embed link</span>
+      </button>
+    }
+
     <mat-divider></mat-divider>
 
     <!-- Editor-wide settings live here; backends and the like will join them. -->
@@ -134,6 +155,7 @@ the download, upload, warning and JSON buttons.
   <input #fileInput type="file" accept="application/json,.json" class="file-input"
     (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
 </mat-toolbar>
+}
 
 @if (loadError) {
   <p class="load-error" role="alert">Could not load that flow — {{loadError}}</p>
