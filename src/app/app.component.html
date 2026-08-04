@@ -164,8 +164,12 @@ this app's cockpit.
   Hidden, not destroyed, while another representation is on screen: the editor
   and its workers live in this component, and the document's figures are those
   workers' live output.
+
+  `embed` hides it unconditionally, not just once the document is up: opening
+  the document awaits a dynamic KaTeX import, and until that resolved the
+  canvas was on screen — an embedded article flashed the editor first.
   -->
-  <fb-flow [flow]="flow" [class.view-hidden]="showJson || showDoc"></fb-flow>
+  <fb-flow [flow]="flow" [class.view-hidden]="showJson || showDoc || embed"></fb-flow>
 
   @if (showJson) {
     <article class="flow-as-json">

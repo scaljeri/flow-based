@@ -1219,6 +1219,33 @@ test('embed mode shows the article alone, without the toolbar', async ({ page })
   await expect(page.locator('mat-toolbar')).toHaveCount(0);
 });
 
+/**
+ * No flash of the editor before the article.
+ *
+ * Opening the document awaits a dynamic KaTeX import, and while that resolved
+ * the canvas was on screen — an embedded article visibly started as the node
+ * editor. Sampled from the first paint onwards rather than asserted once: a
+ * single check would pass by landing in the wrong millisecond.
+ */
+test('embed mode never shows the canvas, not even for a frame', async ({ page }) => {
+  await page.goto('/?embed=doc', { waitUntil: 'commit' });
+
+  const canvasVisible = () => page.evaluate(() => {
+    const flow = document.querySelector('fb-flow');
+
+    return !!flow && getComputedStyle(flow).display !== 'none'
+      && flow.getBoundingClientRect().height > 0;
+  }).catch(() => false);
+
+  for (let i = 0; i < 40; i++) {
+    expect(await canvasVisible()).toBe(false);
+    await page.waitForTimeout(25);
+  }
+
+  // ...and the article did arrive, so this was not a test of a blank page.
+  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers, drawn');
+});
+
 test('the share button appears with the document and confirms the copy', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');

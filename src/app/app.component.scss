@@ -9,6 +9,21 @@
   z-index: 100;
 }
 
+/*
+ * Embedded, the paper is painted before there is a document to paint it.
+ * The app's own ground is black (fb-root), and the document arrives one
+ * dynamic import late — so without this an embedded article opened on a black
+ * rectangle, which on a light page is a flash of the wrong thing entirely.
+ * The tones match the document element's own tokens.
+ */
+:host(.is-embed) {
+  background-color: #14161b;
+
+  @media (prefers-color-scheme: light) {
+    background-color: #f3f1ec;
+  }
+}
+
 mat-toolbar {
   align-items: center;
   display: flex;

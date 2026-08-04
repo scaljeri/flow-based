@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostListener, NgZone, OnInit, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, HostBinding, HostListener, NgZone, OnInit, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
@@ -58,6 +58,7 @@ export class AppComponent implements OnInit, AfterViewInit {
    * The canvas still runs underneath, hidden: the figures are its workers'
    * live output.
    */
+  @HostBinding('class.is-embed')
   readonly embed = new URLSearchParams(window.location.search).has('embed');
 
   /** Flipped briefly after a copy, so the share button can say it worked. */
