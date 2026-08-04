@@ -43,9 +43,25 @@ export class SamplerWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
+  private adoptedRange?: string;
+
   setStream(stream: Observable<FnValue>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => {
       this.fn = value;
+
+      /*
+       * A function that declares its own domain fills the sampler's settings —
+       * that is what makes "this one is interesting from -5 to 5" travel with
+       * the function. Adopted only when the DECLARATION changes, so the user's
+       * own tweaks survive a formula edit that left the domain alone.
+       */
+      const declared = value.xRange && JSON.stringify(value.xRange);
+
+      if (declared && declared !== this.adoptedRange) {
+        this.adoptedRange = declared;
+        Object.assign(this.config, value.xRange);
+      }
+
       this.restart();
     });
   }

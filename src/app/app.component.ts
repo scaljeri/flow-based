@@ -55,8 +55,6 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-    // Modules enabled on an earlier visit come back with the app.
-    this.modules.restore();
     // For the e2e harness, which enables modules without walking the dialog.
     (window as unknown as { fbModules: ModulesService }).fbModules = this.modules;
 
@@ -132,12 +130,22 @@ export class AppComponent implements OnInit, AfterViewInit {
   private saveTimer?: ReturnType<typeof setTimeout>;
 
   private async restoreFlow(): Promise<void> {
+    /*
+     * Modules FIRST, flow second. A saved flow can speak module types, and
+     * showing it before those download rendered every module node as an empty
+     * circle until something forced a re-render.
+     */
+    await this.modules.restore();
+
     const id = this.store.currentId();
     const saved = id ? this.store.load(id) : null;
 
     if (id && saved) {
-      this.currentFlowId = id;
-      this.flow = saved;
+      this.zone.run(() => {
+        this.currentFlowId = id;
+        this.flow = saved;
+        this.cdr.detectChanges();
+      });
 
       return;
     }

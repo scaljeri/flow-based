@@ -971,3 +971,44 @@ test('the sampler turns a function into a stream of samples', async ({ page }) =
 
   expect(samples.map(v => Math.round(v * 1000) / 1000)).toEqual([0, 0.01, 0.04]);
 });
+
+/**
+ * A formula can declare parameters and a domain: a·x² + b grows value rows
+ * for a and b by parsing, the values travel WITH the function, the derivative
+ * keeps them symbolic (2·a·x), and the declared domain fills the sampler's
+ * settings downstream.
+ */
+test('formula parameters and domain travel with the function', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const result = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const formula = editor.children.find((n: any) => n.type === 'math-formula');
+    const sampler = editor.children.find((n: any) => n.type === 'math-sampler');
+    const derivative = editor.children.find((n: any) => n.type === 'math-derivative');
+    const worker = editor.flow.getWorker(formula.id);
+
+    worker.setExpression('a*x^2 + b');
+    worker.setParam('a', 3);
+    worker.setXRange('from', -5);
+
+    const derived: { expr: string; params?: Record<string, number> } =
+      await new Promise(resolve => editor.flow.getWorker(derivative.id).getStream().subscribe(resolve));
+
+    return {
+      params: formula.config.params,
+      derivedExpr: derived.expr.replace(/\s/g, ''),
+      derivedAt2: editor.flow.getWorker(derivative.id).current.evaluate({ x: 2 }),
+      samplerFrom: sampler.config.from,
+    };
+  });
+
+  expect(result.params).toEqual({ a: 3, b: 1 });
+  // d/dx of a·x² + b is 2·a·x, with a still symbolic...
+  expect(result.derivedExpr).toContain('a');
+  // ...and a = 3 baked into evaluation: 2·3·2 = 12.
+  expect(result.derivedAt2).toBe(12);
+  // The declared domain reached the sampler.
+  expect(result.samplerFrom).toBe(-5);
+});

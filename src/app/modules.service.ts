@@ -60,10 +60,8 @@ export class ModulesService {
   ];
 
   /** Modules enabled on an earlier visit load with the app. */
-  restore(): void {
-    for (const id of this.persisted()) {
-      void this.enable(id);
-    }
+  restore(): Promise<void> {
+    return Promise.all(this.persisted().map(id => this.enable(id))).then(() => undefined);
   }
 
   async enable(id: string): Promise<void> {
@@ -122,10 +120,30 @@ export class ModulesService {
   /** New types have to reach the running editors' adapter maps too. */
   private patchEditors(types: FbNodeTypes): void {
     const mounted = angularNodeTypes(types, this.injector);
+    const names = new Set(Object.keys(types));
 
     for (const editor of this.flowService.allEditors) {
       Object.assign(editor.types, mounted);
+
+      /*
+       * A document that ALREADY contains nodes of these types was loaded
+       * before its module arrived: the engine skipped their workers (unknown
+       * type), so those nodes drew nothing and their settings drove nothing.
+       * Reloading the root rebuilds the engine with the types now present.
+       * A document without them just gets a re-render, which is what makes
+       * the palette's new group and any empty boxes catch up.
+       */
+      if (this.containsAny(editor.root, names)) {
+        editor.load(editor.root);
+      } else {
+        editor.changes.emit({ kind: 'structure' });
+      }
     }
+  }
+
+  private containsAny(node: { type?: string; children?: unknown[] } | undefined, names: Set<string>): boolean {
+    return (node?.children as { type?: string; children?: unknown[] }[] | undefined)
+      ?.some(child => names.has(child.type!) || this.containsAny(child, names)) ?? false;
   }
 
   private persisted(): string[] {

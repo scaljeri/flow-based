@@ -30,7 +30,7 @@ export class DerivativeWorker implements FbNodeWorker {
   setStream(stream: Observable<FnValue>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => {
       try {
-        this.current = deriveFnValue(value.expr);
+        this.current = deriveFnValue(value);
         this.error = null;
         this.subject.next(this.current);
       } catch (error) {

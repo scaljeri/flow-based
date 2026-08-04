@@ -3,6 +3,7 @@ import { NodeService } from '@scaljeri/flow-based';
 import { parse } from 'mathjs';
 import { FormulaWorker } from './formula.worker';
 import { renderTex } from './katex-view';
+import { MathStepperComponent } from './stepper.component';
 
 /**
  * The formula editor: type an expression, see it typeset as you go.
@@ -16,6 +17,7 @@ import { renderTex } from './katex-view';
 @Component({
   standalone: true,
   selector: 'fb-math-formula-settings',
+  imports: [MathStepperComponent],
   template: `
     <div class="preview"></div>
 
@@ -35,6 +37,33 @@ import { renderTex } from './katex-view';
     </div>
 
     <p class="error" [class.visible]="error">{{error}}</p>
+
+    <!--
+      The free symbols besides x, found by parsing: type a·x² + b and rows for
+      a and b appear by themselves. Their values are the function's DEFAULTS
+      and travel with it over the wire.
+    -->
+    @if (worker.paramNames.length) {
+      <div class="params">
+        @for (name of worker.paramNames; track name) {
+          <fb-math-stepper
+            [label]="name"
+            [value]="worker.params[name]"
+            [by]="1"
+            (valueChange)="onParam(name, $event)"></fb-math-stepper>
+        }
+      </div>
+    }
+
+    <!-- The domain this function is interesting on; a sampler adopts it. -->
+    <div class="range">
+      <fb-math-stepper label="x from" [value]="worker.xRange.from" [by]="1"
+                       (valueChange)="onRange('from', $event)"></fb-math-stepper>
+      <fb-math-stepper label="x to" [value]="worker.xRange.to" [by]="1"
+                       (valueChange)="onRange('to', $event)"></fb-math-stepper>
+      <fb-math-stepper label="x step" [value]="worker.xRange.step" [by]="0.05" [min]="0.001"
+                       (valueChange)="onRange('step', $event)"></fb-math-stepper>
+    </div>
   `,
   styles: [`
     :host {
@@ -98,6 +127,18 @@ import { renderTex } from './katex-view';
     .error.visible {
       visibility: visible;
     }
+
+    .params,
+    .range {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .range {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 8px;
+    }
   `]
 })
 export class FormulaSettingsComponent implements OnInit, AfterViewInit {
@@ -143,6 +184,16 @@ export class FormulaSettingsComponent implements OnInit, AfterViewInit {
     this.worker.setExpression(expr);
     this.error = this.worker.error;
     this.preview(expr);
+    this.cdr.detectChanges();
+  }
+
+  onParam(name: string, value: number): void {
+    this.worker.setParam(name, value);
+    this.cdr.detectChanges();
+  }
+
+  onRange(part: 'from' | 'to' | 'step', value: number): void {
+    this.worker.setXRange(part, value);
     this.cdr.detectChanges();
   }
 
