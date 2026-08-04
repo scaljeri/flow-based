@@ -206,6 +206,17 @@ export class FbNodeElement extends LitElement {
       min-height: 0;
     }
 
+    /*
+     * The SLOT is a flex item in .body and shrink-to-fits its content — the
+     * quiet clamp in the chain. While a user size is active it must stretch,
+     * or everything inside stays content-sized however big the box gets.
+     */
+    :host([sized]) .body slot {
+      flex: 1 1 auto;
+      height: 100%;
+      width: 100%;
+    }
+
     :host([sized]) ::slotted(.fb-node-content) {
       height: 100%;
       width: 100%;
@@ -1231,10 +1242,22 @@ export class FbNodeElement extends LitElement {
       this.style.width = `${size.width}px`;
       this.style.height = `${size.height}px`;
       this.toggleAttribute('sized', true);
+
+      /*
+       * INLINE on the content host, deliberately. The component's own :host
+       * rule (a default like width: 320px) outranks the shell's ::slotted
+       * 100% in the cascade for slotted elements — so a grown node kept a
+       * 320px drawing floating in it. An inline declaration outranks both,
+       * and it is set only while a user size is active.
+       */
+      this.contentHost?.style.setProperty('width', '100%');
+      this.contentHost?.style.setProperty('height', '100%');
     } else if (this.hasAttribute('sized')) {
       this.style.width = '';
       this.style.height = '';
       this.removeAttribute('sized');
+      this.contentHost?.style.removeProperty('width');
+      this.contentHost?.style.removeProperty('height');
     }
   }
 
