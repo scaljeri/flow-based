@@ -25,7 +25,8 @@ export const GRAPHS_MODULE: FbModule = {
         title: 'Time series',
         group: 'Graphs',
         config: { style: 'line' },
-        sockets: [{ type: 'in', format: 'number' }],
+        // Readings over time, or sampled points — both are drawable series.
+        sockets: [{ type: 'in', formats: ['number', 'point'] }],
       },
       worker: TimeseriesWorker,
     },

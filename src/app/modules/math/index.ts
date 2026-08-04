@@ -95,10 +95,11 @@ export const MATH_MODULE: FbModule = {
       settings: {
         title: 'Sampler',
         group: GROUP,
-        config: { from: 0, to: 10, step: 0.1, interval: 50 },
+        config: { from: 0, to: 10, step: 0.1, interval: 50, mode: 'point' },
         sockets: [
           { type: 'in', format: 'function' },
-          { type: 'out', format: 'number' },
+          // Points, not bare numbers: a sample without its x is half a fact.
+          { type: 'out', format: 'point' },
         ],
       },
       worker: SamplerWorker,

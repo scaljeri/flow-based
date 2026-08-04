@@ -3,46 +3,108 @@ import { Observable, Subject, Subscription } from 'rxjs';
 
 export const TIMESERIES_WINDOW = 120;
 
+/** A drawable series: y-values against their x's, or against arrival order. */
+export interface SeriesBuffer {
+  /** True when the points carry their own x — drawn as a function graph. */
+  xy: boolean;
+  points: [number, number][];
+}
+
 /**
- * A rolling window over a stream of numbers.
+ * A rolling window over a stream — of numbers, of [x, y] points, or of whole
+ * point arrays.
  *
- * The window is bounded — a plot shows the recent past, and an unbounded
- * history is a leak wearing a chart. The node's drawings subscribe to `ticks`
- * and read `values` directly; the worker keeps no notion of how it is drawn.
+ * Three shapes, one buffer. A bare number is a reading over TIME: it gets
+ * arrival order as its x and the window rolls. An [x, y] point is a sample of
+ * a FUNCTION: it keeps its x, and when x jumps backwards the sweep has
+ * wrapped, so the buffer starts over instead of drawing a cliff — the
+ * sawtooth that bare y-values used to produce. A whole array replaces the
+ * buffer at once.
  */
 export class TimeseriesWorker implements FbNodeWorker {
-  private readonly subject = new Subject<number>();
+  private readonly subject = new Subject<void>();
   private readonly subscriptions: { [id: number]: Subscription } = {};
 
-  readonly values: number[] = [];
+  readonly buffer: SeriesBuffer = { xy: false, points: [] };
 
   destroy(): void {
     Object.values(this.subscriptions).forEach(s => s.unsubscribe());
     this.subject.complete();
   }
 
-  getStream(): Observable<number> {
+  getStream(): Observable<void> {
     return this.subject.asObservable();
   }
 
-  setStream(stream: Observable<number>, socket: FbSocket, connection: FbConnection): void {
+  setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => {
-      if (typeof value !== 'number' || Number.isNaN(value)) {
-        return;
+      if (this.ingest(value)) {
+        this.subject.next();
       }
-
-      this.values.push(value);
-
-      if (this.values.length > TIMESERIES_WINDOW) {
-        this.values.shift();
-      }
-
-      this.subject.next(value);
     });
   }
 
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+  }
+
+  private ingest(value: unknown): boolean {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      this.push(false, [this.nextIndex(), value]);
+
+      return true;
+    }
+
+    if (Array.isArray(value) && typeof value[0] === 'number') {
+      // One [x, y] point (extra dimensions ride along; the plot reads two).
+      this.push(true, [value[0], value[1] as number]);
+
+      return true;
+    }
+
+    if (Array.isArray(value) && Array.isArray(value[0])) {
+      // A whole sweep: the buffer IS this array now.
+      this.buffer.xy = true;
+      this.buffer.points = (value as [number, number][]).filter(
+        p => Number.isFinite(p[0]) && Number.isFinite(p[1]),
+      );
+
+      return true;
+    }
+
+    return false;
+  }
+
+  private push(xy: boolean, point: [number, number]): void {
+    // A shape change is a new story; mixing the two x-axes draws neither.
+    if (this.buffer.xy !== xy) {
+      this.buffer.xy = xy;
+      this.buffer.points = [];
+    }
+
+    const last = this.buffer.points[this.buffer.points.length - 1];
+
+    // x moving backwards means the sweep wrapped: start the graph over.
+    if (xy && last && point[0] < last[0]) {
+      this.buffer.points = [];
+    }
+
+    this.buffer.points.push(point);
+
+    if (this.buffer.points.length > TIMESERIES_WINDOW * 2) {
+      this.buffer.points.shift();
+    }
+
+    // Time readings roll; a function sweep clears on wrap instead.
+    if (!xy && this.buffer.points.length > TIMESERIES_WINDOW) {
+      this.buffer.points.shift();
+    }
+  }
+
+  private nextIndex(): number {
+    const last = this.buffer.points[this.buffer.points.length - 1];
+
+    return this.buffer.xy || !last ? 0 : last[0] + 1;
   }
 }

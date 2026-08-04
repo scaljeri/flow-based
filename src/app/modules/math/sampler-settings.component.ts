@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { NodeService } from '@scaljeri/flow-based';
-import { SamplerConfig, SamplerWorker } from './sampler.worker';
+import { SamplerConfig, SamplerMode, SamplerWorker } from './sampler.worker';
 
 type SamplerKey = 'from' | 'to' | 'step' | 'interval';
 
@@ -21,6 +21,14 @@ type SamplerKey = 'from' | 'to' | 'step' | 'interval';
   standalone: true,
   selector: 'fb-math-sampler-settings',
   template: `
+    <label class="field">
+      <span class="label">Mode</span>
+      <select [value]="worker.mode" (change)="onMode($event)">
+        <option value="point">One point at a time</option>
+        <option value="sweep">Whole sweep as one array</option>
+      </select>
+    </label>
+
     @for (field of fields; track field.key) {
       <div class="field">
         <span class="label">{{field.label}}</span>
@@ -82,6 +90,18 @@ type SamplerKey = 'from' | 'to' | 'step' | 'interval';
       padding: 6px 8px;
       text-align: center;
     }
+
+    select {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px;
+    }
+
+    select option {
+      background: #222;
+    }
   `]
 })
 export class SamplerSettingsComponent {
@@ -102,6 +122,14 @@ export class SamplerSettingsComponent {
 
   read(key: SamplerKey): number {
     return this.worker[key];
+  }
+
+  onMode(event: Event): void {
+    const config = (this.service.state.config ??= {}) as SamplerConfig;
+
+    config.mode = (event.target as HTMLSelectElement).value as SamplerMode;
+    this.worker.restart();
+    this.cdr.detectChanges();
   }
 
   nudge(field: { key: SamplerKey; by: number; min?: number }, direction: 1 | -1): void {

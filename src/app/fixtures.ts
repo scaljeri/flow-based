@@ -326,10 +326,10 @@ export const demo = () => ({
       type: 'math-sampler',
       title: 'Sampler',
       id: 600,
-      config: { from: 0, to: 10, step: 0.1, interval: 50 },
+      config: { from: 0, to: 10, step: 0.1, interval: 50, mode: 'point' },
       sockets: [
         { id: 610, type: 'in', format: 'function' },
-        { id: 611, type: 'out', format: 'number' },
+        { id: 611, type: 'out', format: 'point' },
       ],
       position: { x: 8, y: 32 },
     },
@@ -338,7 +338,7 @@ export const demo = () => ({
       title: 'Time series',
       id: 200,
       config: { style: 'line' },
-      sockets: [{ id: 210, type: 'in', format: 'number' }],
+      sockets: [{ id: 210, type: 'in', formats: ['number', 'point'] }],
       position: { x: 48, y: 30 },
     },
     {

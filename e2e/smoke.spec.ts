@@ -765,8 +765,8 @@ test('data type colours are set from the menu, and can be switched off', async (
   const dialog = page.locator('fb-type-colors');
   await expect(dialog).toBeVisible();
 
-  // Only the types actually in use: the demo deals in numbers and functions.
-  await expect(dialog.locator('li .name')).toHaveText(['function', 'number']);
+  // Only the types actually in use: numbers, functions, and sampled points.
+  await expect(dialog.locator('li .name')).toHaveText(['function', 'number', 'point']);
 
   // Pick a new colour for `number`, and every line carrying it follows.
   await page.evaluate(() => {
@@ -939,37 +939,65 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
 });
 
 /**
- * The sampler is the bridge between vocabularies: a FUNCTION in, numbers out.
- * f(x) = x^2 swept from 0 in steps of 0.1 must produce 0, 0.01, 0.04 — the
- * squares — as a stream a plot can drink.
+ * The sampler is the bridge between vocabularies: a FUNCTION in, POINTS out —
+ * a sample without its x is half a fact. f(x) = x^2 swept from 0 in steps of
+ * 0.1 must produce [0,0], [0.1,0.01], [0.2,0.04]; and in sweep mode, the
+ * whole domain arrives as one array.
  */
-test('the sampler turns a function into a stream of samples', async ({ page }) => {
+test('the sampler turns a function into points, one by one or as a sweep', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
 
-  const samples = await page.evaluate(async () => {
+  const result = await page.evaluate(async () => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
     const formula = editor.addNode('math-formula');
     const sampler = editor.addNode('math-sampler');
 
-    editor.socketClicked(formula.sockets.find((s: any) => s.type === 'out'), formula.id);
-    editor.socketClicked(sampler.sockets.find((s: any) => s.type === 'in'), sampler.id);
-
     const worker = editor.flow.getWorker(sampler.id);
-    const seen: number[] = [];
+    const seen: number[][] = [];
 
-    return new Promise<number[]>(resolve => {
-      worker.getStream().subscribe((value: number) => {
+    // Subscribed BEFORE wiring: the stream replays its latest value, and a
+    // subscriber arriving mid-sweep would get one point from the middle first.
+    const collected = new Promise<number[][]>(resolve => {
+      worker.getStream().subscribe((value: number[]) => {
         seen.push(value);
 
         if (seen.length === 3) {
-          resolve(seen);
+          // A copy: this subscription keeps collecting after resolve, and the
+          // later sweep-mode array must not grow into the resolved value.
+          resolve([...seen]);
         }
       });
     });
+
+    editor.socketClicked(formula.sockets.find((s: any) => s.type === 'out'), formula.id);
+    editor.socketClicked(sampler.sockets.find((s: any) => s.type === 'in'), sampler.id);
+
+    const points = await collected;
+
+    // Switch to sweep mode: the whole domain as one array.
+    sampler.config.mode = 'sweep';
+    worker.restart();
+
+    const sweep: number[][] = await new Promise(resolve => {
+      worker.getStream().subscribe((value: unknown) => {
+        if (Array.isArray(value) && Array.isArray(value[0])) {
+          resolve(value as number[][]);
+        }
+      });
+    });
+
+    return { points, sweepLength: sweep.length, sweepFirst: sweep[0], sweepLast: sweep[sweep.length - 1] };
   });
 
-  expect(samples.map(v => Math.round(v * 1000) / 1000)).toEqual([0, 0.01, 0.04]);
+  const rounded = result.points.map(p => p.map(v => Math.round(v * 1000) / 1000));
+
+  expect(rounded).toEqual([[0, 0], [0.1, 0.01], [0.2, 0.04]]);
+  // 0..10 in steps of 0.1 inclusive.
+  expect(result.sweepLength).toBe(101);
+  expect(result.sweepFirst).toEqual([0, 0]);
+  expect(result.sweepLast[0]).toBeCloseTo(10);
+  expect(result.sweepLast[1]).toBeCloseTo(100);
 });
 
 /**

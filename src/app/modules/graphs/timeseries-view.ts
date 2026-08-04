@@ -38,7 +38,8 @@ export abstract class TimeseriesView implements OnInit, OnDestroy {
   }
 
   get latest(): string {
-    const value = this.worker?.values[this.worker.values.length - 1];
+    const points = this.worker?.buffer.points;
+    const value = points?.[points.length - 1]?.[1];
 
     return value === undefined ? '' : Number.isInteger(value) ? String(value) : value.toFixed(3);
   }
@@ -63,44 +64,53 @@ export abstract class TimeseriesView implements OnInit, OnDestroy {
     }
 
     const ctx = canvas.getContext('2d')!;
-    const values = this.worker.values;
+    const { points } = this.worker.buffer;
     const { width, height } = canvas;
 
     ctx.clearRect(0, 0, width, height);
 
-    if (values.length < 2) {
+    if (points.length < 2) {
       return;
     }
 
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const span = max - min || 1;
+    /*
+     * Both axes scale to the DATA. For time readings the x's are arrival
+     * indices and this is what it always did; for function samples the x's
+     * are real coordinates, so f(x) = x^2 draws as the parabola it is rather
+     * than as y-values marching along in arrival order.
+     */
+    const xs = points.map(p => p[0]);
+    const ys = points.map(p => p[1]);
+    const minX = Math.min(...xs);
+    const spanX = Math.max(...xs) - minX || 1;
+    const minY = Math.min(...ys);
+    const spanY = Math.max(...ys) - minY || 1;
     const pad = 6;
 
-    const x = (i: number) => pad + (i / (values.length - 1)) * (width - pad * 2);
-    const y = (v: number) => height - pad - ((v - min) / span) * (height - pad * 2);
+    const x = (v: number) => pad + ((v - minX) / spanX) * (width - pad * 2);
+    const y = (v: number) => height - pad - ((v - minY) / spanY) * (height - pad * 2);
 
     ctx.strokeStyle = '#bada55';
     ctx.fillStyle = 'rgba(186, 218, 85, 0.35)';
     ctx.lineWidth = 2;
 
     if (this.style === 'bars') {
-      const barWidth = Math.max(1, (width - pad * 2) / values.length - 1);
+      const barWidth = Math.max(1, (width - pad * 2) / points.length - 1);
 
-      for (let i = 0; i < values.length; i++) {
-        ctx.fillRect(x(i) - barWidth / 2, y(values[i]), barWidth, height - pad - y(values[i]));
+      for (const point of points) {
+        ctx.fillRect(x(point[0]) - barWidth / 2, y(point[1]), barWidth, height - pad - y(point[1]));
       }
 
       return;
     }
 
     ctx.beginPath();
-    values.forEach((v, i) => ctx.lineTo(x(i), y(v)));
+    points.forEach(point => ctx.lineTo(x(point[0]), y(point[1])));
     ctx.stroke();
 
     if (this.style === 'area') {
-      ctx.lineTo(x(values.length - 1), height - pad);
-      ctx.lineTo(x(0), height - pad);
+      ctx.lineTo(x(points[points.length - 1][0]), height - pad);
+      ctx.lineTo(x(points[0][0]), height - pad);
       ctx.closePath();
       ctx.fill();
     }

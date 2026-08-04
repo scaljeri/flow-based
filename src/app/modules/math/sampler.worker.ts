@@ -1,33 +1,42 @@
 import { FbConnection, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Observable, ReplaySubject, Subscription } from 'rxjs';
 import { FnValue } from './function-value';
+
+export type SamplerMode = 'point' | 'sweep';
 
 export interface SamplerConfig {
   from?: number;
   to?: number;
   step?: number;
   interval?: number;
+  /** 'point': one [x, y] per tick. 'sweep': the whole sweep as one array. */
+  mode?: SamplerMode;
 }
 
+/** One sample: the coordinates, however many dimensions there are. */
+export type SamplePoint = number[];
+
 /**
- * A function in, a time series out.
+ * A function in, samples out — as POINTS, because a sample without its x is
+ * half a fact: a plot fed bare y's could only draw them against arrival
+ * order, which turned every sweep's wrap-around into a sawtooth cliff.
  *
- * The sampler walks x across [from, to] one step per tick, emitting f(x) as a
- * plain number — which is what turns a FUNCTION, a thing with no time in it,
- * into something a time-series plot can draw. At the end it wraps around, so
- * the shape keeps redrawing as long as anyone watches; a new function on the
- * input restarts the sweep from the left, because half of one curve glued to
- * half of another reads as neither.
+ * Two modes. 'point' walks x across [from, to] one step per tick, emitting
+ * [x, f(x)] each time — the function unfolds live, and wraps to keep
+ * unfolding. 'sweep' computes the whole [from, to] in one go and emits a
+ * single array of points — the function as a THING, delivered at once, again
+ * whenever the function or the settings change.
  */
 export class SamplerWorker implements FbNodeWorker {
-  private readonly subject = new Subject<number>();
+  private readonly subject = new ReplaySubject<SamplePoint | SamplePoint[]>(1);
   private readonly subscriptions: { [id: number]: Subscription } = {};
 
   private fn?: FnValue;
   private x = 0;
   private timer?: ReturnType<typeof setInterval>;
+  private adoptedRange?: string;
 
-  /** The latest sample, for the node's own drawing. */
+  /** The latest sample's y, for the node's own drawing. */
   current?: number;
 
   constructor(private readonly config: SamplerConfig = {}) {
@@ -39,11 +48,9 @@ export class SamplerWorker implements FbNodeWorker {
     this.subject.complete();
   }
 
-  getStream(): Observable<number> {
+  getStream(): Observable<SamplePoint | SamplePoint[]> {
     return this.subject.asObservable();
   }
-
-  private adoptedRange?: string;
 
   setStream(stream: Observable<FnValue>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => {
@@ -76,35 +83,60 @@ export class SamplerWorker implements FbNodeWorker {
   /** Called by the settings panel too: new bounds mean a new sweep. */
   restart(): void {
     clearInterval(this.timer);
+    this.timer = undefined;
     this.x = this.from;
 
     if (!this.fn) {
       return;
     }
 
-    this.timer = setInterval(() => this.tick(), this.interval);
+    if (this.mode === 'sweep') {
+      this.emitSweep();
+    } else {
+      this.timer = setInterval(() => this.tick(), this.interval);
+    }
   }
 
   private tick(): void {
-    if (!this.fn) {
-      return;
-    }
+    const point = this.sampleAt(this.x);
 
-    try {
-      const value = this.fn.evaluate({ x: this.x });
-
-      if (typeof value === 'number' && Number.isFinite(value)) {
-        this.current = value;
-        this.subject.next(value);
-      }
-    } catch {
-      // A function that fails at this x simply contributes no sample there.
+    if (point) {
+      this.current = point[1];
+      this.subject.next(point);
     }
 
     this.x += this.step;
 
     if (this.x > this.to) {
       this.x = this.from;
+    }
+  }
+
+  private emitSweep(): void {
+    const points: SamplePoint[] = [];
+
+    for (let x = this.from; x <= this.to + 1e-9; x += this.step) {
+      const point = this.sampleAt(x);
+
+      if (point) {
+        points.push(point);
+      }
+    }
+
+    if (points.length) {
+      this.current = points[points.length - 1][1];
+      this.subject.next(points);
+    }
+  }
+
+  private sampleAt(x: number): SamplePoint | null {
+    try {
+      const value = this.fn!.evaluate({ x });
+
+      return typeof value === 'number' && Number.isFinite(value) ? [x, value] : null;
+    } catch {
+      // A function that fails at this x simply contributes no sample there.
+      return null;
     }
   }
 
@@ -123,5 +155,9 @@ export class SamplerWorker implements FbNodeWorker {
 
   get interval(): number {
     return Math.max(16, this.config.interval ?? 50);
+  }
+
+  get mode(): SamplerMode {
+    return this.config.mode ?? 'point';
   }
 }
