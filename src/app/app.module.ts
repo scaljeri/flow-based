@@ -10,8 +10,9 @@ import { SubflowComponent } from './nodes/subflow/subflow.component';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
 import { FlowsDialogComponent } from './components/flows/flows-dialog.component';
+import { ModulesService } from './modules.service';
 import { FlowComponent } from './flow/flow.component';
-import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
+import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FB_TYPE_ASSIGNABILITY, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
 
 /*
  * The `@angular/material` barrel was removed in v9 — every symbol now comes from
@@ -144,6 +145,15 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
     }, {
       provide: FB_SOCKET_COLORS,
       useValue: FB_SOCKET_PALETTE as FbSocketColors
+    }, {
+      /*
+       * The editors' type comparison runs on the module registry's refinement
+       * chains. A factory closing over the service, so the answer follows the
+       * registry as modules come and go.
+       */
+      provide: FB_TYPE_ASSIGNABILITY,
+      useFactory: (modules: ModulesService) => (from: string, to: string) => modules.formats.assignable(from, to),
+      deps: [ModulesService]
     }
   ],
   /*

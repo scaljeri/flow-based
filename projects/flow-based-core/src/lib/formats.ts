@@ -21,31 +21,54 @@ export function formatsOf(socket: FbSocket): string[] {
   return socket.format ? [socket.format] : [];
 }
 
-/** The types both sockets could carry; empty when one of them takes anything. */
-export function commonFormats(a: FbSocket, b: FbSocket): string[] {
-  const left = formatsOf(a);
-  const right = formatsOf(b);
+/**
+ * Whether a value of type `from` may be OFFERED where `to` is demanded.
+ *
+ * The engine does not know what types MEAN — a host that has a registry of
+ * refinements (temperature refines number) injects its own answer, and this
+ * name-equality default keeps every flow that never heard of refinements
+ * exactly as it was.
+ */
+export type FbAssignable = (from: string, to: string) => boolean;
 
-  if (!left.length) {
-    return right;
+export const sameName: FbAssignable = (from, to) => from === to;
+
+/**
+ * The types the OUT side could actually deliver into the IN side.
+ *
+ * Directional on purpose: an out that speaks `temperature` fits an in that
+ * demands `number` (a refinement flows up to its base), never the other way
+ * around — meaning is not free. An empty set still means "anything": an
+ * untyped out adopts the in's demands, an undemanding in takes the out's
+ * offer, exactly as overlap always behaved.
+ */
+export function commonFormats(out: FbSocket, input: FbSocket, assignable: FbAssignable = sameName): string[] {
+  const offers = formatsOf(out);
+  const demands = formatsOf(input);
+
+  if (!offers.length) {
+    return demands;
   }
 
-  if (!right.length) {
-    return left;
+  if (!demands.length) {
+    return offers;
   }
 
-  return left.filter(format => right.includes(format));
+  return offers.filter(offer => demands.some(demand => assignable(offer, demand)));
 }
 
 /**
- * Whether two sockets could be joined on type grounds.
+ * Whether the out socket could legally feed the in socket.
  *
- * Either takes anything, or their sets overlap. With one type each this is the
- * equality test it replaces, so nothing about a single-format flow changes.
+ * Either takes anything, or something the out offers is assignable to
+ * something the in demands. With one type each and the default answer this is
+ * the equality test it replaces, so nothing about a single-format flow
+ * changes.
  */
-export function formatsCompatible(a: FbSocket, b: FbSocket): boolean {
-  const left = formatsOf(a);
-  const right = formatsOf(b);
+export function formatsCompatible(out: FbSocket, input: FbSocket, assignable: FbAssignable = sameName): boolean {
+  const offers = formatsOf(out);
+  const demands = formatsOf(input);
 
-  return !left.length || !right.length || left.some(format => right.includes(format));
+  return !offers.length || !demands.length
+    || offers.some(offer => demands.some(demand => assignable(offer, demand)));
 }

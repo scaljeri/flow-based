@@ -13,6 +13,12 @@ export interface FbFormatDef {
   name: string;
   /** What the type IS. This is its identity across modules. */
   description?: string;
+  /**
+   * The base this type refines: `temperature` refines `number`. A refinement
+   * is its base's shape wearing a meaning — it satisfies every demand for the
+   * base, while the base never satisfies a demand for the refinement.
+   */
+  refines?: string;
   /** A default colour for its lines; presentation, so never part of identity. */
   color?: string;
 }
@@ -102,7 +108,37 @@ export class FbFormatRegistry {
     return [...this.formats.values()].map(entry => entry.def);
   }
 
+  /**
+   * Whether an OFFERED type satisfies a DEMANDED one: itself, or anything up
+   * its refinement chain. This is the function the engine's format comparison
+   * runs on. Cycle-guarded, because a registry fed by strangers must not hang.
+   */
+  assignable = (from: string, to: string): boolean => {
+    if (from === to) {
+      return true;
+    }
+
+    const seen = new Set<string>();
+    let current = this.formats.get(from)?.def.refines;
+
+    while (current && !seen.has(current)) {
+      if (current === to) {
+        return true;
+      }
+
+      seen.add(current);
+      current = this.formats.get(current)?.def.refines;
+    }
+
+    return false;
+  };
+
   private sameType(a: FbFormatDef, b: FbFormatDef): boolean {
+    // A different base is a different type, whatever the words say.
+    if ((a.refines ?? null) !== (b.refines ?? null)) {
+      return false;
+    }
+
     return !a.description || !b.description || a.description === b.description;
   }
 }
@@ -123,7 +159,16 @@ export function prepareModule(
   const colors: Record<string, string> = {};
 
   for (const def of module.formats ?? []) {
-    const finalName = registry.register(def, module.prefix);
+    /*
+     * A refinement whose base got prefixed must refine the PREFIXED base —
+     * declaration order within the module decides, so a base is declared
+     * before its refinements.
+     */
+    const settled = def.refines && renames.has(def.refines)
+      ? { ...def, refines: renames.get(def.refines) }
+      : def;
+
+    const finalName = registry.register(settled, module.prefix);
 
     if (finalName !== def.name) {
       renames.set(def.name, finalName);

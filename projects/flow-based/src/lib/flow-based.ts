@@ -58,6 +58,14 @@ export type FbNodeTypes = FbCoreNodeTypes<FbNodeComponent>;
 /** The node-type registry: maps a node `type` string to its component + worker. */
 export const FB_NODE_TYPES = new InjectionToken<FbNodeTypes>('fb-node-types');
 
+/**
+ * How type names relate — whether an offered type satisfies a demanded one.
+ * Provided by an app that keeps a refinement registry; absent, the editor
+ * compares names, which is what every flow before refinements expects.
+ */
+export const FB_TYPE_ASSIGNABILITY =
+  new InjectionToken<import('@scaljeri/flow-based-core').FbAssignable>('fb-type-assignability');
+
 /** Optional hooks letting an app customise socket-format negotiation. */
 export const FB_NODE_HELPERS = new InjectionToken<FbNodeHelpers>('fb-node-helpers');
 

@@ -24,7 +24,9 @@ import {
   boundarySocketPosition,
   copyNodes,
   distributeNodes,
+  FbAssignable,
   formatsCompatible,
+  sameName,
   formatsOf,
   moveSocket,
   pasteNodes,
@@ -83,6 +85,12 @@ export interface FbEditorOptions {
    * pushes to, not a second one that silently disagrees with it.
    */
   history?: FbHistory;
+  /**
+   * How type names relate — whether an offered type satisfies a demanded one.
+   * A host with a refinement registry (temperature refines number) injects
+   * its answer; the default is plain name equality.
+   */
+  assignable?: FbAssignable;
 }
 
 /**
@@ -151,12 +159,14 @@ export class FbEditor {
 
   private readonly ids = new IdGenerator();
   private readonly helpers?: FbNodeHelpers;
+  private readonly assignable: FbAssignable;
   private unbind?: () => void;
 
   constructor(options: FbEditorOptions) {
     this.types = options.types;
     this.history = options.history ?? new FbHistory();
     this.helpers = options.helpers;
+    this.assignable = options.assignable ?? sameName;
     this.socketColors = options.socketColors ?? {};
     this.routing = options.routing ?? 'curved';
 
@@ -220,7 +230,7 @@ export class FbEditor {
     // The old engine's workers keep running until told otherwise — a worker
     // with an interval, say, would tick on unobserved forever.
     this.flow?.destroy();
-    this.flow = new Flow(this.types, this.helpers, this.ids);
+    this.flow = new Flow(this.types, this.helpers, this.ids, this.assignable);
     this.unbind = this.flow.changes.subscribe(kind => {
       /*
        * A half-drawn connection does not survive a change to the graph.
@@ -1078,8 +1088,18 @@ export class FbEditor {
       return false;
     }
 
-    // Compatible when either takes anything, or their declared sets overlap.
-    return formatsCompatible(pending.socket, socket);
+    /*
+     * Directional: the effective OUT side offers, the IN side demands, and a
+     * refinement satisfies its base but never the reverse — an input demanding
+     * `temperature` refuses a bare `number`, while the plot demanding `number`
+     * takes every temperature.
+     */
+    const pendingType = this.effectiveType(pending.socket, pending.nodeId);
+    const [offer, demand] = pendingType === 'out'
+      ? [pending.socket, socket]
+      : [socket, pending.socket];
+
+    return formatsCompatible(offer, demand, this.assignable);
   }
 
   /**

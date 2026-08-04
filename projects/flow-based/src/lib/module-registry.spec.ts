@@ -86,3 +86,60 @@ describe('prepareModule', () => {
     expect(prepared.colors).toEqual({ point: '#ff0000' });
   });
 });
+
+describe('assignable', () => {
+  it('walks the refinement chain upward, never downward', () => {
+    const registry = new FbFormatRegistry();
+
+    registry.seed(def('number'));
+    registry.register({ ...def('temperature', 'Degrees'), refines: 'number' }, 'th');
+    registry.register({ ...def('celsius', 'Degrees Celsius'), refines: 'temperature' }, 'th');
+
+    expect(registry.assignable('celsius', 'number')).toBe(true);
+    expect(registry.assignable('celsius', 'temperature')).toBe(true);
+    expect(registry.assignable('temperature', 'celsius')).toBe(false);
+    expect(registry.assignable('number', 'temperature')).toBe(false);
+    expect(registry.assignable('number', 'number')).toBe(true);
+  });
+
+  it('survives a cycle instead of hanging on it', () => {
+    const registry = new FbFormatRegistry();
+
+    registry.register({ ...def('a', 'A'), refines: 'b' }, 'x');
+    registry.register({ ...def('b', 'B'), refines: 'a' }, 'x');
+
+    expect(registry.assignable('a', 'c')).toBe(false);
+  });
+
+  it('treats a different base as a different type, whatever the words say', () => {
+    const registry = new FbFormatRegistry();
+
+    registry.register({ ...def('score', 'Points scored'), refines: 'number' }, 'game');
+
+    // Same name and description, but refining something else: prefixed.
+    expect(registry.register({ ...def('score', 'Points scored'), refines: 'text' }, 'quiz')).toBe('quiz:score');
+  });
+
+  it('renames a refinement whose base got prefixed', () => {
+    const registry = new FbFormatRegistry();
+
+    registry.register(def('point', 'A sampled coordinate: [x, y, ...]'), 'math');
+
+    const tennis: FbModule = {
+      name: 'Tennis',
+      prefix: 'tennis',
+      formats: [
+        def('point', 'A score in tennis'),
+        { ...def('advantage', 'Past deuce'), refines: 'point' },
+      ],
+      types: {},
+    };
+
+    prepareModule(tennis, registry);
+
+    // The refinement follows its own module's PREFIXED point, not math's.
+    expect(registry.get('tennis:advantage')?.refines ?? registry.get('advantage')?.refines).toBe('tennis:point');
+    expect(registry.assignable('advantage', 'tennis:point')).toBe(true);
+    expect(registry.assignable('advantage', 'point')).toBe(false);
+  });
+});

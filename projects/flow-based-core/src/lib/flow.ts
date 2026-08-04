@@ -6,7 +6,7 @@ import {
   FbNodeHelpers,
   FbNodeState, FbSocket
 } from './types';
-import { commonFormats, formatsCompatible } from './formats';
+import { FbAssignable, commonFormats, formatsCompatible, sameName } from './formats';
 import { FlowWorker } from './flow-worker';
 import { IdGenerator } from './id-generator';
 import { FbChangeEmitter } from './change-emitter';
@@ -53,7 +53,9 @@ export class Flow {
 
   constructor(private flowTypes: FbNodeTypes,
               private helpers?: FbNodeHelpers,
-              private ids: IdGenerator = new IdGenerator()) {
+              private ids: IdGenerator = new IdGenerator(),
+              /** How types relate; a host with a refinement registry injects it. */
+              private assignable: FbAssignable = sameName) {
   }
 
   initialize(flow: FbNodeState): Flow {
@@ -594,7 +596,7 @@ export class Flow {
      * two overlapping sets still leave a real choice, and guessing which is
      * worse than leaving it open for the next connection to settle.
      */
-    const common = commonFormats(outSocket, inSocket);
+    const common = commonFormats(outSocket, inSocket, this.assignable);
 
     if (common.length === 1) {
       for (const socket of [outSocket, inSocket]) {
@@ -635,7 +637,11 @@ export class Flow {
       const peerId = connection.in === socketId ? connection.out : connection.in;
       const peer = peerId === undefined ? undefined : this.getSocket(peerId);
 
-      if (peer && !formatsCompatible(socket, peer)) {
+      // Direction matters now: the OUT side offers, the IN side demands.
+      const outSide = connection.out === socketId ? socket : peer;
+      const inSide = connection.in === socketId ? socket : peer;
+
+      if (peer && outSide && inSide && !formatsCompatible(outSide, inSide, this.assignable)) {
         this.removeConnection(connection, state, false);
         dropped++;
       }

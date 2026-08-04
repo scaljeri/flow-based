@@ -68,3 +68,45 @@ describe('commonFormats', () => {
     expect(commonFormats(socket({ format: 'a' }), socket({ format: 'b' }))).toEqual([]);
   });
 });
+
+describe('assignability-aware comparison', () => {
+  // A miniature refinement registry: temperature refines number.
+  const refines = (from: string, to: string): boolean =>
+    from === to || (from === 'temperature' && to === 'number');
+
+  it('lets a refinement flow into a demand for its base', () => {
+    expect(formatsCompatible(
+      socket({ format: 'temperature' }),
+      socket({ format: 'number' }),
+      refines,
+    )).toBe(true);
+
+    expect(commonFormats(
+      socket({ format: 'temperature' }),
+      socket({ formats: ['number', 'point'] }),
+      refines,
+    )).toEqual(['temperature']);
+  });
+
+  it('never lets the base pass for its refinement — meaning is not free', () => {
+    expect(formatsCompatible(
+      socket({ format: 'number' }),
+      socket({ format: 'temperature' }),
+      refines,
+    )).toBe(false);
+  });
+
+  it('accepts one of several demanded types', () => {
+    // An input taking number OR text; a temperature satisfies the number leg.
+    expect(formatsCompatible(
+      socket({ format: 'temperature' }),
+      socket({ formats: ['number', 'text'] }),
+      refines,
+    )).toBe(true);
+  });
+
+  it('defaults to name equality, so old flows behave exactly as before', () => {
+    expect(formatsCompatible(socket({ format: 'a' }), socket({ format: 'a' }))).toBe(true);
+    expect(formatsCompatible(socket({ format: 'a' }), socket({ format: 'b' }))).toBe(false);
+  });
+});
