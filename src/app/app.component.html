@@ -59,16 +59,21 @@ this app's cockpit.
 
     <button type="button" mat-button (click)="toggleDoc()" class="doc"
       matTooltip="Read this flow as a document">{{showDoc ? 'Flow' : 'Doc'}}</button>
-
-    <!-- Only while the document is up: the link it copies IS the document. -->
-    @if (showDoc) {
-      <button type="button" mat-button class="share" (click)="copyShareLink()"
-        matTooltip="Copy an embed link — the article alone, no toolbar"
-        aria-label="Copy an embed link to this document">
-        <mat-icon>{{shareCopied ? 'check' : 'share'}}</mat-icon>
-      </button>
-    }
   </div>
+
+  <!--
+  Share sits at the toolbar's right edge, OUTSIDE the secondary actions: those
+  fold into the overflow menu on a phone, and sharing the article should not
+  require finding a menu. Only while the document is up — the link it copies
+  IS the document.
+  -->
+  @if (showDoc) {
+    <button type="button" mat-icon-button class="share" (click)="copyShareLink()"
+      matTooltip="Copy an embed link — the article alone, no toolbar"
+      aria-label="Copy an embed link to this document">
+      <mat-icon>{{shareCopied ? 'check' : 'share'}}</mat-icon>
+    </button>
+  }
 
   <button type="button" mat-icon-button class="overflow" [matMenuTriggerFor]="overflowMenu"
     aria-label="More actions">
@@ -119,13 +124,6 @@ this app's cockpit.
       <mat-icon>article</mat-icon>
       <span>{{showDoc ? 'Show flow' : 'Show document'}}</span>
     </button>
-
-    @if (showDoc) {
-      <button type="button" mat-menu-item (click)="copyShareLink()">
-        <mat-icon>{{shareCopied ? 'check' : 'share'}}</mat-icon>
-        <span>Copy embed link</span>
-      </button>
-    }
 
     <mat-divider></mat-divider>
 
