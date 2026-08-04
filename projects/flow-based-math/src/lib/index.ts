@@ -51,6 +51,20 @@ const operator = (
 });
 
 export const MATH_MODULE: FbModule = {
+  name: 'Mathematics',
+  prefix: 'math',
+
+  /*
+   * The data types this module DEFINES. The descriptions are their identity:
+   * another module declaring the same name with a compatible description
+   * shares the type; one describing something else gets its name prefixed.
+   */
+  formats: [
+    { name: 'number', description: 'A plain numeric value', color: '#025d04' },
+    { name: 'function', description: 'A symbolic function of x', color: '#c77d0a' },
+    { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
+  ],
+
   types: {
     'math-add': operator('Add', '+', (a, b) => a + b),
     'math-subtract': operator('Subtract', '−', (a, b) => a - b),

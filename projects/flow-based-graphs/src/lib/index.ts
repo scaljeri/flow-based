@@ -13,6 +13,16 @@ import { TimeseriesSettingsComponent } from './timeseries-settings.component';
  * will join it here rather than in the core set.
  */
 export const GRAPHS_MODULE: FbModule = {
+  name: 'Graphs',
+  prefix: 'graph',
+
+  // The same identities Mathematics declares, so the two SHARE these types —
+  // which is what lets a sampled function flow straight into a plot.
+  formats: [
+    { name: 'number', description: 'A plain numeric value', color: '#025d04' },
+    { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
+  ],
+
   types: {
     'graph-timeseries': {
       component: {

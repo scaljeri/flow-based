@@ -1,5 +1,16 @@
 import { EnvironmentInjector, EventEmitter, Injectable, inject } from '@angular/core';
-import { FB_NODE_TYPES, FbModule, FbNodeTypes, FlowBasedService, angularNodeTypes } from '@scaljeri/flow-based';
+import {
+  FB_NODE_TYPES,
+  FB_SOCKET_COLORS,
+  FbFormatRegistry,
+  FbModule,
+  FbNodeTypes,
+  FlowBasedService,
+  angularNodeTypes,
+  prepareModule,
+} from '@scaljeri/flow-based';
+import { FbSocketColors } from '@scaljeri/flow-based-core';
+import { FB_SOCKET_PALETTE } from './fb-settings';
 
 export type { FbModule };
 
@@ -40,10 +51,23 @@ const LOADERS: Record<string, () => Promise<FbModule>> = {
 @Injectable({ providedIn: 'root' })
 export class ModulesService {
   private readonly types = inject<FbNodeTypes>(FB_NODE_TYPES);
+  private readonly colors = inject<FbSocketColors>(FB_SOCKET_COLORS);
   private readonly injector = inject(EnvironmentInjector);
   private readonly flowService = inject(FlowBasedService);
 
   readonly changed = new EventEmitter<void>();
+
+  /**
+   * The book of data types. Seeded with the app's own palette, so a module
+   * declaring 'number' compatibly SHARES it rather than colliding with it.
+   */
+  readonly formats = new FbFormatRegistry();
+
+  constructor() {
+    for (const [name, color] of Object.entries(FB_SOCKET_PALETTE)) {
+      this.formats.seed({ name, color });
+    }
+  }
 
   readonly modules: FbModuleInfo[] = [
     {
@@ -77,8 +101,20 @@ export class ModulesService {
     try {
       const mod = await loader();
 
-      Object.assign(this.types, mod.types);
-      this.patchEditors(mod.types);
+      /*
+       * Settle the module's type names first: a declared type that collides
+       * with a DIFFERENT existing type comes back prefixed, and the module's
+       * sockets are rewritten to speak the settled names. The colours a
+       * module brings only fill gaps — an app or user choice stands.
+       */
+      const prepared = prepareModule(mod, this.formats);
+
+      for (const [name, color] of Object.entries(prepared.colors)) {
+        this.colors[name] ??= color;
+      }
+
+      Object.assign(this.types, prepared.types);
+      this.patchEditors(prepared.types);
       info.enabled = true;
       this.persist();
     } finally {
