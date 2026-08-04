@@ -108,6 +108,12 @@ export interface FbNodeState {
    * looking the way it was left.
    */
   view?: import('./views').FbNodeView;
+  /**
+   * A size the USER gave the node, in pixels — only meaningful in the normal
+   * view of a type that declared itself resizable. Absent, the view component
+   * sizes itself, which is the rule everywhere else.
+   */
+  size?: { width: number; height: number };
   /** Prose and figure settings for this node in the document representation. */
   doc?: FbNodeDoc;
   /**
@@ -164,6 +170,13 @@ export interface FbNodeSettings {
    * smallest supported one — a node at rest is an icon.
    */
   defaultView?: import('./views').FbNodeView;
+  /**
+   * Whether the NORMAL view can be resized by hand. Opt-in per type: the
+   * component must be written to fill the size it is given (100% widths, a
+   * flexible canvas) or the grip resizes a box around unmoved content.
+   * Small stays an icon and full already has the whole surface.
+   */
+  resizable?: boolean;
 }
 
 /**

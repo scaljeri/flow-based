@@ -34,6 +34,8 @@ export const GRAPHS_MODULE: FbModule = {
       settings: {
         title: 'Time series',
         group: 'Graphs',
+        // The normal view grows with a corner grip; the plot fills what it gets.
+        resizable: true,
         config: { style: 'line' },
         // Readings over time, or sampled points — both are drawable series.
         sockets: [{ type: 'in', formats: ['number', 'point'] }],

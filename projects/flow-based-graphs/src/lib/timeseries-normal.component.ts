@@ -12,14 +12,23 @@ import { TimeseriesView } from './timeseries-view';
     <canvas #plot></canvas>
   `,
   styles: [`
+    /*
+     * A DEFAULT size, not a fixed one: the type is resizable, so when the
+     * node carries a user-given size this host is stretched to it (the shell
+     * sets 100% on the slotted chain) and the flexible canvas follows.
+     */
     :host {
-      display: block;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
       line-height: 0;
       padding: 6px;
+      width: 320px;
     }
 
     .plot-title {
       color: rgba(255, 255, 255, 0.9);
+      flex: 0 0 auto;
       font: 12px system-ui, sans-serif;
       line-height: normal;
       margin: 0 0 4px;
@@ -29,8 +38,13 @@ import { TimeseriesView } from './timeseries-view';
     canvas {
       background: rgba(255, 255, 255, 0.04);
       border-radius: 8px;
-      height: 190px;
-      width: 320px;
+      flex: 1 1 190px;
+      min-height: 190px;
+      width: 100%;
+    }
+
+    :host-context([sized]) canvas {
+      min-height: 0;
     }
   `]
 })

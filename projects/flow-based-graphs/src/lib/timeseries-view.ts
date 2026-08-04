@@ -73,13 +73,25 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
    * until the next tick. In sweep mode there is no next tick: the whole
    * array came once, and the reopened plot stayed empty for good.
    */
+  private resizeObserver?: ResizeObserver;
+
   ngAfterViewInit(): void {
     this.draw();
     this.cdr.detectChanges();
+
+    // A user-resized node changes the canvas without a new sample arriving;
+    // the plot must follow the room it is given, not wait for data.
+    const canvas = this.plot?.nativeElement;
+
+    if (canvas && typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.draw());
+      this.resizeObserver.observe(canvas);
+    }
   }
 
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
+    this.resizeObserver?.disconnect();
   }
 
   get latest(): string {

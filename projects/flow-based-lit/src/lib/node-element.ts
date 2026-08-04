@@ -192,6 +192,56 @@ export class FbNodeElement extends LitElement {
       width: 13px;
     }
 
+    /*
+     * The user gave this node a size: the box takes it and the content chain
+     * stretches to fill. Only a resizable type's normal view ever sets it.
+     */
+    :host([sized]) .box {
+      height: 100%;
+      width: 100%;
+    }
+
+    :host([sized]) .body {
+      flex: 1;
+      min-height: 0;
+    }
+
+    :host([sized]) ::slotted(.fb-node-content) {
+      height: 100%;
+      width: 100%;
+    }
+
+    .resize-grip {
+      bottom: 0;
+      cursor: nwse-resize;
+      height: 22px;
+      position: absolute;
+      right: 0;
+      touch-action: none;
+      width: 22px;
+      z-index: 3;
+    }
+
+    /* Two strokes of a corner, drawn not iconed. */
+    .resize-grip::before {
+      border-bottom: 2px solid rgba(255, 255, 255, 0.55);
+      border-right: 2px solid rgba(255, 255, 255, 0.55);
+      border-radius: 0 0 6px 0;
+      bottom: 5px;
+      content: '';
+      height: 8px;
+      position: absolute;
+      right: 5px;
+      width: 8px;
+    }
+
+    @media (pointer: coarse) {
+      .resize-grip {
+        height: 34px;
+        width: 34px;
+      }
+    }
+
     .box {
       --inner-border-color: var(--fb-block-border-color, #868686);
 
@@ -509,6 +559,7 @@ export class FbNodeElement extends LitElement {
     }
 
     this.applyPosition();
+    this.applySize();
     this.applySelected();
     this.setAttribute('view', this.view);
     this.notifyView();
@@ -1163,6 +1214,88 @@ export class FbNodeElement extends LitElement {
     this.endDrag();
   };
 
+  /* ----------------------------------------------------------------------
+     Resizing — opt-in per type, normal view only
+     ---------------------------------------------------------------------- */
+
+  private resizableNow(): boolean {
+    return this.view === 'normal'
+      && this.editor?.types[this.state?.type]?.settings?.resizable === true;
+  }
+
+  /** Reflect the user-given size; everywhere else the content decides. */
+  private applySize(): void {
+    const size = this.view === 'normal' ? this.state?.size : undefined;
+
+    if (size) {
+      this.style.width = `${size.width}px`;
+      this.style.height = `${size.height}px`;
+      this.toggleAttribute('sized', true);
+    } else if (this.hasAttribute('sized')) {
+      this.style.width = '';
+      this.style.height = '';
+      this.removeAttribute('sized');
+    }
+  }
+
+  private resizeFrom: { x: number; y: number; width: number; height: number; pointerId: number } | null = null;
+
+  private onResizeStart = (event: PointerEvent): void => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    // The grip is the node's, not the canvas's — and not a drag either.
+    event.stopPropagation();
+    event.preventDefault();
+
+    const rect = this.getBoundingClientRect();
+    const zoom = this.editor.viewport.zoom || 1;
+
+    this.editor.captureBeforeDrag();
+    this.resizeFrom = {
+      x: event.clientX,
+      y: event.clientY,
+      width: rect.width / zoom,
+      height: rect.height / zoom,
+      pointerId: event.pointerId,
+    };
+
+    window.addEventListener('pointermove', this.onResizeMove);
+    window.addEventListener('pointerup', this.onResizeEnd);
+    window.addEventListener('pointercancel', this.onResizeEnd);
+  };
+
+  private onResizeMove = (event: PointerEvent): void => {
+    if (!this.resizeFrom || event.pointerId !== this.resizeFrom.pointerId) {
+      return;
+    }
+
+    const zoom = this.editor.viewport.zoom || 1;
+
+    // Floors, or a wild drag folds the node to nothing around its header.
+    const width = Math.max(160, this.resizeFrom.width + (event.clientX - this.resizeFrom.x) / zoom);
+    const height = Math.max(100, this.resizeFrom.height + (event.clientY - this.resizeFrom.y) / zoom);
+
+    this.state.size = { width: Math.round(width), height: Math.round(height) };
+    this.applySize();
+  };
+
+  private onResizeEnd = (event: PointerEvent): void => {
+    if (!this.resizeFrom || event.pointerId !== this.resizeFrom.pointerId) {
+      return;
+    }
+
+    this.resizeFrom = null;
+    window.removeEventListener('pointermove', this.onResizeMove);
+    window.removeEventListener('pointerup', this.onResizeEnd);
+    window.removeEventListener('pointercancel', this.onResizeEnd);
+
+    // Sockets and curves follow the measured size; the model heard a change.
+    this.editor.geometry.changes.emit(this.state.id);
+    this.editor.changes.emit({ kind: 'geometry', nodeId: this.state.id });
+  };
+
   private endDrag(): void {
     this.dragPointerId = null;
     this.dragFrom = null;
@@ -1190,6 +1323,11 @@ export class FbNodeElement extends LitElement {
         </div>
 
         <svg class="wires"></svg>
+
+        ${this.resizableNow()
+          ? html`<div class="resize-grip ${FB_DRAG_IGNORE}"
+                      @pointerdown=${this.onResizeStart}></div>`
+          : nothing}
       </div>
 
       <!--
