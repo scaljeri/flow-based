@@ -60,9 +60,12 @@ export function toFnValue(
  * string; whoever needs to RUN the function compiles it here — once per
  * distinct expression, however many samples follow.
  */
-const compiled = new Map<string, { evaluate: (scope: Record<string, number>) => number }>();
+const compiled = new Map<string, { evaluate: (scope: Record<string, number>) => unknown }>();
 
-export function compileExpression(value: FnValue): (x: number) => number {
+/** What an evaluation yields: a real number, or a complex one as plain data. */
+export type FnResult = number | { re: number; im: number };
+
+export function compileExpression(value: FnValue): (x: number) => FnResult {
   let entry = compiled.get(value.expr);
 
   if (!entry) {
@@ -78,7 +81,25 @@ export function compileExpression(value: FnValue): (x: number) => number {
 
   const params = value.params ?? {};
 
-  return x => entry!.evaluate({ ...params, x });
+  return x => {
+    const result = entry!.evaluate({ ...params, x }) as
+      number | { re?: number; im?: number } | null;
+
+    /*
+     * mathjs hands back a Complex INSTANCE for e^(i·x) and friends; the wire
+     * carries data, so it leaves here as a plain {re, im}. sqrt(-1) is not an
+     * error in this house — it is a coordinate.
+     */
+    if (typeof result === 'number') {
+      return result;
+    }
+
+    if (result && typeof result.re === 'number' && typeof result.im === 'number') {
+      return { re: result.re, im: result.im };
+    }
+
+    return NaN;
+  };
 }
 
 /** The derivative of an expression, as the same kind of value. */

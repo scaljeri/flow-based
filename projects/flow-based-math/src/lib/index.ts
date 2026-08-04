@@ -63,6 +63,7 @@ export const MATH_MODULE: FbModule = {
     { name: 'number', description: 'A plain numeric value', color: '#025d04' },
     { name: 'function', description: 'A symbolic function of x', color: '#c77d0a' },
     { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
+    { name: 'complex', description: 'A complex number: {re, im}', color: '#2aa7a0' },
   ],
 
   types: {

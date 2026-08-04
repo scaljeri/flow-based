@@ -213,6 +213,7 @@ export class FormulaSettingsComponent implements OnInit, AfterViewInit {
     { label: '√', insert: 'sqrt()', title: 'Square root' },
     { label: '⁄', insert: '/', title: 'Fraction' },
     { label: 'π', insert: 'pi', title: 'Pi' },
+    { label: 'i', insert: 'i', title: 'The imaginary unit' },
     { label: 'Σ', insert: 'sum(,)', title: 'Sum of a list' },
     { label: 'e', insert: 'e', title: "Euler's number" },
     { label: 'ln', insert: 'log()', title: 'Natural logarithm' },

@@ -1,7 +1,7 @@
 import { FbConnection, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 import { FnValue } from './function-value';
-import { compileExpression } from './formula.worker';
+import { FnResult, compileExpression } from './formula.worker';
 
 export type SamplerMode = 'point' | 'sweep';
 
@@ -44,7 +44,7 @@ export class SamplerWorker implements FbNodeWorker {
   private readonly subscriptions: { [id: number]: Subscription } = {};
 
   private fn?: FnValue;
-  private evaluate?: (x: number) => number;
+  private evaluate?: (x: number) => FnResult;
   private x = 0;
   private timer?: ReturnType<typeof setInterval>;
 
@@ -170,7 +170,16 @@ export class SamplerWorker implements FbNodeWorker {
     try {
       const value = this.evaluate(x);
 
-      return typeof value === 'number' && Number.isFinite(value) ? [x, value] : null;
+      if (typeof value === 'number') {
+        return Number.isFinite(value) ? [x, value] : null;
+      }
+
+      // A complex result is a sample with one more dimension: [x, re, im].
+      if (value && Number.isFinite(value.re) && Number.isFinite(value.im)) {
+        return [x, value.re, value.im];
+      }
+
+      return null;
     } catch {
       // A function that fails at this x simply contributes no sample there.
       return null;

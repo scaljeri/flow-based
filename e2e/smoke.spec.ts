@@ -1086,3 +1086,45 @@ test('formula parameters and domain travel with the function', async ({ page }) 
   // And the derivative's own introduction reached the plot's buffer.
   expect((result.labels as { y: string }).y).toBe("f'(x)");
 });
+
+/**
+ * Imaginary numbers are data, not errors: e^(i·x) samples as [x, re, im] and
+ * every point sits on the unit circle — |z| = 1, which is the whole point of
+ * the exponential.
+ */
+test('a complex function samples as [x, re, im] on the unit circle', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const points = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const formula = editor.addNode('math-formula');
+    const sampler = editor.addNode('math-sampler');
+    const worker = editor.flow.getWorker(sampler.id);
+
+    const seen: number[][] = [];
+    const collected = new Promise<number[][]>(resolve => {
+      worker.getStream().subscribe((value: unknown) => {
+        if (Array.isArray(value) && typeof value[0] === 'number') {
+          seen.push(value as number[]);
+
+          if (seen.length === 5) {
+            resolve([...seen]);
+          }
+        }
+      });
+    });
+
+    editor.flow.getWorker(formula.id).setExpression('e^(i*x)');
+    editor.socketClicked(formula.sockets.find((s: any) => s.type === 'out'), formula.id);
+    editor.socketClicked(sampler.sockets.find((s: any) => s.type === 'in'), sampler.id);
+
+    return collected;
+  });
+
+  for (const point of points) {
+    expect(point).toHaveLength(3);
+    const [, re, im] = point;
+    expect(Math.hypot(re, im)).toBeCloseTo(1, 6);
+  }
+});

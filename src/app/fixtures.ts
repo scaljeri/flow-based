@@ -25,6 +25,13 @@ export const basic = {
   sockets: [],
   children: [
     {
+      type: 'graph-complex',
+      title: 'Complex plane',
+      id: 900,
+      sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
+      position: { x: 27, y: 48 },
+    },
+    {
       type: 'random-numbers',
       title: 'Random number generator',
       id: 100,
@@ -302,6 +309,8 @@ export const demo = () => ({
   id: 1,
   type: 'flow',
   title: 'demo',
+  // Bumped when the fixture changes shape; the app reseeds on mismatch.
+  config: { seedVersion: 2 },
   sockets: [],
   children: [
     {
@@ -309,14 +318,14 @@ export const demo = () => ({
       title: 'Damped wave',
       id: 400,
       /*
-       * The showpiece: e^(-a·x)·sin(b·x), a wave strangled by its own
-       * envelope. Two parameters to play with in the settings, a domain wide
-       * enough for five crossings, and a derivative that is every bit as
-       * dramatic as the function itself.
+       * The showpiece went COMPLEX: e^((b·i − a)·x). Its real and imaginary
+       * parts are the damped cosine and sine the old demo showed — and on
+       * the complex plane the same function is a logarithmic spiral walking
+       * into the origin. One formula, three honest pictures.
        */
       config: {
-        expr: 'e^(-a*x) * sin(b*x)',
-        params: { a: 0.4, b: 4 },
+        expr: 'e^((b*i - a)*x)',
+        params: { a: 0.3, b: 4 },
         x: { from: 0, to: 8, step: 0.02 },
       },
       sockets: [{ id: 410, type: 'out', format: 'function' }],
@@ -371,6 +380,13 @@ export const demo = () => ({
       position: { x: 52, y: 34 },
     },
     {
+      type: 'graph-complex',
+      title: 'Complex plane',
+      id: 900,
+      sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
+      position: { x: 27, y: 48 },
+    },
+    {
       type: 'random-numbers',
       title: 'Random number generator',
       id: 100,
@@ -385,7 +401,7 @@ export const demo = () => ({
         integer: true,
       },
       sockets: [{ id: 110, type: 'out', format: 'number' }],
-      position: { x: 6, y: 66 },
+      position: { x: 6, y: 72 },
     },
     {
       type: 'tap',
@@ -396,7 +412,7 @@ export const demo = () => ({
         { id: 310, type: 'in' },
         { id: 311, type: 'out' },
       ],
-      position: { x: 55, y: 66 },
+      position: { x: 55, y: 72 },
     },
   ],
   /*
@@ -409,6 +425,7 @@ export const demo = () => ({
     { id: 1003, from: 400, to: 600, out: 410, in: 610 },
     { id: 1004, from: 500, to: 700, out: 511, in: 710 },
     { id: 1005, from: 600, to: 200, out: 611, in: 210 },
+    { id: 1007, from: 600, to: 900, out: 611, in: 910 },
     { id: 1006, from: 700, to: 800, out: 711, in: 810 },
     { id: 1001, from: 100, to: 300, out: 110, in: 310 },
   ],

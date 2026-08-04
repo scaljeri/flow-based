@@ -7,7 +7,12 @@ export const TIMESERIES_WINDOW = 120;
 export interface SeriesBuffer {
   /** True when the points carry their own x — drawn as a function graph. */
   xy: boolean;
-  points: [number, number][];
+  /**
+   * Each point is [x, y, ...] — however many dimensions arrived. A real
+   * sample has two, a complex one three (x, re, im); the views read the
+   * dimensions they know how to draw.
+   */
+  points: number[][];
   /** What the series calls itself; sent by the producer, drawn by the plot. */
   labels?: { title?: string; x?: string; y?: string };
 }
@@ -65,8 +70,8 @@ export class TimeseriesWorker implements FbNodeWorker {
     }
 
     if (Array.isArray(value) && typeof value[0] === 'number') {
-      // One [x, y] point (extra dimensions ride along; the plot reads two).
-      this.push(true, [value[0], value[1] as number]);
+      // One [x, y, ...] point — every dimension it carries comes along.
+      this.push(true, value as number[]);
 
       return true;
     }
@@ -74,7 +79,7 @@ export class TimeseriesWorker implements FbNodeWorker {
     if (Array.isArray(value) && Array.isArray(value[0])) {
       // A whole sweep: the buffer IS this array now.
       this.buffer.xy = true;
-      this.buffer.points = (value as [number, number][]).filter(
+      this.buffer.points = (value as number[][]).filter(
         p => Number.isFinite(p[0]) && Number.isFinite(p[1]),
       );
 
@@ -84,7 +89,7 @@ export class TimeseriesWorker implements FbNodeWorker {
     return false;
   }
 
-  private push(xy: boolean, point: [number, number]): void {
+  private push(xy: boolean, point: number[]): void {
     // A shape change is a new story; mixing the two x-axes draws neither.
     if (this.buffer.xy !== xy) {
       this.buffer.xy = xy;

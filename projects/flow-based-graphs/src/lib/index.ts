@@ -4,6 +4,9 @@ import { TimeseriesSmallComponent } from './timeseries-small.component';
 import { TimeseriesNormalComponent } from './timeseries-normal.component';
 import { TimeseriesFullComponent } from './timeseries-full.component';
 import { TimeseriesSettingsComponent } from './timeseries-settings.component';
+import { ComplexPlaneSmallComponent } from './complex-plane-small.component';
+import { ComplexPlaneNormalComponent } from './complex-plane-normal.component';
+import { ComplexPlaneFullComponent } from './complex-plane-full.component';
 
 /**
  * The Graphs module: ways of LOOKING at streams.
@@ -38,6 +41,26 @@ export const GRAPHS_MODULE: FbModule = {
         resizable: true,
         config: { style: 'line' },
         // Readings over time, or sampled points — both are drawable series.
+        sockets: [{ type: 'in', formats: ['number', 'point'] }],
+      },
+      worker: TimeseriesWorker,
+    },
+
+    /*
+     * The complex plane: im against re, time as the parameter. Fed by the
+     * same point stream the time series drinks — a real series lies flat on
+     * the real axis, a complex one walks circles and spirals.
+     */
+    'graph-complex': {
+      component: {
+        small: ComplexPlaneSmallComponent,
+        normal: ComplexPlaneNormalComponent,
+        full: ComplexPlaneFullComponent,
+      },
+      settings: {
+        title: 'Complex plane',
+        group: 'Graphs',
+        resizable: true,
         sockets: [{ type: 'in', formats: ['number', 'point'] }],
       },
       worker: TimeseriesWorker,

@@ -152,7 +152,12 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
      * than as y-values marching along in arrival order.
      */
     const xs = points.map(p => p[0]);
-    const ys = points.map(p => p[1]);
+    // Complex samples carry [x, re, im]; BOTH series set the y-range, or the
+    // imaginary line walks off the top of the plot.
+    const complex = points.some(p => p.length > 2);
+    const ys = complex
+      ? points.flatMap(p => [p[1], p[2] ?? p[1]])
+      : points.map(p => p[1]);
     const minX = Math.min(...xs);
     const maxX = Math.max(...xs);
     const spanX = maxX - minX || 1;
@@ -196,6 +201,37 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
       ctx.lineTo(x(points[0][0]), height - bottom);
       ctx.closePath();
       ctx.fill();
+    }
+
+    /*
+     * The imaginary part, as its own line in the point colour. Two labelled
+     * strokes in the corner say which is which — a complex series without a
+     * legend is two anonymous wiggles.
+     */
+    if (complex) {
+      ctx.strokeStyle = '#9988cf';
+      ctx.beginPath();
+      points.forEach(point => ctx.lineTo(x(point[0]), y(point[2] ?? 0)));
+      ctx.stroke();
+
+      if (this.axes) {
+        ctx.font = '10px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = '#bada55';
+        ctx.beginPath();
+        ctx.moveTo(width - 58, top + 6);
+        ctx.lineTo(width - 44, top + 6);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.fillText('re', width - 40, top + 6);
+        ctx.strokeStyle = '#9988cf';
+        ctx.beginPath();
+        ctx.moveTo(width - 58, top + 18);
+        ctx.lineTo(width - 44, top + 18);
+        ctx.stroke();
+        ctx.fillText('im', width - 40, top + 18);
+      }
     }
   }
 

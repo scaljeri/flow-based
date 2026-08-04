@@ -144,12 +144,17 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     /*
      * The demo lives in the store under a FIXED id, seeded from the fixture
-     * whenever it is absent — so a browser that has flows of its own still
-     * gets it in the Flows dialog, and deleting it there resets it to the
-     * fixture on the next visit. One shared, reproducible flow to test on.
+     * whenever it is absent OR outdated — so a browser that has flows of its
+     * own still gets it in the Flows dialog, deleting it there resets it,
+     * and shipping a new fixture reaches every browser on its next visit.
+     * One shared, reproducible flow to test on; edits to it do not survive a
+     * fixture bump, which is the point of a shared reference.
      */
-    if (!this.store.load(AppComponent.DEMO_ID)) {
-      this.store.save(AppComponent.DEMO_ID, data.demo() as FbNodeState);
+    const seeded = this.store.load(AppComponent.DEMO_ID);
+    const fixture = data.demo() as FbNodeState & { config?: { seedVersion?: number } };
+
+    if (!seeded || (seeded as { config?: { seedVersion?: number } }).config?.seedVersion !== fixture.config?.seedVersion) {
+      this.store.save(AppComponent.DEMO_ID, fixture);
     }
 
     const id = this.store.currentId();
