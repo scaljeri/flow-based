@@ -393,7 +393,10 @@ test('toggles the JSON view, which is the serialisable flow state', async ({ pag
 
   // The view now shows the versioned envelope, i.e. exactly what Save writes.
   const parsed = JSON.parse((await json.textContent()) ?? '');
-  expect(parsed.version).toBe(1);
+  // The CURRENT format version, whatever it is by now — the point is the
+  // envelope, not the number.
+  expect(typeof parsed.version).toBe('number');
+  expect(parsed.version).toBeGreaterThanOrEqual(2);
   // ...wrapping the recursive shape the engine relies on.
   expect(Array.isArray(parsed.flow.children)).toBe(true);
   expect(Array.isArray(parsed.flow.connections)).toBe(true);

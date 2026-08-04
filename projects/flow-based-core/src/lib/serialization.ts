@@ -7,8 +7,10 @@ import { FbNodeState } from './types';
  *     `position` as percentages of the graph plane. Files saved before versioning
  *     existed carry no `version` field and are read as 1, because the shape did
  *     not change when the viewport was introduced (see FbViewportService).
+ * 2 — the view names `medium` and `large` became `normal` and `full`. Readers
+ *     translated the old names at runtime; the file now says what it means.
  */
-export const FB_FLOW_FORMAT_VERSION = 1;
+export const FB_FLOW_FORMAT_VERSION = 2;
 
 export interface FbSerializedFlow {
   version: number;
@@ -23,12 +25,33 @@ export class FbFlowFormatError extends Error {
 }
 
 /**
- * Migrations from an older version to the next one, keyed by the version being
- * upgraded FROM. Empty today; the mechanism exists so that the first real format
- * change does not have to invent it, and so old files never silently
- * misinterpret.
+ * Migrations from an older version to the NEXT one, keyed by the version being
+ * upgraded FROM. A file several versions old walks the chain one step at a
+ * time — 1 to 2, 2 to 3 — so every migration only ever reasons about two
+ * adjacent shapes, never about history.
+ *
+ * A migration receives a clone and may mutate it freely.
  */
-const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {};
+const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
+  /* 1 → 2: the view names medium/large became normal/full. */
+  1: flow => {
+    const renames: Record<string, string> = { medium: 'normal', large: 'full' };
+
+    const walk = (node: FbNodeState): void => {
+      const view = node.view as string | undefined;
+
+      if (view && renames[view]) {
+        node.view = renames[view] as FbNodeState['view'];
+      }
+
+      node.children?.forEach(walk);
+    };
+
+    walk(flow);
+
+    return flow;
+  },
+};
 
 export function serializeFlow(flow: FbNodeState): FbSerializedFlow {
   return { version: FB_FLOW_FORMAT_VERSION, flow: structuredClone(flow) };
@@ -52,7 +75,13 @@ export function deserializeFlow(input: unknown): FbNodeState {
   const record = input as Record<string, unknown>;
   const envelope = typeof record['version'] === 'number' && typeof record['flow'] === 'object';
 
-  let version = envelope ? (record['version'] as number) : FB_FLOW_FORMAT_VERSION;
+  /*
+   * A bare flow — no envelope — is a file from before versioning existed,
+   * which makes it format 1 BY DEFINITION. It used to be read as the current
+   * version, which skipped every migration for exactly the files migrations
+   * exist for.
+   */
+  let version = envelope ? (record['version'] as number) : 1;
   let flow = (envelope ? record['flow'] : record) as FbNodeState;
 
   if (!Number.isInteger(version) || version < 1) {

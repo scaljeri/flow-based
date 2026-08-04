@@ -54,6 +54,46 @@ describe('deserializeFlow', () => {
     expect(deserializeFlow(flow()).type).toBe('flow');
   });
 
+  it('migrates step by step from the version the file carries', () => {
+    const old = flow();
+
+    // A version-1 file speaks the old view names.
+    (old.children![0] as { view?: string }).view = 'medium';
+    (old.children![1] as { view?: string }).view = 'large';
+
+    const upgraded = deserializeFlow({ version: 1, flow: old });
+
+    expect(upgraded.children![0].view).toBe('normal');
+    expect(upgraded.children![1].view).toBe('full');
+  });
+
+  it('migrates a bare pre-versioning file too — bare means format 1', () => {
+    const old = flow();
+
+    (old.children![0] as { view?: string }).view = 'large';
+
+    expect(deserializeFlow(old).children![0].view).toBe('full');
+  });
+
+  it('reaches into subflows when migrating', () => {
+    const old = flow();
+
+    old.children![0].children = [
+      { id: 99, type: 'x', sockets: [], view: 'medium' as never },
+    ];
+    old.children![0].connections = [];
+
+    expect(deserializeFlow({ version: 1, flow: old }).children![0].children![0].view).toBe('normal');
+  });
+
+  it('leaves a current-version file untouched by migrations', () => {
+    const current = flow();
+
+    (current.children![0] as { view?: string }).view = 'normal';
+
+    expect(deserializeFlow({ version: FB_FLOW_FORMAT_VERSION, flow: current }).children![0].view).toBe('normal');
+  });
+
   it('rejects a flow from a newer format with an explanatory message', () => {
     expect(() => deserializeFlow({ version: FB_FLOW_FORMAT_VERSION + 1, flow: flow() }))
       .toThrow(/newer version of the library/);
