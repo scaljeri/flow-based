@@ -76,9 +76,11 @@ describe('shapeFits', () => {
   });
 
   it('defines the framework base types as the shapes they claim to be', () => {
-    // Any object fits the base `object`; any array fits the base `array`.
+    // Exactly four: what stands complete on its own. An array is a
+    // constructor — an array OF something — and no base type.
+    expect(Object.keys(FB_BASE_SHAPES).sort()).toEqual(['boolean', 'number', 'object', 'string']);
+    // Any object fits the base `object`.
     expect(shapeFits(fbObject({ a: fbNumber }), FB_BASE_SHAPES['object'])).toBe(true);
-    expect(shapeFits(fbArray(fbNumber, 2), FB_BASE_SHAPES['array'])).toBe(true);
     expect(shapeFits(FB_BASE_SHAPES['number'], fbNumber)).toBe(true);
     expect(shapeFits(fbNumber, FB_BASE_SHAPES['string'])).toBe(false);
   });

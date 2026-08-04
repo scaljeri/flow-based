@@ -8,10 +8,14 @@
  * - the primitives `number`, `boolean`, `string`;
  * - `array` (a point is an array of numbers, at least two of them);
  * - `object` (named fields, each with a shape of its own);
- * - `opaque` (a runtime value no structure describes — a compiled function,
- *   an ImageData — equal only to its own id);
+ * - `opaque` (a runtime value no structure describes, equal only to its own
+ *   id — what a module's compiled-function type is made of);
  * - `any` (fits everywhere, demands nothing; composition uses it for "an
  *   array of anything").
+ *
+ * `array` and `opaque` are CONSTRUCTORS, not types: an array is always an
+ * array OF something, and an opaque is always somebody's named thing. Only
+ * what stands complete on its own is a base type.
  *
  * MEANING is not here on purpose. A temperature and a score are both the
  * `number` shape; telling them apart is the type registry's job (refinements),
@@ -44,18 +48,20 @@ export function fbOpaque(id: string): FbShape {
 }
 
 /**
- * The base types the framework itself defines, by name.
+ * The base types the framework itself defines, by name: number, boolean,
+ * string, object. These stand complete on their own — `object` is "any
+ * object". A registry seeds itself with these, and every refinement chain
+ * ends on one of them.
  *
- * These are shapes wearing their own name and nothing more: `object` is "any
- * object", `array` is "any array". A registry seeds itself with these, and
- * every refinement chain ends on one of them.
+ * Deliberately absent: `array` (a constructor — an array is an array OF
+ * something, so a module declares "point", not "array") and anything opaque
+ * like a function type — those belong to the module that gives them meaning.
  */
 export const FB_BASE_SHAPES: Record<string, FbShape> = {
   number: fbNumber,
   boolean: fbBoolean,
   string: fbString,
   object: fbObject(),
-  array: fbArray(),
 };
 
 /**

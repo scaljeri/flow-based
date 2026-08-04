@@ -170,7 +170,6 @@ export const FB_CONFIG: FbNodeTypes = {
 
 export const FB_SOCKET_PALETTE = {
   'number': '#025d04',
-  'function': '#c77d0a',
   'worker': '#c1a',
   'dimension': '#bebebe',
   'point': '#9988cf'
