@@ -160,8 +160,10 @@ export class FbConnectionsElement extends LitElement {
   override disconnectedCallback(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    // Its listeners are on `window` and would outlive this element otherwise.
+    // Their listeners are on `window` and would outlive this element otherwise —
+    // the handle drag's as much as the long-press's.
     this.cancelArming();
+    this.releaseHandle();
     super.disconnectedCallback();
   }
 
@@ -178,15 +180,40 @@ export class FbConnectionsElement extends LitElement {
       // those arrive alongside a structure or connection change anyway.
       if (change.kind === 'geometry' || change.kind === 'connections'
         || change.kind === 'sockets' || change.kind === 'structure'
-        || change.kind === 'interaction' || change.kind === 'viewport') {
+        || change.kind === 'interaction' || change.kind === 'pointer'
+        || change.kind === 'viewport') {
         this.requestUpdate();
+      }
+
+      if (change.kind === 'viewport') {
+        // The plane moved under any cached measurement of it.
+        this.planeRect = null;
       }
     });
   }
 
+  /** Socket lookup for the frame being rendered; see socketColour. */
+  private socketIndex = new Map<number, FbSocket>();
+
   protected override render() {
     if (!this.editor?.flow) {
       return nothing;
+    }
+
+    /*
+     * Built once per render rather than searched per socket: socketColour ran a
+     * scan over every node PER CONNECTION END, and — worse — only over the
+     * children, so a connection to the flow's own boundary socket had no colour
+     * at all and came out white at that end.
+     */
+    this.socketIndex.clear();
+
+    for (const node of [...this.editor.children, this.editor.state]) {
+      for (const socket of node?.sockets ?? []) {
+        if (socket.id !== undefined) {
+          this.socketIndex.set(socket.id, socket);
+        }
+      }
     }
 
     /*
@@ -238,16 +265,31 @@ export class FbConnectionsElement extends LitElement {
     const outSide = from.sockets?.find(s => s.id === connection.out);
     const inSide = to.sockets?.find(s => s.id === connection.in);
 
+    /*
+     * The whole EDGE each end sits on — which sockets share it, in what order —
+     * not just which edge it is. A socket's position is its index within its
+     * edge's group, so reordering two sockets on one side, or moving a THIRD
+     * socket onto the side, moves this one without changing anything else this
+     * key used to look at.
+     */
+    const edge = (node: FbNodeState, socket: FbSocket | undefined): string =>
+      socket
+        ? (node.sockets ?? []).filter(s => sideOf(s) === sideOf(socket)).map(s => s.id).join('.')
+        : '';
+
     return `${fp.x},${fp.y},${fs?.width},${fs?.height},${tp.x},${tp.y},${ts?.width},${ts?.height},`
       + `${connection.out},${connection.in},${plane.width},${plane.height},`
       + `${outSide && sideOf(outSide)},${inSide && sideOf(inSide)},`
+      + `${edge(from, outSide)},${edge(to, inSide)},`
       /*
        * The colour VERSION, not the resolved colours: resolving one means
        * scanning the nodes, and this key is built per connection per frame —
        * the resolved form made a drag cost work proportional to the graph,
-       * which is the exact property the perf test exists to protect.
+       * which is the exact property the perf test exists to protect. Both ends'
+       * formats, because the gradient has two stops: the in-side's used to be
+       * missing, so a format arriving there recoloured nothing.
        */
-      + `${this.editor.colorsVersion},${connection.out && this.editor.nodeById(connection.from)?.sockets?.find(s => s.id === connection.out)?.format},`
+      + `${this.editor.colorsVersion},${outSide?.format},${inSide?.format},`
       + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing},`
       // Whether this line is being held. Without it `guard` sees an unchanged
       // key and skips the very re-render that turns the line red.
@@ -307,7 +349,7 @@ export class FbConnectionsElement extends LitElement {
     to: FbSocketSide = 'left',
   ): { d: string; arrow: string } {
     if (this.editor.routing === 'orthogonal') {
-      const points = orthogonalRoute(start, end);
+      const points = orthogonalRoute(start, end, undefined, from, to);
       const mid = routeMidpoint(points);
 
       return {
@@ -395,12 +437,26 @@ export class FbConnectionsElement extends LitElement {
 
   private handlePointerId: number | null = null;
 
+  /**
+   * The plane's client rect, measured when a drag starts instead of per move.
+   * getBoundingClientRect forces layout, and paying that on every pointermove
+   * is the difference between following a finger and chasing it. Invalidated
+   * when the viewport changes, which is what moves the plane.
+   */
+  private planeRect: DOMRect | null = null;
+
   private onHandleDown = (event: PointerEvent): void => {
+    // A right or middle press is not a grab.
+    if (event.button !== 0) {
+      return;
+    }
+
     // The canvas would otherwise read this as a background press and pan.
     event.stopPropagation();
     event.preventDefault();
 
     this.handlePointerId = event.pointerId;
+    this.planeRect = this.getBoundingClientRect();
     (event.target as Element).setPointerCapture?.(event.pointerId);
 
     window.addEventListener('pointermove', this.onHandleMove);
@@ -421,10 +477,7 @@ export class FbConnectionsElement extends LitElement {
       return;
     }
 
-    this.handlePointerId = null;
-    window.removeEventListener('pointermove', this.onHandleMove);
-    window.removeEventListener('pointerup', this.onHandleUp);
-    window.removeEventListener('pointercancel', this.onHandleUp);
+    this.releaseHandle();
 
     /*
      * Dropped on a socket, that is the other end. Found through the editor's
@@ -438,9 +491,17 @@ export class FbConnectionsElement extends LitElement {
     }
   };
 
+  private releaseHandle(): void {
+    this.handlePointerId = null;
+    this.planeRect = null;
+    window.removeEventListener('pointermove', this.onHandleMove);
+    window.removeEventListener('pointerup', this.onHandleUp);
+    window.removeEventListener('pointercancel', this.onHandleUp);
+  }
+
   /** Where a pointer is, in the plane's own coordinates. */
   private toPlane(event: { clientX: number; clientY: number }): FbPosition {
-    const rect = this.getBoundingClientRect();
+    const rect = this.planeRect ?? this.getBoundingClientRect();
 
     return this.editor.viewport.toPlane({
       x: event.clientX - rect.left,
@@ -474,8 +535,9 @@ export class FbConnectionsElement extends LitElement {
   private arming?: { id: number; pointerId: number; from: FbPosition; timer: number };
 
   private onLinePress(event: PointerEvent, connection: FbAnyConnection): void {
-    // An element-to-element line is decoration a node owns, not a graph edge.
-    if (typeof connection.from !== 'number' || connection.id === undefined) {
+    // An element-to-element line is decoration a node owns, not a graph edge —
+    // and a right or middle press is not a hold.
+    if (typeof connection.from !== 'number' || connection.id === undefined || event.button !== 0) {
       return;
     }
 
@@ -644,19 +706,9 @@ export class FbConnectionsElement extends LitElement {
   }
 
   private socketColour(socketId: number | undefined): string {
-    if (socketId === undefined) {
-      return '#fff';
-    }
+    const socket = socketId === undefined ? undefined : this.socketIndex.get(socketId);
 
-    for (const node of this.editor.children) {
-      const socket = node.sockets?.find(s => s.id === socketId);
-
-      if (socket) {
-        return this.colourOf(socket.format, socket.color);
-      }
-    }
-
-    return '#fff';
+    return socket ? this.colourOf(socket.format, socket.color) : '#fff';
   }
 
   private colourOf(format: string | null | undefined, explicit?: string): string {

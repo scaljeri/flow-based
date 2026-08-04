@@ -167,17 +167,16 @@ export class FbFlowDocumentElement extends LitElement {
   private readonly handles = new Map<number, FbNodeHandle>();
   /** Light-DOM host per figure, assigned to that figure's slot. */
   private readonly hosts = new Map<number, HTMLElement>();
+  /** The state each figure was mounted FOR. Undo replaces state objects
+   *  wholesale while keeping the ids, and a mounted figure holding the old
+   *  object kept rendering — and mutating — a node the document no longer
+   *  contained. */
+  private readonly figureStates = new Map<number, FbNodeState>();
   private unsubscribe?: () => void;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
-      // A document has no connections and no viewport; only the set of nodes and
-      // their prose can change what it says.
-      if (change.kind === 'structure' || change.kind === 'sockets') {
-        this.requestUpdate();
-      }
-    });
+    this.subscribe();
 
     // Re-attached after being moved in the DOM; see FbNodeElement.
     if (this.hasUpdated) {
@@ -185,8 +184,28 @@ export class FbFlowDocumentElement extends LitElement {
     }
   }
 
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    // A NEW editor means the old subscription listens to a dead one — swapping
+    // documents left this element deaf to everything the new editor did.
+    if (changed.has('editor')) {
+      this.subscribe();
+    }
+  }
+
+  private subscribe(): void {
+    this.unsubscribe?.();
+    this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
+      // A document has no connections and no viewport; only the set of nodes and
+      // their prose can change what it says.
+      if (change.kind === 'structure' || change.kind === 'sockets') {
+        this.requestUpdate();
+      }
+    });
+  }
+
   override disconnectedCallback(): void {
     this.unsubscribe?.();
+    this.unsubscribe = undefined;
     this.destroyFigures();
     super.disconnectedCallback();
   }
@@ -203,18 +222,30 @@ export class FbFlowDocumentElement extends LitElement {
     this.mountFigures();
   }
 
+  /** The sheets adopted on the LAST pass, so a new set replaces them. */
+  private adoptedExtras: CSSStyleSheet[] = [];
+
   private adoptExtraStyles(): void {
     const root = this.renderRoot as ShadowRoot;
 
-    if (!this.extraStyles?.length || !root.adoptedStyleSheets) {
+    if (!root.adoptedStyleSheets) {
       return;
     }
 
-    // Appended, not assigned: Lit puts this component's own styles here, and
-    // replacing the array would strip them.
-    const own = root.adoptedStyleSheets.filter(sheet => !this.extraStyles!.includes(sheet));
+    /*
+     * Appended, not assigned — Lit puts this component's own styles here, and
+     * replacing the array would strip them. What comes OFF is what this element
+     * adopted last time, not "whatever is not in the new set": filtering
+     * against the new set kept every previously-adopted sheet forever, so each
+     * assignment of extraStyles grew the root's list by the old set.
+     */
+    const extras = this.extraStyles ?? [];
+    const own = root.adoptedStyleSheets.filter(
+      sheet => !this.adoptedExtras.includes(sheet) && !extras.includes(sheet),
+    );
 
-    root.adoptedStyleSheets = [...own, ...this.extraStyles];
+    this.adoptedExtras = [...extras];
+    root.adoptedStyleSheets = [...own, ...extras];
   }
 
   private destroyFigures(): void {
@@ -228,6 +259,7 @@ export class FbFlowDocumentElement extends LitElement {
 
     this.handles.clear();
     this.hosts.clear();
+    this.figureStates.clear();
   }
 
   /**
@@ -242,11 +274,17 @@ export class FbFlowDocumentElement extends LitElement {
       const nodeId = Number(slot.name.slice('fig-'.length));
       live.add(nodeId);
 
-      if (this.handles.has(nodeId)) {
-        continue;
-      }
-
       const node = this.editor.nodeById(nodeId);
+
+      if (this.handles.has(nodeId)) {
+        if (this.figureStates.get(nodeId) === node) {
+          continue;
+        }
+
+        // Same id, different object: an undo or reload swapped the state out
+        // underneath the figure. Remount against the live one.
+        this.dropFigure(nodeId);
+      }
       /*
        * The `normal` drawing for a type that has one per view. A figure is a node
        * shown at the size the page gives it, which is neither an icon on a canvas
@@ -276,16 +314,22 @@ export class FbFlowDocumentElement extends LitElement {
       this.hosts.set(nodeId, host);
 
       this.handles.set(nodeId, mount(host, { api: this.readingApi(node) }));
+      this.figureStates.set(nodeId, node);
     }
 
-    for (const [nodeId, handle] of [...this.handles]) {
+    for (const nodeId of [...this.handles.keys()]) {
       if (!live.has(nodeId)) {
-        handle.destroy();
-        this.handles.delete(nodeId);
-        this.hosts.get(nodeId)?.remove();
-        this.hosts.delete(nodeId);
+        this.dropFigure(nodeId);
       }
     }
+  }
+
+  private dropFigure(nodeId: number): void {
+    this.handles.get(nodeId)?.destroy();
+    this.handles.delete(nodeId);
+    this.hosts.get(nodeId)?.remove();
+    this.hosts.delete(nodeId);
+    this.figureStates.delete(nodeId);
   }
 
   /**

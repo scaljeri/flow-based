@@ -475,6 +475,13 @@ export class FbNodeSettingsElement extends LitElement {
 
   override disconnectedCallback(): void {
     this.releaseOwn();
+
+    // A rim drag in flight holds window listeners; they go with the element.
+    this.dragging = undefined;
+    window.removeEventListener('pointermove', this.onDotMove);
+    window.removeEventListener('pointerup', this.onDotUp);
+    window.removeEventListener('pointercancel', this.onDotUp);
+
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     super.disconnectedCallback();
@@ -498,6 +505,12 @@ export class FbNodeSettingsElement extends LitElement {
   private subscribe(): void {
     this.unsubscribe?.();
     this.unsubscribe = this.editor?.changes.subscribe(change => {
+      // Only while showing something. Every closed panel — one per node — used
+      // to re-render on every socket change anywhere in the flow.
+      if (!this.isOpen && this.editing === undefined) {
+        return;
+      }
+
       if (change.kind === 'sockets' || change.kind === 'structure' || change.kind === 'formats') {
         this.requestUpdate();
       }
@@ -868,6 +881,17 @@ export class FbNodeSettingsElement extends LitElement {
     window.removeEventListener('pointercancel', this.onDotUp);
 
     /*
+     * pointercancel means the browser took the gesture back — nothing was
+     * chosen. Treating it as a release both committed half-finished moves and
+     * opened the socket editor mid-pinch.
+     */
+    if (event.type === 'pointercancel') {
+      this.requestUpdate();
+
+      return;
+    }
+
+    /*
      * A press that never travelled is a tap, and a tap opens the socket. The
      * distinction is made here rather than with a `click` listener because a
      * drag that happens to end where it started would fire one too.
@@ -910,7 +934,26 @@ export class FbNodeSettingsElement extends LitElement {
 
   private editSocket(socket: FbSocket): void {
     this.editing = socket.id;
+    this.editCaptured = false;
     this.requestUpdate();
+  }
+
+  /**
+   * One undo step for a whole dialog session, taken at the FIRST edit.
+   *
+   * The name field writes to the model per keystroke through updateSocket,
+   * which deliberately does not capture — capturing there would cost an undo
+   * entry per letter, and capturing nowhere made renames invisible to undo
+   * entirely. Not on opening the dialog either: opening one to look at it
+   * would then cost an empty undo step.
+   */
+  private editCaptured = false;
+
+  private captureOnce(): void {
+    if (!this.editCaptured) {
+      this.editor.captureBeforeDrag();
+      this.editCaptured = true;
+    }
   }
 
   private closeSocket(): void {
@@ -950,7 +993,10 @@ export class FbNodeSettingsElement extends LitElement {
             type="text"
             .value=${socket.name ?? ''}
             placeholder=${socket.format ?? 'name'}
-            @input=${(e: Event) => this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value })}>
+            @input=${(e: Event) => {
+              this.captureOnce();
+              this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value });
+            }}>
         </label>
 
         <!--

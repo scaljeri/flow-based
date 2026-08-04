@@ -746,6 +746,14 @@ export class FbNodeElement extends LitElement {
   }
 
   private unmountContent(): void {
+    /*
+     * Events were registered under the SOURCE's id — see api(): a subflow's
+     * preview mounts a CHILD's content, which registers as itself. Unregistering
+     * under this.state.id, as this used to, left the child's listeners behind
+     * on every remount.
+     */
+    const sourceId = this.mountedFor?.id ?? this.state?.id;
+
     this.handle?.destroy();
     this.handle = undefined;
     this.mountedFor = undefined;
@@ -754,8 +762,8 @@ export class FbNodeElement extends LitElement {
     this.clickListeners.clear();
     this.viewListeners.clear();
 
-    if (this.state?.id !== undefined) {
-      this.editor?.events.unregisterAll(this.state.id);
+    if (sourceId !== undefined) {
+      this.editor?.events.unregisterAll(sourceId);
     }
 
     // Anything the content left behind goes with it; the host itself is reused.
@@ -1025,6 +1033,23 @@ export class FbNodeElement extends LitElement {
       return;
     }
 
+    /*
+     * A second finger turned this into a pinch. The canvas owns that gesture;
+     * a node that kept dragging under it moved AND zoomed at once, ending
+     * somewhere neither gesture chose.
+     */
+    if (this.editor.pinchActive) {
+      // The snapshot was for a drag; if nothing moved yet there is nothing to
+      // undo, so it must not linger as an empty undo step.
+      if (!this.dragMoved) {
+        this.editor.history.discard();
+      }
+
+      this.endDrag();
+
+      return;
+    }
+
     this.dragMoved = true;
     this.toggleAttribute('dragging', true);
 
@@ -1064,12 +1089,30 @@ export class FbNodeElement extends LitElement {
   };
 
   private onPointerUp = (event: PointerEvent): void => {
+    // Only the finger that started the drag may end it — a second finger
+    // lifting elsewhere used to drop this one's drag mid-move.
+    if (event.pointerId !== this.dragPointerId) {
+      return;
+    }
+
+    /*
+     * A press that never moved took a history snapshot for a drag that never
+     * came; without this every click on a node cost the user an undo step.
+     * Discarded before the click listeners run, so a listener's own capture is
+     * not the one popped.
+     */
+    if (!this.dragMoved) {
+      this.editor.history.discard();
+    }
+
     /*
      * A press that never moved is a click on the node. Distinguishing them here
      * rather than listening for `click` is what stops a drag that happens to end
-     * over the node from opening whatever the content does on click.
+     * over the node from opening whatever the content does on click. Cancel is
+     * not a click: pointercancel means the browser took the gesture — a pinch,
+     * a palm — and acting on it opened editors mid-pinch.
      */
-    if (this.dragPointerId !== null && !this.dragMoved) {
+    if (!this.dragMoved && event.type === 'pointerup') {
       this.editor.cancelPending();
 
       for (const listener of [...this.clickListeners]) {
@@ -1077,6 +1120,10 @@ export class FbNodeElement extends LitElement {
       }
     }
 
+    this.endDrag();
+  };
+
+  private endDrag(): void {
     this.dragPointerId = null;
     this.dragFrom = null;
     this.toggleAttribute('dragging', false);
@@ -1084,7 +1131,7 @@ export class FbNodeElement extends LitElement {
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
-  };
+  }
 
   /* ----------------------------------------------------------------------
      Render

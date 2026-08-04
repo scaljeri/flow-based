@@ -283,6 +283,26 @@ export class FbFlowCanvasElement extends LitElement {
     window.removeEventListener('pointermove', this.onPinchMove);
     window.removeEventListener('pointerup', this.onPointerReleased);
     window.removeEventListener('pointercancel', this.onPointerReleased);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+
+    /*
+     * Fingers whose lift this element will no longer hear must not survive as
+     * state: a remount with two stale entries would treat the next single
+     * touch as a third finger and refuse to pan.
+     */
+    this.pointers.clear();
+    this.pinchCentre = null;
+    this.pinchDistance = 0;
+    this.panPointerId = null;
+    this.panFrom = null;
+    this.marqueeFrom = null;
+    this.marquee = null;
+
+    if (this.editor) {
+      this.editor.pinchActive = false;
+    }
+
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     super.disconnectedCallback();
@@ -294,10 +314,34 @@ export class FbFlowCanvasElement extends LitElement {
     }
   }
 
+  private resizeObserver?: ResizeObserver;
+
   protected override firstUpdated(): void {
     // Freeze the plane size from the first layout; see the class comment.
     const rect = this.getBoundingClientRect();
-    this.editor?.viewport.setPlaneSize(rect.width, rect.height);
+
+    /*
+     * Unless there was no first layout to freeze: an editor mounted in a hidden
+     * tab measures 0x0, and freezing THAT put every node at the origin for
+     * good. Wait for the element to actually have a size, take the first real
+     * one, and freeze that instead.
+     */
+    if (rect.width && rect.height) {
+      this.editor?.viewport.setPlaneSize(rect.width, rect.height);
+
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      const measured = this.getBoundingClientRect();
+
+      if (measured.width && measured.height) {
+        this.editor?.viewport.setPlaneSize(measured.width, measured.height);
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = undefined;
+      }
+    });
+    this.resizeObserver.observe(this);
   }
 
   protected override updated(): void {
@@ -309,9 +353,15 @@ export class FbFlowCanvasElement extends LitElement {
   private subscribe(): void {
     this.unsubscribe?.();
     this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
-      // The canvas owns the node list and the plane transform. A node moving or
-      // resizing is the node's and the connection layer's business, not its.
-      if (change.kind === 'structure' || change.kind === 'viewport') {
+      /*
+       * The canvas owns the node list, the plane transform AND the boundary
+       * sockets — a subflow's own, drawn on the plane's edges. Those need
+       * 'interaction' (they highlight as connection targets) and 'sockets'
+       * (adding one from the config panel must draw it); without either, the
+       * boundary never showed a state the nodes' sockets all did.
+       */
+      if (change.kind === 'structure' || change.kind === 'viewport'
+        || change.kind === 'interaction' || change.kind === 'sockets') {
         /*
          * A newly created subflow asks to be named. Taken here rather than in
          * render, which runs for reasons that have nothing to do with it and
@@ -343,12 +393,23 @@ export class FbFlowCanvasElement extends LitElement {
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
     if (this.pointers.size === 2) {
-      const [a, b] = [...this.pointers.values()];
-
-      this.pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
-      this.pinchCentre = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      this.rebaselinePinch();
     }
   };
+
+  /** Start measuring the pinch from where the two fingers are NOW. */
+  private rebaselinePinch(): void {
+    const [a, b] = [...this.pointers.values()];
+
+    this.pinchDistance = Math.hypot(a.x - b.x, a.y - b.y);
+    this.pinchCentre = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+
+    // Raised for the nodes' benefit: a drag joined by a second finger has
+    // become a zoom, and the dragged node bows out when it sees this.
+    if (this.editor) {
+      this.editor.pinchActive = true;
+    }
+  }
 
   private onPinchMove = (event: PointerEvent): void => {
     if (!this.pointers.has(event.pointerId)) {
@@ -381,9 +442,31 @@ export class FbFlowCanvasElement extends LitElement {
   private onPointerReleased = (event: PointerEvent): void => {
     this.pointers.delete(event.pointerId);
 
-    if (this.pointers.size < 2) {
+    if (this.pointers.size === 2) {
+      /*
+       * A THIRD finger lifted and exactly a pinch remains. Measuring the next
+       * move against the old baseline — set when the last two of THREE fingers
+       * were tracked — read the difference as one huge jump and the zoom
+       * snapped.
+       */
+      this.rebaselinePinch();
+    } else if (this.pointers.size < 2) {
       this.pinchCentre = null;
       this.pinchDistance = 0;
+
+      if (this.editor) {
+        this.editor.pinchActive = false;
+      }
+    }
+
+    /*
+     * On WINDOW, deliberately: the plane's own pointerup never fires when the
+     * finger lifts outside it — off the edge, or over a dialog — and the pan
+     * survived its own release, so the next bare hover dragged the graph
+     * around with no button down.
+     */
+    if (event.pointerId === this.panPointerId) {
+      this.onPointerUp();
     }
   };
 

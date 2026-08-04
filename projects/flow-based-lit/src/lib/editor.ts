@@ -50,8 +50,15 @@ export interface FbEditorChange {
     | 'geometry'
     | 'viewport'
     | 'history'
-    /** The pending connection, or the pointer while one is being drawn. */
+    /** The pending connection changed — armed, resolved or cancelled. */
     | 'interaction'
+    /**
+     * Only the free end of the pending line moved. Split from 'interaction':
+     * it fires per pointermove, and on 'interaction' every node re-rendered on
+     * every frame of drawing a connection. Only the connection layer cares
+     * where the pointer is.
+     */
+    | 'pointer'
     /** Which nodes are selected. */
     | 'selection';
   nodeId?: number;
@@ -130,6 +137,13 @@ export class FbEditor {
    */
   readonly selection = new Set<number>();
 
+  /**
+   * True while two fingers are zooming. Raised by the canvas, read by nodes:
+   * a drag that is joined by a second finger has become a pinch, and the node
+   * bows out rather than moving under the zoom.
+   */
+  pinchActive = false;
+
   /** The socket awaiting a partner, if a connection is being drawn. */
   pending: FbPendingSocket | null = null;
   /** Free end of the pending connection, in plane coordinates. */
@@ -146,14 +160,37 @@ export class FbEditor {
     this.socketColors = options.socketColors ?? {};
     this.routing = options.routing ?? 'curved';
 
-    this.geometry.changes.subscribe(nodeId => this.changes.emit({ kind: 'geometry', nodeId }));
-    this.viewport.changes.subscribe(() => this.changes.emit({ kind: 'viewport' }));
-    this.history.changes.subscribe(() => this.changes.emit({ kind: 'history' }));
+    this.coreUnsubscribes.push(
+      this.geometry.changes.subscribe(nodeId => this.changes.emit({ kind: 'geometry', nodeId })),
+      this.viewport.changes.subscribe(() => this.changes.emit({ kind: 'viewport' })),
+      this.history.changes.subscribe(() => this.changes.emit({ kind: 'history' })),
+    );
+  }
+
+  private readonly coreUnsubscribes: (() => void)[] = [];
+
+  /**
+   * Release everything this editor holds outside itself.
+   *
+   * Two leaks lived here. The engine's workers run until destroyed — a node
+   * with an interval keeps ticking for an editor nobody can see. And the
+   * history can be SHARED (see FbEditorOptions.history): its emitter is
+   * longer-lived than any one editor, so a subscription never taken down
+   * kept every destroyed editor reachable for the life of the app.
+   */
+  destroy(): void {
+    this.unbind?.();
+    this.unbind = undefined;
+    this.flow?.destroy();
+
+    for (const unsubscribe of this.coreUnsubscribes) {
+      unsubscribe();
+    }
+
+    this.coreUnsubscribes.length = 0;
   }
 
   load(state: FbNodeState): void {
-    this.unbind?.();
-
     this.ids.observeFlow(state);
 
     if (!state.children) {
@@ -165,6 +202,24 @@ export class FbEditor {
     this.root = state;
     this.state = state;
     this.ancestors.length = 0;
+    this.rebuildEngine();
+  }
+
+  /**
+   * Rebuild the engine from {@link root} without touching WHERE the user is.
+   *
+   * Separate from {@link load} because paste needs exactly this: the engine has
+   * to make workers for the new nodes and propagate formats through the new
+   * connections, but paste used to do that by calling `load(this.state)` — and
+   * inside a subflow that RE-ROOTED the document to the subflow, silently
+   * discarding everything above it. Loading is "here is a new document";
+   * rebuilding is "the same document changed underneath the engine".
+   */
+  private rebuildEngine(): void {
+    this.unbind?.();
+    // The old engine's workers keep running until told otherwise — a worker
+    // with an interval, say, would tick on unobserved forever.
+    this.flow?.destroy();
     this.flow = new Flow(this.types, this.helpers, this.ids);
     this.unbind = this.flow.changes.subscribe(kind => {
       /*
@@ -187,7 +242,7 @@ export class FbEditor {
 
       this.changes.emit({ kind });
     });
-    this.flow.initialize(state);
+    this.flow.initialize(this.root);
 
     this.pending = null;
     this.pointer = null;
@@ -399,7 +454,9 @@ export class FbEditor {
     if (moveSocket(node, socketId, toIndex, toSide)) {
       this.changes.emit({ kind: 'sockets' });
     } else {
-      this.history.undo(this.root);
+      // Nothing moved, so the snapshot is void. Undoing it instead — the old
+      // rollback — pushed the un-move onto the REDO stack.
+      this.history.discard();
     }
   }
 
@@ -550,11 +607,12 @@ export class FbEditor {
   /**
    * Set which types a socket may carry.
    *
-   * One type is stored as the plain `format` the engine has always negotiated,
-   * so a socket with a single type is indistinguishable from one written before
-   * this existed — in the JSON as much as in the code. Several are a set, and
-   * `format` is cleared unless it is still among them: it says what the socket
-   * HAS, and a socket that may be two things has not settled yet.
+   * What was DECLARED always lives in `formats` — a single type as a set of
+   * one. `format` is what the socket HAS: filled straight away for a single
+   * type, and for several only once the engine settles it. The two have to be
+   * separate fields, because the engine clears and re-derives `format` on
+   * every graph rebuild — when a single declared type lived only in `format`,
+   * one disconnect wiped it for good.
    *
    * Connections the new set cannot carry are cut, because a connection that can
    * carry nothing is not a connection.
@@ -562,13 +620,15 @@ export class FbEditor {
   setSocketFormats(socket: FbSocket, formats: string[]): void {
     this.history.capture(this.root);
 
-    if (formats.length <= 1) {
+    if (formats.length === 0) {
       delete socket.formats;
-      socket.format = formats[0] ?? null;
+      socket.format = null;
     } else {
       socket.formats = [...formats];
 
-      if (!socket.format || !formats.includes(socket.format)) {
+      if (formats.length === 1) {
+        socket.format = formats[0];
+      } else if (!socket.format || !formats.includes(socket.format)) {
         socket.format = null;
       }
     }
@@ -725,8 +785,10 @@ export class FbEditor {
     }
 
     // Rebuilt rather than nudged: the engine has to build workers and sockets
-    // for the new nodes, and propagate formats through the new connections.
-    this.load(this.state);
+    // for the new nodes, and propagate formats through the new connections —
+    // from the ROOT, wherever the paste landed, so pasting inside a subflow
+    // does not re-root the document to that subflow.
+    this.rebuildEngine();
     this.changes.emit({ kind: 'selection' });
   }
 
@@ -954,7 +1016,7 @@ export class FbEditor {
 
   setPointer(point: FbPosition | null): void {
     this.pointer = point;
-    this.changes.emit({ kind: 'interaction' });
+    this.changes.emit({ kind: 'pointer' });
   }
 
   /** True when `socket` could legally receive the pending connection. */
