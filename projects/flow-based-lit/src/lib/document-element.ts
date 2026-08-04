@@ -56,21 +56,51 @@ export class FbFlowDocumentElement extends LitElement {
 
   static override styles = css`
     /*
-     * The page is dark on purpose. The figures are dark instruments and the
-     * app around the page is dark; a white page would be the one white thing
-     * in the product, fighting its own figures. Warm near-black paper, a
-     * faint glow at the top, serif prose, and the app's mono for anything
-     * that is the tool speaking rather than the text.
+     * Two papers, one page. The reader's device decides which — there is no
+     * toggle to find, prefers-color-scheme IS the setting. Dark is the native
+     * habitat (the app around the page is dark, and the figures are dark
+     * instruments); light is warm paper on which those same instruments sit
+     * as framed dark wells — the well never follows the theme, because the
+     * node content inside it is styled for the dark canvas and knows nothing
+     * about the page. Everything the theme touches goes through these tokens.
      */
     :host {
-      background: radial-gradient(120% 60% at 50% 0%, #1b1f2a 0%, #14161b 55%);
+      --doc-ground: radial-gradient(120% 60% at 50% 0%, #1b1f2a 0%, #14161b 55%);
+      --doc-ink: #cfccc4;
+      --doc-ink-strong: #eeebe3;
+      --doc-ink-soft: rgba(207, 204, 196, 0.55);
+      --doc-lede: #dedbd3;
+      --doc-math: #e6e3db;
+      --doc-code-bg: rgba(255, 255, 255, 0.07);
+      --doc-link: #ff7aa8;
+      --doc-link-underline: rgba(255, 122, 168, 0.45);
+      --doc-figure-border: rgba(255, 255, 255, 0.08);
+    }
+
+    @media (prefers-color-scheme: light) {
+      :host {
+        --doc-ground: radial-gradient(120% 60% at 50% 0%, #ffffff 0%, #f3f1ec 55%);
+        --doc-ink: #33363c;
+        --doc-ink-strong: #17191d;
+        --doc-ink-soft: rgba(51, 54, 60, 0.6);
+        --doc-lede: #26282e;
+        --doc-math: #1c1e24;
+        --doc-code-bg: rgba(0, 0, 0, 0.06);
+        --doc-link: #c2185b;
+        --doc-link-underline: rgba(194, 24, 91, 0.4);
+        --doc-figure-border: rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    :host {
+      background: var(--doc-ground);
       display: block;
       overflow: auto;
       padding: 48px 40px 96px;
     }
 
     .page {
-      color: #cfccc4;
+      color: var(--doc-ink);
       font-family: 'Iowan Old Style', Georgia, Charter, Cambria, 'Times New Roman', serif;
       font-size: 1.0625rem;
       margin: 0 auto;
@@ -85,7 +115,7 @@ export class FbFlowDocumentElement extends LitElement {
        reading voice. The contrast is what keeps a page of prose recognisably
        part of the tool. */
     h1 {
-      color: #eeebe3;
+      color: var(--doc-ink-strong);
       font-family: 'Source Code Pro', ui-monospace, Menlo, monospace;
       font-size: clamp(1.9rem, 4.5vw, 2.6rem);
       font-weight: 700;
@@ -95,7 +125,7 @@ export class FbFlowDocumentElement extends LitElement {
     }
 
     h2, h3 {
-      color: #eeebe3;
+      color: var(--doc-ink-strong);
       font-family: 'Source Code Pro', ui-monospace, Menlo, monospace;
       font-weight: 600;
     }
@@ -132,13 +162,13 @@ export class FbFlowDocumentElement extends LitElement {
     /* The lede: the first paragraph after the title, one step up. This works
        because the title and every paragraph are flat siblings under .page. */
     h1 + p {
-      color: #dedbd3;
+      color: var(--doc-lede);
       font-size: 1.22rem;
       line-height: 1.65;
     }
 
     code {
-      background: rgba(255, 255, 255, 0.07);
+      background: var(--doc-code-bg);
       border-radius: 4px;
       font-family: 'Source Code Pro', ui-monospace, Menlo, monospace;
       font-size: 0.85em;
@@ -146,9 +176,9 @@ export class FbFlowDocumentElement extends LitElement {
     }
 
     a {
-      color: #ff7aa8;
+      color: var(--doc-link);
       text-decoration: underline;
-      text-decoration-color: rgba(255, 122, 168, 0.45);
+      text-decoration-color: var(--doc-link-underline);
       text-underline-offset: 3px;
     }
 
@@ -157,7 +187,7 @@ export class FbFlowDocumentElement extends LitElement {
     }
 
     .math-display {
-      color: #e6e3db;
+      color: var(--doc-math);
       font-size: 1.15em;
       margin: 2em 0;
       overflow-x: auto;
@@ -263,7 +293,7 @@ export class FbFlowDocumentElement extends LitElement {
      */
     .figure-body {
       background: #0b0d11;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--doc-figure-border);
       border-radius: 10px;
       box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
       overflow: hidden;
@@ -280,7 +310,7 @@ export class FbFlowDocumentElement extends LitElement {
     /* Captions read as instrument labels — mono small caps under a live
        device, distinct from the serif prose at a glance. */
     figcaption {
-      color: rgba(207, 204, 196, 0.55);
+      color: var(--doc-ink-soft);
       font-family: 'Source Code Pro', ui-monospace, Menlo, monospace;
       font-size: 0.72rem;
       letter-spacing: 0.06em;

@@ -130,13 +130,18 @@ main {
     display: none;
   }
 
-  // The document went dark, and the ground has to change HERE too: this
-  // element paints its own background outside the shadow root, so any gap
-  // around <fb-flow-document> would otherwise flash white.
+  // The ground around <fb-flow-document> is painted HERE, outside the shadow
+  // root, so it has to follow the same prefers-color-scheme the document's
+  // own tokens follow — a mismatched gap would flash the wrong paper.
   .flow-as-doc {
     background-color: #14161b;
     color: #cfccc4;
     flex: 1;
+
+    @media (prefers-color-scheme: light) {
+      background-color: #f3f1ec;
+      color: #33363c;
+    }
   }
 
   .flow-as-json {
