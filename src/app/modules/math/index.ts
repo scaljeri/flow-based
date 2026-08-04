@@ -7,6 +7,9 @@ import { FormulaSmallComponent } from './formula-small.component';
 import { FormulaSettingsComponent } from './formula-settings.component';
 import { DerivativeWorker } from './derivative.worker';
 import { DerivativeSmallComponent } from './derivative-small.component';
+import { SamplerWorker } from './sampler.worker';
+import { SamplerSmallComponent } from './sampler-small.component';
+import { SamplerSettingsComponent } from './sampler-settings.component';
 
 /**
  * The Mathematics module.
@@ -79,6 +82,26 @@ export const MATH_MODULE: FbModule = {
         ],
       },
       worker: DerivativeWorker,
+    },
+
+    /*
+     * The bridge between the two vocabularies: a function has no time in it,
+     * and the sampler gives it some — f(x) swept over a range, one sample per
+     * tick, which is exactly what a time-series plot drinks.
+     */
+    'math-sampler': {
+      component: { small: SamplerSmallComponent },
+      settingsComponent: SamplerSettingsComponent,
+      settings: {
+        title: 'Sampler',
+        group: GROUP,
+        config: { from: 0, to: 10, step: 0.1, interval: 50 },
+        sockets: [
+          { type: 'in', format: 'function' },
+          { type: 'out', format: 'number' },
+        ],
+      },
+      worker: SamplerWorker,
     },
   },
 };

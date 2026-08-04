@@ -305,6 +305,43 @@ export const demo = () => ({
   sockets: [],
   children: [
     {
+      type: 'math-formula',
+      title: 'Formula',
+      id: 400,
+      config: { expr: 'x^2' },
+      sockets: [{ id: 410, type: 'out', format: 'function' }],
+      position: { x: 6, y: 6 },
+    },
+    {
+      type: 'math-derivative',
+      title: 'Derivative',
+      id: 500,
+      sockets: [
+        { id: 510, type: 'in', format: 'function' },
+        { id: 511, type: 'out', format: 'function' },
+      ],
+      position: { x: 52, y: 6 },
+    },
+    {
+      type: 'math-sampler',
+      title: 'Sampler',
+      id: 600,
+      config: { from: 0, to: 10, step: 0.1, interval: 50 },
+      sockets: [
+        { id: 610, type: 'in', format: 'function' },
+        { id: 611, type: 'out', format: 'number' },
+      ],
+      position: { x: 8, y: 32 },
+    },
+    {
+      type: 'graph-timeseries',
+      title: 'Time series',
+      id: 200,
+      config: { style: 'line' },
+      sockets: [{ id: 210, type: 'in', format: 'number' }],
+      position: { x: 48, y: 30 },
+    },
+    {
       type: 'random-numbers',
       title: 'Random number generator',
       id: 100,
@@ -319,15 +356,7 @@ export const demo = () => ({
         integer: true,
       },
       sockets: [{ id: 110, type: 'out', format: 'number' }],
-      position: { x: 6, y: 8 },
-    },
-    {
-      type: 'graph-timeseries',
-      title: 'Time series',
-      id: 200,
-      config: { style: 'area' },
-      sockets: [{ id: 210, type: 'in', format: 'number' }],
-      position: { x: 52, y: 6 },
+      position: { x: 6, y: 64 },
     },
     {
       type: 'tap',
@@ -338,30 +367,19 @@ export const demo = () => ({
         { id: 310, type: 'in' },
         { id: 311, type: 'out' },
       ],
-      position: { x: 30, y: 36 },
-    },
-    {
-      type: 'math-formula',
-      title: 'Formula',
-      id: 400,
-      config: { expr: 'x^2' },
-      sockets: [{ id: 410, type: 'out', format: 'function' }],
-      position: { x: 6, y: 62 },
-    },
-    {
-      type: 'math-derivative',
-      title: 'Derivative',
-      id: 500,
-      sockets: [
-        { id: 510, type: 'in', format: 'function' },
-        { id: 511, type: 'out', format: 'function' },
-      ],
-      position: { x: 52, y: 62 },
+      position: { x: 55, y: 64 },
     },
   ],
+  /*
+   * The top half is one sentence read left to right and down: define f(x) =
+   * x^2, differentiate it, sample the derivative over [0,10], plot the
+   * samples — the straight 2x line on the plot IS the proof it all worked.
+   * The bottom half keeps the original story: values flowing into a reader.
+   */
   connections: [
-    { id: 1000, from: 100, to: 200, out: 110, in: 210 },
-    { id: 1001, from: 100, to: 300, out: 110, in: 310 },
     { id: 1002, from: 400, to: 500, out: 410, in: 510 },
+    { id: 1003, from: 500, to: 600, out: 511, in: 610 },
+    { id: 1004, from: 600, to: 200, out: 611, in: 210 },
+    { id: 1001, from: 100, to: 300, out: 110, in: 310 },
   ],
 });

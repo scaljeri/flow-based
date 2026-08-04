@@ -747,13 +747,17 @@ test('data type colours are set from the menu, and can be switched off', async (
   await page.goto('/');
   await waitUntilReady(page);
 
-  const lineColour = () => page.evaluate(() =>
-    document.querySelector('fb-flow-canvas')!.shadowRoot!
+  // Every colour any line end is painted with. The demo's FIRST connection is
+  // the function line, so asserting on one particular stop asserts on layout.
+  const lineColours = () => page.evaluate(() =>
+    [...document.querySelector('fb-flow-canvas')!.shadowRoot!
       .querySelector('fb-connections')!.shadowRoot!
-      .querySelector('linearGradient stop')!.getAttribute('stop-color'));
+      .querySelectorAll('linearGradient stop')]
+      .map(stop => stop.getAttribute('stop-color')));
 
-  // The demo palette colours `number` dark green.
-  expect(await lineColour()).toBe('#025d04');
+  // The demo palette colours `number` dark green and `function` orange.
+  expect(await lineColours()).toContain('#025d04');
+  expect(await lineColours()).toContain('#c77d0a');
 
   await page.locator('mat-toolbar button.overflow').click();
   await page.locator('button.type-colors').click();
@@ -774,16 +778,19 @@ test('data type colours are set from the menu, and can be switched off', async (
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-  await expect.poll(lineColour).toBe('#2244ff');
+  await expect.poll(async () => (await lineColours()).includes('#2244ff')).toBe(true);
+  await expect.poll(async () => (await lineColours()).includes('#025d04')).toBe(false);
 
   // Off silences every colour; on again remembers the choice.
   const toggle = dialog.locator('.toggle input');
 
   await toggle.uncheck();
-  await expect.poll(lineColour).toBe('#fff');
+  await expect.poll(async () => new Set(await lineColours()).size).toBe(1);
+  await expect.poll(async () => (await lineColours())[0]).toBe('#fff');
 
   await toggle.check();
-  await expect.poll(lineColour).toBe('#2244ff');
+  await expect.poll(async () => (await lineColours()).includes('#2244ff')).toBe(true);
+  await expect.poll(async () => (await lineColours()).includes('#025d04')).toBe(false);
 });
 
 /**
@@ -929,4 +936,38 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
   await page.locator('mat-toolbar button.overflow').click();
   await page.locator('.cdk-overlay-container button.flows').click();
   await expect(page.locator('fb-flows-dialog li')).toHaveCount(2);
+});
+
+/**
+ * The sampler is the bridge between vocabularies: a FUNCTION in, numbers out.
+ * f(x) = x^2 swept from 0 in steps of 0.1 must produce 0, 0.01, 0.04 — the
+ * squares — as a stream a plot can drink.
+ */
+test('the sampler turns a function into a stream of samples', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const samples = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const formula = editor.addNode('math-formula');
+    const sampler = editor.addNode('math-sampler');
+
+    editor.socketClicked(formula.sockets.find((s: any) => s.type === 'out'), formula.id);
+    editor.socketClicked(sampler.sockets.find((s: any) => s.type === 'in'), sampler.id);
+
+    const worker = editor.flow.getWorker(sampler.id);
+    const seen: number[] = [];
+
+    return new Promise<number[]>(resolve => {
+      worker.getStream().subscribe((value: number) => {
+        seen.push(value);
+
+        if (seen.length === 3) {
+          resolve(seen);
+        }
+      });
+    });
+  });
+
+  expect(samples.map(v => Math.round(v * 1000) / 1000)).toEqual([0, 0.01, 0.04]);
 });
