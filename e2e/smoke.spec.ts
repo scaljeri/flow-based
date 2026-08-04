@@ -130,7 +130,7 @@ test('deletes a node and its connections without errors', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('opens the node-selection overlay from the toolbar', async ({ page }) => {
+test('opens the node-selection overlay from the toolbar, and its cross closes it', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.locator('mat-toolbar').first()).toBeVisible();
@@ -138,7 +138,12 @@ test('opens the node-selection overlay from the toolbar', async ({ page }) => {
   // The toolbar's "Add" button opens a CDK overlay listing the node types.
   await page.locator('mat-toolbar button.add').click();
 
-  await expect(page.locator('.cdk-overlay-container fb-component-selection')).toBeVisible();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await expect(palette).toBeVisible();
+
+  // The cross, for when nothing is wanted after all — a phone has no Escape.
+  await palette.locator('button.close').click();
+  await expect(palette).toHaveCount(0);
 });
 
 test('filters the node palette and adds the match with Enter', async ({ page }) => {

@@ -67,6 +67,12 @@ export class AppComponent implements OnInit {
 
       this.flowService.add(type);
     });
+
+    // The palette's own close button: same cleanup, nothing added.
+    this.selectionService.close$.subscribe(() => {
+      this.activeOverlay?.dispose();
+      this.activeOverlay = null;
+    });
   }
 
   /* ----------------------------------------------------------------------

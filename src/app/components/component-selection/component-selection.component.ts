@@ -42,6 +42,10 @@ export class ComponentSelectionComponent implements OnInit {
     this.selectionService.select(type);
   }
 
+  onClose(): void {
+    this.selectionService.close();
+  }
+
   /** Enter picks the only remaining match, so search-then-Enter adds a node. */
   onEnter(): void {
     const keys = this.groups.flatMap(group => group.keys);

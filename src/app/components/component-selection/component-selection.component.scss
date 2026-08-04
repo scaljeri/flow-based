@@ -58,3 +58,8 @@ mat-list {
   padding: 10px 16px 2px;
   text-transform: uppercase;
 }
+
+mat-toolbar {
+  display: flex;
+  justify-content: space-between;
+}
