@@ -142,6 +142,12 @@ export type FbNodeWorkerCtor = new (config?: any, sockets?: FbSocket[]) => FbNod
 
 export interface FbNodeSettings {
   title: string;
+  /**
+   * Which palette group this type is listed under. Absent means the general
+   * list. A group is presentation — nothing in the engine reads it — but it
+   * lives here because the palette's only knowledge of a type IS its settings.
+   */
+  group?: string;
   config?: any;
   sockets?: FbSocket[];
   isFlow?: boolean;

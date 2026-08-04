@@ -765,3 +765,90 @@ test('data type colours are set from the menu, and can be switched off', async (
   await toggle.check();
   await expect.poll(lineColour).toBe('#2244ff');
 });
+
+/**
+ * Modules join the registry at runtime, from a dialog, as a download.
+ *
+ * The maths module is a separate chunk — most of a megabyte of algebra — so
+ * enabling it genuinely fetches code the app did not ship with. Its types then
+ * stand in the palette under their own group, and the palette's search spans
+ * groups. The choice persists per browser.
+ */
+test('a module can be enabled from the menu, and its group joins the palette', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // The overflow menu (this is a phone) holds the Modules item.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.modules').click();
+
+  const dialog = page.locator('fb-modules-dialog');
+  await expect(dialog).toBeVisible();
+
+  // Enable Mathematics; the spinner comes and goes as the chunk downloads.
+  await dialog.locator('input[type=checkbox]').first().check();
+  await expect
+    .poll(() => page.evaluate(() =>
+      !!(document.querySelector('fb-flow-canvas') as unknown as { editor: { types: Record<string, unknown> } })
+        .editor.types['math-formula']))
+    .toBe(true);
+  await dialog.locator('button', { hasText: 'Close' }).click();
+
+  // The palette lists the new group, and search finds a resident by name.
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await expect(palette).toBeVisible();
+  await expect(palette.locator('.group', { hasText: 'Mathematics' })).toBeVisible();
+
+  await palette.locator('input[type="search"]').fill('derivative');
+  await expect(palette.locator('mat-list-item')).toHaveCount(1);
+  await palette.locator('input[type="search"]').press('Enter');
+
+  await expect
+    .poll(() => page.evaluate(() => [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .some(n => (n as unknown as { state?: { type?: string } }).state?.type === 'math-derivative')))
+    .toBe(true);
+
+  // Enabled survives a reload — that is what enabling was FOR.
+  await page.reload();
+  await waitUntilReady(page);
+  await expect
+    .poll(() => page.evaluate(() =>
+      !!(document.querySelector('fb-flow-canvas') as unknown as { editor: { types: Record<string, unknown> } })
+        .editor.types['math-formula']))
+    .toBe(true);
+});
+
+/**
+ * The formula node produces a FUNCTION, and the derivative node differentiates
+ * it symbolically: x^2 in, 2x out — checked on the value that actually flows,
+ * not on pixels.
+ */
+test('a formula flows into a derivative and comes out differentiated', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.evaluate(async () => {
+    const win = window as unknown as { fbModules: { enable(id: string): Promise<void> } };
+
+    await win.fbModules.enable('math');
+  });
+
+  const derived = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const formula = editor.addNode('math-formula');
+    const derivative = editor.addNode('math-derivative');
+
+    editor.socketClicked(formula.sockets.find((s: any) => s.type === 'out'), formula.id);
+    editor.socketClicked(derivative.sockets.find((s: any) => s.type === 'in'), derivative.id);
+
+    const worker = editor.flow.getWorker(derivative.id);
+
+    return new Promise<{ expr: string }>(resolve => {
+      worker.getStream().subscribe((value: { expr: string }) => resolve({ expr: value.expr }));
+    });
+  });
+
+  expect(derived.expr.replace(/\s/g, '')).toBe('2*x');
+});

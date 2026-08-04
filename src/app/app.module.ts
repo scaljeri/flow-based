@@ -8,6 +8,7 @@ import { TapNormalComponent } from './nodes/tap/tap-normal.component';
 import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { SubflowComponent } from './nodes/subflow/subflow.component';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
+import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
 import { FlowComponent } from './flow/flow.component';
 import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
 
@@ -24,6 +25,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatDividerModule } from '@angular/material/divider';
@@ -70,6 +72,7 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
     TapFullComponent,
     SubflowComponent,
     TypeColorsComponent,
+    ModulesDialogComponent,
     FlowComponent,
     ComponentSelectionComponent,
     BasicGraphSmallComponent,
@@ -115,6 +118,7 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
     MatCheckboxModule,
     MatIconModule,
     MatListModule,
+    MatProgressSpinnerModule,
     MatTooltipModule,
     OverlayModule,
     MatAutocompleteModule,

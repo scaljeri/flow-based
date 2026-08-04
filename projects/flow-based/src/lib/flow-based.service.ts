@@ -44,6 +44,16 @@ export class FlowBasedService {
     return this.editors[0];
   }
 
+  /**
+   * Every registered editor, most recently active first.
+   *
+   * For app-wide changes that must reach all of them — a module adding node
+   * types has to patch each editor's registry, not just the focused one's.
+   */
+  get allEditors(): readonly FbEditor[] {
+    return this.editors;
+  }
+
   get flow(): Flow | undefined {
     return this.editor?.flow;
   }

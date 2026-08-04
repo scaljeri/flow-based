@@ -1,6 +1,8 @@
 import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
+import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
+import { ModulesService } from './modules.service';
 import {
   FbHistoryService,
   FbNodeState,
@@ -32,17 +34,27 @@ export class AppComponent implements OnInit {
   history = inject(FbHistoryService);
   private overlay = inject(Overlay);
   private dialog = inject(MatDialog);
+  private modules = inject(ModulesService);
 
   activeOverlay: OverlayRef | null = null;
   showJson = false;
   flow: FbNodeState = data.basic as FbNodeState;
   loadError: string | null = null;
 
+  openModules(): void {
+    this.dialog.open(ModulesDialogComponent, { width: '340px' });
+  }
+
   openTypeColors(): void {
     this.dialog.open(TypeColorsComponent, { width: '320px' });
   }
 
   ngOnInit(): void {
+    // Modules enabled on an earlier visit come back with the app.
+    this.modules.restore();
+    // For the e2e harness, which enables modules without walking the dialog.
+    (window as unknown as { fbModules: ModulesService }).fbModules = this.modules;
+
     this.selectionService.selection$.subscribe(type => {
       /*
        * Clear the handle as well as disposing. The backdropClick path nulls it

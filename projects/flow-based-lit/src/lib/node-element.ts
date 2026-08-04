@@ -1295,7 +1295,18 @@ export class FbNodeElement extends LitElement {
 
     if (bigger) {
       this.requestView(bigger);
+
+      return;
     }
+
+    /*
+     * Nothing bigger to open — but a small-only type can still HAVE settings,
+     * and small draws no header to reach them by. A formula node is exactly
+     * this: its whole configuration is its settings panel, and without this
+     * the panel existed and nothing on screen could open it.
+     */
+    this.configOpen = true;
+    this.requestUpdate();
   };
 
   private renderSocket(socket: FbSocket) {

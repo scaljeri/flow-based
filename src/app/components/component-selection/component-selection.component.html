@@ -11,14 +11,18 @@
   </mat-form-field>
 
   <mat-list>
-    @for (key of flowKeys; track key) {
-      <mat-list-item>
-        <button type="button" mat-button (click)="onSelection(key)">{{title(key)}}</button>
-      </mat-list-item>
+    @for (group of groups; track group.name) {
+      <div matSubheader class="group">{{group.name}}</div>
+
+      @for (key of group.keys; track key) {
+        <mat-list-item>
+          <button type="button" mat-button (click)="onSelection(key)">{{title(key)}}</button>
+        </mat-list-item>
+      }
     }
   </mat-list>
 
-  @if (!flowKeys.length) {
+  @if (empty) {
     <p class="no-matches">No flow unit matches &ldquo;{{query}}&rdquo;.</p>
   }
 </section>
