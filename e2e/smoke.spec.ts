@@ -625,10 +625,11 @@ test('merge streams has no full view, and wires itself when opened', async ({ pa
     };
   });
 
-  // Feed it, so it has a value to draw a card for.
+  // Feed it, so it has a value to draw a card for. The demo carries no
+  // generator any more, so the test brings its own.
   await page.evaluate(() => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
-    const gen = editor.children.find((n: any) => n.type === 'random-numbers');
+    const gen = editor.addNode('random-numbers');
     const merge = editor.children.find((n: any) => n.type === 'merge-streams');
 
     editor.socketClicked(gen.sockets.find((s: any) => s.type === 'out'), gen.id);
@@ -662,6 +663,12 @@ test('merge streams has no full view, and wires itself when opened', async ({ pa
 test('a node type contributes its own settings to the panel', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
+
+  // The demo carries no generator any more; the test brings its own.
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor
+      .addNode('random-numbers');
+  });
 
   const node = () => page.evaluate(() => {
     const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
@@ -758,8 +765,9 @@ test('data type colours are set from the menu, and can be switched off', async (
       .querySelectorAll('linearGradient stop')]
       .map(stop => stop.getAttribute('stop-color')));
 
-  // The demo palette colours `number` dark green and `function` orange.
-  expect(await lineColours()).toContain('#025d04');
+  // The demo's lines carry functions (orange) and points (purple); `number`
+  // is declared on the plot inputs but no line carries it any more.
+  expect(await lineColours()).toContain('#9988cf');
   expect(await lineColours()).toContain('#c77d0a');
 
   await page.locator('mat-toolbar button.overflow').click();
@@ -771,10 +779,10 @@ test('data type colours are set from the menu, and can be switched off', async (
   // Only the types actually in use: numbers, functions, and sampled points.
   await expect(dialog.locator('li .name')).toHaveText(['function', 'number', 'point']);
 
-  // Pick a new colour for `number`, and every line carrying it follows.
+  // Pick a new colour for `point`, and every line carrying it follows.
   await page.evaluate(() => {
     const rows = [...document.querySelectorAll('fb-type-colors li')];
-    const row = rows.find(r => r.querySelector('.name')?.textContent === 'number')!;
+    const row = rows.find(r => r.querySelector('.name')?.textContent === 'point')!;
     const input = row.querySelector<HTMLInputElement>('input[type=color]')!;
 
     input.value = '#2244ff';
@@ -782,7 +790,7 @@ test('data type colours are set from the menu, and can be switched off', async (
   });
 
   await expect.poll(async () => (await lineColours()).includes('#2244ff')).toBe(true);
-  await expect.poll(async () => (await lineColours()).includes('#025d04')).toBe(false);
+  await expect.poll(async () => (await lineColours()).includes('#9988cf')).toBe(false);
 
   // Off silences every colour; on again remembers the choice.
   const toggle = dialog.locator('.toggle input');
@@ -793,7 +801,7 @@ test('data type colours are set from the menu, and can be switched off', async (
 
   await toggle.check();
   await expect.poll(async () => (await lineColours()).includes('#2244ff')).toBe(true);
-  await expect.poll(async () => (await lineColours()).includes('#025d04')).toBe(false);
+  await expect.poll(async () => (await lineColours()).includes('#9988cf')).toBe(false);
 });
 
 /**

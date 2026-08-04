@@ -310,7 +310,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 2 },
+  config: { seedVersion: 3 },
   sockets: [],
   children: [
     {
@@ -386,39 +386,12 @@ export const demo = () => ({
       sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
       position: { x: 27, y: 48 },
     },
-    {
-      type: 'random-numbers',
-      title: 'Random number generator',
-      id: 100,
-      config: {
-        min: 0,
-        max: 100,
-        start: 0,
-        end: 10,
-        intervalMax: 10000,
-        intervalMin: 100,
-        interval: 800,
-        integer: true,
-      },
-      sockets: [{ id: 110, type: 'out', format: 'number' }],
-      position: { x: 6, y: 72 },
-    },
-    {
-      type: 'tap',
-      title: 'Logger',
-      id: 300,
-      config: { expanded: false },
-      sockets: [
-        { id: 310, type: 'in' },
-        { id: 311, type: 'out' },
-      ],
-      position: { x: 55, y: 72 },
-    },
   ],
   /*
-   * Two sampled chains side by side — the wave and its slope — with the
-   * original numbers-into-a-reader pair below. The samplers run in sweep
-   * mode, so both plots stand complete the moment the page opens.
+   * Two sampled chains side by side — the wave and its slope — and the same
+   * function once more as a path through the complex plane. The samplers run
+   * in sweep mode, so every picture stands complete the moment the page
+   * opens. Nothing else: the demo is the complex story now.
    */
   connections: [
     { id: 1002, from: 400, to: 500, out: 410, in: 510 },
@@ -427,6 +400,5 @@ export const demo = () => ({
     { id: 1005, from: 600, to: 200, out: 611, in: 210 },
     { id: 1007, from: 600, to: 900, out: 611, in: 910 },
     { id: 1006, from: 700, to: 800, out: 711, in: 810 },
-    { id: 1001, from: 100, to: 300, out: 110, in: 310 },
   ],
 });
