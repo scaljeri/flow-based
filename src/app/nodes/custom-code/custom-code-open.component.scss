@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  /* A panel: it has to fit a phone with the node's own chrome around it. */
+  width: 340px;
+}
+
+/* The full view stretches instead; same template, all the room there is. */
+:host(.fills) {
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+
+  .wrap {
+    height: 100%;
+  }
+
+  .code {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+}
+
+.wrap {
+  background-color: #fff;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+}
+
+.format-form {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+
+  mat-form-field {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.code {
+  min-width: 0;
+}
+
+.errors {
+  color: #f00;
+  text-align: center;
+}

@@ -10,7 +10,6 @@ import { SubflowComponent } from './nodes/subflow/subflow.component';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { FlowComponent } from './flow/flow.component';
 import { FB_NODE_HELPERS, FB_SOCKET_COLORS, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
-import { DefaultFrontComponent } from './components/default-front/default-front.component';
 
 /*
  * The `@angular/material` barrel was removed in v9 — every symbol now comes from
@@ -38,18 +37,27 @@ import { ComponentSelectionService } from './component-selection.service';
 import { RandomNumbersSmallComponent } from './nodes/random-numbers/random-numbers-small.component';
 import { RandomNumbersNormalComponent } from './nodes/random-numbers/random-numbers-normal.component';
 import { RandomNumbersSettingsComponent } from './nodes/random-numbers/random-numbers-settings.component';
-import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
-import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
+import { BasicGraphSmallComponent } from './nodes/basic-graph/basic-graph-small.component';
+import { BasicGraphNormalComponent } from './nodes/basic-graph/basic-graph-normal.component';
+import { BasicGraphFullComponent } from './nodes/basic-graph/basic-graph-full.component';
+import { MergeStreamsSmallComponent } from './nodes/merge-streams/merge-streams-small.component';
+import { MergeStreamsNormalComponent } from './nodes/merge-streams/merge-streams-normal.component';
 import { FB_CONFIG, FB_SOCKET_PALETTE } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
-import { StatsComponent } from './nodes/stats/stats.component';
-import { NormalNodeComponent } from './components/normal-node/normal-node.component';
-import { EditNodeComponent } from './components/edit-node/edit-node.component';
-import { NodeHeaderComponent } from './components/node-header/node-header.component';
-import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
-import { FractalComponent } from './nodes/fractal/fractal.component';
-import { ZoomCanvasComponent } from './nodes/zoom-canvas/zoom-canvas.component';
-import { CanvasComponent } from './nodes/canvas/canvas.component';
+import { StatsSmallComponent } from './nodes/stats/stats-small.component';
+import { StatsNormalComponent } from './nodes/stats/stats-normal.component';
+import { StatsFullComponent } from './nodes/stats/stats-full.component';
+import { CustomCodeSmallComponent } from './nodes/custom-code/custom-code-small.component';
+import { CustomCodeNormalComponent } from './nodes/custom-code/custom-code-normal.component';
+import { CustomCodeFullComponent } from './nodes/custom-code/custom-code-full.component';
+import { FractalSmallComponent } from './nodes/fractal/fractal-small.component';
+import { FractalSettingsComponent } from './nodes/fractal/fractal-settings.component';
+import { ZoomCanvasSmallComponent } from './nodes/zoom-canvas/zoom-canvas-small.component';
+import { ZoomCanvasNormalComponent } from './nodes/zoom-canvas/zoom-canvas-normal.component';
+import { ZoomCanvasFullComponent } from './nodes/zoom-canvas/zoom-canvas-full.component';
+import { CanvasSmallComponent } from './nodes/canvas/canvas-small.component';
+import { CanvasNormalComponent } from './nodes/canvas/canvas-normal.component';
+import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
 
 @NgModule({
   declarations: [
@@ -63,18 +71,26 @@ import { CanvasComponent } from './nodes/canvas/canvas.component';
     SubflowComponent,
     TypeColorsComponent,
     FlowComponent,
-    DefaultFrontComponent,
     ComponentSelectionComponent,
-    BasicGraphComponent,
-    MergeStreamsComponent,
-    EditNodeComponent,
-    NodeHeaderComponent,
-    StatsComponent,
-    NormalNodeComponent,
-    CustomCodeComponent,
-    FractalComponent,
-    ZoomCanvasComponent,
-    CanvasComponent,
+    BasicGraphSmallComponent,
+    BasicGraphNormalComponent,
+    BasicGraphFullComponent,
+    MergeStreamsSmallComponent,
+    MergeStreamsNormalComponent,
+    StatsSmallComponent,
+    StatsNormalComponent,
+    StatsFullComponent,
+    CustomCodeSmallComponent,
+    CustomCodeNormalComponent,
+    CustomCodeFullComponent,
+    FractalSmallComponent,
+    FractalSettingsComponent,
+    ZoomCanvasSmallComponent,
+    ZoomCanvasNormalComponent,
+    ZoomCanvasFullComponent,
+    CanvasSmallComponent,
+    CanvasNormalComponent,
+    CanvasFullComponent,
   ],
   imports: [
     BrowserModule,

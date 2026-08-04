@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FB_NODE_TYPES, FbNodeTypes } from '@scaljeri/flow-based';
 import { ComponentSelectionService } from '../../component-selection.service';
 
@@ -9,13 +9,12 @@ import { ComponentSelectionService } from '../../component-selection.service';
   styleUrls: ['./component-selection.component.scss']
 })
 export class ComponentSelectionComponent implements OnInit {
+  private selectionService = inject(ComponentSelectionService);
+  flowTypes = inject<FbNodeTypes>(FB_NODE_TYPES);
+
   private allKeys: string[] = [];
   flowKeys: string[] = [];
   query = '';
-
-  constructor(private selectionService: ComponentSelectionService,
-              @Inject(FB_NODE_TYPES) public flowTypes: FbNodeTypes) {
-  }
 
   ngOnInit() {
     // Sorted by the title the user actually sees, not by registry insertion order.

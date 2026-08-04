@@ -3,11 +3,16 @@ import { RandomNumbersSmallComponent } from './nodes/random-numbers/random-numbe
 import { RandomNumbersNormalComponent } from './nodes/random-numbers/random-numbers-normal.component';
 import { RandomNumbersSettingsComponent } from './nodes/random-numbers/random-numbers-settings.component';
 import { RANDOM_NUMBER_SETTINGS, RandomNumbersWorker } from './workers/random-numbers';
-import { StatsComponent } from './nodes/stats/stats.component';
+import { StatsSmallComponent } from './nodes/stats/stats-small.component';
+import { StatsNormalComponent } from './nodes/stats/stats-normal.component';
+import { StatsFullComponent } from './nodes/stats/stats-full.component';
 import { STATS_SETTINGS, StatsWorker } from './workers/stats';
-import { BasicGraphComponent } from './nodes/basic-graph/basic-graph.component';
+import { BasicGraphSmallComponent } from './nodes/basic-graph/basic-graph-small.component';
+import { BasicGraphNormalComponent } from './nodes/basic-graph/basic-graph-normal.component';
+import { BasicGraphFullComponent } from './nodes/basic-graph/basic-graph-full.component';
 import { BASIC_GRAPH_CONFIG, BasicGraphWorker } from './workers/basic-graph';
-import { MergeStreamsComponent } from './nodes/merge-streams/merge-streams.component';
+import { MergeStreamsSmallComponent } from './nodes/merge-streams/merge-streams-small.component';
+import { MergeStreamsNormalComponent } from './nodes/merge-streams/merge-streams-normal.component';
 import { MERGE_STREAMS_SETTINGS, MergeStreamsWorker } from './workers/merge-streams';
 import { TapSmallComponent } from './nodes/tap/tap-small.component';
 import { TapNormalComponent } from './nodes/tap/tap-normal.component';
@@ -15,13 +20,20 @@ import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { TAP_SETTINGS, TapWorker } from './workers/tap';
 import { METER_SETTINGS, meterNormal, meterSmall } from './nodes/meter/meter.node';
 import { SubflowComponent } from './nodes/subflow/subflow.component';
-import { CustomCodeComponent } from './nodes/custom-code/custom-code.component';
+import { CustomCodeSmallComponent } from './nodes/custom-code/custom-code-small.component';
+import { CustomCodeNormalComponent } from './nodes/custom-code/custom-code-normal.component';
+import { CustomCodeFullComponent } from './nodes/custom-code/custom-code-full.component';
 import { CUSTOM_CODE_SETTINGS, CustomCodeWorker } from './workers/custom-code';
-import { FractalComponent } from './nodes/fractal/fractal.component';
+import { FractalSmallComponent } from './nodes/fractal/fractal-small.component';
+import { FractalSettingsComponent } from './nodes/fractal/fractal-settings.component';
 import { FRACTALS_SETTINGS, FractalsWorker } from './workers/fractals';
 import { ZOOM_CANVAS_SETTINGS, ZoomCanvasWorker } from './workers/zoom-canvas';
-import { ZoomCanvasComponent } from './nodes/zoom-canvas/zoom-canvas.component';
-import { CanvasComponent } from './nodes/canvas/canvas.component';
+import { ZoomCanvasSmallComponent } from './nodes/zoom-canvas/zoom-canvas-small.component';
+import { ZoomCanvasNormalComponent } from './nodes/zoom-canvas/zoom-canvas-normal.component';
+import { ZoomCanvasFullComponent } from './nodes/zoom-canvas/zoom-canvas-full.component';
+import { CanvasSmallComponent } from './nodes/canvas/canvas-small.component';
+import { CanvasNormalComponent } from './nodes/canvas/canvas-normal.component';
+import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
 import { CANVAS_SETTINGS, CanvasWorker } from './workers/canvas';
 
 export const FB_CONFIG: FbNodeTypes = {
@@ -39,9 +51,39 @@ export const FB_CONFIG: FbNodeTypes = {
     settings: RANDOM_NUMBER_SETTINGS,
     worker: RandomNumbersWorker,
   },
-  'stats': {component: StatsComponent, settings: STATS_SETTINGS, worker: StatsWorker},
-  'basic-graph': {component: BasicGraphComponent, settings: BASIC_GRAPH_CONFIG, worker: BasicGraphWorker},
-  'merge-streams': {component: MergeStreamsComponent, settings: MERGE_STREAMS_SETTINGS, worker: MergeStreamsWorker},
+  /*
+   * A drawing per view, everywhere. What follows used to be single components
+   * toggling .minified/.expanded with CSS — a fixed ~500px whatever the view,
+   * which is what kept the demo off a phone.
+   */
+  'stats': {
+    component: {
+      small: StatsSmallComponent,
+      normal: StatsNormalComponent,
+      full: StatsFullComponent,
+    },
+    settings: STATS_SETTINGS,
+    worker: StatsWorker,
+  },
+  'basic-graph': {
+    component: {
+      small: BasicGraphSmallComponent,
+      normal: BasicGraphNormalComponent,
+      full: BasicGraphFullComponent,
+    },
+    settings: BASIC_GRAPH_CONFIG,
+    worker: BasicGraphWorker,
+  },
+  // No full: this node draws measured lines between its own elements, and on
+  // the whole surface those became sweeps across an empty middle.
+  'merge-streams': {
+    component: {
+      small: MergeStreamsSmallComponent,
+      normal: MergeStreamsNormalComponent,
+    },
+    settings: MERGE_STREAMS_SETTINGS,
+    worker: MergeStreamsWorker,
+  },
   /*
    * A drawing PER VIEW rather than one that branches on how open it is.
    *
@@ -59,10 +101,47 @@ export const FB_CONFIG: FbNodeTypes = {
     settings: TAP_SETTINGS,
     worker: TapWorker,
   },
-  'custom': {component: CustomCodeComponent, settings: CUSTOM_CODE_SETTINGS, worker: CustomCodeWorker},
-  'fractals': {component: FractalComponent, settings: FRACTALS_SETTINGS, worker: FractalsWorker},
-  'zoomcanvas': {component: ZoomCanvasComponent, settings: ZOOM_CANVAS_SETTINGS, worker: ZoomCanvasWorker},
-  'canvas': {component: CanvasComponent, settings: CANVAS_SETTINGS, worker: CanvasWorker},
+  'custom': {
+    component: {
+      small: CustomCodeSmallComponent,
+      normal: CustomCodeNormalComponent,
+      full: CustomCodeFullComponent,
+    },
+    settings: CUSTOM_CODE_SETTINGS,
+    worker: CustomCodeWorker,
+  },
+  /*
+   * The select and the reset moved to the settings panel — they are
+   * configuration, not content. What is left to draw is which fractal this
+   * computes, and small says that; there is nothing more a bigger view could
+   * add, so there isn't one.
+   */
+  'fractals': {
+    component: {
+      small: FractalSmallComponent,
+    },
+    settingsComponent: FractalSettingsComponent,
+    settings: FRACTALS_SETTINGS,
+    worker: FractalsWorker,
+  },
+  'zoomcanvas': {
+    component: {
+      small: ZoomCanvasSmallComponent,
+      normal: ZoomCanvasNormalComponent,
+      full: ZoomCanvasFullComponent,
+    },
+    settings: ZOOM_CANVAS_SETTINGS,
+    worker: ZoomCanvasWorker,
+  },
+  'canvas': {
+    component: {
+      small: CanvasSmallComponent,
+      normal: CanvasNormalComponent,
+      full: CanvasFullComponent,
+    },
+    settings: CANVAS_SETTINGS,
+    worker: CanvasWorker,
+  },
   /*
    * A subflow: a node that is itself a flow. The type key stays `flow` because
    * it is in every saved file; only what it is CALLED changed.

@@ -1,46 +1,47 @@
 <fb-flow-based #editor [state]="flow"></fb-flow-based>
 
 <!--
-  Viewport controls live in the app, not the library: the library exposes
-  FbViewportService plus the zoom/pan gestures and leaves the chrome to the host.
-  Wheel zooms at the cursor; dragging the background pans.
+Viewport controls live in the app, not the library: the library exposes
+FbViewportService plus the zoom/pan gestures and leaves the chrome to the host.
+Wheel zooms at the cursor; dragging the background pans.
 -->
 <!--
-  Alignment, shown only when there is something to align.
-  A permanent bar of six buttons that do nothing most of the time is noise; these
-  appear exactly when two or more nodes are selected, which is the only moment
-  they mean anything.
+Alignment, shown only when there is something to align.
+A permanent bar of six buttons that do nothing most of the time is noise; these
+appear exactly when two or more nodes are selected, which is the only moment
+they mean anything.
 -->
-<div class="align-controls fb-drag-ignore" *ngIf="editor.selectionCount() > 1">
-  <button type="button" mat-mini-fab (click)="editor.align('left')" matTooltip="Align left" aria-label="Align left">
-    <mat-icon>align_horizontal_left</mat-icon>
-  </button>
-  <button type="button" mat-mini-fab (click)="editor.align('centre-x')" matTooltip="Align centre" aria-label="Align centre">
-    <mat-icon>align_horizontal_center</mat-icon>
-  </button>
-  <button type="button" mat-mini-fab (click)="editor.align('right')" matTooltip="Align right" aria-label="Align right">
-    <mat-icon>align_horizontal_right</mat-icon>
-  </button>
-  <button type="button" mat-mini-fab (click)="editor.align('top')" matTooltip="Align top" aria-label="Align top">
-    <mat-icon>align_vertical_top</mat-icon>
-  </button>
-  <button type="button" mat-mini-fab (click)="editor.align('centre-y')" matTooltip="Align middle" aria-label="Align middle">
-    <mat-icon>align_vertical_center</mat-icon>
-  </button>
-  <button type="button" mat-mini-fab (click)="editor.align('bottom')" matTooltip="Align bottom" aria-label="Align bottom">
-    <mat-icon>align_vertical_bottom</mat-icon>
-  </button>
-
-  <!-- Distributing needs a gap to even out, so it needs three. -->
-  <button type="button" mat-mini-fab [disabled]="editor.selectionCount() < 3"
-          (click)="editor.distribute('x')" matTooltip="Distribute horizontally" aria-label="Distribute horizontally">
-    <mat-icon>horizontal_distribute</mat-icon>
-  </button>
-  <button type="button" mat-mini-fab [disabled]="editor.selectionCount() < 3"
-          (click)="editor.distribute('y')" matTooltip="Distribute vertically" aria-label="Distribute vertically">
-    <mat-icon>vertical_distribute</mat-icon>
-  </button>
-</div>
+@if (editor.selectionCount() > 1) {
+  <div class="align-controls fb-drag-ignore">
+    <button type="button" mat-mini-fab (click)="editor.align('left')" matTooltip="Align left" aria-label="Align left">
+      <mat-icon>align_horizontal_left</mat-icon>
+    </button>
+    <button type="button" mat-mini-fab (click)="editor.align('centre-x')" matTooltip="Align centre" aria-label="Align centre">
+      <mat-icon>align_horizontal_center</mat-icon>
+    </button>
+    <button type="button" mat-mini-fab (click)="editor.align('right')" matTooltip="Align right" aria-label="Align right">
+      <mat-icon>align_horizontal_right</mat-icon>
+    </button>
+    <button type="button" mat-mini-fab (click)="editor.align('top')" matTooltip="Align top" aria-label="Align top">
+      <mat-icon>align_vertical_top</mat-icon>
+    </button>
+    <button type="button" mat-mini-fab (click)="editor.align('centre-y')" matTooltip="Align middle" aria-label="Align middle">
+      <mat-icon>align_vertical_center</mat-icon>
+    </button>
+    <button type="button" mat-mini-fab (click)="editor.align('bottom')" matTooltip="Align bottom" aria-label="Align bottom">
+      <mat-icon>align_vertical_bottom</mat-icon>
+    </button>
+    <!-- Distributing needs a gap to even out, so it needs three. -->
+    <button type="button" mat-mini-fab [disabled]="editor.selectionCount() < 3"
+      (click)="editor.distribute('x')" matTooltip="Distribute horizontally" aria-label="Distribute horizontally">
+      <mat-icon>horizontal_distribute</mat-icon>
+    </button>
+    <button type="button" mat-mini-fab [disabled]="editor.selectionCount() < 3"
+      (click)="editor.distribute('y')" matTooltip="Distribute vertically" aria-label="Distribute vertically">
+      <mat-icon>vertical_distribute</mat-icon>
+    </button>
+  </div>
+}
 
 <div class="viewport-controls fb-drag-ignore">
   <button type="button" mat-mini-fab color="primary" (click)="editor.zoomOut()" aria-label="Zoom out">
@@ -48,7 +49,7 @@
   </button>
 
   <button type="button" mat-button class="zoom-level" (click)="editor.resetView()"
-          [attr.aria-label]="'Reset view, currently ' + editor.zoomPercent() + ' percent'">
+    [attr.aria-label]="'Reset view, currently ' + editor.zoomPercent() + ' percent'">
     {{editor.zoomPercent()}}%
   </button>
 
@@ -57,8 +58,8 @@
   </button>
 
   <button type="button" mat-mini-fab class="routing" (click)="editor.toggleRouting()"
-          [matTooltip]="editor.routing() === 'curved' ? 'Straight connections' : 'Curved connections'"
-          [attr.aria-label]="editor.routing() === 'curved' ? 'Straight connections' : 'Curved connections'">
+    [matTooltip]="editor.routing() === 'curved' ? 'Straight connections' : 'Curved connections'"
+    [attr.aria-label]="editor.routing() === 'curved' ? 'Straight connections' : 'Curved connections'">
     <mat-icon>{{editor.routing() === 'curved' ? 'turn_sharp_right' : 'gesture'}}</mat-icon>
   </button>
 </div>

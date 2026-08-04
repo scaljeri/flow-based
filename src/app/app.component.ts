@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import {
@@ -27,17 +27,16 @@ import { ComponentSelectionService } from './component-selection.service';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
+  private selectionService = inject(ComponentSelectionService);
+  private flowService = inject(FlowBasedService);
+  history = inject(FbHistoryService);
+  private overlay = inject(Overlay);
+  private dialog = inject(MatDialog);
+
   activeOverlay: OverlayRef | null = null;
   showJson = false;
   flow: FbNodeState = data.basic as FbNodeState;
   loadError: string | null = null;
-
-  constructor(private selectionService: ComponentSelectionService,
-              private flowService: FlowBasedService,
-              public history: FbHistoryService,
-              private overlay: Overlay,
-              private dialog: MatDialog) {
-  }
 
   openTypeColors(): void {
     this.dialog.open(TypeColorsComponent, { width: '320px' });

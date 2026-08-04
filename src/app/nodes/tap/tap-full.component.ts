@@ -17,14 +17,16 @@ import { TapView } from './tap-view';
       <p class="value">{{value}}</p>
       <p class="count">{{count}} values received</p>
     </section>
-
+    
     <section class="history">
       <h2>History</h2>
       <ol>
-        <li *ngFor="let entry of history">{{entry}}</li>
+        @for (entry of history; track entry) {
+          <li>{{entry}}</li>
+        }
       </ol>
     </section>
-  `,
+    `,
   styles: [`
     :host {
       color: #fff;

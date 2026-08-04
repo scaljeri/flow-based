@@ -1,0 +1,36 @@
+.canvas-wrapper {
+  line-height: 0;
+  position: relative;
+}
+
+canvas {
+  border-radius: 8px;
+  cursor: default;
+}
+
+.fractal,
+.zoom,
+.xmax-xmin {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font: 12px system-ui, sans-serif;
+  line-height: normal;
+  padding: 3px;
+  position: absolute;
+  z-index: 100;
+}
+
+.fractal {
+  left: 5px;
+  top: 5px;
+}
+
+.xmax-xmin {
+  left: 5px;
+  top: 30px;
+}
+
+.zoom {
+  left: 5px;
+  top: 55px;
+}

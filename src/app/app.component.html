@@ -1,20 +1,20 @@
 <!--
-  The toolbar is a real flex row: buttons, then a title that takes what is left.
-  It used to centre the title with the buttons absolutely positioned on top of it,
-  so nothing kept them apart — on a landscape phone the title ran straight over
-  the download, upload, warning and JSON buttons.
+The toolbar is a real flex row: buttons, then a title that takes what is left.
+It used to centre the title with the buttons absolutely positioned on top of it,
+so nothing kept them apart — on a landscape phone the title ran straight over
+the download, upload, warning and JSON buttons.
 -->
 <mat-toolbar [color]="'primary'">
   <div class="actions primary-actions">
     <button type="button" mat-button (click)="openModal()" class="add">Add</button>
 
     <button type="button" mat-button class="undo collapses" (click)="undo()"
-            [disabled]="!history.canUndo()" matTooltip="Undo (Ctrl+Z)" aria-label="Undo">
+      [disabled]="!history.canUndo()" matTooltip="Undo (Ctrl+Z)" aria-label="Undo">
       <mat-icon>undo</mat-icon>
     </button>
 
     <button type="button" mat-button class="redo collapses" (click)="redo()"
-            [disabled]="!history.canRedo()" matTooltip="Redo (Ctrl+Shift+Z)" aria-label="Redo">
+      [disabled]="!history.canRedo()" matTooltip="Redo (Ctrl+Shift+Z)" aria-label="Redo">
       <mat-icon>redo</mat-icon>
     </button>
   </div>
@@ -22,45 +22,47 @@
   <span class="title">Flow based programming</span>
 
   <!--
-    Secondary actions. Shown inline when there is room, and folded into the menu
-    below when there is not — 528px of buttons does not fit a phone whatever the
-    title does.
+  Secondary actions. Shown inline when there is room, and folded into the menu
+  below when there is not — 528px of buttons does not fit a phone whatever the
+  title does.
   -->
   <div class="actions secondary-actions">
     <button type="button" mat-button class="save" (click)="save()"
-            matTooltip="Download this flow as JSON" aria-label="Download this flow as JSON">
+      matTooltip="Download this flow as JSON" aria-label="Download this flow as JSON">
       <mat-icon>download</mat-icon>
     </button>
 
     <button type="button" mat-button class="load" (click)="fileInput.click()"
-            matTooltip="Load a flow from JSON" aria-label="Load a flow from JSON">
+      matTooltip="Load a flow from JSON" aria-label="Load a flow from JSON">
       <mat-icon>upload</mat-icon>
     </button>
 
     <!--
-      Validation surface. The engine reports unresolved socket formats and graph
-      cycles through Flow.lastPropagation; previously the only signal was a
-      console.warn that said nothing about which sockets were wrong.
+    Validation surface. The engine reports unresolved socket formats and graph
+    cycles through Flow.lastPropagation; previously the only signal was a
+    console.warn that said nothing about which sockets were wrong.
     -->
-    <button type="button" mat-button class="problems" *ngIf="problemCount > 0"
-            [matTooltip]="validationDetail">
-      <mat-icon>warning</mat-icon>
-      {{problemCount}}
-    </button>
+    @if (problemCount > 0) {
+      <button type="button" mat-button class="problems"
+        [matTooltip]="validationDetail">
+        <mat-icon>warning</mat-icon>
+        {{problemCount}}
+      </button>
+    }
 
     <button type="button" mat-button (click)="showJSON()" class="json">{{showJson ? 'Flow' : 'JSON'}}</button>
   </div>
 
   <button type="button" mat-icon-button class="overflow" [matMenuTriggerFor]="overflowMenu"
-          aria-label="More actions">
+    aria-label="More actions">
     <mat-icon>menu</mat-icon>
   </button>
 
   <mat-menu #overflowMenu="matMenu">
     <!--
-      Undo and redo carry a label here. As icons on a phone they are two grey
-      arrows with no explanation: the tooltip that explains them only appears on
-      hover, and there is no hover on a touch screen.
+    Undo and redo carry a label here. As icons on a phone they are two grey
+    arrows with no explanation: the tooltip that explains them only appears on
+    hover, and there is no hover on a touch screen.
     -->
     <button type="button" mat-menu-item (click)="undo()" [disabled]="!history.canUndo()">
       <mat-icon>undo</mat-icon>
@@ -84,10 +86,12 @@
       <span>Load JSON</span>
     </button>
 
-    <button type="button" mat-menu-item *ngIf="problemCount > 0" [matTooltip]="validationDetail">
-      <mat-icon>warning</mat-icon>
-      <span>{{problemCount}} problems</span>
-    </button>
+    @if (problemCount > 0) {
+      <button type="button" mat-menu-item [matTooltip]="validationDetail">
+        <mat-icon>warning</mat-icon>
+        <span>{{problemCount}} problems</span>
+      </button>
+    }
 
     <button type="button" mat-menu-item (click)="showJSON()">
       <mat-icon>data_object</mat-icon>
@@ -105,16 +109,22 @@
 
   <!-- One file input, shared by the inline button and the menu item. -->
   <input #fileInput type="file" accept="application/json,.json" class="file-input"
-         (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
+    (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
 </mat-toolbar>
 
-<p *ngIf="loadError" class="load-error" role="alert">Could not load that flow — {{loadError}}</p>
+@if (loadError) {
+  <p class="load-error" role="alert">Could not load that flow — {{loadError}}</p>
+}
 
 <main>
-  <fb-flow *ngIf="!showJson" [flow]="flow"></fb-flow>
+  @if (!showJson) {
+    <fb-flow [flow]="flow"></fb-flow>
+  }
 
-  <article *ngIf="showJson" class="flow-as-json">
-    <!-- The versioned envelope, i.e. exactly what the download writes. -->
-    <pre>{{flowJson}}</pre>
-  </article>
+  @if (showJson) {
+    <article class="flow-as-json">
+      <!-- The versioned envelope, i.e. exactly what the download writes. -->
+      <pre>{{flowJson}}</pre>
+    </article>
+  }
 </main>

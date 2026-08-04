@@ -1,0 +1,15 @@
+<div class="canvas-wrapper">
+  <!-- Which fractal is arriving on the socket is live data, so it is drawn
+  here rather than fed to the header, whose title is model. -->
+  <span class="fractal">{{getTitle()}}</span>
+
+  @if (dimensions) {
+    <span class="xmax-xmin">xMax - xMin: {{width}}</span>
+    <span class="zoom">zoom: {{zoom}}</span>
+  }
+
+  <canvas (mousemove)="onMouseMove($event)"
+    (mousedown)="onMouseDown($event)"
+    (mouseup)="onMouseUp($event)"
+  #canvas fbNoDrag></canvas>
+</div>

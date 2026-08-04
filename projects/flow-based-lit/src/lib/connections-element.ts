@@ -174,6 +174,9 @@ export class FbConnectionsElement extends LitElement {
   }
 
   private subscribe(): void {
+    // A new editor is a new graph; nothing cached about the old one holds.
+    this.socketIndex.clear();
+    this.nodeSigs.clear();
     this.unsubscribe?.();
     this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
       // Anything that can move a line. Not 'history' or 'formats' on their own —
@@ -189,32 +192,33 @@ export class FbConnectionsElement extends LitElement {
         // The plane moved under any cached measurement of it.
         this.planeRect = null;
       }
+
+      // Only these change which sockets exist or where they sit; a drag frame
+      // does not, and rebuilding the lookups per frame is work proportional to
+      // the graph — the exact cost the drag perf test forbids.
+      if (change.kind === 'structure' || change.kind === 'connections' || change.kind === 'sockets') {
+        this.socketIndex.clear();
+        this.nodeSigs.clear();
+      }
     });
   }
 
   /** Socket lookup for the frame being rendered; see socketColour. */
   private socketIndex = new Map<number, FbSocket>();
 
+  /**
+   * One socket-layout signature per NODE per render, memoised because
+   * geometryKey runs per connection per frame and several connections share a
+   * node. Computing it inline pushed the drag-cost perf test over its ratio —
+   * the same trap the resolved-colours key fell into.
+   */
+  private nodeSigs = new Map<number, string>();
+
   protected override render() {
     if (!this.editor?.flow) {
       return nothing;
     }
 
-    /*
-     * Built once per render rather than searched per socket: socketColour ran a
-     * scan over every node PER CONNECTION END, and — worse — only over the
-     * children, so a connection to the flow's own boundary socket had no colour
-     * at all and came out white at that end.
-     */
-    this.socketIndex.clear();
-
-    for (const node of [...this.editor.children, this.editor.state]) {
-      for (const socket of node?.sockets ?? []) {
-        if (socket.id !== undefined) {
-          this.socketIndex.set(socket.id, socket);
-        }
-      }
-    }
 
     /*
      * Keyed, and guarded on the geometry each curve actually depends on.
@@ -266,21 +270,28 @@ export class FbConnectionsElement extends LitElement {
     const inSide = to.sockets?.find(s => s.id === connection.in);
 
     /*
-     * The whole EDGE each end sits on — which sockets share it, in what order —
-     * not just which edge it is. A socket's position is its index within its
-     * edge's group, so reordering two sockets on one side, or moving a THIRD
-     * socket onto the side, moves this one without changing anything else this
-     * key used to look at.
+     * The node's whole socket LAYOUT — every socket's id and edge, in order —
+     * not just which edge this end is on. A socket's position is its index
+     * within its edge's group, so reordering two sockets on one side, or
+     * moving a third socket onto the side, moves this one without changing
+     * anything else this key used to look at. Memoised per node per render;
+     * see nodeSigs.
      */
-    const edge = (node: FbNodeState, socket: FbSocket | undefined): string =>
-      socket
-        ? (node.sockets ?? []).filter(s => sideOf(s) === sideOf(socket)).map(s => s.id).join('.')
-        : '';
+    const sig = (node: FbNodeState): string => {
+      let cached = this.nodeSigs.get(node.id!);
+
+      if (cached === undefined) {
+        cached = (node.sockets ?? []).map(s => `${s.id}:${sideOf(s)}`).join('.');
+        this.nodeSigs.set(node.id!, cached);
+      }
+
+      return cached;
+    };
 
     return `${fp.x},${fp.y},${fs?.width},${fs?.height},${tp.x},${tp.y},${ts?.width},${ts?.height},`
       + `${connection.out},${connection.in},${plane.width},${plane.height},`
       + `${outSide && sideOf(outSide)},${inSide && sideOf(inSide)},`
-      + `${edge(from, outSide)},${edge(to, inSide)},`
+      + `${sig(from)},${sig(to)},`
       /*
        * The colour VERSION, not the resolved colours: resolving one means
        * scanning the nodes, and this key is built per connection per frame —
@@ -705,8 +716,28 @@ export class FbConnectionsElement extends LitElement {
     return `translate(${x}, ${y}) rotate(${deg})`;
   }
 
+  /**
+   * Filled lazily and kept until the graph changes shape (see subscribe): the
+   * old code scanned every node PER CONNECTION END — and only the children, so
+   * a connection to the flow's own boundary socket came out white at that end.
+   * The entries are references, so a format arriving later reads through.
+   */
   private socketColour(socketId: number | undefined): string {
-    const socket = socketId === undefined ? undefined : this.socketIndex.get(socketId);
+    if (socketId === undefined) {
+      return '#fff';
+    }
+
+    if (this.socketIndex.size === 0) {
+      for (const node of [...this.editor.children, this.editor.state]) {
+        for (const socket of node?.sockets ?? []) {
+          if (socket.id !== undefined) {
+            this.socketIndex.set(socket.id, socket);
+          }
+        }
+      }
+    }
+
+    const socket = this.socketIndex.get(socketId);
 
     return socket ? this.colourOf(socket.format, socket.color) : '#fff';
   }

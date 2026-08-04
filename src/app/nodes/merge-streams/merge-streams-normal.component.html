@@ -1,0 +1,19 @@
+<section class="main">
+  <section class="inputs">
+    @for (socket of state.sockets | socketIn; track socket) {
+      <ng-container class="socket">
+        @for (val of streamValues[socket.id!]; track val) {
+          <mat-card #inputs [attr.data-socket-id]="socket.id" class="socket">
+            <mat-card-content>{{val !== undefined ? val.toFixed(3) : ''}}</mat-card-content>
+          </mat-card>
+        }
+      </ng-container>
+    }
+  </section>
+
+  <div #output class="output">
+    <mat-card class="socket">
+      <mat-card-content>{{value}}</mat-card-content>
+    </mat-card>
+  </div>
+</section>

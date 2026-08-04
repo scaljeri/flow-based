@@ -439,6 +439,8 @@ export class FbNodeElement extends LitElement {
   private unsubscribe?: () => void;
   private dragPointerId: number | null = null;
   private dragFrom: { x: number; y: number } | null = null;
+  /** Where the press landed, for the tap-versus-drag slop test. */
+  private dragOrigin: { x: number; y: number } | null = null;
   private dragMoved = false;
 
   /** Light-DOM host for the node's content; see mountContent(). */
@@ -1016,6 +1018,7 @@ export class FbNodeElement extends LitElement {
 
     this.dragPointerId = event.pointerId;
     this.dragFrom = { x: event.clientX, y: event.clientY };
+    this.dragOrigin = { x: event.clientX, y: event.clientY };
     this.dragMoved = false;
     this.editor.captureBeforeDrag();
 
@@ -1048,6 +1051,26 @@ export class FbNodeElement extends LitElement {
       this.endDrag();
 
       return;
+    }
+
+    /*
+     * A few pixels of slop before a press becomes a drag. A fingertip is never
+     * still — without this, tapping a node on a phone read as a 2px drag: the
+     * node crept, the tap never fired, and the press cost an undo step.
+     */
+    if (!this.dragMoved) {
+      const travelled = Math.hypot(
+        event.clientX - this.dragOrigin!.x,
+        event.clientY - this.dragOrigin!.y,
+      );
+
+      if (travelled < 6) {
+        return;
+      }
+
+      // The pointer has left the slop circle; measure the drag from HERE, or
+      // the node jumps by the slop distance on its first real frame.
+      this.dragFrom = { x: event.clientX, y: event.clientY };
     }
 
     this.dragMoved = true;
@@ -1126,6 +1149,7 @@ export class FbNodeElement extends LitElement {
   private endDrag(): void {
     this.dragPointerId = null;
     this.dragFrom = null;
+    this.dragOrigin = null;
     this.toggleAttribute('dragging', false);
 
     window.removeEventListener('pointermove', this.onPointerMove);

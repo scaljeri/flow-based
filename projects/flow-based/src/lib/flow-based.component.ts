@@ -1,21 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  EnvironmentInjector,
-  EventEmitter,
-  HostBinding,
-  Inject,
-  Input,
-  OnChanges,
-  HostListener,
-  OnDestroy,
-  Optional,
-  signal,
-  Output,
-  SimpleChanges,
-  ViewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EnvironmentInjector, EventEmitter, HostBinding, Input, OnChanges, HostListener, OnDestroy, signal, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { FbAlignment, FbNodeState, FbRouting, FbSocketColors } from '@scaljeri/flow-based-core';
 // Imported for the side effect as well as the types: this registers
 // <fb-flow-canvas> and friends with the custom-element registry.
@@ -61,6 +44,8 @@ import { angularNodeTypes } from './angular-node';
   standalone: false,
 })
 export class FlowBasedComponent implements OnChanges, OnDestroy {
+  private readonly flowService = inject(FlowBasedService);
+
   @Input() @HostBinding('class.is-active') active = true;
   @Input() @HostBinding('class.is-root') root = true;
   @Input() @HostBinding('class.type') type!: string;
@@ -108,13 +93,13 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
 
   private readonly unsubscribe: () => void;
 
-  constructor(
-    private readonly flowService: FlowBasedService,
-    environmentInjector: EnvironmentInjector,
-    history: FbHistoryService,
-    @Inject(FB_NODE_TYPES) types: FbNodeTypes,
-    @Optional() @Inject(FB_NODE_HELPERS) helpers: FbNodeHelpers,
-    @Optional() @Inject(FB_SOCKET_COLORS) socketColors: FbSocketColors) {
+  constructor() {
+    const environmentInjector = inject(EnvironmentInjector);
+    const history = inject(FbHistoryService);
+    const types = inject<FbNodeTypes>(FB_NODE_TYPES);
+    const helpers = inject<FbNodeHelpers>(FB_NODE_HELPERS, { optional: true });
+    const socketColors = inject<FbSocketColors>(FB_SOCKET_COLORS, { optional: true });
+
 
     this.editor = new FbEditor({
       types: angularNodeTypes(types, environmentInjector),

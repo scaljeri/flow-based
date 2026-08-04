@@ -483,8 +483,9 @@ test('a slider inside a node moves its thumb and nothing else', async ({ page })
   await waitUntilReady(page);
 
   /*
-   * The Statistics node, because its column-width slider is still IN the node.
-   * The generator's used to be, and its settings moved into the panel — where
+   * The Statistics node, because its column-width slider is still IN the node —
+   * in its FULL view, beside the chart the width belongs to. The generator's
+   * used to be in the node too, and its settings moved into the panel — where
    * the question does not arise, since a modal dialog is not the canvas.
    */
   await page.locator('mat-toolbar button.add').click();
@@ -504,6 +505,22 @@ test('a slider inside a node moves its thumb and nothing else', async ({ page })
 
     node.shadowRoot!.querySelector('.box')!
       .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  });
+
+  // Opened to normal; the slider lives one step further, on the full view.
+  await expect
+    .poll(() => page.evaluate(() => [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'stats')!
+      .getAttribute('view')))
+    .toBe('normal');
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'stats')!;
+    const grow = [...node.shadowRoot!.querySelectorAll<HTMLButtonElement>('.head button.step')]
+      .find(b => b.getAttribute('aria-label')?.includes('full'))!;
+
+    grow.click();
   });
 
   const slider = page.locator('fb-slider input[type=range]').first();

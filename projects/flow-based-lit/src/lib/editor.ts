@@ -833,6 +833,40 @@ export class FbEditor {
      Mutations — each snapshots history first, because the engine edits in place
      ---------------------------------------------------------------------- */
 
+  /**
+   * Where a new node lands: the middle of what the user is LOOKING at.
+   *
+   * It used to land at (0,0) — the plane's top-left corner, which on a phone
+   * sits under the toolbar, so an added node was invisible until you went
+   * hunting for it. The centre of the current view is wherever the user has
+   * panned and zoomed to, which is by definition where they are working.
+   * Consecutive adds cascade a step down-right so they do not stack.
+   */
+  private newNodeCount = 0;
+
+  private placeForNewNode(): FbPosition {
+    const plane = this.viewport.planeSize;
+
+    if (!plane.width || !plane.height) {
+      return { x: 10, y: 10 };
+    }
+
+    // The viewport shows the plane through the pan/zoom transform; the local
+    // centre of the visible surface maps back to plane pixels, and positions
+    // are stored as percentages of the plane.
+    const centre = this.viewport.toPlane({ x: plane.width / 2, y: plane.height / 2 });
+    // A real cascade: each next node lands a readable step down-right, wrapping
+    // after eight — 3% looked like a pile, this reads as a stack of cards.
+    const step = (this.newNodeCount++ % 8) * 5;
+
+    const clampPct = (value: number) => Math.max(0, Math.min(88, value));
+
+    return {
+      x: clampPct((centre.x / plane.width) * 100 - 16 + step),
+      y: clampPct((centre.y / plane.height) * 100 - 14 + step),
+    };
+  }
+
   addNode(type: string): FbNodeState | undefined {
     const entry = this.types[type];
 
@@ -847,6 +881,7 @@ export class FbEditor {
       type,
       title: settings.title,
       id: this.ids.create(),
+      position: this.placeForNewNode(),
       config: settings.config === undefined ? undefined : structuredClone(settings.config),
       sockets: (settings.sockets ?? []).map(s => ({ ...s, id: this.ids.create() })),
       ...(settings.isFlow ? { children: [], connections: [] } : {}),

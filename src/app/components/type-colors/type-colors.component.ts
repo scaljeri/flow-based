@@ -23,7 +23,7 @@ import { FlowBasedService } from '@scaljeri/flow-based';
   selector: 'fb-type-colors',
   template: `
     <h2 mat-dialog-title>Data types</h2>
-
+    
     <mat-dialog-content>
       <label class="toggle">
         <span>Colour by data type</span>
@@ -32,27 +32,30 @@ import { FlowBasedService } from '@scaljeri/flow-based';
           [checked]="enabled"
           (change)="onToggle($event)">
       </label>
-
-      <ul *ngIf="types.length; else none" [class.disabled]="!enabled">
-        <li *ngFor="let type of types">
-          <span class="name">{{type}}</span>
-          <input
-            type="color"
-            [value]="colorOf(type)"
-            [disabled]="!enabled"
-            (input)="onColor(type, $event)">
-        </li>
-      </ul>
-
-      <ng-template #none>
+    
+      @if (types.length) {
+        <ul [class.disabled]="!enabled">
+          @for (type of types; track type) {
+            <li>
+              <span class="name">{{type}}</span>
+              <input
+                type="color"
+                [value]="colorOf(type)"
+                [disabled]="!enabled"
+                (input)="onColor(type, $event)">
+            </li>
+          }
+        </ul>
+      } @else {
         <p class="empty">No data types in use yet — they come from the nodes in the flow.</p>
-      </ng-template>
+      }
+    
     </mat-dialog-content>
-
+    
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Close</button>
     </mat-dialog-actions>
-  `,
+    `,
   styles: [`
     mat-dialog-content {
       min-width: 260px;
