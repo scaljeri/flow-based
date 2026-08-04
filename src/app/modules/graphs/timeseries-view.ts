@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Directive, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 import { TimeseriesWorker } from './timeseries.worker';
@@ -14,7 +14,7 @@ export type TimeseriesStyle = 'line' | 'area' | 'bars';
  * panel writes it.
  */
 @Directive()
-export abstract class TimeseriesView implements OnInit, OnDestroy {
+export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy {
   protected readonly service = inject(NodeService);
   protected readonly cdr = inject(ChangeDetectorRef);
 
@@ -27,10 +27,23 @@ export abstract class TimeseriesView implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.worker = this.service.worker as TimeseriesWorker;
 
-    this.subscription = this.worker.getStream().subscribe(() => {
+    this.subscription = this.worker?.getStream().subscribe(() => {
       this.draw();
       this.cdr.detectChanges();
     });
+  }
+
+  /**
+   * Draw what the buffer already holds, immediately.
+   *
+   * The stream only says "something arrived", so a view mounted BETWEEN
+   * arrivals — opening the node from small to normal — showed an empty plot
+   * until the next tick. In sweep mode there is no next tick: the whole
+   * array came once, and the reopened plot stayed empty for good.
+   */
+  ngAfterViewInit(): void {
+    this.draw();
+    this.cdr.detectChanges();
   }
 
   ngOnDestroy(): void {
