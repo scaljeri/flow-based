@@ -1,4 +1,4 @@
-import { FbModule } from '../../modules.service';
+import { FbModule } from '@scaljeri/flow-based';
 import { TimeseriesWorker } from './timeseries.worker';
 import { TimeseriesSmallComponent } from './timeseries-small.component';
 import { TimeseriesNormalComponent } from './timeseries-normal.component';

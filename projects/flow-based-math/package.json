@@ -1,0 +1,23 @@
+{
+  "name": "@scaljeri/flow-based-math",
+  "version": "0.1.0",
+  "description": "Mathematics node types for @scaljeri/flow-based: operators, a formula editor with live notation, symbolic derivatives, and a function sampler",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scaljeri/flow-based"
+  },
+  "keywords": ["angular", "flow-based-programming", "fbp", "mathjs", "katex"],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "rxjs": "^7.4.0",
+    "@scaljeri/flow-based": "^0.1.0"
+  },
+  "dependencies": {
+    "mathjs": "^15.0.0",
+    "katex": "^0.16.0",
+    "tslib": "^2.8.1"
+  }
+}

@@ -218,6 +218,64 @@
           }
         }
       }
+    },
+    "@scaljeri/flow-based-math": {
+      "projectType": "library",
+      "root": "projects/flow-based-math",
+      "sourceRoot": "projects/flow-based-math/src",
+      "prefix": "fb",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-math/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-math/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-math/**/*.ts",
+              "projects/flow-based-math/**/*.html"
+            ]
+          }
+        }
+      }
+    },
+    "@scaljeri/flow-based-graphs": {
+      "projectType": "library",
+      "root": "projects/flow-based-graphs",
+      "sourceRoot": "projects/flow-based-graphs/src",
+      "prefix": "fb",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-graphs/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-graphs/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-graphs/**/*.ts",
+              "projects/flow-based-graphs/**/*.html"
+            ]
+          }
+        }
+      }
     }
   }
 }

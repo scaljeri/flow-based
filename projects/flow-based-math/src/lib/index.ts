@@ -1,5 +1,5 @@
 import { FbNodeTypes } from '@scaljeri/flow-based';
-import { FbModule } from '../../modules.service';
+import { FbModule } from '@scaljeri/flow-based';
 import { OperatorWorker } from './operator.worker';
 import { OperatorSmallComponent } from './operator-small.component';
 import { FormulaWorker } from './formula.worker';

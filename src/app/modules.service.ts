@@ -1,10 +1,7 @@
 import { EnvironmentInjector, EventEmitter, Injectable, inject } from '@angular/core';
-import { FB_NODE_TYPES, FbNodeTypes, FlowBasedService, angularNodeTypes } from '@scaljeri/flow-based';
+import { FB_NODE_TYPES, FbModule, FbNodeTypes, FlowBasedService, angularNodeTypes } from '@scaljeri/flow-based';
 
-/** What a loadable module exports: node types, already carrying their group. */
-export interface FbModule {
-  types: FbNodeTypes;
-}
+export type { FbModule };
 
 export interface FbModuleInfo {
   id: string;
@@ -18,13 +15,15 @@ export interface FbModuleInfo {
 const STORAGE_KEY = 'fb-modules';
 
 /*
- * Each module is a dynamic import, so the bundler splits it into its own
- * chunk and enabling one genuinely DOWNLOADS it — the editor does not carry
- * mathjs (~1MB of algebra) for users who never open the math group.
+ * Each module is its own PACKAGE in the workspace — flow-based-math,
+ * flow-based-graphs — and a dynamic import here, so the bundler splits it
+ * into its own chunk and enabling one genuinely DOWNLOADS it: the editor
+ * does not carry mathjs (~1MB of algebra) for users who never open the math
+ * group. Adding a module means adding a package and one line in this map.
  */
 const LOADERS: Record<string, () => Promise<FbModule>> = {
-  math: () => import('./modules/math').then(m => m.MATH_MODULE),
-  graphs: () => import('./modules/graphs').then(m => m.GRAPHS_MODULE),
+  math: () => import('@scaljeri/flow-based-math').then(m => m.MATH_MODULE),
+  graphs: () => import('@scaljeri/flow-based-graphs').then(m => m.GRAPHS_MODULE),
 };
 
 /**
