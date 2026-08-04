@@ -1,5 +1,5 @@
 import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbNodeState, FbSocket } from '@scaljeri/flow-based';
-import { Observable, ReplaySubject, Subject, Subscription, zip } from 'rxjs';
+import { Observable, ReplaySubject, Subject, Subscription, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 export const MERGE_STREAMS_SETTINGS: FbNodeSettings = {
@@ -79,7 +79,14 @@ export class MergeStreamsWorker implements FbNodeWorker {
       return;
     }
 
-    this.subscription = zip(...streams$)
+    /*
+     * combineLatest, not zip. zip pairs values BY INDEX and buffers whatever
+     * arrives early: with one stream ticking at 500ms and another at 5s, the
+     * fast one's values queue up without bound — a slow leak dressed up as
+     * synchronisation — and the merge lags ever further behind the inputs. The
+     * sum people expect from a merge is over the LATEST value of each stream.
+     */
+    this.subscription = combineLatest(streams$)
       .subscribe(values => {
         this.outputValue = values.reduce((a, b) => a + b.value, 0);
         this.subject.next(this.outputValue);

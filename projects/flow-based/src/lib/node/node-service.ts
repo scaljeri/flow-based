@@ -116,6 +116,14 @@ export class NodeService {
     this.nodeClicked.next(event);
 
     if (Date.now() - this.lastClicked < this.thresholdClicks) {
+      /*
+       * Consumed: the pair is spent whether or not a handler is attached.
+       * Leaving the stamp meant a triple click read as TWO double-clicks —
+       * the second and third clicks paired up again — so a slightly eager
+       * finger toggled the node closed and straight back open.
+       */
+      this.lastClicked = 0;
+
       if (this.doubleClick) {
         this.doubleClick();
         this.api.setMaxSize(false);

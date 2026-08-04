@@ -7,6 +7,14 @@ import { FbHistory, FbNodeState } from '@scaljeri/flow-based-core';
  * The snapshot logic is framework-free and lives in the core, so a Lit or React
  * shell gets undo/redo for nothing; this adapts its change notification into
  * signals for templates to bind to.
+ *
+ * Root-provided, which means ONE undo stack for the whole app. With a single
+ * editor on the page — the demo, and every app seen so far — that is exactly
+ * right: the toolbar's undo button and the editor agree by construction. With
+ * several editors at once it is a known trade-off: undo acts on whichever
+ * editor pushed last, not whichever the user last touched. If that setup
+ * becomes real, provide this service (or a plain FbHistory via
+ * FbEditorOptions.history) per editor instead of reaching for the root one.
  */
 @Injectable({ providedIn: 'root' })
 export class FbHistoryService implements OnDestroy {

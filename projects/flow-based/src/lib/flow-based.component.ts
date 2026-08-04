@@ -159,6 +159,9 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
   ngOnDestroy(): void {
     this.unsubscribe();
     this.flowService.deactivate(this.editor);
+    // The engine's workers and the shared history's subscription outlive the
+    // component unless told otherwise; a reload leaked a running Flow per visit.
+    this.editor.destroy();
   }
 
   /* ----------------------------------------------------------------------

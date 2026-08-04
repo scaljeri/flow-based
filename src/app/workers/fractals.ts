@@ -158,7 +158,9 @@ export class FractalsWorker implements FbNodeWorker {
   setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe((dim: IDimensions) => {
       if (this.webWorker && dim) {
-        if (dim.x && dim.y) {
+        // Present, not truthy: 0 is a real coordinate — the left and top edge
+        // of the fractal — and a truthiness check silently ignored it.
+        if (dim.x != null && dim.y != null) {
           this.x = dim.x;
           this.y = dim.y;
         }

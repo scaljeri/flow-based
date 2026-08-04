@@ -9,12 +9,13 @@
 export function calcMean(values: number[]): number {
   let count = 0;
 
-  const index = Math.round(values.reduce((sum, val, i) => {
+  const weighted = values.reduce((sum, val, i) => {
     count += val;
     return sum + i * val;
-  }, 0) / count);
+  }, 0);
 
-  return index;
+  // An empty histogram has no mean; 0 beats NaN spreading into the curve.
+  return count === 0 ? 0 : Math.round(weighted / count);
 }
 
 export function calcMax(values: number[], mean: number): number {
@@ -36,33 +37,43 @@ export function calcMax(values: number[], mean: number): number {
     index++;
   }
 
-  return total / hits;
+  return hits === 0 ? 0 : total / hits;
 }
 
 export function calcStandardDeviation(mean: number, values: number[]): number {
   let count = 0;
 
-  return Math.sqrt(values.reduce((sum, val, i) => {
+  const weighted = values.reduce((sum, val, i) => {
     count += val;
 
     return sum + Math.pow(i - mean, 2) * val;
-  }, 0) / count);
+  }, 0);
+
+  return count === 0 ? 0 : Math.sqrt(weighted / count);
 }
 
 export function getGaussian(mean: number, sd: number, maxAmpl: number, length: number): number[] {
-  const frac = 1 / (mean * Math.sqrt(2 * Math.PI));
+  /*
+   * No 1/(σ√2π) front factor: the curve is rescaled to maxAmpl below, so a
+   * constant factor cancels out entirely. Computing it anyway — and from
+   * `mean` rather than the σ the formula calls for — meant a mean of zero
+   * divided by zero and turned the whole curve into NaN.
+   */
   const denominator = 2 * Math.pow(sd, 2);
-
-  let output: number[] = [];
+  const output: number[] = [];
   let max = 0;
-  let index = 0;
 
   for (let x = 0; x < length; x++) {
-    const numerator = -Math.pow(x - mean, 2);
-    max = Math.max(output[index++] = frac * Math.pow(Math.E, numerator / denominator), max);
+    // A zero deviation is a spike: everything at the mean, nothing elsewhere.
+    const val = denominator === 0
+      ? (x === Math.round(mean) ? 1 : 0)
+      : Math.exp(-Math.pow(x - mean, 2) / denominator);
+
+    output.push(val);
+    max = Math.max(val, max);
   }
 
-  output = output.map(val => val / max * maxAmpl);
-
-  return output;
+  // A mean far outside the range can leave every bucket at zero; scaling that
+  // by 0/0 would be NaN, and a flat zero curve is the honest answer.
+  return output.map(val => (max > 0 ? (val / max) * maxAmpl : 0));
 }

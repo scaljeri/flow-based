@@ -83,6 +83,16 @@ export class RandomNumbersWorker implements FbNodeWorker {
   }
 
   set interval(val: number) {
+    /*
+     * Only a CHANGE restarts the timer. The settings form assigns every field
+     * on every valueChanges tick, so moving the Start slider used to re-assign
+     * the same interval and reset the timer with it — the stream went quiet
+     * for a whole period each time any other setting moved.
+     */
+    if (val === this.config.interval) {
+      return;
+    }
+
     this.config.interval = val;
     this.initialize();
   }
