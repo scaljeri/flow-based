@@ -7,6 +7,7 @@ import { FormulaSmallComponent } from './formula-small.component';
 import { FormulaSettingsComponent } from './formula-settings.component';
 import { DerivativeWorker } from './derivative.worker';
 import { DerivativeSmallComponent } from './derivative-small.component';
+import { DerivativeSettingsComponent } from './derivative-settings.component';
 import { SamplerWorker } from './sampler.worker';
 import { SamplerSmallComponent } from './sampler-small.component';
 import { SamplerSettingsComponent } from './sampler-settings.component';
@@ -73,6 +74,7 @@ export const MATH_MODULE: FbModule = {
 
     'math-derivative': {
       component: { small: DerivativeSmallComponent },
+      settingsComponent: DerivativeSettingsComponent,
       settings: {
         title: 'Derivative',
         group: GROUP,

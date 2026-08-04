@@ -173,6 +173,13 @@ export class SamplerSettingsComponent {
     const config = (this.service.state.config ??= {}) as SamplerConfig;
 
     config[field.key] = field.min === undefined ? value : Math.max(field.min, value);
+
+    // Setting a domain field makes it the USER's; the function's declared
+    // defaults stop following it from here on.
+    if (field.key === 'from' || field.key === 'to' || field.key === 'step') {
+      config.touched = { ...(config.touched ?? {}), [field.key]: true };
+    }
+
     this.worker?.restart();
     this.cdr.detectChanges();
   }

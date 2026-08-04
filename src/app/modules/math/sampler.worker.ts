@@ -11,6 +11,12 @@ export interface SamplerConfig {
   interval?: number;
   /** 'point': one [x, y] per tick. 'sweep': the whole sweep as one array. */
   mode?: SamplerMode;
+  /**
+   * Which of from/to/step the USER has set. An untouched field follows the
+   * function's declared domain — the formula supplies defaults, nothing
+   * more — while a touched one is the user's answer and stays theirs.
+   */
+  touched?: { from?: boolean; to?: boolean; step?: boolean };
 }
 
 /** One sample: the coordinates, however many dimensions there are. */
@@ -39,7 +45,6 @@ export class SamplerWorker implements FbNodeWorker {
   private fn?: FnValue;
   private x = 0;
   private timer?: ReturnType<typeof setInterval>;
-  private adoptedRange?: string;
 
   /** The latest sample's y, for the node's own drawing. */
   current?: number;
@@ -62,16 +67,17 @@ export class SamplerWorker implements FbNodeWorker {
       this.fn = value;
 
       /*
-       * A function that declares its own domain fills the sampler's settings —
-       * that is what makes "this one is interesting from -5 to 5" travel with
-       * the function. Adopted only when the DECLARATION changes, so the user's
-       * own tweaks survive a formula edit that left the domain alone.
+       * The function's declared domain fills every field the user has not
+       * touched — the formula supplies DEFAULTS, and a default keeps
+       * following its source. A field the user set is theirs and stays
+       * theirs, whatever the formula later declares.
        */
-      const declared = value.xRange && JSON.stringify(value.xRange);
-
-      if (declared && declared !== this.adoptedRange) {
-        this.adoptedRange = declared;
-        Object.assign(this.config, value.xRange);
+      if (value.xRange) {
+        for (const key of ['from', 'to', 'step'] as const) {
+          if (!this.config.touched?.[key]) {
+            this.config[key] = value.xRange[key];
+          }
+        }
       }
 
       this.restart();

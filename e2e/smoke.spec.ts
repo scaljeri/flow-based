@@ -1042,11 +1042,29 @@ test('formula parameters and domain travel with the function', async ({ page }) 
       }, 100);
     });
 
+    /*
+     * The sampler stays the user's: touch a field and the formula's later
+     * declarations stop moving it, while untouched fields keep following.
+     */
+    const samplerWorker = editor.flow.getWorker(sampler.id);
+
+    sampler.config.to = 3;
+    sampler.config.touched = { to: true };
+    worker.setXRange('to', 8);
+    worker.setXRange('from', -2);
+    await new Promise(r => setTimeout(r, 100));
+
+    // The derivative takes its own words too.
+    editor.flow.getWorker(derivative.id).setLabel('title', 'slope');
+
     return {
       params: formula.config.params,
       derivedExpr: derived.expr.replace(/\s/g, ''),
       derivedAt2: editor.flow.getWorker(derivative.id).current.evaluate({ x: 2 }),
       samplerFrom: sampler.config.from,
+      samplerTouchedTo: sampler.config.to,
+      samplerFollowedFrom: sampler.config.from,
+      derivedTitle: editor.flow.getWorker(derivative.id).current.labels.title,
       labels,
     };
   });
@@ -1056,8 +1074,11 @@ test('formula parameters and domain travel with the function', async ({ page }) 
   expect(result.derivedExpr).toContain('a');
   // ...and a = 3 baked into evaluation: 2·3·2 = 12.
   expect(result.derivedAt2).toBe(12);
-  // The declared domain reached the sampler.
-  expect(result.samplerFrom).toBe(-5);
+  // The touched field is the user's; the untouched one kept following.
+  expect(result.samplerTouchedTo).toBe(3);
+  expect(result.samplerFollowedFrom).toBe(-2);
+  // The derivative's configured title stands on its outgoing value.
+  expect(result.derivedTitle).toBe('slope');
   // And the derivative's own introduction reached the plot's buffer.
   expect((result.labels as { y: string }).y).toBe("f'(x)");
 });
