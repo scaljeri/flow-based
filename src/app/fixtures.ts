@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 10 },
+  config: { seedVersion: 11 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -377,9 +377,12 @@ export const demo = () => ({
           '\n' +
           '$$i \\cdot i = -1$$\n' +
           '\n' +
-          'You may have seen this written as $i = \\sqrt{-1}$. Same idea, but ' +
-          '$i^2 = -1$ is the safer way to put it: $-i$ squares to $-1$ just as well, so ' +
-          'there is no single “the” square root to point at.\n' +
+          'You may have seen this written as $i = \\sqrt{-1}$. It comes to the same ' +
+          'thing, but $i^2 = -1$ is the safer way to put it. Think of $\\sqrt{9}$: it ' +
+          'means $3$ and not $-3$, even though both square to $9$ — the rule is to take ' +
+          'the positive one. For $-1$ that rule has nothing to grab. Both $i$ and $-i$ ' +
+          'square to $-1$, and neither of them is the positive one, so the square-root ' +
+          'sign has no way to choose.\n' +
           '\n' +
           'Now watch what that one line does on its own. Start at $1$ and keep ' +
           'multiplying by $i$:\n' +
