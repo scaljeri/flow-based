@@ -35,7 +35,22 @@ showing this app's cockpit.
     </button>
   }
 
-  <button type="button" mat-button (click)="openModal()" class="add">Add</button>
+  <!--
+  Add belongs to the canvas: in document mode it would put a node on a surface
+  the reader cannot see. So the right-hand button follows what is on screen —
+  Add while editing the graph, Edit while reading the page, Save and Cancel
+  while writing it.
+  -->
+  @if (showDoc) {
+    @if (editingDoc) {
+      <button type="button" mat-button class="doc-cancel" (click)="cancelDoc()">Cancel</button>
+      <button type="button" mat-button class="doc-save" (click)="saveDoc()">Save</button>
+    } @else {
+      <button type="button" mat-button class="doc-edit" (click)="editDoc()">Edit</button>
+    }
+  } @else {
+    <button type="button" mat-button (click)="openModal()" class="add">Add</button>
+  }
 
   <mat-menu #overflowMenu="matMenu">
     <button type="button" mat-menu-item class="undo" (click)="undo()" [disabled]="!history.canUndo()">
@@ -138,8 +153,9 @@ showing this app's cockpit.
     The document can ask for things the app decides on: `{{!flow:...}}` in the
     prose becomes a button, and this is where "flow" is given its meaning.
     -->
-    <fb-flow-document class="flow-as-doc" [editor]="editor" [mathRenderer]="mathRenderer"
-      (fb-doc-action)="onDocAction($event)"></fb-flow-document>
+    <fb-flow-document #docView class="flow-as-doc" [editor]="editor" [mathRenderer]="mathRenderer"
+      [editing]="editingDoc" (fb-doc-action)="onDocAction($event)"
+      (fb-doc-saved)="persistNow()"></fb-flow-document>
   }
 
   <!--

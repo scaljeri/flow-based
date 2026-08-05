@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, HostBinding, HostListener, NgZone, OnInit, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostBinding, HostListener, NgZone, OnInit, ViewChild, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
@@ -78,6 +78,37 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   /** Flipped briefly after a copy, so the share button can say it worked. */
   shareCopied = false;
+
+  /**
+   * Whether the document is being written rather than read.
+   *
+   * The document element owns the draft; this only says which mode it is in,
+   * because the buttons that drive it live in the toolbar rather than in the
+   * page. A document that was never authored still edits: the element starts
+   * from the one derived from the graph, which is how a document begins.
+   */
+  editingDoc = false;
+
+  @ViewChild('docView') docView?: ElementRef<HTMLElement & { save(): void; cancel(): void }>;
+
+  editDoc(): void {
+    this.editingDoc = true;
+  }
+
+  saveDoc(): void {
+    this.docView?.nativeElement.save();
+    this.editingDoc = false;
+  }
+
+  cancelDoc(): void {
+    this.docView?.nativeElement.cancel();
+    this.editingDoc = false;
+  }
+
+  /** The document wrote itself into the flow; put that on the shelf. */
+  persistNow(): void {
+    this.persist();
+  }
 
   /**
    * How the document view typesets TeX. Set the first time the view opens —
@@ -441,6 +472,12 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.showDoc = !this.showDoc;
     this.showJson = false;
     this.docOpened = this.docOpened || this.showDoc;
+
+    // Closing the page abandons an edit rather than hiding one: coming back to
+    // a document that is silently half-rewritten is worse than losing a draft.
+    if (!this.showDoc) {
+      this.editingDoc = false;
+    }
     // zone.js does not patch dynamic import(); after the await we are outside
     // the zone and nothing schedules a tick (see restoreFlow).
     this.cdr.detectChanges();

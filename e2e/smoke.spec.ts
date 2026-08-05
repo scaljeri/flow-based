@@ -1446,3 +1446,75 @@ test('a plot offers to add inputs but not outputs, and copies the declared forma
   expect(added.refused).toBeFalsy();
   expect(added.socket.formats).toEqual(['number', 'point', 'marks']);
 });
+
+/**
+ * Writing the document.
+ *
+ * A document is part of the flow's JSON, so editing one is an ordinary write
+ * to the graph — it persists with everything else, and travels with a
+ * download, a share link and an embed. A flow that never had a document edits
+ * the one derived from its own nodes, which is how a document comes into
+ * being: there is no separate act of creation.
+ */
+test('the document can be written, and what is written is part of the flow', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+  await menuAction(page, 'doc');
+
+  const doc = page.locator('fb-flow-document');
+
+  await expect(doc.locator('h1')).toHaveText('Imaginary numbers make a circle');
+
+  // Add belongs to the canvas; the document offers Edit in its place.
+  await expect(page.locator('mat-toolbar button.add')).toHaveCount(0);
+  await page.locator('button.doc-edit').click();
+
+  // The element re-renders on its own clock: wait for the editor to be there
+  // rather than for the click to have returned.
+  await expect(doc.locator('.edit-title input')).toBeVisible();
+
+  const blocks = doc.locator('.edit-block');
+  const before = await blocks.count();
+
+  expect(before).toBeGreaterThan(5);
+
+  await doc.locator('.edit-title input').fill('Written by hand');
+  await doc.locator('.edit-insert').first().locator('button', { hasText: '+ text' }).click();
+  await expect(blocks).toHaveCount(before + 1);
+
+  await page.locator('button.doc-save').click();
+
+  // Read back: the page shows it, and so does the flow it belongs to.
+  await expect(doc.locator('h1')).toHaveText('Written by hand');
+  expect(await page.evaluate(() => {
+    const state = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.state;
+
+    return { title: state.document?.title, blocks: state.document?.blocks.length };
+  })).toEqual({ title: 'Written by hand', blocks: before + 1 });
+
+  // A reload proves it was written rather than merely displayed.
+  await page.reload();
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { document?: { title?: string } } } })
+        ?.editor?.state?.document?.title), { timeout: 20_000 })
+    .toBe('Written by hand');
+});
+
+test('leaving the document abandons an unsaved edit', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+  await menuAction(page, 'doc');
+
+  await page.locator('button.doc-edit').click();
+  await expect(page.locator('fb-flow-document .edit-title input')).toBeVisible();
+  await page.locator('fb-flow-document .edit-title input').fill('Never saved');
+
+  // Cancel is one way out; leaving the view entirely is the other, and both
+  // have to drop the draft rather than keep it half-applied.
+  await menuAction(page, 'doc');
+  await menuAction(page, 'doc');
+
+  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers make a circle');
+  await expect(page.locator('button.doc-edit')).toBeVisible();
+});

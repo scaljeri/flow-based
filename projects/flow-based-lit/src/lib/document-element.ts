@@ -2,6 +2,7 @@ import { LitElement, PropertyValues, css, html, nothing } from 'lit';
 import {
   FbDocBlock,
   FbDocNodeBlock,
+  FbDocument,
   FbInline,
   FbNodeApi,
   FbNodeHandle,
@@ -10,6 +11,7 @@ import {
   componentFor,
   documentFor,
   isDisplayMath,
+  deepClone,
   paragraphsOf,
   parseInline,
   readConfigValue,
@@ -52,6 +54,7 @@ export class FbFlowDocumentElement extends LitElement {
     editor: { attribute: false },
     mathRenderer: { attribute: false },
     extraStyles: { attribute: false },
+    editing: { attribute: false },
   };
 
   static override styles = css`
@@ -354,6 +357,150 @@ export class FbFlowDocumentElement extends LitElement {
       clear: both;
     }
 
+    /* ------------------------------------------------------------------
+       Writing the page
+       ------------------------------------------------------------------
+       Deliberately plain: this is the machinery behind the page, and it
+       should not pretend to be the page. Blocks are boxes in a column, so
+       what you are rearranging is what the document actually IS.
+       ------------------------------------------------------------------ */
+
+    .page.editing {
+      font-family: 'Source Code Pro', ui-monospace, Menlo, monospace;
+      font-size: 0.9rem;
+    }
+
+    .edit-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .edit-title span {
+      color: var(--doc-ink-soft);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .page.editing input,
+    .page.editing textarea,
+    .page.editing select {
+      background: rgba(127, 127, 127, 0.12);
+      border: 1px solid rgba(127, 127, 127, 0.4);
+      border-radius: 6px;
+      color: inherit;
+      font: inherit;
+      padding: 6px 8px;
+      width: 100%;
+    }
+
+    .page.editing textarea {
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .page.editing select option {
+      background: var(--doc-paper);
+      color: var(--doc-ink);
+    }
+
+    .edit-block {
+      border: 1px solid rgba(127, 127, 127, 0.35);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .edit-tools {
+      align-items: center;
+      display: flex;
+      gap: 6px;
+    }
+
+    .edit-tools .kind {
+      color: var(--doc-ink-soft);
+      flex: 1;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .edit-tools button {
+      background: rgba(127, 127, 127, 0.15);
+      border: 1px solid rgba(127, 127, 127, 0.4);
+      border-radius: 6px;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      min-width: 30px;
+      padding: 2px 6px;
+    }
+
+    .edit-tools button:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
+
+    .edit-tools .remove {
+      border-color: rgba(255, 64, 129, 0.5);
+    }
+
+    .edit-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    /*
+     * Shares of the row, not content widths. Every field is 100% wide by
+     * default, which made a dropdown eat the whole row; sizing a select to its
+     * content instead let the longest node title push the fields beside it off
+     * the edge. A text field gets twice what a dropdown does, and a min-width
+     * of zero is what lets either of them shrink at all. (No backticks in
+     * here: this comment sits inside a tagged CSS template literal.)
+     */
+    .edit-row select {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .edit-row input {
+      flex: 2 1 0;
+      min-width: 0;
+    }
+
+    /*
+     * The insert bar is quiet until you go near it: one between every pair of
+     * blocks is a lot of furniture for something you need occasionally.
+     */
+    .edit-insert {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      opacity: 0.35;
+      padding: 6px 0;
+      transition: opacity 120ms ease;
+    }
+
+    .edit-insert:hover,
+    .edit-insert:focus-within {
+      opacity: 1;
+    }
+
+    .edit-insert button {
+      background: none;
+      border: 1px dashed rgba(127, 127, 127, 0.6);
+      border-radius: 6px;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.8rem;
+      padding: 2px 10px;
+    }
+
     @media (max-width: 640px) {
       :host {
         padding: 24px 18px 64px;
@@ -431,6 +578,20 @@ export class FbFlowDocumentElement extends LitElement {
   declare editor: FbEditor;
 
   /**
+   * Whether the page is being written rather than read.
+   *
+   * Editing works on a DRAFT — a copy of the document, taken when editing
+   * starts — so leaving without saving leaves nothing behind, and the reader's
+   * version is never half-rewritten while somebody types. A flow that has no
+   * document of its own gets the derived one as its draft, which is how a
+   * document comes into being here: you never create one, you edit the one the
+   * graph already implies and save it.
+   */
+  declare editing: boolean;
+
+  private draft?: FbDocument;
+
+  /**
    * How to typeset TeX. Optional, and unset by default on purpose.
    *
    * A document renderer that hard-wired KaTeX or MathJax would put a large
@@ -493,6 +654,77 @@ export class FbFlowDocumentElement extends LitElement {
     if (changed.has('editor')) {
       this.subscribe();
     }
+
+    if (changed.has('editing')) {
+      this.draft = this.editing ? deepClone(documentFor(this.editor.state)) : undefined;
+    }
+  }
+
+  /**
+   * Commit the draft to the flow.
+   *
+   * The document lives in the flow's own JSON, so saving is an ordinary write
+   * to the graph — it travels with a download, a share link and an embed,
+   * because those are all the same JSON. The host is told, since it owns
+   * whatever persistence there is.
+   */
+  save(): void {
+    if (!this.draft) {
+      return;
+    }
+
+    this.editor.state.document = deepClone(this.draft);
+    this.dispatchEvent(new CustomEvent('fb-doc-saved', { bubbles: true, composed: true }));
+    this.editing = false;
+  }
+
+  /** Leave without writing. The draft is dropped by willUpdate. */
+  cancel(): void {
+    this.editing = false;
+  }
+
+  /** Which nodes a figure block can point at. */
+  private get figureChoices(): { id: number; label: string }[] {
+    return (this.editor.state.children ?? [])
+      .filter(node => node.id !== undefined)
+      .map(node => ({ id: node.id!, label: node.title || node.type }));
+  }
+
+  private editBlocks(): FbDocBlock[] {
+    return this.draft?.blocks ?? [];
+  }
+
+  private touchDraft(): void {
+    this.requestUpdate();
+  }
+
+  private moveBlock(index: number, by: -1 | 1): void {
+    const blocks = this.editBlocks();
+    const to = index + by;
+
+    if (to < 0 || to >= blocks.length) {
+      return;
+    }
+
+    [blocks[index], blocks[to]] = [blocks[to], blocks[index]];
+    this.touchDraft();
+  }
+
+  private removeBlock(index: number): void {
+    this.editBlocks().splice(index, 1);
+    this.touchDraft();
+  }
+
+  private insertBlock(index: number, kind: FbDocBlock['type']): void {
+    const first = this.figureChoices[0]?.id;
+    const block: FbDocBlock = kind === 'heading'
+      ? { type: 'heading', text: 'New section', level: 2 }
+      : kind === 'text'
+        ? { type: 'text', text: 'Write here.' }
+        : { type: 'node', nodeId: first ?? 0, float: 'right' };
+
+    this.editBlocks().splice(index, 0, block);
+    this.touchDraft();
   }
 
   private subscribe(): void {
@@ -700,6 +932,10 @@ export class FbFlowDocumentElement extends LitElement {
       return nothing;
     }
 
+    if (this.editing && this.draft) {
+      return this.renderEditor(this.draft);
+    }
+
     const doc = documentFor(this.editor.state);
 
     return html`
@@ -710,6 +946,157 @@ export class FbFlowDocumentElement extends LitElement {
         `)}
         <div class="end"></div>
       </article>
+    `;
+  }
+
+  /**
+   * The page, being written.
+   *
+   * Text and headings show their SOURCE — the asterisks, the dollars, the
+   * {{node:path}} pills — because half of what this syntax can say has no
+   * visual form to drag around: an editable value and a button that asks the
+   * host for something are not styling. A figure is not text at all, so it
+   * shows what it actually is: which node, which side, how wide, what caption,
+   * with the live node still drawing above the controls.
+   */
+  private renderEditor(draft: FbDocument) {
+    const blocks = draft.blocks;
+
+    return html`
+      <article class="page editing">
+        <label class="edit-title">
+          <span>Title</span>
+          <input
+            type="text"
+            .value=${live(draft.title ?? '')}
+            @input=${(event: Event) => {
+              draft.title = (event.target as HTMLInputElement).value;
+              this.touchDraft();
+            }}>
+        </label>
+
+        ${this.renderInsert(0)}
+
+        ${blocks.map((block, index) => html`
+          <div class="edit-block">
+            <div class="edit-tools">
+              <span class="kind">${block.type}</span>
+              <button type="button" title="Move up" ?disabled=${index === 0}
+                @click=${() => this.moveBlock(index, -1)}>↑</button>
+              <button type="button" title="Move down" ?disabled=${index === blocks.length - 1}
+                @click=${() => this.moveBlock(index, 1)}>↓</button>
+              <button type="button" class="remove" title="Remove"
+                @click=${() => this.removeBlock(index)}>✕</button>
+            </div>
+
+            ${this.renderBlockEditor(block)}
+          </div>
+
+          ${this.renderInsert(index + 1)}
+        `)}
+
+        <div class="end"></div>
+      </article>
+    `;
+  }
+
+  private renderInsert(index: number) {
+    return html`
+      <div class="edit-insert">
+        <button type="button" @click=${() => this.insertBlock(index, 'heading')}>+ heading</button>
+        <button type="button" @click=${() => this.insertBlock(index, 'text')}>+ text</button>
+        <button type="button" @click=${() => this.insertBlock(index, 'node')}>+ figure</button>
+      </div>
+    `;
+  }
+
+  private renderBlockEditor(block: FbDocBlock) {
+    if (block.type === 'heading') {
+      return html`
+        <div class="edit-row">
+          <select
+            .value=${live(String(block.level ?? 2))}
+            @change=${(event: Event) => {
+              block.level = Number((event.target as HTMLSelectElement).value);
+              this.touchDraft();
+            }}>
+            <option value="2">Section</option>
+            <option value="3">Sub-section</option>
+          </select>
+
+          <input
+            type="text"
+            class="grow"
+            .value=${live(block.text)}
+            @input=${(event: Event) => {
+              block.text = (event.target as HTMLInputElement).value;
+              this.touchDraft();
+            }}>
+        </div>
+      `;
+    }
+
+    if (block.type === 'text') {
+      return html`
+        <textarea
+          rows=${Math.max(3, block.text.split('\n').length + 1)}
+          .value=${live(block.text)}
+          @input=${(event: Event) => {
+            block.text = (event.target as HTMLTextAreaElement).value;
+            this.touchDraft();
+          }}></textarea>
+      `;
+    }
+
+    return html`
+      <!-- The figure keeps drawing while it is arranged: this is the same slot
+           the reading view uses, so the node is never unmounted for an edit. -->
+      <figure class="float-none" style="width:${block.width ?? '320px'}">
+        <div class="figure-body"><slot name="fig-${block.nodeId}"></slot></div>
+      </figure>
+
+      <div class="edit-row">
+        <select
+          .value=${live(String(block.nodeId))}
+          @change=${(event: Event) => {
+            block.nodeId = Number((event.target as HTMLSelectElement).value);
+            this.touchDraft();
+          }}>
+          ${this.figureChoices.map(choice => html`
+            <option value=${choice.id}>${choice.label}</option>
+          `)}
+        </select>
+
+        <select
+          .value=${live(block.float ?? 'none')}
+          @change=${(event: Event) => {
+            block.float = (event.target as HTMLSelectElement).value as FbDocNodeBlock['float'];
+            this.touchDraft();
+          }}>
+          <option value="right">Right</option>
+          <option value="left">Left</option>
+          <option value="none">Centred</option>
+        </select>
+
+        <input
+          type="text"
+          placeholder="width, e.g. 320px"
+          .value=${live(block.width ?? '')}
+          @input=${(event: Event) => {
+            block.width = (event.target as HTMLInputElement).value || undefined;
+            this.touchDraft();
+          }}>
+      </div>
+
+      <input
+        type="text"
+        class="grow"
+        placeholder="Caption"
+        .value=${live(block.caption ?? '')}
+        @input=${(event: Event) => {
+          block.caption = (event.target as HTMLInputElement).value || undefined;
+          this.touchDraft();
+        }}>
     `;
   }
 
