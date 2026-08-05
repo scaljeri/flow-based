@@ -80,6 +80,29 @@ export class FbNodeSettingsElement extends LitElement {
     .panel {
       max-height: calc(80vh - 32px);
       overflow: auto;
+      /*
+       * Room for a scrollbar that takes none. A phone's scrollbar is an
+       * OVERLAY: it floats on the content instead of narrowing it, so the
+       * right-hand column of keys and the right edge of every field sat
+       * underneath it. Desktop scrollbars do reserve their own width, which is
+       * why this only ever showed up on a phone.
+       */
+      padding-right: 12px;
+    }
+
+    /*
+     * The title bar of the panel stays put while its contents scroll: the way
+     * out of a long panel should not be somewhere up the page. Nearly opaque
+     * rather than the dialog's own translucent black, because text passes
+     * underneath it.
+     */
+    .panel > header {
+      background: rgba(18, 18, 22, 0.97);
+      margin: -4px 0 12px;
+      padding: 4px 0;
+      position: sticky;
+      top: 0;
+      z-index: 3;
     }
 
     /*
@@ -177,6 +200,12 @@ export class FbNodeSettingsElement extends LitElement {
       display: flex;
       justify-content: space-between;
       margin-bottom: 12px;
+    }
+
+    /* A bigger target than a text glyph deserves on a touch screen. */
+    .panel > header button {
+      min-height: 32px;
+      min-width: 32px;
     }
 
     .config header strong {
