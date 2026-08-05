@@ -219,6 +219,9 @@ export class AppComponent implements OnInit, AfterViewInit {
   /** The pollution flow, seeded the same way and for the same reasons. */
   private static readonly POLLUTION_ID = 'pollution-seed';
 
+  /** The two TOPAS networks on one map. */
+  private static readonly TNO_ID = 'tno-seed';
+
   private async restoreFlow(): Promise<void> {
     /*
      * Modules FIRST, flow second. A saved flow can speak module types, and
@@ -237,6 +240,7 @@ export class AppComponent implements OnInit, AfterViewInit {
      */
     this.seed(AppComponent.DEMO_ID, data.demo() as FbNodeState);
     this.seed(AppComponent.POLLUTION_ID, data.pollution() as FbNodeState);
+    this.seed(AppComponent.TNO_ID, data.tno() as FbNodeState);
 
     const id = this.store.currentId();
     const saved = id ? this.store.load(id) : null;

@@ -971,7 +971,7 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
 
   // Both shipped flows plus the new one: the shelf holds what was seeded and
   // what was made, which is the whole point of it.
-  await expect(page.locator('fb-flows-dialog li')).toHaveCount(3);
+  await expect(page.locator('fb-flows-dialog li')).toHaveCount(4);
 });
 
 /**

@@ -829,3 +829,103 @@ export const pollution = () => ({
     { id: 1001, from: 150, to: 200, out: 161, in: 210 },
   ],
 });
+
+/**
+ * The two measuring networks TOPAS publishes, on one map.
+ *
+ * A second flow rather than more nodes in the first: `pollution` answers
+ * "where is it measured officially", this one asks what the picture looks
+ * like when the citizen sensors are drawn beside it — 93 instruments against
+ * three thousand, which is a fact about the data worth seeing rather than
+ * reading.
+ *
+ * Two chains into ONE map, on two input sockets, so the layer order is the
+ * node's socket order: the sparse official network sits on top of the dense
+ * citizen one and stays findable.
+ *
+ * Only the official stations carry labels. The citizen sensors have no names
+ * in the file at all, and three thousand tooltips would be a wall of text
+ * where a map should be — so their `limit` is the interesting knob instead.
+ *
+ * A function, because ids must be fresh per creation.
+ */
+export const tno = () => ({
+  id: 1,
+  type: 'flow',
+  title: 'tno',
+  config: { seedVersion: 1 },
+  sockets: [],
+  children: [
+    {
+      type: 'net-request',
+      title: 'Official network',
+      id: 100,
+      config: { url: '../tno-topas/lml.json', method: 'GET', every: 0 },
+      sockets: [
+        { id: 109, type: 'in', name: 'when' },
+        { id: 110, type: 'out', format: 'data' },
+      ],
+      position: { x: 4, y: 6 },
+    },
+    {
+      type: 'data-pick',
+      title: 'Stations',
+      id: 150,
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: 'name', limit: 200 },
+      sockets: [
+        { id: 160, type: 'in', format: 'data' },
+        { id: 161, type: 'out', formats: ['geo', 'point', 'number'] },
+      ],
+      position: { x: 26, y: 6 },
+    },
+    {
+      type: 'net-request',
+      title: 'Citizen sensors',
+      id: 200,
+      config: { url: '../tno-topas/samenmeten.json', method: 'GET', every: 0 },
+      sockets: [
+        { id: 209, type: 'in', name: 'when' },
+        { id: 210, type: 'out', format: 'data' },
+      ],
+      position: { x: 4, y: 30 },
+    },
+    {
+      type: 'data-pick',
+      title: 'Sensors',
+      id: 250,
+      /*
+       * No label field: the file has no names, and a tooltip per sensor would
+       * bury the map it is drawn on. The limit is deliberately short of all
+       * 3166 — raise it in the panel and watch what that costs.
+       */
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', limit: 400 },
+      sockets: [
+        { id: 260, type: 'in', format: 'data' },
+        { id: 261, type: 'out', formats: ['geo', 'point', 'number'] },
+      ],
+      position: { x: 26, y: 30 },
+    },
+    {
+      type: 'graph-map',
+      title: 'Both networks',
+      id: 300,
+      config: { track: false, follow: true },
+      /*
+       * The dense set first, the sparse one second: a socket declared later
+       * is drawn later, and the 93 official stations would vanish under four
+       * hundred sensors the other way round.
+       */
+      sockets: [
+        { id: 310, type: 'in', formats: ['geo'] },
+        { id: 311, type: 'in', formats: ['geo'] },
+      ],
+      position: { x: 50, y: 14 },
+    },
+  ],
+  connections: [
+    { id: 1000, from: 100, to: 150, out: 110, in: 160 },
+    { id: 1001, from: 200, to: 250, out: 210, in: 260 },
+    { id: 1002, from: 250, to: 300, out: 261, in: 310 },
+    { id: 1003, from: 150, to: 300, out: 161, in: 311 },
+  ],
+});
