@@ -1201,6 +1201,28 @@ test('the demo reads as a document with typeset math and live figures', async ({
       .editor.nodeById(1000).config.x.to)).toBe(3);
 
   /*
+   * A keystroke is a value: the figures answer while you type, not once you
+   * leave the field. Half-typed text that cannot parse yet is simply not
+   * written, and the field keeps it rather than snapping back mid-word.
+   */
+  await arc.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('5');
+
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.nodeById(1000).config.x.to)).toBe(5);
+
+  await page.keyboard.type('.');
+
+  await expect(arc).toHaveValue('5.');
+  expect(await page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.nodeById(1000).config.x.to)).toBe(5);
+
+  await arc.press('Enter');
+
+  /*
    * The walk itself: a set of named points, one of them current, and the
    * current one moves on its own. Sampled rather than asserted once — the
    * whole claim is that it is running.

@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 20 },
+  config: { seedVersion: 21 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -546,7 +546,7 @@ export const demo = () => ({
         x: { from: 0, to: 8, step: 0.02 },
       },
       sockets: [{ id: 410, type: 'out', format: 'function' }],
-      position: { x: 4, y: 4 },
+      position: { x: 2, y: 4 },
     },
     {
       type: 'math-derivative',
@@ -556,7 +556,7 @@ export const demo = () => ({
         { id: 510, type: 'in', format: 'function' },
         { id: 511, type: 'out', format: 'function' },
       ],
-      position: { x: 54, y: 4 },
+      position: { x: 26, y: 4 },
     },
     {
       type: 'math-sampler',
@@ -567,7 +567,7 @@ export const demo = () => ({
         { id: 610, type: 'in', format: 'function' },
         { id: 611, type: 'out', format: 'point' },
       ],
-      position: { x: 6, y: 20 },
+      position: { x: 2, y: 22 },
     },
     {
       type: 'math-sampler',
@@ -578,7 +578,7 @@ export const demo = () => ({
         { id: 710, type: 'in', format: 'function' },
         { id: 711, type: 'out', format: 'point' },
       ],
-      position: { x: 56, y: 20 },
+      position: { x: 26, y: 22 },
     },
     {
       type: 'graph-timeseries',
@@ -586,7 +586,7 @@ export const demo = () => ({
       id: 200,
       config: { style: 'line' },
       sockets: [{ id: 210, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 2, y: 34 },
+      position: { x: 2, y: 42 },
     },
     {
       type: 'graph-timeseries',
@@ -594,14 +594,14 @@ export const demo = () => ({
       id: 800,
       config: { style: 'line' },
       sockets: [{ id: 810, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 52, y: 34 },
+      position: { x: 26, y: 42 },
     },
     {
       type: 'graph-complex',
       title: 'Complex plane',
       id: 900,
       sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 27, y: 48 },
+      position: { x: 2, y: 64 },
     },
     {
       type: 'math-formula',
@@ -623,7 +623,7 @@ export const demo = () => ({
         x: { from: 0, to: 6.3, step: 0.02 },
       },
       sockets: [{ id: 1010, type: 'out', format: 'function' }],
-      position: { x: 78, y: 4 },
+      position: { x: 50, y: 4 },
     },
     {
       type: 'math-sampler',
@@ -634,7 +634,7 @@ export const demo = () => ({
         { id: 1110, type: 'in', format: 'function' },
         { id: 1111, type: 'out', format: 'point' },
       ],
-      position: { x: 80, y: 20 },
+      position: { x: 50, y: 22 },
     },
     {
       type: 'graph-complex',
@@ -652,7 +652,7 @@ export const demo = () => ({
         { id: 1211, type: 'in', formats: ['number', 'point', 'marks'] },
         { id: 1212, type: 'in', formats: ['number', 'point', 'marks'] },
       ],
-      position: { x: 77, y: 34 },
+      position: { x: 50, y: 42 },
     },
     {
       type: 'math-points',
@@ -677,14 +677,14 @@ export const demo = () => ({
       // Near the plane it feeds, not across the canvas from it: this node's
       // marks go to two plots, and from the far corner one of those wires
       // crossed every other node on the way.
-      position: { x: 58, y: 48 },
+      position: { x: 76, y: 4 },
     },
     {
       type: 'graph-complex',
       title: 'Four powers of i',
       id: 1500,
       sockets: [{ id: 1510, type: 'in', formats: ['number', 'point', 'marks'] }],
-      position: { x: 58, y: 62 },
+      position: { x: 76, y: 22 },
     },
     {
       type: 'math-sampler',
@@ -708,7 +708,7 @@ export const demo = () => ({
         { id: 1610, type: 'in', format: 'function' },
         { id: 1611, type: 'out', format: 'point' },
       ],
-      position: { x: 66, y: 34 },
+      position: { x: 64, y: 22 },
     },
     {
       type: 'graph-timeseries',
@@ -726,7 +726,7 @@ export const demo = () => ({
       sockets: [{ id: 1310, type: 'in', formats: ['number', 'point'] }],
       // Clear of the plot above it, LABEL included: 14% of the canvas left this
       // box sitting on the unit circle's caption in the flow view.
-      position: { x: 77, y: 56 },
+      position: { x: 50, y: 64 },
     },
   ],
   /*

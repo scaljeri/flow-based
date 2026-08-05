@@ -350,6 +350,9 @@ export class FbFlowCanvasElement extends LitElement {
      */
     if (rect.width && rect.height) {
       this.editor?.viewport.setPlaneSize(rect.width, rect.height);
+      // A plane bigger than the screen it opened on is shown whole, not
+      // cropped to its top-left corner.
+      this.editor?.viewport.fitPlane(rect);
 
       return;
     }
@@ -359,6 +362,7 @@ export class FbFlowCanvasElement extends LitElement {
 
       if (measured.width && measured.height) {
         this.editor?.viewport.setPlaneSize(measured.width, measured.height);
+        this.editor?.viewport.fitPlane(measured);
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
       }

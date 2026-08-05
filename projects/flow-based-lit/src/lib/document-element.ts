@@ -797,8 +797,15 @@ export class FbFlowDocumentElement extends LitElement {
       return html`<code>{{${token.nodeId}:${token.path}}}</code>`;
     }
 
-    const text = String(value);
+    const key = `${token.nodeId}:${token.path}`;
     const numeric = typeof value === 'number';
+    /*
+     * While a pill is being typed in, the field shows what was TYPED, not what
+     * was committed. Every keystroke writes through, and the re-render that
+     * follows would otherwise rewrite the field from the committed value —
+     * turning "0.30" into "0.3" under the caret, and "1e" into nothing.
+     */
+    const text = this.typing === key ? this.typed : String(value);
     // A numeric pill carries the chevron gutter inside its border box, so the
     // width has to grant that gutter back or the digits get clipped.
     const width = numeric
@@ -811,13 +818,46 @@ export class FbFlowDocumentElement extends LitElement {
       inputmode=${numeric ? 'decimal' : 'text'}
       style="width:${width}"
       .value=${live(text)}
+      @input=${(event: Event) => this.onConfigInputTyped(token, event.target as HTMLInputElement)}
       @change=${(event: Event) => this.commitConfigInput(token, event.target as HTMLInputElement)}
+      @blur=${() => this.endTyping()}
       @keydown=${(event: KeyboardEvent) => this.onConfigInputKey(token, event)}
       @pointerdown=${(event: PointerEvent) => this.onConfigPointerDown(token, event)}
       @pointermove=${(event: PointerEvent) => this.onConfigPointerMove(event)}
       @pointerup=${(event: PointerEvent) => this.onConfigPointerUp(event)}
       @pointercancel=${(event: PointerEvent) => this.onConfigPointerCancel(event)}
     >`;
+  }
+
+  /** Which pill is being typed in, as `nodeId:path`, and the text so far. */
+  private typing?: string;
+  private typed = '';
+
+  /**
+   * A keystroke is a value.
+   *
+   * Waiting for blur made the figures answer a beat after the reader stopped
+   * typing, which reads as lag rather than as cause and effect. Text that does
+   * not parse is simply not written yet — the field keeps it, and the next
+   * keystroke may well complete it, so a half-typed "-" or "0." is a pause
+   * rather than an error.
+   */
+  private onConfigInputTyped(token: { nodeId: number; path: string }, input: HTMLInputElement): void {
+    this.typing = `${token.nodeId}:${token.path}`;
+    this.typed = input.value;
+
+    this.commitConfigInput(token, input, { silent: true });
+  }
+
+  private endTyping(): void {
+    if (this.typing === undefined) {
+      return;
+    }
+
+    this.typing = undefined;
+    this.typed = '';
+    // Back to the committed value, which is what puts unparseable text right.
+    this.requestUpdate();
   }
 
   private onConfigInputKey(token: { nodeId: number; path: string }, event: KeyboardEvent): void {
@@ -881,7 +921,18 @@ export class FbFlowDocumentElement extends LitElement {
     );
   }
 
-  private commitConfigInput(token: { nodeId: number; path: string }, input: HTMLInputElement): void {
+  /**
+   * Write what the field says, if it says anything writable.
+   *
+   * `silent` is the mid-typing call: a value that does not parse yet must not
+   * snap the field back, because the reader is still in the middle of writing
+   * it. On commit — blur, Enter — the same bad value does snap back.
+   */
+  private commitConfigInput(
+    token: { nodeId: number; path: string },
+    input: HTMLInputElement,
+    options: { silent?: boolean } = {},
+  ): void {
     const node = this.editor.nodeById(token.nodeId);
     const current = node ? readConfigValue(node.config, token.path) : undefined;
     const raw = input.value.trim();
@@ -898,7 +949,9 @@ export class FbFlowDocumentElement extends LitElement {
       const parsed = Number(raw.replace(',', '.'));
 
       if (raw === '' || Number.isNaN(parsed)) {
-        this.requestUpdate();
+        if (!options.silent) {
+          this.requestUpdate();
+        }
 
         return;
       }

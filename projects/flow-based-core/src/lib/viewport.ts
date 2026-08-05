@@ -5,6 +5,19 @@ export const FB_ZOOM_MIN = 0.2;
 export const FB_ZOOM_MAX = 4;
 
 /**
+ * The smallest the graph plane is ever taken to be, in CSS pixels.
+ *
+ * Node positions are percentages of the plane, while nodes themselves are a
+ * fixed pixel size — so a plane the width of a phone made 6% mean 23px, and a
+ * layout that reads cleanly on a laptop arrived as a heap. Below this size the
+ * plane stops following the container and the surface scrolls instead, which
+ * is what pan and zoom are for. Above it nothing changes — the height is
+ * deliberately short of any desktop window, so only genuinely narrow screens
+ * are affected.
+ */
+export const FB_PLANE_MIN: FbSize = { width: 1200, height: 600 };
+
+/**
  * Zoom and pan for one editor surface.
  *
  * Node positions are percentages, but of a fixed-size graph *plane* rather than
@@ -44,9 +57,47 @@ export class FbViewport {
 
   setPlaneSize(width: number, height: number): void {
     if (width > 0 && height > 0 && this.plane.width === 0) {
-      this.plane = { width, height };
+      // Never smaller than the design size: see FB_PLANE_MIN. A flow is laid
+      // out once and has to arrive the same way on every screen.
+      this.plane = {
+        width: Math.max(width, FB_PLANE_MIN.width),
+        height: Math.max(height, FB_PLANE_MIN.height),
+      };
       this.changes.emit();
     }
+  }
+
+  /**
+   * Zoom out far enough to show the whole plane, when it does not fit.
+   *
+   * Only ever out, never in: a screen with room to spare shows the graph at
+   * its own size, and a phone opens on the whole flow rather than on whichever
+   * node happens to sit in the top-left corner.
+   */
+  fitPlane(viewport: FbSize): void {
+    if (!this.plane.width || !viewport.width || !viewport.height) {
+      return;
+    }
+
+    const fit = Math.min(viewport.width / this.plane.width, viewport.height / this.plane.height);
+
+    if (fit >= 1) {
+      return;
+    }
+
+    this.zoomLevel = Math.max(FB_ZOOM_MIN, fit);
+
+    /*
+     * Centred in whatever room is left over. Fitting takes the smaller of the
+     * two ratios, so one axis is filled and the other has slack — and with the
+     * slack all at the far end the graph opened pinned to a corner with an
+     * empty half-screen under it.
+     */
+    this.panOffset = {
+      x: Math.max(0, (viewport.width - this.plane.width * this.zoomLevel) / 2),
+      y: Math.max(0, (viewport.height - this.plane.height * this.zoomLevel) / 2),
+    };
+    this.changes.emit();
   }
 
   /** CSS transform for the plane element. Assumes `transform-origin: 0 0`. */
