@@ -31,13 +31,6 @@ mat-toolbar {
   height: 64px;
   user-select: none;
 
-  .actions {
-    align-items: center;
-    display: flex;
-    flex: 0 0 auto;
-    gap: var(--fb-gutter-size);
-  }
-
   /*
    * The title takes what is left and truncates.
    *
@@ -56,31 +49,14 @@ mat-toolbar {
     white-space: nowrap;
   }
 
-  /* Shown only when the secondary actions are folded away. */
-  .overflow {
-    display: none;
+  .overflow,
+  .add,
+  .problems {
+    flex: 0 0 auto;
   }
 }
 
-/*
- * Below this the secondary actions do not fit beside the title — 528px of
- * buttons on a 390px screen — so they fold into a menu. The primary three stay:
- * adding a node and undoing it are what the toolbar is for.
- */
-@media (max-width: 720px) {
-  mat-toolbar {
-    .secondary-actions,
-    .collapses {
-      display: none;
-    }
-
-    .overflow {
-      display: inline-flex;
-    }
-  }
-}
-
-/* Narrower still, the title is the first thing worth losing: it is also the
+/* Narrow enough that the title is the first thing worth losing: it is also the
    document title, so nothing is actually lost. */
 @media (max-width: 420px) {
   mat-toolbar .title {

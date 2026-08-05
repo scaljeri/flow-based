@@ -46,6 +46,18 @@ async function deleteNode(page: import('@playwright/test').Page, index = 0): Pro
   await page.waitForTimeout(250);
 }
 
+/**
+ * Run one of the toolbar's commands.
+ *
+ * They all live in the menu — Add is the only button in the bar — so a test
+ * that clicks a command has to open the menu first, the way a user does.
+ */
+async function menuAction(page: import('@playwright/test').Page, action: string): Promise<void> {
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator(`.cdk-overlay-container button.${action}`).click();
+  await page.waitForTimeout(150);
+}
+
 async function waitUntilReady(page: import('@playwright/test').Page): Promise<void> {
   /*
    * The demo flow arrives ASYNCHRONOUSLY on a fresh profile — the app first
@@ -313,12 +325,22 @@ test('undoes and redoes a node deletion', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
 
-  const undo = page.locator('mat-toolbar button.undo');
-  const redo = page.locator('mat-toolbar button.redo');
+  // Undo and redo live in the menu with every other command, so their state is
+  // read there too: opened, acted on, and closed again.
+  const menuState = async (action: string) => {
+    await page.locator('mat-toolbar button.overflow').click();
+
+    const disabled = await page.locator(`.cdk-overlay-container button.${action}`).isDisabled();
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+
+    return disabled;
+  };
 
   // Nothing has happened yet, so there is nothing to undo.
-  await expect(undo).toBeDisabled();
-  await expect(redo).toBeDisabled();
+  expect(await menuState('undo')).toBe(true);
+  expect(await menuState('redo')).toBe(true);
 
   const before = await page.locator('fb-node-box').count();
   const socketsBefore = await page.locator('fb-node-box .socket').count();
@@ -327,17 +349,17 @@ test('undoes and redoes a node deletion', async ({ page }) => {
   await page.locator('body')
     .click({ force: true });
   await expect(page.locator('fb-node-box')).toHaveCount(before - 1);
-  await expect(undo).toBeEnabled();
+  expect(await menuState('undo')).toBe(false);
 
-  await undo.click();
+  await menuAction(page, 'undo');
   await expect(page.locator('fb-node-box')).toHaveCount(before);
   // The restored node's sockets must come back with it, and be re-registered —
   // otherwise its connections would render as empty paths.
   await expect(page.locator('fb-node-box .socket')).toHaveCount(socketsBefore);
   expect(await worstEndpointError(page)).toBeLessThan(1);
 
-  await expect(redo).toBeEnabled();
-  await redo.click();
+  expect(await menuState('redo')).toBe(false);
+  await menuAction(page, 'redo');
   await expect(page.locator('fb-node-box')).toHaveCount(before - 1);
 
   expect(errors).toEqual([]);
@@ -386,7 +408,7 @@ test('drags a node and its connections follow', async ({ page }) => {
 test('toggles the JSON view, which is the serialisable flow state', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('mat-toolbar button.json').click();
+  await menuAction(page, 'json');
 
   const json = page.locator('article.flow-as-json pre');
   await expect(json).toBeVisible();
@@ -770,8 +792,7 @@ test('data type colours are set from the menu, and can be switched off', async (
   expect(await lineColours()).toContain('#9988cf');
   expect(await lineColours()).toContain('#c77d0a');
 
-  await page.locator('mat-toolbar button.overflow').click();
-  await page.locator('button.type-colors').click();
+  await menuAction(page, 'type-colors');
 
   const dialog = page.locator('fb-type-colors');
   await expect(dialog).toBeVisible();
@@ -1151,7 +1172,7 @@ test('the demo reads as a document with typeset math and live figures', async ({
   await page.goto('/');
   await waitUntilReady(page);
 
-  await page.click('button.doc');
+  await menuAction(page, 'doc');
 
   const doc = page.locator('fb-flow-document');
 
@@ -1244,7 +1265,7 @@ test('the demo reads as a document with typeset math and live figures', async ({
   expect(visited.size).toBeGreaterThan(1);
 
   // Back to the flow: the editor was hidden, not destroyed, and still stands.
-  await page.click('button.doc');
+  await menuAction(page, 'doc');
   await expect(page.locator('fb-node-box').first()).toBeVisible();
   await expect(doc).toHaveCount(0);
 });
@@ -1304,13 +1325,18 @@ test('the share button appears with the document and confirms the copy', async (
   await page.goto('/');
   await waitUntilReady(page);
 
-  // No document on screen, no share button — the link it copies IS the document.
-  await expect(page.locator('button.share')).toHaveCount(0);
+  // No document on screen, no share command — the link it copies IS the document.
+  await page.locator('mat-toolbar button.overflow').click();
+  await expect(page.locator('.cdk-overlay-container button.share')).toHaveCount(0);
+  await page.keyboard.press('Escape');
 
-  await page.click('button.doc');
-  await page.click('button.share');
+  await menuAction(page, 'doc');
+  await menuAction(page, 'share');
 
-  await expect(page.locator('button.share mat-icon')).toHaveText('check');
+  // Reopened, the command confirms what it just did.
+  await page.locator('mat-toolbar button.overflow').click();
+  await expect(page.locator('.cdk-overlay-container button.share')).toContainText('Link copied');
+  await page.keyboard.press('Escape');
 
   const copied = await page.evaluate(() => navigator.clipboard.readText());
 

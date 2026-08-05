@@ -1,128 +1,83 @@
 <!--
-The toolbar is a real flex row: buttons, then a title that takes what is left.
-It used to centre the title with the buttons absolutely positioned on top of it,
-so nothing kept them apart — on a landscape phone the title ran straight over
-the download, upload, warning and JSON buttons.
+The toolbar is three things: a menu on the left, a title that takes what is
+left, and Add on the right.
 
-In embed mode (?embed=doc) it is gone entirely: the share link promises the
-article alone, and an iframe on someone else's page has no business showing
-this app's cockpit.
+Everything else lives in the menu, at every screen size. Splitting the actions
+between an inline row and a fold-away menu meant maintaining two copies of the
+same commands and a breakpoint to choose between them — and on a landscape
+phone the inline row still filled the bar to its last twenty pixels. It also
+put two unlabelled arrows on a touch screen: their tooltips only appear on
+hover, and a phone has none, so download and upload were a guess. In the menu
+every command carries its own words.
+
+In embed mode (?embed=doc) the bar is gone entirely: the share link promises
+the article alone, and an iframe on someone else's page has no business
+showing this app's cockpit.
 -->
 @if (!embed) {
 <mat-toolbar [color]="'primary'">
-  <div class="actions primary-actions">
-    <button type="button" mat-button (click)="openModal()" class="add">Add</button>
-
-    <button type="button" mat-button class="undo collapses" (click)="undo()"
-      [disabled]="!history.canUndo()" matTooltip="Undo (Ctrl+Z)" aria-label="Undo">
-      <mat-icon>undo</mat-icon>
-    </button>
-
-    <button type="button" mat-button class="redo collapses" (click)="redo()"
-      [disabled]="!history.canRedo()" matTooltip="Redo (Ctrl+Shift+Z)" aria-label="Redo">
-      <mat-icon>redo</mat-icon>
-    </button>
-  </div>
+  <button type="button" mat-icon-button class="overflow" [matMenuTriggerFor]="overflowMenu"
+    aria-label="Menu">
+    <mat-icon>menu</mat-icon>
+  </button>
 
   <span class="title">Flow based programming</span>
 
   <!--
-  Secondary actions. Shown inline when there is room, and folded into the menu
-  below when there is not — 528px of buttons does not fit a phone whatever the
-  title does.
+  Validation stays in the bar, alone among the commands: it is not something
+  you go looking for, it is the editor telling you something is wrong, and an
+  alert behind a menu is not an alert. It appears only when there is one.
   -->
-  <div class="actions secondary-actions">
-    <button type="button" mat-button class="save" (click)="save()"
-      matTooltip="Download this flow as JSON" aria-label="Download this flow as JSON">
-      <mat-icon>download</mat-icon>
-    </button>
-
-    <button type="button" mat-button class="load" (click)="fileInput.click()"
-      matTooltip="Load a flow from JSON" aria-label="Load a flow from JSON">
-      <mat-icon>upload</mat-icon>
-    </button>
-
-    <!--
-    Validation surface. The engine reports unresolved socket formats and graph
-    cycles through Flow.lastPropagation; previously the only signal was a
-    console.warn that said nothing about which sockets were wrong.
-    -->
-    @if (problemCount > 0) {
-      <button type="button" mat-button class="problems"
-        [matTooltip]="validationDetail">
-        <mat-icon>warning</mat-icon>
-        {{problemCount}}
-      </button>
-    }
-
-    <button type="button" mat-button (click)="showJSON()" class="json">{{showJson ? 'Flow' : 'JSON'}}</button>
-
-    <button type="button" mat-button (click)="toggleDoc()" class="doc"
-      matTooltip="Read this flow as a document">{{showDoc ? 'Flow' : 'Doc'}}</button>
-  </div>
-
-  <!--
-  Share sits at the toolbar's right edge, OUTSIDE the secondary actions: those
-  fold into the overflow menu on a phone, and sharing the article should not
-  require finding a menu. Only while the document is up — the link it copies
-  IS the document.
-  -->
-  @if (showDoc) {
-    <button type="button" mat-icon-button class="share" (click)="copyShareLink()"
-      matTooltip="Copy an embed link — the article alone, no toolbar"
-      aria-label="Copy an embed link to this document">
-      <mat-icon>{{shareCopied ? 'check' : 'share'}}</mat-icon>
+  @if (problemCount > 0) {
+    <button type="button" mat-button class="problems" [matTooltip]="validationDetail">
+      <mat-icon>warning</mat-icon>
+      {{problemCount}}
     </button>
   }
 
-  <button type="button" mat-icon-button class="overflow" [matMenuTriggerFor]="overflowMenu"
-    aria-label="More actions">
-    <mat-icon>menu</mat-icon>
-  </button>
+  <button type="button" mat-button (click)="openModal()" class="add">Add</button>
 
   <mat-menu #overflowMenu="matMenu">
-    <!--
-    Undo and redo carry a label here. As icons on a phone they are two grey
-    arrows with no explanation: the tooltip that explains them only appears on
-    hover, and there is no hover on a touch screen.
-    -->
-    <button type="button" mat-menu-item (click)="undo()" [disabled]="!history.canUndo()">
+    <button type="button" mat-menu-item class="undo" (click)="undo()" [disabled]="!history.canUndo()">
       <mat-icon>undo</mat-icon>
       <span>Undo</span>
     </button>
 
-    <button type="button" mat-menu-item (click)="redo()" [disabled]="!history.canRedo()">
+    <button type="button" mat-menu-item class="redo" (click)="redo()" [disabled]="!history.canRedo()">
       <mat-icon>redo</mat-icon>
       <span>Redo</span>
     </button>
 
     <mat-divider></mat-divider>
 
-    <button type="button" mat-menu-item (click)="save()">
-      <mat-icon>download</mat-icon>
-      <span>Download JSON</span>
-    </button>
-
-    <button type="button" mat-menu-item (click)="fileInput.click()">
-      <mat-icon>upload</mat-icon>
-      <span>Load JSON</span>
-    </button>
-
-    @if (problemCount > 0) {
-      <button type="button" mat-menu-item [matTooltip]="validationDetail">
-        <mat-icon>warning</mat-icon>
-        <span>{{problemCount}} problems</span>
-      </button>
-    }
-
-    <button type="button" mat-menu-item (click)="showJSON()">
+    <button type="button" mat-menu-item class="json" (click)="showJSON()">
       <mat-icon>data_object</mat-icon>
       <span>{{showJson ? 'Show flow' : 'Show JSON'}}</span>
     </button>
 
-    <button type="button" mat-menu-item (click)="toggleDoc()">
+    <button type="button" mat-menu-item class="doc" (click)="toggleDoc()">
       <mat-icon>article</mat-icon>
       <span>{{showDoc ? 'Show flow' : 'Show document'}}</span>
+    </button>
+
+    <!-- Only while the document is up: the link it copies IS the document. -->
+    @if (showDoc) {
+      <button type="button" mat-menu-item class="share" (click)="copyShareLink()">
+        <mat-icon>{{shareCopied ? 'check' : 'share'}}</mat-icon>
+        <span>{{shareCopied ? 'Link copied' : 'Copy embed link'}}</span>
+      </button>
+    }
+
+    <mat-divider></mat-divider>
+
+    <button type="button" mat-menu-item class="save" (click)="save()">
+      <mat-icon>download</mat-icon>
+      <span>Download JSON</span>
+    </button>
+
+    <button type="button" mat-menu-item class="load" (click)="fileInput.click()">
+      <mat-icon>upload</mat-icon>
+      <span>Load JSON</span>
     </button>
 
     <mat-divider></mat-divider>
@@ -149,7 +104,6 @@ this app's cockpit.
     <div class="app-version">{{version}}</div>
   </mat-menu>
 
-  <!-- One file input, shared by the inline button and the menu item. -->
   <input #fileInput type="file" accept="application/json,.json" class="file-input"
     (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
 </mat-toolbar>
