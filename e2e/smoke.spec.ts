@@ -1295,3 +1295,64 @@ test('the share button appears with the document and confirms the copy', async (
   expect(copied).toContain('?embed=doc');
   expect(new URL(copied).pathname).toBe(new URL(page.url()).pathname);
 });
+
+/**
+ * A plot's inputs are layers.
+ *
+ * Each input socket keeps its own buffer, and the node's socket order is the
+ * drawing order — so one plot can hold a curve with marked points on top of
+ * it. Before this, a second connection could only overwrite the first.
+ */
+test('a graph draws one layer per input socket, in socket order', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const layers = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const worker = editor.flow.getWorker(1200);
+
+    return editor.nodeById(1200).sockets
+      .filter((socket: any) => socket.type === 'in')
+      .map((socket: any) => {
+        const buffer = worker.layerFor(socket.id);
+
+        return { points: buffer?.points.length ?? 0, marks: buffer?.marks?.length ?? 0 };
+      });
+  });
+
+  // Two inputs: the swept circle underneath, the four named powers on top.
+  expect(layers).toHaveLength(2);
+  expect(layers[0].points).toBeGreaterThan(100);
+  expect(layers[0].marks).toBe(0);
+  expect(layers[1].points).toBe(0);
+  expect(layers[1].marks).toBe(4);
+});
+
+/**
+ * Which sides accept a new socket is the type's business.
+ *
+ * A plot takes as many inputs as you like — every one is a layer — and has
+ * nothing to send anywhere, so it offers no output button. The format of an
+ * added socket is copied from the type's own declaration rather than chosen,
+ * which is what keeps a layer's data type out of the user's hands.
+ */
+test('a plot offers to add inputs but not outputs, and copies the declared format', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const added = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return {
+      canAddIn: editor.canAddSocket(1200, 'in'),
+      canAddOut: editor.canAddSocket(1200, 'out'),
+      socket: editor.addSocket(1200, 'in'),
+      refused: editor.addSocket(1200, 'out'),
+    };
+  });
+
+  expect(added.canAddIn).toBe(true);
+  expect(added.canAddOut).toBe(false);
+  expect(added.refused).toBeFalsy();
+  expect(added.socket.formats).toEqual(['number', 'point', 'marks']);
+});

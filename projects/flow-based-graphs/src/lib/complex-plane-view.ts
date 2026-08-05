@@ -1,7 +1,20 @@
 import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
-import { TimeseriesWorker } from './timeseries.worker';
+import { SeriesBuffer, TimeseriesWorker } from './timeseries.worker';
+
+/**
+ * One pair of colours per layer: the path, and the marks drawn on it.
+ *
+ * The first layer keeps the colours this plot has always used, so a plot with
+ * one input looks exactly as it did; further layers have to be told apart from
+ * it at a glance, which is what a second and third pair are for.
+ */
+const LAYER_COLOURS = [
+  { path: '186, 218, 85', mark: '#bada55' },
+  { path: '255, 64, 129', mark: '#ff4081' },
+  { path: '42, 167, 160', mark: '#2aa7a0' },
+];
 
 /**
  * The complex plane: im against re, the sample's x forgotten on purpose.
@@ -80,41 +93,53 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
 
     ctx.clearRect(0, 0, width, height);
 
-    // A set of named positions is a different picture from a trajectory, and
-    // it takes precedence: whoever sent marks meant them to be the subject.
-    if (this.worker.buffer.marks?.length) {
-      this.drawMarks(ctx, width, height);
+    const layers = this.layers();
 
+    if (!layers.length) {
       return;
     }
-
-    // A real-only series lives ON the real axis: im is simply 0.
-    const points = this.worker.buffer.points.map(p => [p[1], p[2] ?? 0]);
-
-    if (points.length < 2) {
-      return;
-    }
-
-    const res = points.map(p => p[0]);
-    const ims = points.map(p => p[1]);
-    const pad = this.axes ? 26 : 6;
 
     /*
-     * One scale, both axes: the largest span decides, centred on the data.
-     * The circle stays a circle whatever shape the canvas has.
+     * One scale for every layer, and for both axes.
+     *
+     * Layers only mean anything if they agree about where a point is: a curve
+     * and the dot riding along it must be measured the same way, or the dot
+     * drifts off its own curve. So the extent is taken over everything drawn.
      */
-    const midRe = (Math.min(...res) + Math.max(...res)) / 2;
-    const midIm = (Math.min(...ims) + Math.max(...ims)) / 2;
-    const span = Math.max(
-      Math.max(...res) - Math.min(...res),
-      Math.max(...ims) - Math.min(...ims),
-    ) || 1;
-    const scale = (Math.min(width, height) - pad * 2) / span;
+    const all = layers.flatMap(layer => [
+      ...layer.points.map(p => [p[1], p[2] ?? 0]),
+      ...(layer.marks ?? []).map(m => [m.re, m.im]),
+    ]);
+
+    if (!all.length) {
+      return;
+    }
+
+    const res = all.map(p => p[0]);
+    const ims = all.map(p => p[1]);
+    // Marks carry labels, and a label at the edge needs room to be written.
+    const marked = layers.some(layer => layer.marks?.length);
+    const pad = (this.axes ? 26 : 6) + (marked ? 14 : 0);
+
+    /*
+     * Named positions are ADDRESSES: a picture of 1, i, -1 and -i with the
+     * origin off-centre has thrown away its own subject, so a marked plot
+     * centres on zero. A bare trajectory centres on the data it has.
+     */
+    const midRe = marked ? 0 : (Math.min(...res) + Math.max(...res)) / 2;
+    const midIm = marked ? 0 : (Math.min(...ims) + Math.max(...ims)) / 2;
+    const span = marked
+      ? Math.max(...res.map(Math.abs), ...ims.map(Math.abs)) * 2
+      : Math.max(
+        Math.max(...res) - Math.min(...res),
+        Math.max(...ims) - Math.min(...ims),
+      );
+    const scale = (Math.min(width, height) - pad * 2) / (span || 1);
 
     const x = (re: number) => width / 2 + (re - midRe) * scale;
     const y = (im: number) => height / 2 - (im - midIm) * scale;
 
-    if (this.axes) {
+    if (this.axes || marked) {
       // The axes of the PLANE: the zero cross, wherever zero happens to be.
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.lineWidth = 1;
@@ -124,7 +149,9 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
       ctx.moveTo(0, y(0));
       ctx.lineTo(width, y(0));
       ctx.stroke();
+    }
 
+    if (this.axes) {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.font = '10px system-ui, sans-serif';
       ctx.textAlign = 'left';
@@ -133,12 +160,47 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
       ctx.fillText('im', x(0) + 4, 2);
     }
 
+    // Bottom socket first: a layer covers the ones declared before it, which
+    // makes the node's own socket order the drawing order.
+    layers.forEach((layer, index) => {
+      const colours = LAYER_COLOURS[index % LAYER_COLOURS.length];
+
+      this.drawPath(ctx, layer, colours, x, y);
+      this.drawMarks(ctx, layer, colours, x, y);
+    });
+  }
+
+  /** The input sockets' buffers, in the order the node declares them. */
+  private layers(): SeriesBuffer[] {
+    const sockets = (this.service.state.sockets ?? []).filter(socket => socket.type === 'in');
+    const layers = sockets
+      .map(socket => this.worker.layerFor(socket.id!))
+      .filter((layer): layer is SeriesBuffer => !!layer);
+
+    // A node whose sockets are not declared yet still has whatever arrived.
+    return layers.length ? layers : [this.worker.buffer];
+  }
+
+  private drawPath(
+    ctx: CanvasRenderingContext2D,
+    layer: SeriesBuffer,
+    colours: { path: string; mark: string },
+    x: (re: number) => number,
+    y: (im: number) => number,
+  ): void {
+    // A real-only series lives ON the real axis: im is simply 0.
+    const points = layer.points.map(p => [p[1], p[2] ?? 0]);
+
+    if (points.length < 2) {
+      return;
+    }
+
     /*
      * The path fades toward its tail: a spiral crosses itself, and without a
      * direction cue the drawing is a tangle instead of a journey.
      */
     for (let i = 1; i < points.length; i++) {
-      ctx.strokeStyle = `rgba(186, 218, 85, ${0.25 + 0.75 * (i / points.length)})`;
+      ctx.strokeStyle = `rgba(${colours.path}, ${0.25 + 0.75 * (i / points.length)})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(x(points[i - 1][0]), y(points[i - 1][1]));
@@ -149,52 +211,31 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
     // The head, marked: where the function is NOW.
     const head = points[points.length - 1];
 
-    ctx.fillStyle = '#bada55';
+    ctx.fillStyle = colours.mark;
     ctx.beginPath();
     ctx.arc(x(head[0]), y(head[1]), 3.5, 0, Math.PI * 2);
     ctx.fill();
   }
 
   /**
-   * A named set of positions, one of them current.
+   * A named set of positions, one of them current, drawn on top of whatever
+   * its layer's path already put down.
    *
-   * Always centred on zero rather than on the data: these are addresses in the
-   * plane, and a picture of $1$, $i$, $-1$ and $-i$ that puts the origin
-   * off-centre has thrown away the very thing it is showing. The current mark
-   * gets a line back to zero — that arm is where the turning becomes visible,
-   * since consecutive marks are a quarter of a circle apart.
+   * The current mark gets a line back to zero — that arm is where turning
+   * becomes visible, since consecutive marks on these figures are a quarter of
+   * a circle apart.
    */
-  private drawMarks(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-    const marks = this.worker.buffer.marks ?? [];
-    const current = this.worker.buffer.current;
-
-    // Room for a label beside the outermost dot, which sits at the very edge
-    // of the span and would otherwise be written off the canvas.
-    const pad = (this.axes ? 26 : 12) + 14;
-    const reach = Math.max(...marks.map(m => Math.max(Math.abs(m.re), Math.abs(m.im))), 1);
-    const scale = (Math.min(width, height) - pad * 2) / (reach * 2);
-
-    const x = (re: number) => width / 2 + re * scale;
-    const y = (im: number) => height / 2 - im * scale;
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x(0), 0);
-    ctx.lineTo(x(0), height);
-    ctx.moveTo(0, y(0));
-    ctx.lineTo(width, y(0));
-    ctx.stroke();
+  private drawMarks(
+    ctx: CanvasRenderingContext2D,
+    layer: SeriesBuffer,
+    colours: { path: string; mark: string },
+    x: (re: number) => number,
+    y: (im: number) => number,
+  ): void {
+    const marks = layer.marks ?? [];
+    const current = layer.current;
 
     ctx.font = '11px system-ui, sans-serif';
-
-    if (this.axes) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('re', width - 18, y(0) + 4);
-      ctx.fillText('im', x(0) + 4, 2);
-    }
 
     marks.forEach((mark, index) => {
       const active = index === current;
@@ -202,7 +243,7 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
       const py = y(mark.im);
 
       if (active) {
-        ctx.strokeStyle = 'rgba(186, 218, 85, 0.55)';
+        ctx.strokeStyle = `rgba(${colours.path}, 0.55)`;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(x(0), y(0));
@@ -210,7 +251,7 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
         ctx.stroke();
       }
 
-      ctx.fillStyle = active ? '#bada55' : 'rgba(186, 218, 85, 0.35)';
+      ctx.fillStyle = active ? colours.mark : `rgba(${colours.path}, 0.35)`;
       ctx.beginPath();
       ctx.arc(px, py, active ? 5 : 3, 0, Math.PI * 2);
       ctx.fill();
@@ -223,7 +264,7 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
        * The label sits on the far side of the dot from the origin, so it never
        * lands on the arm or on the axis cross.
        */
-      ctx.fillStyle = active ? '#eef6d8' : 'rgba(255, 255, 255, 0.6)';
+      ctx.fillStyle = active ? '#fff' : 'rgba(255, 255, 255, 0.6)';
       ctx.textAlign = mark.re < 0 ? 'right' : 'left';
       ctx.textBaseline = mark.im < 0 ? 'top' : 'bottom';
       ctx.fillText(mark.label, px + (mark.re < 0 ? -8 : 8), py + (mark.im < 0 ? 8 : -8));

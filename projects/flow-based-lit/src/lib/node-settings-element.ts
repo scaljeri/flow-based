@@ -1,4 +1,4 @@
-import { LitElement, PropertyValues, css, html, svg } from 'lit';
+import { LitElement, PropertyValues, css, html, nothing, svg } from 'lit';
 import {
   FB_DRAG_IGNORE,
   FbNodeState,
@@ -683,12 +683,16 @@ export class FbNodeSettingsElement extends LitElement {
           socket was actually on.
         -->
         <div class="add-sockets">
-          <button type="button" class="add-socket" @click=${() => this.editor.addSocket(state.id!, 'in')}>
-            + in
-          </button>
-          <button type="button" class="add-socket" @click=${() => this.editor.addSocket(state.id!, 'out')}>
-            + out
-          </button>
+          ${this.editor.canAddSocket(state.id!, 'in') ? html`
+            <button type="button" class="add-socket" @click=${() => this.editor.addSocket(state.id!, 'in')}>
+              + in
+            </button>
+          ` : nothing}
+          ${this.editor.canAddSocket(state.id!, 'out') ? html`
+            <button type="button" class="add-socket" @click=${() => this.editor.addSocket(state.id!, 'out')}>
+              + out
+            </button>
+          ` : nothing}
         </div>
 
         <div class="own"></div>

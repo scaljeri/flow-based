@@ -47,6 +47,12 @@ export const GRAPHS_MODULE: FbModule = {
         config: { style: 'line' },
         // Readings over time, or sampled points — both are drawable series.
         sockets: [{ type: 'in', formats: ['number', 'point'] }],
+        /*
+         * Every input is one drawn layer, so there can be as many as you like
+         * — but a plot has nothing to send anywhere, and an output would be a
+         * socket its worker never fills.
+         */
+        addableSockets: 'in',
       },
       worker: TimeseriesWorker,
     },
@@ -68,6 +74,8 @@ export const GRAPHS_MODULE: FbModule = {
         resizable: true,
         // Trajectories, and named positions: the same plane draws both.
         sockets: [{ type: 'in', formats: ['number', 'point', 'marks'] }],
+        // One layer per input, drawn in the order the sockets are declared.
+        addableSockets: 'in',
       },
       worker: TimeseriesWorker,
     },

@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 15 },
+  config: { seedVersion: 17 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -450,7 +450,9 @@ export const demo = () => ({
           '\n' +
           '$$e^{i\\,x}$$\n' +
           '\n' +
-          'The figure beside this text is that function, computed live. Note that $x$ ' +
+          'The figure beside this text is that function, computed live — with the four ' +
+          'values from the last section still marked on it, because they sit exactly ' +
+          'on this circle. Note that $x$ ' +
           'is not measured in degrees: it is the distance travelled along the circle, ' +
           'and one full lap is $2\\pi \\approx 6.28$. That is why this run stops at ' +
           '{{1000:x.to}} — a little past one lap, so the circle closes.\n' +
@@ -631,7 +633,17 @@ export const demo = () => ({
       type: 'graph-complex',
       title: 'Unit circle',
       id: 1200,
-      sockets: [{ id: 1210, type: 'in', formats: ['number', 'point'] }],
+      /*
+       * Two inputs, so two layers: the circle underneath, and the four powers
+       * of i marked on top of it. Socket order IS drawing order — the marks
+       * are declared second because they must cover the curve, not hide under
+       * it. They also happen to prove the section's point: those four values
+       * sit exactly on this circle.
+       */
+      sockets: [
+        { id: 1210, type: 'in', formats: ['number', 'point', 'marks'] },
+        { id: 1211, type: 'in', formats: ['number', 'point', 'marks'] },
+      ],
       position: { x: 77, y: 34 },
     },
     {
@@ -704,5 +716,6 @@ export const demo = () => ({
     { id: 1009, from: 1100, to: 1200, out: 1111, in: 1210 },
     { id: 1011, from: 1100, to: 1300, out: 1111, in: 1310 },
     { id: 1012, from: 1400, to: 1500, out: 1410, in: 1510 },
+    { id: 1013, from: 1400, to: 1200, out: 1410, in: 1211 },
   ],
 });

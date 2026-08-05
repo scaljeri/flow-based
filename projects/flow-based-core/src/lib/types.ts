@@ -177,6 +177,17 @@ export interface FbNodeSettings {
    * Small stays an icon and full already has the whole surface.
    */
   resizable?: boolean;
+  /**
+   * Which sides a user may add sockets to. Defaults to both.
+   *
+   * A type that means something specific by its inputs says so here: a plot
+   * whose every input is one drawn layer can take as many as you like, while
+   * a derivative has exactly one function to differentiate and a second input
+   * would be a socket it never reads. An ADDED socket copies the type's own
+   * declaration for that side, so its data type is inherited rather than
+   * chosen — the format of a socket is not something a user gets to pick.
+   */
+  addableSockets?: 'in' | 'out' | 'both' | 'none';
 }
 
 /**

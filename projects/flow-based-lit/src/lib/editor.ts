@@ -455,16 +455,40 @@ export class FbEditor {
     return written;
   }
 
+  /** Whether this node's type allows a socket to be added on that side. */
+  canAddSocket(nodeId: number, type: FbSocketType): boolean {
+    const node = this.nodeById(nodeId);
+    const allowed = node && this.types[node.type]?.settings?.addableSockets;
+
+    return allowed === undefined || allowed === 'both' || allowed === type;
+  }
+
+  /**
+   * Add a socket, shaped like the ones its type already declares.
+   *
+   * The format is COPIED rather than left open or asked for: a type that
+   * accepts extra inputs accepts more of the same thing, and a socket whose
+   * data type differed from its siblings would be a promise the node's worker
+   * never made. Types that declare nothing for that side keep the old
+   * behaviour of a formatless socket, which the engine fills in by
+   * propagation.
+   */
   addSocket(nodeId: number, type: FbSocketType): FbSocket | undefined {
     const node = this.nodeById(nodeId);
 
-    if (!node) {
+    if (!node || !this.canAddSocket(nodeId, type)) {
       return undefined;
     }
 
     this.history.capture(this.root);
 
-    const socket: FbSocket = { id: this.ids.create(), type };
+    const declared = this.types[node.type]?.settings?.sockets?.find(s => s.type === type);
+    const socket: FbSocket = {
+      id: this.ids.create(),
+      type,
+      ...(declared?.format ? { format: declared.format } : {}),
+      ...(declared?.formats ? { formats: [...declared.formats] } : {}),
+    };
 
     this.flow.addSocket(socket, nodeId);
 
