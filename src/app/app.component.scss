@@ -54,6 +54,19 @@ mat-toolbar {
   .problems {
     flex: 0 0 auto;
   }
+
+  /*
+   * An icon button does NOT inherit the toolbar's text colour: it has its own
+   * token, which defaults to the on-surface ink of the light theme — so the
+   * menu rendered in near-black on an indigo bar while the Add beside it was
+   * white. The toolbar override only reaches components that read
+   * container-text-color, and this is not one of them.
+   */
+  .overflow {
+    --mat-icon-button-icon-color: currentcolor;
+
+    color: var(--mat-sys-on-primary, #fff);
+  }
 }
 
 /* Narrow enough that the title is the first thing worth losing: it is also the
