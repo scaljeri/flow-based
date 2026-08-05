@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 17 },
+  config: { seedVersion: 20 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -432,7 +432,12 @@ export const demo = () => ({
       },
 
       { type: 'heading', text: 'Turning without stopping', level: 2 },
-      { type: 'node', nodeId: 1200, float: 'right', caption: 'One point, going round, right now' },
+      {
+        type: 'node',
+        nodeId: 1200,
+        float: 'right',
+        caption: 'A point going round, and the four quarter turns it passes through',
+      },
       {
         type: 'text',
         text:
@@ -450,9 +455,11 @@ export const demo = () => ({
           '\n' +
           '$$e^{i\\,x}$$\n' +
           '\n' +
-          'The figure beside this text is that function, computed live — with the four ' +
-          'values from the last section still marked on it, because they sit exactly ' +
-          'on this circle. Note that $x$ ' +
+          'The figure beside this text is that function, computed live: a dot travels ' +
+          'the circle a small step at a time, while the four values from the last ' +
+          'section stay marked on it — they sit exactly on this circle, and the arm ' +
+          'still jumps between them a quarter at a time. That is the difference this ' +
+          'section is about, in one picture. Note that $x$ ' +
           'is not measured in degrees: it is the distance travelled along the circle, ' +
           'and one full lap is $2\\pi \\approx 6.28$. That is why this run stops at ' +
           '{{1000:x.to}} — a little past one lap, so the circle closes.\n' +
@@ -643,6 +650,7 @@ export const demo = () => ({
       sockets: [
         { id: 1210, type: 'in', formats: ['number', 'point', 'marks'] },
         { id: 1211, type: 'in', formats: ['number', 'point', 'marks'] },
+        { id: 1212, type: 'in', formats: ['number', 'point', 'marks'] },
       ],
       position: { x: 77, y: 34 },
     },
@@ -666,16 +674,41 @@ export const demo = () => ({
         interval: 900,
       },
       sockets: [{ id: 1410, type: 'out', format: 'marks' }],
-      // Bottom left, clear of the wire that runs the width of the graph at the
-      // top: a node parked on a connection reads as attached to it.
-      position: { x: 2, y: 62 },
+      // Near the plane it feeds, not across the canvas from it: this node's
+      // marks go to two plots, and from the far corner one of those wires
+      // crossed every other node on the way.
+      position: { x: 58, y: 48 },
     },
     {
       type: 'graph-complex',
       title: 'Four powers of i',
       id: 1500,
       sockets: [{ id: 1510, type: 'in', formats: ['number', 'point', 'marks'] }],
-      position: { x: 14, y: 62 },
+      position: { x: 58, y: 62 },
+    },
+    {
+      type: 'math-sampler',
+      title: 'Walker',
+      id: 1600,
+      /*
+       * The same circle, stepped instead of swept: one small step per tick,
+       * so the plane draws a dot travelling the curve its neighbour drew all
+       * at once. The step is the sampler's own — hence `touched`, or the
+       * formula's declared step would take it back on the next emit — and it
+       * is coarser than the sweep's, because a lap you can watch beats a lap
+       * that is smooth and takes a minute.
+       */
+      config: {
+        mode: 'point',
+        step: 0.05,
+        interval: 40,
+        touched: { step: true },
+      },
+      sockets: [
+        { id: 1610, type: 'in', format: 'function' },
+        { id: 1611, type: 'out', format: 'point' },
+      ],
+      position: { x: 66, y: 34 },
     },
     {
       type: 'graph-timeseries',
@@ -717,5 +750,7 @@ export const demo = () => ({
     { id: 1011, from: 1100, to: 1300, out: 1111, in: 1310 },
     { id: 1012, from: 1400, to: 1500, out: 1410, in: 1510 },
     { id: 1013, from: 1400, to: 1200, out: 1410, in: 1211 },
+    { id: 1014, from: 1000, to: 1600, out: 1010, in: 1610 },
+    { id: 1015, from: 1600, to: 1200, out: 1611, in: 1212 },
   ],
 });

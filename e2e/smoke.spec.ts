@@ -1320,12 +1320,27 @@ test('a graph draws one layer per input socket, in socket order', async ({ page 
       });
   });
 
-  // Two inputs: the swept circle underneath, the four named powers on top.
-  expect(layers).toHaveLength(2);
+  // Three inputs: the swept circle underneath, the four named powers on top of
+  // it, and the dot walking the same function one small step at a time.
+  expect(layers).toHaveLength(3);
   expect(layers[0].points).toBeGreaterThan(100);
   expect(layers[0].marks).toBe(0);
   expect(layers[1].points).toBe(0);
   expect(layers[1].marks).toBe(4);
+
+  // The walker is a walker: sampled twice, it has moved along its own domain.
+  const at = () => page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const points = editor.flow.getWorker(1200).layerFor(1212)?.points ?? [];
+
+    return points[points.length - 1]?.[0];
+  });
+
+  const first = await at();
+
+  await page.waitForTimeout(600);
+
+  expect(await at()).not.toBe(first);
 });
 
 /**
