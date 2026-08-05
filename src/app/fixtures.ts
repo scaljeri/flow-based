@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 7 },
+  config: { seedVersion: 8 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -321,6 +321,12 @@ export const demo = () => ({
    * the quarter turn i and the numbers gain a plane → e puts that turn into
    * every step, so you walk a circle and never leave it → the two
    * coordinates of that walk ARE the cosine and the sine.
+   *
+   * The voice is plain and explanatory, not literary: state what a thing is,
+   * define the words as they arrive, and let the pictures carry the wonder.
+   * An earlier draft opened with plucked strings and buoys, which reads well
+   * and teaches nothing — a reader who does not yet know what i is cannot
+   * spend attention on decoding a metaphor.
    *
    * The figures are not screenshots: each one mounts the node's live
    * content, so the circle in the prose is the circle the editor draws,
@@ -337,114 +343,136 @@ export const demo = () => ({
       {
         type: 'text',
         text:
-          'Pluck a string. Push a swing. Watch a buoy ride the swell. You get a wave — ' +
-          'the same shape every time, rising and falling, never in a hurry.\n' +
+          'An imaginary number sounds like something that does not exist. It exists, ' +
+          'and it does one specific job: it lets numbers turn. This page builds that ' +
+          'up from nothing, and ends at a result you probably met in school without ' +
+          'being told where it came from — the cosine and the sine.\n' +
           '\n' +
-          'This page is about something else: a point going round a circle, steady ' +
-          'speed, forever. Every figure below is a node of this flow, still computing ' +
-          'while you read, and the pink numbers are yours to change — type one, or ' +
-          'drag it sideways. What kind of number describes that walk?',
+          'Every figure below is a live node of this flow, computing while you read. ' +
+          'The pink numbers are inputs you can change: click one and type, or drag it ' +
+          'sideways. The figures react immediately.',
       },
       { type: 'node', nodeId: 1000, float: 'right', width: '300px', caption: 'The formula this page is heading for' },
 
-      { type: 'heading', text: 'You cannot go round on a line', level: 2 },
+      { type: 'heading', text: 'Why the number line is not enough', level: 2 },
       {
         type: 'text',
         text:
-          'The numbers you grew up with sit on a line. Left, right, and nothing else. ' +
-          'A line cannot turn.\n' +
+          'Ordinary numbers — $1$, $2$, $-3$, $0.5$ — all sit on a line. Each one is a ' +
+          'certain distance left or right of zero. Multiplying by a positive number ' +
+          'slides you along that line; multiplying by $-1$ flips you to the other side ' +
+          'of zero.\n' +
           '\n' +
-          'So ask for the turn instead. What can you do to $1$, twice in a row, that ' +
-          'lands you on $-1$? A flip does it in one move, so each of your two moves is ' +
-          'half a flip: a quarter turn. Call that quarter turn $i$:\n' +
+          'Now ask a question the line cannot answer: which number, multiplied by ' +
+          'itself, gives $-1$? A positive times itself is positive. A negative times ' +
+          'itself is also positive. No number on the line works.\n' +
+          '\n' +
+          'The fix was to define a new number. Call it $i$, and define it by exactly ' +
+          'the property that was missing:\n' +
           '\n' +
           '$$i \\cdot i = -1$$\n' +
           '\n' +
-          'That hands numbers a second direction — across is real, up is imaginary — ' +
-          'and any point is $a + b\\,i$: how far across, how far up. Nothing spooky: in ' +
-          'this flow a complex value is literally the pair `{re, im}`, and the wires ' +
-          'carry it as ordinary data.\n' +
+          'Here is a useful way to picture it. Multiplying by $-1$ is a half turn: it ' +
+          'takes $1$ to $-1$. So multiplying by $i$ — which gets you there in two equal ' +
+          'steps — is *half* of a half turn. A quarter turn.\n' +
           '\n' +
-          'So multiplying no longer only stretches; it stretches *and* turns. Multiply ' +
-          '$1$ by $i$ over and over: $i$, $-1$, $-i$, $1$. Four quarter turns and you ' +
-          'are home. That is the walk, in four clumsy steps.',
+          'A quarter turn needs somewhere to go, and the line has no room, so numbers ' +
+          'get a second direction. Horizontal is the ordinary part, called the **real** ' +
+          'part; vertical is the **imaginary** part. Every number is then written ' +
+          '$a + b\\,i$: $a$ to the right, $b$ upward. That flat space is the complex ' +
+          'plane. Nothing exotic is stored: in this flow a complex number is the pair ' +
+          '`{re, im}`, and the connections carry it as ordinary data.\n' +
+          '\n' +
+          'Multiply $1$ by $i$ four times over and you get $i$, $-1$, $-i$, $1$: four ' +
+          'quarter turns, back where you started. Multiplication now does two things at ' +
+          'once — it scales, and it rotates.',
       },
 
-      { type: 'heading', text: 'A turn that never stops', level: 2 },
+      { type: 'heading', text: 'Turning without stopping', level: 2 },
       { type: 'node', nodeId: 1200, float: 'right', caption: 'One point, going round, right now' },
       {
         type: 'text',
         text:
-          'Four steps make a square, not a circle. For a circle the turning must never ' +
-          'stop. Read $e^x$ as *grow in the direction you already face* — which is why ' +
-          'it runs away with you.\n' +
+          'Four separate quarter turns give you four points, not a circle. A circle ' +
+          'needs the turning to be continuous.\n' +
           '\n' +
-          'Now put $i$ in the exponent, and every step gets turned a right angle ' +
-          'first. A push at right angles cannot speed you up or slow you down; it can ' +
-          'only aim you somewhere else. Your distance from zero never changes, so ' +
-          'nothing is left but turning: you walk a circle of radius $1$ and never get ' +
-          'off.\n' +
+          'Continuous change is what $e^x$ is for: it grows at a rate equal to its own ' +
+          'current value, and that growth points in the direction it already has.\n' +
+          '\n' +
+          'Put $i$ in the exponent, and every bit of that growth gets rotated a quarter ' +
+          'turn before it is applied — so it pushes sideways instead of outward. A ' +
+          'sideways push cannot move you further from zero or closer to it. It can only ' +
+          'change your direction. The distance from zero therefore stays $1$ forever, ' +
+          'and all that is left is rotation:\n' +
           '\n' +
           '$$e^{i\\,x}$$\n' +
           '\n' +
-          'The figure beside this text is that walk, live — and $x$ is not an angle in ' +
-          'degrees. It is how far you have gone around the rim. Once round is about ' +
-          '$6.28$, which is why this walk stops at {{1000:x.to}}: a hair past a lap, ' +
-          'so the circle closes. Drag it down to $3$ and the circle stops being a ' +
-          'circle — it opens into the arc you actually walked. Put it back and it ' +
-          'closes.',
+          'The figure beside this text is that function, computed live. Note that $x$ ' +
+          'is not measured in degrees: it is the distance travelled along the circle, ' +
+          'and one full lap is $2\\pi \\approx 6.28$. That is why this run stops at ' +
+          '{{1000:x.to}} — a little past one lap, so the circle closes.\n' +
+          '\n' +
+          'Set that number to $3$ and you see only the part of the circle actually ' +
+          'travelled: an arc instead of a closed loop. Put it back to $6.3$ and it ' +
+          'closes again.',
       },
 
-      { type: 'heading', text: 'The shadow is the wave', level: 2 },
+      { type: 'heading', text: 'Cosine and sine are the two coordinates', level: 2 },
       { type: 'node', nodeId: 1300, float: 'left', caption: 'The same walk, seen from the side' },
       {
         type: 'text',
         text:
-          'The walking point always has two numbers: how far across it is, and how far ' +
-          'up. Throw one away and watch the other. Across, it slides out and back and ' +
-          'out again; up, it rises and falls. Plot each against how far you have ' +
-          'walked and there they are: two waves, from a point that never wiggled ' +
-          'once.\n' +
+          'The moving point always has two coordinates: how far right it is, and how ' +
+          'far up. Take each one on its own and plot it against $x$, the distance ' +
+          'travelled. The horizontal coordinate moves out, back, and out again. The ' +
+          'vertical one rises and falls. Both draw waves — and the point itself never ' +
+          'wobbled; it only went round.\n' +
           '\n' +
-          'You already know their names. Across is the cosine, up is the sine:\n' +
+          'Those two waves already have names. The horizontal coordinate is the ' +
+          'cosine; the vertical coordinate is the sine:\n' +
           '\n' +
           '$$e^{i\\,x} = \\cos x + i\\,\\sin x$$\n' +
           '\n' +
-          'Euler’s formula — not a new fact, just the same walk written twice. The ' +
-          'circle above and the waves beside this paragraph come off one node: one set ' +
-          'of numbers, drawn two ways.\n' +
+          'This is Euler’s formula. It is not an extra fact to memorise — it is the ' +
+          'same motion, written in coordinates. The circle above and the two waves ' +
+          'beside this paragraph are produced by one node in the flow: a single set of ' +
+          'numbers, drawn two ways.\n' +
           '\n' +
-          'Before you touch it, guess. If the walker goes round twice as fast, what ' +
-          'happens to each picture? The speed is $b =$ {{1000:params.b}} — set it to ' +
-          '$2$ and find out. The circle does not budge: same radius, same rim, walked ' +
-          'twice over. The wave crowds into twice the humps. Faster spin, shorter ' +
-          'wave, higher note.\n' +
+          'Now change the speed. The formula is really $e^{i\\,b\\,x}$, where $b$ is how ' +
+          'fast the point goes round; at the moment $b =$ {{1000:params.b}}. Set it to ' +
+          '$2$, but predict the result first. The circle does not change at all: same ' +
+          'radius, same path, simply travelled twice over. The waves do change — twice ' +
+          'as many cycles fit in the same width. Faster rotation means a shorter ' +
+          'wavelength, which for a sound wave means a higher pitch.\n' +
           '\n' +
-          'Sine was never a fact about triangles. It is what a circle looks like from ' +
-          'the side.',
+          'So the sine is not a fact about triangles that has to be looked up in a ' +
+          'table. It is the vertical coordinate of a point going round a circle.',
       },
 
-      { type: 'heading', text: 'Bonus: turning, but shrinking', level: 2 },
+      { type: 'heading', text: 'Bonus: turning while shrinking', level: 2 },
       { type: 'node', nodeId: 900, float: 'right', caption: 'Turning and shrinking at once — a spiral' },
       {
         type: 'text',
         text:
-          'One knob more, then you are done. The flow holds a second formula that ' +
-          'turns like the first, but lets its distance from the middle leak away as it ' +
-          'goes. Turning plus leaking is a spiral, and the leak is yours: ' +
-          '{{400:params.a}}. Set it to $0$ and the leaking stops — the spiral relaxes ' +
-          'into the circle you started on, which was underneath it the whole time.',
+          'One more knob, and it costs nothing new. The flow holds a second formula, ' +
+          '$e^{(b\\,i - a)\\,x}$. The $b\\,i$ part turns, exactly as above. The $-a$ ' +
+          'part shrinks the distance from the middle as $x$ grows. Turning while ' +
+          'shrinking traces a spiral, drawn beside this text.\n' +
+          '\n' +
+          'How fast it shrinks is $a =$ {{400:params.a}}. Set it to $0$ and the ' +
+          'shrinking stops — the spiral becomes the circle from the previous section. ' +
+          'It was the same motion all along, with one extra effect switched on.',
       },
 
       {
         type: 'text',
         text:
-          'Multiplying is turning, turning needs a plane, and a push that stays ' +
-          'sideways walks a circle forever. The circle is not a picture of the wave — ' +
-          'it *is* the wave, before a direction got thrown away.\n' +
+          'In short: multiplying by $i$ is a quarter turn, turning needs a second ' +
+          'dimension, and $e^{i\\,x}$ is what turning without stopping looks like. ' +
+          'Cosine and sine are nothing more than the two coordinates of that motion.\n' +
           '\n' +
-          'Now flip to the flow view: that graph and this page are the same JSON, read ' +
-          'twice.',
+          'Switch to the flow view to see the wiring: that graph and this page are two ' +
+          'readings of the same JSON.',
       },
     ],
   },
