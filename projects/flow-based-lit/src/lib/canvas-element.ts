@@ -868,7 +868,7 @@ export class FbFlowCanvasElement extends LitElement {
       <div
         class="plane"
         data-full=${full ? 'true' : 'false'}
-        style=${this.planeStyle(plane.width, plane.height, transform)}
+        style=${this.planeStyle(full ? 0 : plane.width, full ? 0 : plane.height, transform)}
         @connection-remove=${this.onConnectionRemove}>
         ${this.renderBoundarySockets()}
         ${this.marquee
@@ -883,6 +883,17 @@ export class FbFlowCanvasElement extends LitElement {
     `;
   }
 
+  /**
+   * The plane's own box. Sized in pixels so node positions, which are
+   * percentages, mean the same thing on every screen.
+   *
+   * Except while a node has the surface to itself: that node is sized at 100%
+   * of the plane and the transform is off, so a plane the size of the design
+   * canvas made it 1200px wide on a phone — the map ran off the screen and
+   * took the button for shrinking it back with it. Given no size, the CSS
+   * falls back to 100% of this element, which is exactly what "the surface"
+   * should mean.
+   */
   private planeStyle(width: number, height: number, transform: string): string {
     const size = width && height ? `width:${width}px;height:${height}px;` : '';
 

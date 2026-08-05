@@ -1662,3 +1662,36 @@ test('a request feeds a pick, which feeds a map', async ({ page }) => {
     return editor.flow.getWorker(pick.id)?.count ?? 0;
   }), { timeout: 15_000 }).toBe(2);
 });
+
+/**
+ * A node with the surface to itself gets the SURFACE, not the design canvas.
+ *
+ * The plane is never taken narrower than 1200px so a layout arrives the same
+ * on every screen — but a full node is sized at 100% of the plane with the
+ * transform off, so on a phone it became 1200px wide, ran off the screen and
+ * took the button for shrinking it back with it. There was no way out.
+ */
+test('a full node fits the screen on a phone, and keeps its way out', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.setView(900, 'full'));
+
+  const measured = await page.evaluate(() => {
+    const host = document.querySelector('fb-flow-canvas')!.getBoundingClientRect();
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === 900)!;
+    const box = node.getBoundingClientRect();
+    const out = node.shadowRoot!.querySelector('.head button:last-of-type')!.getBoundingClientRect();
+
+    return {
+      overflow: Math.round(box.right - host.right),
+      wayOutVisible: out.width > 0 && out.right <= host.right + 1,
+    };
+  });
+
+  expect(measured.overflow).toBeLessThanOrEqual(0);
+  expect(measured.wayOutVisible).toBe(true);
+});
