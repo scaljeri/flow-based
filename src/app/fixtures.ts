@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 14 },
+  config: { seedVersion: 15 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -422,9 +422,7 @@ export const demo = () => ({
           'called the **real** part; the vertical axis carries the **imaginary** part. ' +
           'Every number is $a + b\\,i$: $a$ along the real axis, $b$ along the ' +
           'imaginary one. That flat space is the complex plane, and it is what every ' +
-          'figure on this page is drawn on — the axes marked `re` and `im`. Nothing ' +
-          'exotic is stored: in this flow a complex number is the pair `{re, im}`, and ' +
-          'the connections carry it as ordinary data.\n' +
+          'figure on this page is drawn on — the axes marked `re` and `im`.\n' +
           '\n' +
           'The walk is live: the arm points at the value it is on, and it steps every ' +
           '{{1400:interval}} milliseconds — set that lower and it speeds up. Right, up, ' +
