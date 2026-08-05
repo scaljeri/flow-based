@@ -119,12 +119,32 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       maxZoom: 19,
     }).addTo(this.map);
 
-    this.map.setView([52.1, 5.3], 7);
+    /*
+     * A saved view wins over the default, and fitting the data wins over both
+     * — until the reader moves the map, which is the strongest signal of all.
+     */
+    const saved = this.worker.view;
+
+    this.map.setView(saved ? [saved.lat, saved.lon] : [52.1, 5.3], saved?.zoom ?? 7);
     this.map.on('movestart', () => {
       // Only a gesture counts: fitBounds moves the map too, and treating that
       // as the user taking over would stop following on the first draw.
       if (this.interactive) {
         this.moved = true;
+      }
+    });
+
+    /*
+     * Where the reader leaves the map is where it opens next time. Nobody
+     * finds a view by typing a latitude — they find it by moving the map, and
+     * having to then press something to keep it is a step that exists only
+     * because it was easier to build.
+     */
+    this.map.on('moveend', () => {
+      if (this.interactive && this.moved && this.map) {
+        const centre = this.map.getCenter();
+
+        this.worker.setView(centre.lat, centre.lng, this.map.getZoom());
       }
     });
 
@@ -349,7 +369,7 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
-    if (bounds.length && this.worker.follow && !this.moved) {
+    if (bounds.length && this.worker.follow && !this.moved && !this.worker.view) {
       map.fitBounds(leaflet.latLngBounds(bounds), { padding: [24, 24], maxZoom: 12 });
     }
 

@@ -18,6 +18,17 @@ import { MapWorker } from './map.worker';
     </label>
 
     <!--
+      The view is remembered by moving the map, not by filling in a form. All
+      that is left to offer is forgetting it again.
+    -->
+    @if (hasView) {
+      <div class="row">
+        <span class="state">Opens at {{viewText}}</span>
+        <button type="button" (click)="clearView()">Forget</button>
+      </div>
+    }
+
+    <!--
       Only worth showing when there is a raster to colour: three fields about
       a scale nothing is drawn on is furniture.
     -->
@@ -53,6 +64,31 @@ import { MapWorker } from './map.worker';
       align-items: center;
       display: flex;
       gap: 8px;
+    }
+
+    .row {
+      align-items: center;
+      display: flex;
+      gap: 6px;
+    }
+
+    .row .state {
+      flex: 1;
+    }
+
+    .row button {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      min-height: 32px;
+      padding: 0 10px;
+    }
+
+    .state {
+      margin: 0;
+      opacity: 0.75;
     }
 
     h4 {
@@ -103,6 +139,21 @@ export class MapSettingsComponent {
 
   onTrack(event: Event): void {
     this.worker?.setTrack((event.target as HTMLInputElement).checked);
+    this.cdr.detectChanges();
+  }
+
+  get hasView(): boolean {
+    return !!this.worker?.view;
+  }
+
+  get viewText(): string {
+    const view = this.worker?.view;
+
+    return view ? `${view.lat}, ${view.lon} · zoom ${view.zoom}` : '';
+  }
+
+  clearView(): void {
+    this.worker?.clearView();
     this.cdr.detectChanges();
   }
 

@@ -12,13 +12,18 @@ import { FbNodeState, FbPosition, FbSize, FbSocket, FbSocketSide } from './types
  *   .sockets-in   { left:  calc(-4px - var(--socket-size)/2) }
  *   .sockets-out  { right: calc( 2px - var(--socket-size)/2) }
  *
- * The half-socket terms cancel once you take the socket's *centre*, which leaves
- * a centre 4px outside the left edge and 2px inside the right edge.
+ * The half-socket terms cancel once you take the socket's *centre*, which is
+ * what these are: how far a centre sits from the edge it belongs to.
+ *
+ * Both are zero, which is to say a socket is centred ON its edge with half the
+ * dot inside and half out. They were 4 and 2, so an input hung six pixels
+ * further from its node than an output did — a difference nobody chose and
+ * everybody could see, since the two sit opposite each other on the same box.
  */
 export interface FbSocketLayout {
-  /** How far an in-socket centre sits outside the node's left edge. */
+  /** How far an in-socket centre sits OUTSIDE the node's left edge. */
   inOffset: number;
-  /** How far an out-socket centre sits inside the node's right edge. */
+  /** How far an out-socket centre sits INSIDE the node's right edge. */
   outOffset: number;
   /** Vertical inset of the socket column at top and bottom. */
   inset: number;
@@ -38,8 +43,8 @@ export interface FbNodeBox extends FbSize {
 }
 
 export const FB_DEFAULT_SOCKET_LAYOUT: FbSocketLayout = {
-  inOffset: 4,
-  outOffset: 2,
+  inOffset: 0,
+  outOffset: 0,
   inset: 6,
 };
 

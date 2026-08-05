@@ -36,6 +36,17 @@ export interface MapConfig {
   track?: boolean;
   /** Zoom to fit whatever is on the map. Off once the user has panned. */
   follow?: boolean;
+  /**
+   * Where the map opens when it is not following its data.
+   *
+   * A saved view is the difference between a map about the Netherlands and a
+   * map that happens to contain it: with a raster covering exactly one
+   * country, fitting the data is right, and with two dots on opposite coasts
+   * it is useless.
+   */
+  lat?: number;
+  lon?: number;
+  zoom?: number;
   /** How solid a raster is drawn. */
   opacity?: number;
   /**
@@ -124,6 +135,35 @@ export class MapWorker implements FbNodeWorker {
 
   get max(): number | null {
     return this.config.max ?? null;
+  }
+
+  get view(): { lat: number; lon: number; zoom: number } | null {
+    return this.config.zoom === undefined ? null : {
+      lat: this.config.lat ?? 52.1,
+      lon: this.config.lon ?? 5.3,
+      zoom: this.config.zoom,
+    };
+  }
+
+  /**
+   * Remember where the map is looking, so it opens there next time.
+   *
+   * Deliberately SILENT: this is called as the reader pans, and telling the
+   * views about it would redraw every layer on every frame of a drag — and
+   * redraw them to no purpose, since nothing about the data changed.
+   */
+  setView(lat: number, lon: number, zoom: number): void {
+    this.config.lat = Number(lat.toFixed(4));
+    this.config.lon = Number(lon.toFixed(4));
+    this.config.zoom = Number(zoom.toFixed(2));
+    this.config.follow = false;
+  }
+
+  clearView(): void {
+    this.config.lat = undefined;
+    this.config.lon = undefined;
+    this.config.zoom = undefined;
+    this.subject.next();
   }
 
   set(key: 'opacity' | 'min' | 'max', value: number | null): void {
