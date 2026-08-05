@@ -69,7 +69,30 @@ export class PickWorker implements FbNodeWorker {
   count = 0;
   error: string | null = null;
 
-  constructor(private readonly config: PickConfig = {}) {
+  /**
+   * The node's own sockets, so the output can say what it will ACTUALLY
+   * carry.
+   *
+   * Declaring every shape it might build left the engine two candidates
+   * whenever the far end accepted more than one, and it reported that as an
+   * unresolved socket — correctly. A node that knows which shape it is
+   * building should say so rather than leave the choice open.
+   */
+  constructor(private readonly config: PickConfig = {}, private readonly sockets?: FbSocket[]) {
+    this.declareOutput();
+  }
+
+  private declareOutput(): void {
+    const out = this.sockets?.find(socket => socket.type === 'out');
+
+    if (!out) {
+      return;
+    }
+
+    const format = this.shape === 'value' ? 'number' : this.shape;
+
+    out.formats = [format];
+    out.format = format;
   }
 
   destroy(): void {
@@ -99,6 +122,11 @@ export class PickWorker implements FbNodeWorker {
 
   set(key: keyof PickConfig, value: string | number): void {
     (this.config as Record<string, unknown>)[key] = value;
+
+    if (key === 'shape') {
+      this.declareOutput();
+    }
+
     this.emit();
   }
 

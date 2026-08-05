@@ -853,7 +853,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 3 },
+  config: { seedVersion: 4 },
   sockets: [],
   children: [
     {
@@ -952,15 +952,15 @@ export const tno = () => ({
        * the raster would bury both sets of markers the other way round.
        */
       /*
-       * Each socket says what ITS layer is, rather than repeating everything
-       * the type can take. A socket offering both formats against a Pick that
-       * offers four leaves the engine two candidates and no way to choose, and
-       * it reported exactly that — two unresolved sockets in the toolbar.
+       * Generic inputs: a layer is a layer, and which kind it carries is the
+       * business of whatever is wired into it. That works because a Pick now
+       * declares the ONE shape it builds rather than every shape it could —
+       * the engine had two candidates before, and said so.
        */
       sockets: [
-        { id: 312, type: 'in', formats: ['grid'] },
-        { id: 310, type: 'in', formats: ['geo'] },
-        { id: 311, type: 'in', formats: ['geo'] },
+        { id: 312, type: 'in', formats: ['geo', 'grid'] },
+        { id: 310, type: 'in', formats: ['geo', 'grid'] },
+        { id: 311, type: 'in', formats: ['geo', 'grid'] },
       ],
       position: { x: 50, y: 20 },
     },

@@ -32,6 +32,20 @@ const STORAGE_KEY = 'fb-modules';
  * does not carry mathjs (~1MB of algebra) for users who never open the math
  * group. Adding a module means adding a package and one line in this map.
  */
+/**
+ * Which type-name prefix belongs to which module.
+ *
+ * The module itself declares the prefix, but that is only known once it has
+ * been downloaded — and the point of this map is to decide whether to
+ * download it at all.
+ */
+const PREFIXES: Record<string, string> = {
+  math: 'math',
+  graphs: 'graph',
+  network: 'net',
+  data: 'data',
+};
+
 const LOADERS: Record<string, () => Promise<FbModule>> = {
   math: () => import('@scaljeri/flow-based-math').then(m => m.MATH_MODULE),
   graphs: () => import('@scaljeri/flow-based-graphs').then(m => m.GRAPHS_MODULE),
@@ -106,6 +120,30 @@ export class ModulesService {
   /** Modules enabled on an earlier visit load with the app. */
   restore(): Promise<void> {
     return Promise.all(this.persisted().map(id => this.enable(id))).then(() => undefined);
+  }
+
+  /**
+   * Enable whatever a flow's own node types need.
+   *
+   * A type name carries its module's prefix — `net-request` belongs to the
+   * module whose prefix is `net` — so a saved flow says which modules it
+   * needs simply by naming its nodes. Without this a browser that had already
+   * chosen its modules never got the ones a newly shipped flow depends on:
+   * the nodes drew as empty boxes with no workers behind them, which looks
+   * like a broken flow rather than a missing download.
+   */
+  async enableFor(flow: { children?: { type?: string }[] } | undefined): Promise<void> {
+    const prefixes = new Set(
+      (flow?.children ?? [])
+        .map(child => child.type?.split('-')[0])
+        .filter((prefix): prefix is string => !!prefix),
+    );
+
+    await Promise.all(
+      this.modules
+        .filter(info => prefixes.has(PREFIXES[info.id] ?? info.id))
+        .map(info => this.enable(info.id)),
+    );
   }
 
   async enable(id: string): Promise<void> {

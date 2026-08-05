@@ -45,6 +45,15 @@ export class RequestWorker implements FbNodeWorker {
   loading = false;
   /** How many answers have come back, so a repeating request looks alive. */
   received = 0;
+  /** Bytes in the last answer, which is the other half of "did that work". */
+  bytes = 0;
+
+  /** Told about every state change, so a spinner can start and stop. */
+  private readonly ticks = new ReplaySubject<void>(1);
+
+  get changes(): Observable<void> {
+    return this.ticks.asObservable();
+  }
 
   constructor(private readonly config: RequestConfig = {}) {
     void this.send();
@@ -52,6 +61,7 @@ export class RequestWorker implements FbNodeWorker {
   }
 
   destroy(): void {
+    this.ticks.complete();
     clearInterval(this.timer);
     Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
     this.subject.complete();
@@ -125,6 +135,7 @@ export class RequestWorker implements FbNodeWorker {
     }
 
     this.loading = true;
+    this.ticks.next();
 
     try {
       const response = await fetch(url, {
@@ -141,12 +152,18 @@ export class RequestWorker implements FbNodeWorker {
       }
 
       /*
-       * Parsed as JSON when it says it is, as text otherwise. A node that
-       * always parsed would turn a plain-text answer into an error about
-       * syntax, which says nothing about what actually happened.
+       * Read as text first, then parsed if it claims to be JSON. Two reasons:
+       * a node that always parsed would turn a plain-text answer into an
+       * error about syntax, which says nothing about what happened — and the
+       * text is how the size is known when the server sends no length, which
+       * a compressed response usually does not.
        */
       const type = response.headers.get('content-type') ?? '';
-      const value = type.includes('json') ? await response.json() : await response.text();
+      const text = await response.text();
+
+      this.bytes = Number(response.headers.get('content-length')) || text.length;
+
+      const value = type.includes('json') ? JSON.parse(text) : text;
 
       this.error = null;
       this.received += 1;
@@ -164,7 +181,21 @@ export class RequestWorker implements FbNodeWorker {
         : message;
     } finally {
       this.loading = false;
+      this.ticks.next();
     }
+  }
+
+  /** The last answer's size, said the way a person would. */
+  get size(): string {
+    if (!this.bytes) {
+      return '';
+    }
+
+    return this.bytes < 1024
+      ? `${this.bytes} B`
+      : this.bytes < 1024 * 1024
+        ? `${Math.round(this.bytes / 1024)} kB`
+        : `${(this.bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 
   private restart(): void {

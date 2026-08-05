@@ -246,6 +246,9 @@ export class AppComponent implements OnInit, AfterViewInit {
     const saved = id ? this.store.load(id) : null;
 
     if (id && saved) {
+      // The flow names its own types, and a type name names its module.
+      await this.modules.enableFor(saved);
+
       this.zone.run(() => {
         this.currentFlowId = id;
         this.flow = saved;
@@ -338,10 +341,18 @@ export class AppComponent implements OnInit, AfterViewInit {
           const flow = this.store.load(action.id);
 
           if (flow) {
-            this.currentFlowId = action.id;
-            this.store.setCurrent(action.id);
-            this.history.clear();
-            this.flow = flow;
+            /*
+             * Modules first, then the flow: a flow shown before its types are
+             * registered draws every one of its nodes as an empty box, and
+             * the engine gives them no workers at all.
+             */
+            void this.modules.enableFor(flow).then(() => this.zone.run(() => {
+              this.currentFlowId = action.id;
+              this.store.setCurrent(action.id);
+              this.history.clear();
+              this.flow = flow;
+              this.cdr.detectChanges();
+            }));
           }
         } else {
           const flow: FbNodeState = {
