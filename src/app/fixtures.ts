@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 12 },
+  config: { seedVersion: 13 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -406,10 +406,31 @@ export const demo = () => ({
           'stored: in this flow a complex number is the pair `{re, im}`, and the ' +
           'connections carry it as ordinary data.\n' +
           '\n' +
-          'Now those four values have addresses: right, up, left, down. Each ' +
-          'multiplication by $i$ moved a quarter of the way round — and that is the ' +
-          'shift this whole page rests on. Multiplication no longer only stretches. It ' +
-          'stretches *and* turns.',
+          'So the four values have addresses now: right, up, left, down.',
+      },
+      /*
+       * Centred rather than floated, and alone between two paragraphs: this is
+       * the diagram the section has been building towards, and a float would
+       * have set it racing the next section's own figure for the right margin.
+       */
+      {
+        type: 'node',
+        nodeId: 1500,
+        float: 'none',
+        // The plane's normal view is 300px wide and the well pads it by 10 on
+        // each side; anything wider leaves the drawing hanging to the left of
+        // its own frame, since the mounted content does not stretch.
+        width: '320px',
+        caption: 'The four powers of i, walked one per step',
+      },
+      {
+        type: 'text',
+        text:
+          'That is the walk above, running: the arm points at the value you are on, and ' +
+          'it steps every {{1400:interval}} milliseconds — set that lower and it speeds ' +
+          'up. Each multiplication by $i$ moves a quarter of the way round, and that is ' +
+          'the shift this whole page rests on. Multiplication no longer only stretches. ' +
+          'It stretches *and* turns.',
       },
 
       { type: 'heading', text: 'Turning without stopping', level: 2 },
@@ -616,6 +637,37 @@ export const demo = () => ({
       position: { x: 77, y: 34 },
     },
     {
+      type: 'math-points',
+      title: 'The four powers of i',
+      id: 1400,
+      /*
+       * The four values the reader has just worked out by hand, written down
+       * as data: each one carries the name it goes by, because a dot at
+       * (0, 1) means little and a dot labelled i means everything. The walk
+       * runs on its own clock, which the document hands to the reader.
+       */
+      config: {
+        points: [
+          { re: 1, im: 0, label: '1' },
+          { re: 0, im: 1, label: 'i' },
+          { re: -1, im: 0, label: '−1' },
+          { re: 0, im: -1, label: '−i' },
+        ],
+        interval: 900,
+      },
+      sockets: [{ id: 1410, type: 'out', format: 'marks' }],
+      // Bottom left, clear of the wire that runs the width of the graph at the
+      // top: a node parked on a connection reads as attached to it.
+      position: { x: 2, y: 62 },
+    },
+    {
+      type: 'graph-complex',
+      title: 'Four powers of i',
+      id: 1500,
+      sockets: [{ id: 1510, type: 'in', formats: ['number', 'point', 'marks'] }],
+      position: { x: 14, y: 62 },
+    },
+    {
       type: 'graph-timeseries',
       title: 'Shadows',
       id: 1300,
@@ -653,5 +705,6 @@ export const demo = () => ({
     { id: 1008, from: 1000, to: 1100, out: 1010, in: 1110 },
     { id: 1009, from: 1100, to: 1200, out: 1111, in: 1210 },
     { id: 1011, from: 1100, to: 1300, out: 1111, in: 1310 },
+    { id: 1012, from: 1400, to: 1500, out: 1410, in: 1510 },
   ],
 });

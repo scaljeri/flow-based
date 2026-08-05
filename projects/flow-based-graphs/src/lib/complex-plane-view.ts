@@ -80,6 +80,14 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
 
     ctx.clearRect(0, 0, width, height);
 
+    // A set of named positions is a different picture from a trajectory, and
+    // it takes precedence: whoever sent marks meant them to be the subject.
+    if (this.worker.buffer.marks?.length) {
+      this.drawMarks(ctx, width, height);
+
+      return;
+    }
+
     // A real-only series lives ON the real axis: im is simply 0.
     const points = this.worker.buffer.points.map(p => [p[1], p[2] ?? 0]);
 
@@ -145,5 +153,80 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
     ctx.beginPath();
     ctx.arc(x(head[0]), y(head[1]), 3.5, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  /**
+   * A named set of positions, one of them current.
+   *
+   * Always centred on zero rather than on the data: these are addresses in the
+   * plane, and a picture of $1$, $i$, $-1$ and $-i$ that puts the origin
+   * off-centre has thrown away the very thing it is showing. The current mark
+   * gets a line back to zero — that arm is where the turning becomes visible,
+   * since consecutive marks are a quarter of a circle apart.
+   */
+  private drawMarks(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const marks = this.worker.buffer.marks ?? [];
+    const current = this.worker.buffer.current;
+
+    // Room for a label beside the outermost dot, which sits at the very edge
+    // of the span and would otherwise be written off the canvas.
+    const pad = (this.axes ? 26 : 12) + 14;
+    const reach = Math.max(...marks.map(m => Math.max(Math.abs(m.re), Math.abs(m.im))), 1);
+    const scale = (Math.min(width, height) - pad * 2) / (reach * 2);
+
+    const x = (re: number) => width / 2 + re * scale;
+    const y = (im: number) => height / 2 - im * scale;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x(0), 0);
+    ctx.lineTo(x(0), height);
+    ctx.moveTo(0, y(0));
+    ctx.lineTo(width, y(0));
+    ctx.stroke();
+
+    ctx.font = '11px system-ui, sans-serif';
+
+    if (this.axes) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('re', width - 18, y(0) + 4);
+      ctx.fillText('im', x(0) + 4, 2);
+    }
+
+    marks.forEach((mark, index) => {
+      const active = index === current;
+      const px = x(mark.re);
+      const py = y(mark.im);
+
+      if (active) {
+        ctx.strokeStyle = 'rgba(186, 218, 85, 0.55)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x(0), y(0));
+        ctx.lineTo(px, py);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = active ? '#bada55' : 'rgba(186, 218, 85, 0.35)';
+      ctx.beginPath();
+      ctx.arc(px, py, active ? 5 : 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (!mark.label) {
+        return;
+      }
+
+      /*
+       * The label sits on the far side of the dot from the origin, so it never
+       * lands on the arm or on the axis cross.
+       */
+      ctx.fillStyle = active ? '#eef6d8' : 'rgba(255, 255, 255, 0.6)';
+      ctx.textAlign = mark.re < 0 ? 'right' : 'left';
+      ctx.textBaseline = mark.im < 0 ? 'top' : 'bottom';
+      ctx.fillText(mark.label, px + (mark.re < 0 ? -8 : 8), py + (mark.im < 0 ? 8 : -8));
+    });
   }
 }

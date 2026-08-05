@@ -15,6 +15,17 @@ export interface SeriesBuffer {
   points: number[][];
   /** What the series calls itself; sent by the producer, drawn by the plot. */
   labels?: { title?: string; x?: string; y?: string };
+  /**
+   * Fixed, named positions in the plane, rather than a trajectory through it.
+   *
+   * A separate field from `points` on purpose: a path is a sequence where
+   * every step matters and the order IS the story, while marks are a set that
+   * happens to be walked. Mixing them into one buffer would mean a plot could
+   * not tell "here are four values" from "here is where it went".
+   */
+  marks?: { re: number; im: number; label?: string }[];
+  /** Which mark the producer is on now, if any. */
+  current?: number;
 }
 
 /**
@@ -57,6 +68,15 @@ export class TimeseriesWorker implements FbNodeWorker {
   }
 
   private ingest(value: unknown): boolean {
+    if (value && typeof value === 'object' && 'marks' in (value as object)) {
+      const message = value as { marks: SeriesBuffer['marks']; current?: number };
+
+      this.buffer.marks = message.marks;
+      this.buffer.current = message.current;
+
+      return true;
+    }
+
     if (value && typeof value === 'object' && 'labels' in (value as object)) {
       this.buffer.labels = { ...(value as { labels: SeriesBuffer['labels'] }).labels };
 

@@ -24,6 +24,11 @@ export const GRAPHS_MODULE: FbModule = {
   formats: [
     { name: 'number', description: 'A plain numeric value', color: '#025d04' },
     { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
+    {
+      name: 'marks',
+      description: 'A labelled set of complex points, with one of them current',
+      color: '#d081b8',
+    },
   ],
 
   types: {
@@ -61,7 +66,8 @@ export const GRAPHS_MODULE: FbModule = {
         title: 'Complex plane',
         group: 'Graphs',
         resizable: true,
-        sockets: [{ type: 'in', formats: ['number', 'point'] }],
+        // Trajectories, and named positions: the same plane draws both.
+        sockets: [{ type: 'in', formats: ['number', 'point', 'marks'] }],
       },
       worker: TimeseriesWorker,
     },

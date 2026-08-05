@@ -776,8 +776,9 @@ test('data type colours are set from the menu, and can be switched off', async (
   const dialog = page.locator('fb-type-colors');
   await expect(dialog).toBeVisible();
 
-  // Only the types actually in use: numbers, functions, and sampled points.
-  await expect(dialog.locator('li .name')).toHaveText(['function', 'number', 'point']);
+  // Only the types actually in use: functions, the labelled point set, plain
+  // numbers, and sampled points.
+  await expect(dialog.locator('li .name')).toHaveText(['function', 'marks', 'number', 'point']);
 
   // Pick a new colour for `point`, and every line carrying it follows.
   await page.evaluate(() => {
@@ -1170,30 +1171,55 @@ test('the demo reads as a document with typeset math and live figures', async ({
     .toBeGreaterThanOrEqual(3);
 
   /*
-   * The inline inputs: the prose carries the circle's arc length and speed and
-   * the damped formula's decay as editable values. A write goes through the
-   * worker (setConfigValue), so the running flow follows; nonsense is not a
-   * write at all and snaps back.
+   * The inline inputs: the prose carries the step interval of the walk over
+   * the powers of i, then the circle's arc length and speed, then the damped
+   * formula's decay. A write goes through the worker (setConfigValue), so the
+   * running flow follows; nonsense is not a write at all and snaps back.
    */
   const inputs = doc.locator('.config-input');
 
-  await expect(inputs).toHaveCount(3);
-  await expect(inputs.first()).toHaveValue('6.3');
+  await expect(inputs).toHaveCount(4);
+  await expect(inputs.first()).toHaveValue('900');
 
-  await inputs.first().fill('3');
-  await inputs.first().press('Enter');
+  const arc = inputs.nth(1);
+
+  await expect(arc).toHaveValue('6.3');
+
+  await arc.fill('3');
+  await arc.press('Enter');
 
   await expect.poll(() => page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
       .editor.nodeById(1000).config.x.to)).toBe(3);
 
-  await inputs.first().fill('not a number');
-  await inputs.first().press('Enter');
+  await arc.fill('not a number');
+  await arc.press('Enter');
 
-  await expect(inputs.first()).toHaveValue('3');
+  await expect(arc).toHaveValue('3');
   expect(await page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
       .editor.nodeById(1000).config.x.to)).toBe(3);
+
+  /*
+   * The walk itself: a set of named points, one of them current, and the
+   * current one moves on its own. Sampled rather than asserted once — the
+   * whole claim is that it is running.
+   */
+  const visited = new Set<number>();
+
+  for (let i = 0; i < 10; i += 1) {
+    const current = await page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+        .editor.flow.getWorker(1500)?.buffer?.current);
+
+    if (typeof current === 'number') {
+      visited.add(current);
+    }
+
+    await page.waitForTimeout(300);
+  }
+
+  expect(visited.size).toBeGreaterThan(1);
 
   // Back to the flow: the editor was hidden, not destroyed, and still stands.
   await page.click('button.doc');
@@ -1217,7 +1243,7 @@ test('embed mode shows the article alone, without the toolbar', async ({ page })
   // The demo arrives asynchronously; its authored title is what proves the
   // document — not the derived fallback of the placeholder flow.
   await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers make a circle');
-  await expect.poll(() => page.locator('fb-flow-document .config-input').count()).toBe(3);
+  await expect.poll(() => page.locator('fb-flow-document .config-input').count()).toBe(4);
 
   await page.keyboard.press('Escape');
   await expect(page.locator('fb-flow-document')).toBeVisible();
