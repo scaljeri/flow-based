@@ -1518,3 +1518,52 @@ test('leaving the document abandons an unsaved edit', async ({ page }) => {
   await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers make a circle');
   await expect(page.locator('button.doc-edit')).toBeVisible();
 });
+
+/**
+ * A map is another way of looking at a stream.
+ *
+ * The Graphs module gained a Leaflet map and a Places source. Leaflet arrives
+ * by dynamic import when a map is first drawn, so a flow of plots never
+ * fetches a mapping library — and the coordinates travel as their own format,
+ * because an [x, y] sample is not a place on the earth.
+ */
+test('a map draws the places it is given', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const wired = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const map = editor.addNode('graph-map');
+
+    places.position = { x: 6, y: 70 };
+    map.position = { x: 26, y: 70 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    return { map: map.id, socket: map.sockets[0].id };
+  });
+
+  // The places reached the map's own layer for that socket.
+  await expect.poll(() => page.evaluate(ids => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return editor.flow.getWorker(ids.map)?.layerFor(ids.socket)?.places.length ?? 0;
+  }, wired)).toBe(4);
+
+  // Opened, it is a real map: Leaflet's container, a marker per place, and a
+  // track joining them. Tiles are deliberately not asserted — they come from
+  // somebody else's server.
+  await page.evaluate(id => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === id);
+
+    (node as unknown as { api?: { setView?: (v: string) => void } }).api?.setView?.('normal');
+  }, wired.map);
+
+  await expect(page.locator('.leaflet-container')).toHaveCount(1);
+  await expect.poll(() => page.locator('path.leaflet-interactive').count(), { timeout: 15_000 })
+    .toBeGreaterThanOrEqual(4);
+  await expect(page.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
+});

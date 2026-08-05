@@ -3,5 +3,6 @@
   "dest": "../../dist/flow-based-graphs",
   "lib": {
     "entryFile": "src/public_api.ts"
-  }
+  },
+  "allowedNonPeerDependencies": ["leaflet"]
 }

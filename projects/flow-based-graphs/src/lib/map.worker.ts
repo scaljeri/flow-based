@@ -1,0 +1,111 @@
+import { FbConnection, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
+import { Observable, Subject, Subscription } from 'rxjs';
+import { GeoPlaces, Place } from './places.worker';
+
+/** One drawn layer: the places that arrived on one input socket. */
+export interface MapLayer {
+  places: Place[];
+  /** Which of them is current, when the producer is walking them. */
+  current?: number;
+}
+
+export interface MapConfig {
+  /** Whether markers are joined in the order they arrived. */
+  track?: boolean;
+  /** Zoom to fit whatever is on the map. Off once the user has panned. */
+  follow?: boolean;
+}
+
+/**
+ * A map's data: one set of places per input socket.
+ *
+ * Same rule as the plots — a socket is a layer, and the node's socket order is
+ * the drawing order — so a route on one input and its landmarks on another sit
+ * on one map without either having to know about the other.
+ */
+export class MapWorker implements FbNodeWorker {
+  private readonly subject = new Subject<void>();
+  private readonly subscriptions: { [id: number]: Subscription } = {};
+  private readonly bySocket = new Map<number, MapLayer>();
+
+  constructor(private readonly config: MapConfig = {}) {
+  }
+
+  destroy(): void {
+    Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
+    this.subject.complete();
+  }
+
+  getStream(): Observable<void> {
+    return this.subject.asObservable();
+  }
+
+  setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
+    const key = socket.id ?? -connection.id;
+    let layer = this.bySocket.get(key);
+
+    if (!layer) {
+      layer = { places: [] };
+      this.bySocket.set(key, layer);
+    }
+
+    this.subscriptions[connection.id] = stream.subscribe(value => {
+      if (this.ingest(layer!, value)) {
+        this.subject.next();
+      }
+    });
+  }
+
+  removeStream(connection: FbConnection): void {
+    this.subscriptions[connection.id]?.unsubscribe();
+    delete this.subscriptions[connection.id];
+  }
+
+  layerFor(socketId: number): MapLayer | undefined {
+    return this.bySocket.get(socketId);
+  }
+
+  get track(): boolean {
+    return this.config.track ?? true;
+  }
+
+  setTrack(on: boolean): void {
+    this.config.track = on;
+    this.subject.next();
+  }
+
+  get follow(): boolean {
+    return this.config.follow ?? true;
+  }
+
+  setFollow(on: boolean): void {
+    this.config.follow = on;
+    this.subject.next();
+  }
+
+  /**
+   * Two shapes, because a producer may or may not be walking its list: the
+   * whole set with an index, or a bare array of places.
+   */
+  private ingest(layer: MapLayer, value: unknown): boolean {
+    if (value && typeof value === 'object' && 'places' in (value as object)) {
+      const message = value as GeoPlaces;
+
+      layer.places = message.places ?? [];
+      layer.current = message.current;
+
+      return true;
+    }
+
+    if (Array.isArray(value)) {
+      layer.places = (value as Place[]).filter(
+        place => Number.isFinite(place?.lat) && Number.isFinite(place?.lon),
+      );
+      layer.current = undefined;
+
+      return true;
+    }
+
+    return false;
+  }
+}
