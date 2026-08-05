@@ -1,0 +1,27 @@
+{
+  "name": "@scaljeri/flow-based-data",
+  "version": "0.1.0",
+  "description": "Data node types for @scaljeri/flow-based: reshaping what flows, without writing code",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scaljeri/flow-based"
+  },
+  "keywords": [
+    "angular",
+    "flow-based-programming",
+    "fbp",
+    "json",
+    "transform"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "rxjs": "^7.4.0",
+    "@scaljeri/flow-based": "^0.1.0"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  }
+}

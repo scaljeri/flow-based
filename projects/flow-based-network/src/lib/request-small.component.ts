@@ -1,14 +1,14 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
-import { GeoSourceWorker } from './geo-source.worker';
+import { RequestWorker } from './request.worker';
 
-/** At rest: how many places arrived, or why none did. */
+/** At rest: the method, and whether the last attempt worked. */
 @Component({
   standalone: true,
-  selector: 'fb-geo-source-small',
+  selector: 'fb-request-small',
   template: `
-    <span class="glyph">⇩ ◉</span>
+    <span class="glyph">{{worker?.method ?? 'GET'}} ⇩</span>
     <span class="value" [class.error]="!!worker?.error">{{value}}</span>
   `,
   styles: [`
@@ -25,7 +25,7 @@ import { GeoSourceWorker } from './geo-source.worker';
     }
 
     .glyph {
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       opacity: 0.7;
     }
 
@@ -34,23 +34,22 @@ import { GeoSourceWorker } from './geo-source.worker';
       text-align: center;
     }
 
-    /* A failure is the node's whole news, so it says so rather than showing a
-       zero that looks like an empty answer. */
+    /* A failure is the node's whole news; a zero would look like an answer. */
     .value.error {
       color: #ff8aa8;
       font-size: 10px;
     }
   `]
 })
-export class GeoSourceSmallComponent implements OnInit, OnDestroy {
+export class RequestSmallComponent implements OnInit, OnDestroy {
   private readonly service = inject(NodeService);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  worker?: GeoSourceWorker;
+  worker?: RequestWorker;
   private subscription?: Subscription;
 
   ngOnInit(): void {
-    this.worker = this.service.worker as GeoSourceWorker;
+    this.worker = this.service.worker as RequestWorker;
     this.subscription = this.worker?.getStream().subscribe(() => this.cdr.detectChanges());
   }
 
@@ -63,6 +62,10 @@ export class GeoSourceSmallComponent implements OnInit, OnDestroy {
       return '';
     }
 
-    return this.worker.error ?? `${this.worker.count} places`;
+    if (this.worker.error) {
+      return this.worker.error;
+    }
+
+    return this.worker.received ? `${this.worker.received} × ${this.worker.status}` : '…';
   }
 }

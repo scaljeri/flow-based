@@ -256,7 +256,12 @@ export class AppComponent implements OnInit, AfterViewInit {
      * those modules download first. The await matters: loading a flow whose
      * types are not registered yet would draw dead boxes.
      */
-    await Promise.all([this.modules.enable('math'), this.modules.enable('graphs')]);
+    await Promise.all([
+      this.modules.enable('math'),
+      this.modules.enable('graphs'),
+      this.modules.enable('network'),
+      this.modules.enable('data'),
+    ]);
 
     /*
      * Back INSIDE the zone — zone.js does not patch dynamic import(), and the

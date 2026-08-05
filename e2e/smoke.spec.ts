@@ -1598,7 +1598,7 @@ test('the pollution flow is on the shelf, and its source reports a failed fetch'
         ?.editor?.state?.title), { timeout: 15_000 })
     .toBe('pollution');
 
-  // No tno-topas beside a dev server, so the fetch fails — and says so.
+  // No tno-topas beside a dev server, so the request fails — and says so.
   await expect.poll(() => page.evaluate(() => {
     const worker = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
       .editor.flow.getWorker(100);
@@ -1606,6 +1606,59 @@ test('the pollution flow is on the shelf, and its source reports a failed fetch'
     return worker?.error;
   }), { timeout: 15_000 }).toBeTruthy();
 
-  // Nothing died with it: the map is still there, waiting for places.
-  await expect(page.locator('fb-node-box')).toHaveCount(2);
+  // Nothing died with it: three nodes, each with a worker of its own, and the
+  // map still waiting for places.
+  await expect(page.locator('fb-node-box')).toHaveCount(3);
+  expect(await page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return [100, 150, 200].every(id => !!flow.getWorker(id));
+  })).toBe(true);
+});
+
+/**
+ * Ask, take the part you meant, draw it.
+ *
+ * The seam between fetching and interpreting is a connection rather than a
+ * config panel, so this walks the whole chain on a served file: a request that
+ * really answers, a pick that really finds the places in it.
+ */
+test('a request feeds a pick, which feeds a map', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // Any same-origin JSON will do; the app's own build stamp is served beside it.
+  await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const request = editor.addNode('net-request');
+    const pick = editor.addNode('data-pick');
+
+    request.position = { x: 4, y: 70 };
+    pick.position = { x: 26, y: 70 };
+
+    editor.flow.getWorker(pick.id).set('list', 'stations');
+    editor.flow.getWorker(pick.id).set('a', 'lat');
+    editor.flow.getWorker(pick.id).set('b', 'lon');
+    editor.flow.getWorker(pick.id).set('label', 'name');
+
+    editor.socketClicked(request.sockets.find((s: any) => s.type === 'out'), request.id);
+    editor.socketClicked(pick.sockets.find((s: any) => s.type === 'in'), pick.id);
+
+    // A data: URL is same-origin by definition, so this tests the chain and
+    // not somebody else's server.
+    const body = encodeURIComponent(JSON.stringify({
+      stations: [{ lat: 52.1, lon: 5.1, name: 'One' }, { lat: 51.9, lon: 4.5, name: 'Two' }],
+    }));
+
+    editor.flow.getWorker(request.id).set('url', `data:application/json,${body}`);
+
+    return { request: request.id, pick: pick.id };
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const pick = editor.state.children.filter((node: any) => node.type === 'data-pick').pop();
+
+    return editor.flow.getWorker(pick.id)?.count ?? 0;
+  }), { timeout: 15_000 }).toBe(2);
 });

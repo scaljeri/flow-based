@@ -762,12 +762,18 @@ export const demo = () => ({
  * browser and reproducible from git rather than from whatever somebody's
  * localStorage happens to hold.
  *
- * The station list is fetched by RELATIVE url. That is not a detail: the
- * browser blocks a cross-origin fetch unless the far end allows it, and this
- * one does not — but the two apps live under one domain, so from
- * /fbp/ the path ../tno-topas/lml.json is same-origin and allowed. Run the
- * editor from a dev server and the same node reports that it could not fetch,
- * which is the honest answer rather than a silent empty map.
+ * Three nodes, one job each: ask, take the part we meant, draw it. The first
+ * two used to be one node, which was quicker to build and worse to look at —
+ * the seam between fetching and interpreting is exactly the thing worth
+ * seeing on a canvas, because everything downstream depends on getting the
+ * interpretation right.
+ *
+ * The URL is RELATIVE, and that is not a detail: a browser blocks a
+ * cross-origin fetch unless the far end allows it, and this data allows
+ * nothing — but the two apps live under one domain, so from /fbp/ the path
+ * ../tno-topas/lml.json is same-origin. Run the editor from a dev server and
+ * the request reports that it could not fetch, which is the honest answer
+ * rather than a silent empty map.
  *
  * A function, because ids must be fresh per creation.
  */
@@ -775,29 +781,35 @@ export const pollution = () => ({
   id: 1,
   type: 'flow',
   title: 'pollution',
-  config: { seedVersion: 1 },
+  config: { seedVersion: 2 },
   sockets: [],
   children: [
     {
-      type: 'graph-geo-source',
-      title: 'Measuring stations',
+      type: 'net-request',
+      title: 'TOPAS stations',
       id: 100,
       /*
-       * TOPAS publishes each network as one file of stations: a code, a name,
-       * a position and which pollutants it measures. Only the position and
-       * the name are read here; the rest waits until there is something to do
-       * with it.
+       * TOPAS publishes each measuring network as one file: a code, a name, a
+       * position and which pollutants the station measures. Asked once —
+       * a list of stations does not change while you look at it.
        */
-      config: {
-        url: '../tno-topas/lml.json',
-        list: 'list',
-        lat: 'lat',
-        lon: 'lon',
-        label: 'name',
-        limit: 200,
-      },
-      sockets: [{ id: 110, type: 'out', format: 'geo' }],
+      config: { url: '../tno-topas/lml.json', method: 'GET', every: 0 },
+      sockets: [
+        { id: 109, type: 'in', name: 'when' },
+        { id: 110, type: 'out', format: 'data' },
+      ],
       position: { x: 4, y: 8 },
+    },
+    {
+      type: 'data-pick',
+      title: 'Their positions',
+      id: 150,
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: 'name', limit: 200 },
+      sockets: [
+        { id: 160, type: 'in', format: 'data' },
+        { id: 161, type: 'out', formats: ['geo', 'point', 'number'] },
+      ],
+      position: { x: 26, y: 8 },
     },
     {
       type: 'graph-map',
@@ -805,13 +817,15 @@ export const pollution = () => ({
       id: 200,
       /*
        * No track: these are 93 separate stations, not a route, and a line
-       * through them in file order would be a claim about them that is not
-       * true.
+       * through them in file order would be a claim that is not true.
        */
       config: { track: false, follow: true },
       sockets: [{ id: 210, type: 'in', formats: ['geo'] }],
-      position: { x: 30, y: 8 },
+      position: { x: 48, y: 8 },
     },
   ],
-  connections: [{ id: 1000, from: 100, to: 200, out: 110, in: 210 }],
+  connections: [
+    { id: 1000, from: 100, to: 150, out: 110, in: 160 },
+    { id: 1001, from: 150, to: 200, out: 161, in: 210 },
+  ],
 });

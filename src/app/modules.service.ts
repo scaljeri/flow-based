@@ -35,6 +35,8 @@ const STORAGE_KEY = 'fb-modules';
 const LOADERS: Record<string, () => Promise<FbModule>> = {
   math: () => import('@scaljeri/flow-based-math').then(m => m.MATH_MODULE),
   graphs: () => import('@scaljeri/flow-based-graphs').then(m => m.GRAPHS_MODULE),
+  network: () => import('@scaljeri/flow-based-network').then(m => m.NETWORK_MODULE),
+  data: () => import('@scaljeri/flow-based-data').then(m => m.DATA_MODULE),
 };
 
 /**
@@ -88,6 +90,16 @@ export class ModulesService {
       id: 'graphs',
       title: 'Graphs',
       description: 'Plot a stream over time — as a line, an area or bars.',
+    },
+    {
+      id: 'network',
+      title: 'Network',
+      description: 'Data that arrives on somebody else\'s schedule: requests, and what answers them.',
+    },
+    {
+      id: 'data',
+      title: 'Data',
+      description: 'Reshape what flows — take the part you meant out of whatever arrived.',
     },
   ];
 

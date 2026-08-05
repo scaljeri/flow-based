@@ -15,9 +15,6 @@ import { PlacesWorker } from './places.worker';
 import { PlacesSmallComponent } from './places-small.component';
 import { PlacesSettingsComponent } from './places-settings.component';
 import { MapSettingsComponent } from './map-settings.component';
-import { GeoSourceWorker } from './geo-source.worker';
-import { GeoSourceSmallComponent } from './geo-source-small.component';
-import { GeoSourceSettingsComponent } from './geo-source-settings.component';
 
 /**
  * The Graphs module: ways of LOOKING at streams.
@@ -126,29 +123,6 @@ export const GRAPHS_MODULE: FbModule = {
       worker: PlacesWorker,
     },
 
-    /*
-     * A published list of coordinates, read straight off the web. Told where
-     * the array is and which field is which — configuration, not a snippet of
-     * code, because only data travels these wires.
-     */
-    'graph-geo-source': {
-      component: { small: GeoSourceSmallComponent },
-      settingsComponent: GeoSourceSettingsComponent,
-      settings: {
-        title: 'Places from a URL',
-        group: 'Graphs',
-        config: {
-          url: '../tno-topas/lml.json',
-          list: 'list',
-          lat: 'lat',
-          lon: 'lon',
-          label: 'name',
-          limit: 200,
-        },
-        sockets: [{ type: 'out', format: 'geo' }],
-      },
-      worker: GeoSourceWorker,
-    },
 
     /*
      * The world as a drawing surface. Leaflet arrives by dynamic import when

@@ -276,6 +276,64 @@
           }
         }
       }
+    },
+    "@scaljeri/flow-based-network": {
+      "projectType": "library",
+      "root": "projects/flow-based-network",
+      "sourceRoot": "projects/flow-based-network/src",
+      "prefix": "fb",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-network/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-network/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-network/**/*.ts",
+              "projects/flow-based-network/**/*.html"
+            ]
+          }
+        }
+      }
+    },
+    "@scaljeri/flow-based-data": {
+      "projectType": "library",
+      "root": "projects/flow-based-data",
+      "sourceRoot": "projects/flow-based-data/src",
+      "prefix": "fb",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-data/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-data/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-data/**/*.ts",
+              "projects/flow-based-data/**/*.html"
+            ]
+          }
+        }
+      }
     }
   }
 }
