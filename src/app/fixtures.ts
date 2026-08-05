@@ -754,3 +754,64 @@ export const demo = () => ({
     { id: 1015, from: 1600, to: 1200, out: 1611, in: 1212 },
   ],
 });
+
+/**
+ * The flow we are exploring the TOPAS data with.
+ *
+ * Seeded beside the demo under its own id, so it is on the shelf in every
+ * browser and reproducible from git rather than from whatever somebody's
+ * localStorage happens to hold.
+ *
+ * The station list is fetched by RELATIVE url. That is not a detail: the
+ * browser blocks a cross-origin fetch unless the far end allows it, and this
+ * one does not — but the two apps live under one domain, so from
+ * /fbp/ the path ../tno-topas/lml.json is same-origin and allowed. Run the
+ * editor from a dev server and the same node reports that it could not fetch,
+ * which is the honest answer rather than a silent empty map.
+ *
+ * A function, because ids must be fresh per creation.
+ */
+export const pollution = () => ({
+  id: 1,
+  type: 'flow',
+  title: 'pollution',
+  config: { seedVersion: 1 },
+  sockets: [],
+  children: [
+    {
+      type: 'graph-geo-source',
+      title: 'Measuring stations',
+      id: 100,
+      /*
+       * TOPAS publishes each network as one file of stations: a code, a name,
+       * a position and which pollutants it measures. Only the position and
+       * the name are read here; the rest waits until there is something to do
+       * with it.
+       */
+      config: {
+        url: '../tno-topas/lml.json',
+        list: 'list',
+        lat: 'lat',
+        lon: 'lon',
+        label: 'name',
+        limit: 200,
+      },
+      sockets: [{ id: 110, type: 'out', format: 'geo' }],
+      position: { x: 4, y: 8 },
+    },
+    {
+      type: 'graph-map',
+      title: 'Where they measure',
+      id: 200,
+      /*
+       * No track: these are 93 separate stations, not a route, and a line
+       * through them in file order would be a claim about them that is not
+       * true.
+       */
+      config: { track: false, follow: true },
+      sockets: [{ id: 210, type: 'in', formats: ['geo'] }],
+      position: { x: 30, y: 8 },
+    },
+  ],
+  connections: [{ id: 1000, from: 100, to: 200, out: 110, in: 210 }],
+});

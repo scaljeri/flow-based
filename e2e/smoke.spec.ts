@@ -968,7 +968,10 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
 
   await page.locator('mat-toolbar button.overflow').click();
   await page.locator('.cdk-overlay-container button.flows').click();
-  await expect(page.locator('fb-flows-dialog li')).toHaveCount(2);
+
+  // Both shipped flows plus the new one: the shelf holds what was seeded and
+  // what was made, which is the whole point of it.
+  await expect(page.locator('fb-flows-dialog li')).toHaveCount(3);
 });
 
 /**
@@ -1566,4 +1569,43 @@ test('a map draws the places it is given', async ({ page }) => {
   await expect.poll(() => page.locator('path.leaflet-interactive').count(), { timeout: 15_000 })
     .toBeGreaterThanOrEqual(4);
   await expect(page.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
+});
+
+/**
+ * The pollution flow, and a source that fails out loud.
+ *
+ * It is seeded beside the demo, so it is on the shelf in every browser. Its
+ * station list is fetched by a relative URL — same-origin where this editor is
+ * deployed next to the data, and simply absent from a dev server, which is
+ * exactly what the node has to survive: it reports the failure rather than
+ * showing an empty map that looks like an answer.
+ */
+test('the pollution flow is on the shelf, and its source reports a failed fetch', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+
+  const shelf = page.locator('fb-flows-dialog li');
+
+  await expect(shelf.filter({ hasText: 'pollution' })).toHaveCount(1);
+  await shelf.filter({ hasText: 'pollution' }).locator('button').first().click();
+
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+        ?.editor?.state?.title), { timeout: 15_000 })
+    .toBe('pollution');
+
+  // No tno-topas beside a dev server, so the fetch fails — and says so.
+  await expect.poll(() => page.evaluate(() => {
+    const worker = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(100);
+
+    return worker?.error;
+  }), { timeout: 15_000 }).toBeTruthy();
+
+  // Nothing died with it: the map is still there, waiting for places.
+  await expect(page.locator('fb-node-box')).toHaveCount(2);
 });

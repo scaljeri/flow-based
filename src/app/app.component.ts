@@ -216,6 +216,9 @@ export class AppComponent implements OnInit, AfterViewInit {
   /** The seeded demo's fixed id: one shared flow Luca and the tests both know. */
   private static readonly DEMO_ID = 'demo-seed';
 
+  /** The pollution flow, seeded the same way and for the same reasons. */
+  private static readonly POLLUTION_ID = 'pollution-seed';
+
   private async restoreFlow(): Promise<void> {
     /*
      * Modules FIRST, flow second. A saved flow can speak module types, and
@@ -232,12 +235,8 @@ export class AppComponent implements OnInit, AfterViewInit {
      * One shared, reproducible flow to test on; edits to it do not survive a
      * fixture bump, which is the point of a shared reference.
      */
-    const seeded = this.store.load(AppComponent.DEMO_ID);
-    const fixture = data.demo() as FbNodeState & { config?: { seedVersion?: number } };
-
-    if (!seeded || (seeded as { config?: { seedVersion?: number } }).config?.seedVersion !== fixture.config?.seedVersion) {
-      this.store.save(AppComponent.DEMO_ID, fixture);
-    }
+    this.seed(AppComponent.DEMO_ID, data.demo() as FbNodeState);
+    this.seed(AppComponent.POLLUTION_ID, data.pollution() as FbNodeState);
 
     const id = this.store.currentId();
     const saved = id ? this.store.load(id) : null;
@@ -271,6 +270,16 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.store.setCurrent(AppComponent.DEMO_ID);
       this.cdr.detectChanges();
     });
+  }
+
+  /** Write a shipped flow to the shelf when it is absent or out of date. */
+  private seed(id: string, fixture: FbNodeState): void {
+    const version = (flow?: FbNodeState) => (flow as { config?: { seedVersion?: number } })?.config?.seedVersion;
+    const stored = this.store.load(id);
+
+    if (!stored || version(stored) !== version(fixture)) {
+      this.store.save(id, fixture);
+    }
   }
 
   /**
