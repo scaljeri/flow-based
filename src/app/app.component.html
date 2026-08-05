@@ -119,11 +119,12 @@ showing this app's cockpit.
   and its workers live in this component, and the document's figures are those
   workers' live output.
 
-  `embed` hides it unconditionally, not just once the document is up: opening
+  Embedded, it also stays hidden until the document has been up once: opening
   the document awaits a dynamic KaTeX import, and until that resolved the
-  canvas was on screen — an embedded article flashed the editor first.
+  canvas was on screen — an embedded article flashed the editor first. After
+  that the document's own button may send the reader here.
   -->
-  <fb-flow [flow]="flow" [class.view-hidden]="showJson || showDoc || embed"></fb-flow>
+  <fb-flow [flow]="flow" [class.view-hidden]="flowHidden"></fb-flow>
 
   @if (showJson) {
     <article class="flow-as-json">
@@ -133,6 +134,19 @@ showing this app's cockpit.
   }
 
   @if (showDoc) {
-    <fb-flow-document class="flow-as-doc" [editor]="editor" [mathRenderer]="mathRenderer"></fb-flow-document>
+    <!--
+    The document can ask for things the app decides on: `{{!flow:...}}` in the
+    prose becomes a button, and this is where "flow" is given its meaning.
+    -->
+    <fb-flow-document class="flow-as-doc" [editor]="editor" [mathRenderer]="mathRenderer"
+      (fb-doc-action)="onDocAction($event)"></fb-flow-document>
+  }
+
+  <!--
+  Embedded, there is no toolbar to go back with — so the way back is offered
+  where the reader is. Only after the document has sent them to the flow.
+  -->
+  @if (embed && !showDoc && !flowHidden) {
+    <button type="button" class="back-to-doc" (click)="toggleDoc()">← Back to the article</button>
   }
 </main>

@@ -10,7 +10,7 @@
  * config references:
  *
  *   **bold**   *italic*   `code`   [text](href)   $x^2$   $$\sum_i x_i$$
- *   {{400:params.a}}
+ *   {{400:params.a}}   {{!flow:Show the flow}}
  */
 export type FbInline =
   | { type: 'text'; text: string }
@@ -29,7 +29,17 @@ export type FbInline =
    * (`params.a`, `x.to`), which bounds what a document can reach: exactly the
    * values that node's own settings panel edits, nothing beyond them.
    */
-  | { type: 'input'; nodeId: number; path: string };
+  | { type: 'input'; nodeId: number; path: string }
+  /**
+   * A named action the HOST performs, written as a button in the prose.
+   *
+   * The document renderer cannot know what "show the flow" means — it is a
+   * library component, and the flow view belongs to whichever app is hosting
+   * it. So a document names an action and the host decides what it does, which
+   * also means a document can offer one where no toolbar exists at all: an
+   * embedded article has no chrome to put a button in.
+   */
+  | { type: 'action'; action: string; text: string };
 
 /*
  * Order matters: the longer opener has to be tried first, or `$$x$$` matches as
@@ -37,6 +47,7 @@ export type FbInline =
  */
 const PATTERN = new RegExp(
   [
+    /\{\{!([a-z][a-z0-9-]*):([^}]+)\}\}/.source,
     /\{\{(\d+):([A-Za-z_][A-Za-z0-9_.]*)\}\}/.source,
     /\$\$([\s\S]+?)\$\$/.source,
     /\$([^$\n]+?)\$/.source,
@@ -103,9 +114,14 @@ export function parseInline(text: string): FbInline[] {
       pushText(text.slice(last, index));
     }
 
-    const [, inputNode, inputPath, displayMath, inlineMath, code, strong, em, linkText, linkHref] = match;
+    const [
+      , actionName, actionText,
+      inputNode, inputPath, displayMath, inlineMath, code, strong, em, linkText, linkHref,
+    ] = match;
 
-    if (inputPath !== undefined) {
+    if (actionName !== undefined) {
+      tokens.push({ type: 'action', action: actionName, text: actionText.trim() });
+    } else if (inputPath !== undefined) {
       tokens.push({ type: 'input', nodeId: Number(inputNode), path: inputPath });
     } else if (displayMath !== undefined) {
       tokens.push({ type: 'math', tex: displayMath.trim(), display: true });

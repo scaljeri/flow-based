@@ -266,6 +266,30 @@ export class FbFlowDocumentElement extends LitElement {
       cursor: text;
     }
 
+    /*
+     * An action reads as a button rather than as a link: a link goes somewhere
+     * else, and this changes what the page in front of you is showing.
+     */
+    .doc-action {
+      background: rgba(255, 64, 129, 0.12);
+      border: 1px solid rgba(255, 64, 129, 0.5);
+      border-radius: 6px;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.95em;
+      padding: 0.15em 0.7em;
+      transition: background-color 120ms ease, border-color 120ms ease;
+      white-space: nowrap;
+    }
+
+    .doc-action:hover,
+    .doc-action:focus-visible {
+      background: rgba(255, 64, 129, 0.22);
+      border-color: #ff4081;
+      outline: none;
+    }
+
     .config-input.scrubbing {
       background-color: rgba(255, 64, 129, 0.25);
       user-select: none;
@@ -769,9 +793,33 @@ export class FbFlowDocumentElement extends LitElement {
       case 'input':
         return this.renderConfigInput(token);
 
+      case 'action':
+        return this.renderAction(token);
+
       default:
         return html`${token.text}`;
     }
+  }
+
+  /**
+   * A named action, as a button in the sentence.
+   *
+   * The document says WHAT it wants and the host decides what that means: a
+   * `fb-doc-action` event, composed so it crosses this shadow root, carrying
+   * the name the document used. Nothing happens if nobody is listening, which
+   * is the honest outcome for a document asking a host for something the host
+   * does not offer.
+   */
+  private renderAction(token: { action: string; text: string }) {
+    return html`<button
+      type="button"
+      class="doc-action"
+      @click=${() => this.dispatchEvent(new CustomEvent('fb-doc-action', {
+        detail: { action: token.action },
+        bubbles: true,
+        composed: true,
+      }))}
+    >${token.text}</button>`;
   }
 
   /**

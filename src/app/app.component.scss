@@ -180,6 +180,24 @@ main {
   display: none;
 }
 
+/*
+ * The way back out of an embedded flow. Floating rather than in a bar,
+ * because embed mode has no bar — that is the whole promise of the link.
+ */
+.back-to-doc {
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font: 13px 'Source Code Pro', monospace;
+  left: 16px;
+  padding: 8px 14px;
+  position: absolute;
+  top: 16px;
+  z-index: 50;
+}
+
 .load-error {
   background-color: var(--mat-sys-error-container, #ffdad6);
   color: var(--mat-sys-on-error-container, #410002);

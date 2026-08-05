@@ -1294,6 +1294,31 @@ test('embed mode shows the article alone, without the toolbar', async ({ page })
 });
 
 /**
+ * The document carries its own way to the flow.
+ *
+ * `{{!flow:...}}` in the prose becomes a button, and the host decides what the
+ * name means — which is the only way this can work embedded, where there is no
+ * toolbar to put the command in. The way back is offered where the reader is,
+ * for the same reason.
+ */
+test('the document can send an embedded reader to the flow, and back', async ({ page }) => {
+  await page.goto('/?embed=doc');
+  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers make a circle');
+
+  const action = page.locator('fb-flow-document .doc-action');
+
+  await expect(action).toHaveText('Show me the flow');
+  await action.click();
+
+  // The editor, with no toolbar around it: embed mode still promises that.
+  await expect(page.locator('fb-node-box').first()).toBeVisible();
+  await expect(page.locator('mat-toolbar')).toHaveCount(0);
+
+  await page.locator('button.back-to-doc').click();
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+});
+
+/**
  * No flash of the editor before the article.
  *
  * Opening the document awaits a dynamic KaTeX import, and while that resolved
@@ -1311,6 +1336,8 @@ test('embed mode never shows the canvas, not even for a frame', async ({ page })
       && flow.getBoundingClientRect().height > 0;
   }).catch(() => false);
 
+  // Sampled only through startup: the document's own button may reveal the
+  // canvas later, and that is a reader's decision rather than a flash.
   for (let i = 0; i < 40; i++) {
     expect(await canvasVisible()).toBe(false);
     await page.waitForTimeout(25);

@@ -91,3 +91,20 @@ describe('isDisplayMath', () => {
     expect(isDisplayMath(parseInline('$x^2$'))).toBe(false);
   });
 });
+
+describe('action tokens', () => {
+  it('reads a named action with its label', () => {
+    expect(parseInline('now {{!flow:Show the flow}} and read on')).toEqual([
+      { type: 'text', text: 'now ' },
+      { type: 'action', action: 'flow', text: 'Show the flow' },
+      { type: 'text', text: ' and read on' },
+    ]);
+  });
+
+  it('does not mistake a config input for an action, or the reverse', () => {
+    expect(parseInline('{{400:params.a}}')).toEqual([
+      { type: 'input', nodeId: 400, path: 'params.a' },
+    ]);
+    expect(parseInline('{{!flow:}}')).toEqual([{ type: 'text', text: '{{!flow:}}' }]);
+  });
+});

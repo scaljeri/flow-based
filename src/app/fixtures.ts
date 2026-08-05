@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 21 },
+  config: { seedVersion: 22 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -523,8 +523,8 @@ export const demo = () => ({
           'dimension, and $e^{i\\,x}$ is what turning without stopping looks like. ' +
           'Cosine and sine are nothing more than the two coordinates of that motion.\n' +
           '\n' +
-          'Switch to the flow view to see the wiring: that graph and this page are two ' +
-          'readings of the same JSON.',
+          'Every figure here is a node of one flow, and this page and that graph are ' +
+          'two readings of the same JSON. {{!flow:Show me the flow}}',
       },
     ],
   },

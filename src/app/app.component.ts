@@ -61,6 +61,21 @@ export class AppComponent implements OnInit, AfterViewInit {
   @HostBinding('class.is-embed')
   readonly embed = new URLSearchParams(window.location.search).has('embed');
 
+  /**
+   * Whether the document has ever been on screen.
+   *
+   * Embedded, the canvas has to stay hidden until it has — that is what keeps
+   * the editor from flashing past while KaTeX downloads. But it may not stay
+   * hidden forever: the document itself offers a button to the flow, and in
+   * embed mode there is no toolbar to offer one instead.
+   */
+  private docOpened = false;
+
+  /** Whether the flow may be shown at all — see docOpened. */
+  get flowHidden(): boolean {
+    return this.showJson || this.showDoc || (this.embed && !this.docOpened);
+  }
+
   /** Flipped briefly after a copy, so the share button can say it worked. */
   shareCopied = false;
 
@@ -425,9 +440,26 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     this.showDoc = !this.showDoc;
     this.showJson = false;
+    this.docOpened = this.docOpened || this.showDoc;
     // zone.js does not patch dynamic import(); after the await we are outside
     // the zone and nothing schedules a tick (see restoreFlow).
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Something the document asked for.
+   *
+   * A document names an action and the host decides what it means; this app
+   * knows one, and a name it does not know is simply ignored rather than
+   * guessed at.
+   */
+  onDocAction(event: Event): void {
+    const action = (event as CustomEvent<{ action?: string }>).detail?.action;
+
+    if (action === 'flow') {
+      this.showDoc = false;
+      this.cdr.detectChanges();
+    }
   }
 
   /**
