@@ -853,7 +853,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 2 },
+  config: { seedVersion: 3 },
   sockets: [],
   children: [
     {
@@ -951,10 +951,16 @@ export const tno = () => ({
        * the 93 official stations. A socket declared later is drawn later, and
        * the raster would bury both sets of markers the other way round.
        */
+      /*
+       * Each socket says what ITS layer is, rather than repeating everything
+       * the type can take. A socket offering both formats against a Pick that
+       * offers four leaves the engine two candidates and no way to choose, and
+       * it reported exactly that — two unresolved sockets in the toolbar.
+       */
       sockets: [
-        { id: 312, type: 'in', formats: ['geo', 'grid'] },
-        { id: 310, type: 'in', formats: ['geo', 'grid'] },
-        { id: 311, type: 'in', formats: ['geo', 'grid'] },
+        { id: 312, type: 'in', formats: ['grid'] },
+        { id: 310, type: 'in', formats: ['geo'] },
+        { id: 311, type: 'in', formats: ['geo'] },
       ],
       position: { x: 50, y: 20 },
     },
