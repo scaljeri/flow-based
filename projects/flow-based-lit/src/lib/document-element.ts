@@ -75,6 +75,9 @@ export class FbFlowDocumentElement extends LitElement {
       --doc-link: #ff7aa8;
       --doc-link-underline: rgba(255, 122, 168, 0.45);
       --doc-figure-border: rgba(255, 255, 255, 0.08);
+      /* Flat, not the ground's gradient: a pinned figure paints its own
+         backing, and a gradient tile would band against the page. */
+      --doc-paper: #14161b;
     }
 
     @media (prefers-color-scheme: light) {
@@ -89,6 +92,7 @@ export class FbFlowDocumentElement extends LitElement {
         --doc-link: #c2185b;
         --doc-link-underline: rgba(194, 24, 91, 0.4);
         --doc-figure-border: rgba(0, 0, 0, 0.2);
+        --doc-paper: #f3f1ec;
       }
     }
 
@@ -159,9 +163,10 @@ export class FbFlowDocumentElement extends LitElement {
       text-align: left;
     }
 
-    /* The lede: the first paragraph after the title, one step up. This works
-       because the title and every paragraph are flat siblings under .page. */
-    h1 + p {
+    /* The lede: the paragraph a document opens with, one step up. Matched as
+       the first CHILD of the first section, so a document that opens on a
+       heading instead has no lede rather than a randomly enlarged sentence. */
+    section:first-of-type > p:first-child {
       color: var(--doc-lede);
       font-size: 1.22rem;
       line-height: 1.65;
@@ -338,14 +343,58 @@ export class FbFlowDocumentElement extends LitElement {
         font-size: 1.1rem;
       }
 
-      /* A floated figure beside 20 characters of text helps nobody. The
-         width arrives as an inline style from the block, so !important is
-         the only thing that wins here. */
+      /*
+       * A floated figure beside 20 characters of text helps nobody, so on a
+       * phone every figure goes full width — and then it is a screen above
+       * the knob that moves it, which is exactly the wrong place: turning a
+       * value taught nothing because its consequence was off-screen.
+       *
+       * Pinned instead. A figure sticks to the top of the viewport for as
+       * long as its own section is being read, so the picture and the
+       * sentence that changes it are on screen together, and it scrolls away
+       * with the section it belongs to. It needs an opaque backing of its
+       * own: the prose passes underneath it.
+       *
+       * The width arrives as an inline style from the block, so !important
+       * is the only thing that wins here.
+       */
       figure.float-left,
-      figure.float-right {
+      figure.float-right,
+      figure.float-none {
+        background: var(--doc-paper);
         float: none;
-        margin: 1.5em auto;
+        margin: 1.2em auto;
+        padding: 6px 0 8px;
+        position: sticky;
+        top: 0;
         width: auto !important;
+        z-index: 1;
+      }
+
+      /*
+       * Prose fades out as it passes behind a pinned figure, above it and
+       * below it alike. A hard edge guillotines whichever line happens to
+       * straddle it, which reads as a rendering fault rather than as a
+       * layer passing underneath.
+       */
+      figure::before,
+      figure::after {
+        content: '';
+        height: 20px;
+        left: 0;
+        pointer-events: none;
+        position: absolute;
+        right: 0;
+      }
+
+      figure::before {
+        background: linear-gradient(to top, var(--doc-paper), transparent);
+        bottom: 100%;
+      }
+
+      figure::after {
+        background: linear-gradient(to bottom, var(--doc-paper), transparent);
+        top: 100%;
       }
 
       .math-display {
@@ -632,10 +681,35 @@ export class FbFlowDocumentElement extends LitElement {
     return html`
       <article class="page">
         ${doc.title ? html`<h1>${doc.title}</h1>` : nothing}
-        ${doc.blocks.map(block => this.renderBlock(block))}
+        ${this.sectionsOf(doc.blocks).map(blocks => html`
+          <section>${blocks.map(block => this.renderBlock(block))}</section>
+        `)}
         <div class="end"></div>
       </article>
     `;
+  }
+
+  /**
+   * The blocks grouped per heading, so a section is a real element.
+   *
+   * A flat list of blocks cannot say where a figure stops belonging: on a
+   * narrow screen the figures are pinned while their own section is being
+   * read, and "its own section" has to be an ancestor element for that to
+   * mean anything. A plain block-level section establishes no float context,
+   * so nothing about the wide layout changes.
+   */
+  private sectionsOf(blocks: FbDocBlock[]): FbDocBlock[][] {
+    const sections: FbDocBlock[][] = [];
+
+    for (const block of blocks) {
+      if (block.type === 'heading' || !sections.length) {
+        sections.push([]);
+      }
+
+      sections[sections.length - 1].push(block);
+    }
+
+    return sections;
   }
 
   private renderBlock(block: FbDocBlock) {
