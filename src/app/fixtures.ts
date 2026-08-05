@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 11 },
+  config: { seedVersion: 12 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -391,7 +391,7 @@ export const demo = () => ({
           '\n' +
           'Four multiplications, and you are exactly back where you started. Ordinary ' +
           'numbers never do that: keep multiplying by $2$ and you run away, by ' +
-          '$\\tfrac12$ and you sink towards zero. This one comes home.\n' +
+          '$\\tfrac12$ and you sink towards zero. Multiplying by $i$ does neither.\n' +
           '\n' +
           'Two of those four values sit on the line: $1$ and $-1$. The other two ' +
           'cannot, because nothing on the line squares to $-1$. So draw a second axis ' +
