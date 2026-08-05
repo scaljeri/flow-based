@@ -272,6 +272,23 @@ export class FbFlowCanvasElement extends LitElement {
      * on a touch screen that would otherwise disable pinch almost everywhere.
      */
     this.addEventListener('pointerdown', this.onPointerTracked, { capture: true });
+
+    /*
+     * On the HOST, not on the plane.
+     *
+     * The plane is one viewport big and it is what pan and zoom transform, so
+     * the moment it has been dragged or scaled it no longer covers the
+     * surface — and a press in the uncovered part reached no handler at all.
+     * A finger landing there did nothing, which on a phone is most of the
+     * screen after one pan. Everything a node cares about still stops at the
+     * node, since nodes stop pointerdown from bubbling.
+     */
+    this.addEventListener('wheel', this.onWheel, { passive: false });
+    this.addEventListener('pointerdown', this.onPointerDown);
+    this.addEventListener('pointermove', this.onPointerMove);
+    this.addEventListener('pointerup', this.onPointerUp);
+    this.addEventListener('pointercancel', this.onPointerUp);
+
     window.addEventListener('pointermove', this.onPinchMove);
     window.addEventListener('pointerup', this.onPointerReleased);
     window.addEventListener('pointercancel', this.onPointerReleased);
@@ -280,6 +297,11 @@ export class FbFlowCanvasElement extends LitElement {
   override disconnectedCallback(): void {
     this.removeEventListener('keydown', this.onKeyDown);
     this.removeEventListener('pointerdown', this.onPointerTracked, { capture: true });
+    this.removeEventListener('wheel', this.onWheel);
+    this.removeEventListener('pointerdown', this.onPointerDown);
+    this.removeEventListener('pointermove', this.onPointerMove);
+    this.removeEventListener('pointerup', this.onPointerUp);
+    this.removeEventListener('pointercancel', this.onPointerUp);
     window.removeEventListener('pointermove', this.onPinchMove);
     window.removeEventListener('pointerup', this.onPointerReleased);
     window.removeEventListener('pointercancel', this.onPointerReleased);
@@ -733,7 +755,12 @@ export class FbFlowCanvasElement extends LitElement {
     const flow = this.editor.state;
 
     return html`
-      <div class="head">
+      <!--
+      The bar stops its own presses: pan and zoom listen on the host now, and
+      without this a drag started on the breadcrumbs would slide the graph
+      behind it.
+      -->
+      <div class="head" @pointerdown=${(event: PointerEvent) => event.stopPropagation()}>
         <nav class="crumbs" aria-label="Flow">
           ${path.map((node, depth) => html`
             ${depth > 0 ? html`<span aria-hidden="true">\u203a</span>` : nothing}
@@ -838,11 +865,6 @@ export class FbFlowCanvasElement extends LitElement {
         class="plane"
         data-full=${full ? 'true' : 'false'}
         style=${this.planeStyle(plane.width, plane.height, transform)}
-        @wheel=${this.onWheel}
-        @pointerdown=${this.onPointerDown}
-        @pointermove=${this.onPointerMove}
-        @pointerup=${this.onPointerUp}
-        @pointercancel=${this.onPointerUp}
         @connection-remove=${this.onConnectionRemove}>
         ${this.renderBoundarySockets()}
         ${this.marquee

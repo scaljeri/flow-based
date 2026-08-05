@@ -2473,3 +2473,53 @@ test('a node is never shorter than its fullest edge of sockets', async ({ page }
   expect(spread.minGap).toBeGreaterThanOrEqual(20);
   expect(spread.height).toBeGreaterThanOrEqual(6 * 20);
 });
+
+/**
+ * A press anywhere on the surface pans — including where the plane is not.
+ *
+ * The plane is one viewport big and it is what pan and zoom transform, so once
+ * it has been dragged or scaled it no longer covers the surface. The pan
+ * handlers used to live on it, which left the vacated part of the screen inert:
+ * a finger landing there did nothing at all, and on a phone that is most of the
+ * screen after one pan.
+ */
+test('a press pans from anywhere on the surface, not only where the plane still is', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const panOffset = () => page.evaluate(() =>
+    ({ ...(window.fbEditor as unknown as { viewport: { panOffset: { x: number; y: number } } }).viewport.panOffset }));
+
+  const drag = async (fromX: number, fromY: number, dx: number, dy: number) => {
+    await page.mouse.move(fromX, fromY);
+    await page.mouse.down();
+    await page.mouse.move(fromX + dx, fromY + dy, { steps: 8 });
+    await page.mouse.up();
+  };
+
+  const box = (await canvas(page).boundingBox())!;
+
+  // Pan down and right, so the plane leaves the top-left corner of the surface.
+  await drag(box.x + box.width * 0.5, box.y + box.height * 0.85, 200, 160);
+
+  // Measured, not assumed: the point pressed next has to be one the plane no
+  // longer covers, or this test passes without proving anything.
+  const gap = await page.evaluate(() => {
+    const host = document.querySelector('fb-flow-canvas')!;
+    const plane = host.shadowRoot!.querySelector('.plane')!.getBoundingClientRect();
+    const surface = host.getBoundingClientRect();
+
+    return { vacated: plane.left - surface.left, x: surface.left + 8, y: surface.top + 8 };
+  });
+
+  expect(gap.vacated).toBeGreaterThan(20);
+
+  const before = await panOffset();
+
+  await drag(gap.x, gap.y, 60, 40);
+
+  const after = await panOffset();
+
+  expect(after.x).not.toBe(before.x);
+  expect(after.y).not.toBe(before.y);
+});
