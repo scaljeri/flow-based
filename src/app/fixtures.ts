@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 13 },
+  config: { seedVersion: 14 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -396,22 +396,14 @@ export const demo = () => ({
           'Two of those four values sit on the line: $1$ and $-1$. The other two ' +
           'cannot, because nothing on the line squares to $-1$. So draw a second axis ' +
           'through zero, at right angles to the first, and plot $i$ on it one unit up — ' +
-          '$-i$ lands one unit down.\n' +
-          '\n' +
-          'The horizontal axis now carries the ordinary part of a number, called the ' +
-          '**real** part; the vertical axis carries the **imaginary** part. Every ' +
-          'number is $a + b\\,i$: $a$ along the real axis, $b$ along the imaginary one. ' +
-          'That flat space is the complex plane, and it is what the figures on this ' +
-          'page are drawn on — the axes marked `re` and `im`. Nothing exotic is ' +
-          'stored: in this flow a complex number is the pair `{re, im}`, and the ' +
-          'connections carry it as ordinary data.\n' +
-          '\n' +
-          'So the four values have addresses now: right, up, left, down.',
+          '$-i$ lands one unit down.',
       },
       /*
-       * Centred rather than floated, and alone between two paragraphs: this is
-       * the diagram the section has been building towards, and a float would
-       * have set it racing the next section's own figure for the right margin.
+       * The picture arrives the moment the second axis does, and the naming
+       * that follows is read with it on screen — an explanation of axes lands
+       * differently when the axes are already in front of you. Centred rather
+       * than floated: a float this late in a section races the next section's
+       * own figure for the right margin.
        */
       {
         type: 'node',
@@ -426,11 +418,19 @@ export const demo = () => ({
       {
         type: 'text',
         text:
-          'That is the walk above, running: the arm points at the value you are on, and ' +
-          'it steps every {{1400:interval}} milliseconds — set that lower and it speeds ' +
-          'up. Each multiplication by $i$ moves a quarter of the way round, and that is ' +
-          'the shift this whole page rests on. Multiplication no longer only stretches. ' +
-          'It stretches *and* turns.',
+          'There they are. The horizontal axis carries the ordinary part of a number, ' +
+          'called the **real** part; the vertical axis carries the **imaginary** part. ' +
+          'Every number is $a + b\\,i$: $a$ along the real axis, $b$ along the ' +
+          'imaginary one. That flat space is the complex plane, and it is what every ' +
+          'figure on this page is drawn on — the axes marked `re` and `im`. Nothing ' +
+          'exotic is stored: in this flow a complex number is the pair `{re, im}`, and ' +
+          'the connections carry it as ordinary data.\n' +
+          '\n' +
+          'The walk is live: the arm points at the value it is on, and it steps every ' +
+          '{{1400:interval}} milliseconds — set that lower and it speeds up. Right, up, ' +
+          'left, down: each multiplication by $i$ moves a quarter of the way round, and ' +
+          'that is the shift this whole page rests on. Multiplication no longer only ' +
+          'stretches. It stretches *and* turns.',
       },
 
       { type: 'heading', text: 'Turning without stopping', level: 2 },
