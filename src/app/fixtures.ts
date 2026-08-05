@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 9 },
+  config: { seedVersion: 10 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -369,9 +369,9 @@ export const demo = () => ({
           'slides you along that line; multiplying by $-1$ flips you to the other side ' +
           'of zero.\n' +
           '\n' +
-          'Now ask a question the line cannot answer: which number, multiplied by ' +
-          'itself, gives $-1$? A positive times itself is positive. A negative times ' +
-          'itself is also positive. No number on the line works.\n' +
+          'Now ask a question no number on that line can answer: which number, ' +
+          'multiplied by itself, gives $-1$? A positive times itself is positive. A ' +
+          'negative times itself is also positive. Nothing on that line works.\n' +
           '\n' +
           'So define one. Call it $i$, and give it the property that was missing:\n' +
           '\n' +
