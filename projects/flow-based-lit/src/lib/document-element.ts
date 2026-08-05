@@ -384,12 +384,18 @@ export class FbFlowDocumentElement extends LitElement {
       text-transform: uppercase;
     }
 
+    /*
+     * A shadow root gets no page reset, so a field is content-box here: its
+     * padding and border are added OUTSIDE a width of 100%, and every one of
+     * them hung 18px past the block that holds it.
+     */
     .page.editing input,
     .page.editing textarea,
     .page.editing select {
       background: rgba(127, 127, 127, 0.12);
       border: 1px solid rgba(127, 127, 127, 0.4);
       border-radius: 6px;
+      box-sizing: border-box;
       color: inherit;
       font: inherit;
       padding: 6px 8px;
