@@ -1142,9 +1142,9 @@ test('a complex function samples as [x, re, im] on the unit circle', async ({ pa
  *
  * The Doc button swaps the canvas for <fb-flow-document>: the seeded demo
  * carries an authored document, its formulas typeset as MathML (KaTeX arrives
- * by dynamic import), and the figures are the nodes' LIVE content — the Wave
- * plot in the prose is a canvas the worker is still drawing on. The canvas is
- * hidden rather than destroyed, so flipping back costs nothing.
+ * by dynamic import), and the figures are the nodes' LIVE content — the unit
+ * circle in the prose is a canvas the worker is still drawing on. The canvas
+ * is hidden rather than destroyed, so flipping back costs nothing.
  */
 test('the demo reads as a document with typeset math and live figures', async ({ page }) => {
   await page.goto('/');
@@ -1155,40 +1155,45 @@ test('the demo reads as a document with typeset math and live figures', async ({
   const doc = page.locator('fb-flow-document');
 
   await expect(doc).toBeVisible();
-  await expect(doc.locator('h1')).toHaveText('Imaginary numbers, drawn');
+  await expect(doc.locator('h1')).toHaveText('Imaginary numbers make a circle');
 
   // KaTeX rendered to MathML — the browser's own maths, no stylesheet needed.
   await expect.poll(() => doc.locator('math').count()).toBeGreaterThan(10);
 
-  // The figures are mounted node content, not screenshots: the Wave plot's
-  // canvas lives in the light DOM, assigned to the figure's slot.
+  /*
+   * The figures are mounted node content, not screenshots: the plots' canvases
+   * live in the light DOM, assigned to the figures' slots. Three of the four
+   * figures draw on a canvas — the unit circle, its shadows and the spiral —
+   * while the fourth is the formula, which is typeset rather than plotted.
+   */
   await expect.poll(() => page.locator('fb-flow-document .fb-node-content canvas').count())
     .toBeGreaterThanOrEqual(3);
 
   /*
-   * The inline inputs: the prose carries the formula's a, b and domain end as
-   * editable values. A write goes through the worker (setConfigValue), so the
-   * running flow follows; nonsense is not a write at all and snaps back.
+   * The inline inputs: the prose carries the circle's arc length and speed and
+   * the damped formula's decay as editable values. A write goes through the
+   * worker (setConfigValue), so the running flow follows; nonsense is not a
+   * write at all and snaps back.
    */
   const inputs = doc.locator('.config-input');
 
   await expect(inputs).toHaveCount(3);
-  await expect(inputs.first()).toHaveValue('0.3');
+  await expect(inputs.first()).toHaveValue('6.3');
 
-  await inputs.first().fill('-0.05');
+  await inputs.first().fill('3');
   await inputs.first().press('Enter');
 
   await expect.poll(() => page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-      .editor.nodeById(400).config.params.a)).toBe(-0.05);
+      .editor.nodeById(1000).config.x.to)).toBe(3);
 
   await inputs.first().fill('not a number');
   await inputs.first().press('Enter');
 
-  await expect(inputs.first()).toHaveValue('-0.05');
+  await expect(inputs.first()).toHaveValue('3');
   expect(await page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-      .editor.nodeById(400).config.params.a)).toBe(-0.05);
+      .editor.nodeById(1000).config.x.to)).toBe(3);
 
   // Back to the flow: the editor was hidden, not destroyed, and still stands.
   await page.click('button.doc');
@@ -1211,7 +1216,7 @@ test('embed mode shows the article alone, without the toolbar', async ({ page })
 
   // The demo arrives asynchronously; its authored title is what proves the
   // document — not the derived fallback of the placeholder flow.
-  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers, drawn');
+  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers make a circle');
   await expect.poll(() => page.locator('fb-flow-document .config-input').count()).toBe(3);
 
   await page.keyboard.press('Escape');
@@ -1243,7 +1248,7 @@ test('embed mode never shows the canvas, not even for a frame', async ({ page })
   }
 
   // ...and the article did arrive, so this was not a test of a blank page.
-  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers, drawn');
+  await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers make a circle');
 });
 
 test('the share button appears with the document and confirms the copy', async ({ page, context }) => {
