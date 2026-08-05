@@ -23,6 +23,7 @@ export const DATA_MODULE: FbModule = {
     { name: 'geo', description: 'A labelled place on the earth: {lat, lon}', color: '#4fa3d1' },
     { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
     { name: 'number', description: 'A plain numeric value', color: '#025d04' },
+    { name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a' },
   ],
 
   types: {
@@ -40,7 +41,7 @@ export const DATA_MODULE: FbModule = {
            * SHAPE that was chosen — and the engine's job is to say whether
            * the far end can take it, not to guess which one it will be.
            */
-          { type: 'out', formats: ['geo', 'point', 'number'] },
+          { type: 'out', formats: ['geo', 'point', 'number', 'grid'] },
         ],
       },
       worker: PickWorker,

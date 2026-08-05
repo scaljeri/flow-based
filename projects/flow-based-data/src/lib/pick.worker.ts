@@ -1,7 +1,7 @@
 import { FbConnection, FbNodeWorker, FbSocket, readConfigValue, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
-export type PickShape = 'value' | 'geo' | 'point';
+export type PickShape = 'value' | 'geo' | 'point' | 'grid';
 
 export interface PickConfig {
   /** What to build out of what arrives. */
@@ -14,6 +14,35 @@ export interface PickConfig {
   label?: string;
   /** How many items to keep. */
   limit?: number;
+  /** Where a raster's parts are, when the shape is a grid. */
+  values?: string;
+  lat?: string;
+  lon?: string;
+  /** Named `dims` rather than `shape`, which this config already spends on
+   *  WHICH shape to build. */
+  dims?: string;
+  unit?: string;
+}
+
+/**
+ * A regular raster of values over a rectangle of the earth.
+ *
+ * Kept as the flat array it arrives as: 42,000 numbers is a picture, not a
+ * list, and turning it into objects to hand it on would cost more than
+ * drawing it does. The bounds are cell CENTRES, which is what the published
+ * data means by them.
+ */
+export interface GeoGrid {
+  rows: number;
+  cols: number;
+  latMin: number;
+  latMax: number;
+  lonMin: number;
+  lonMax: number;
+  /** Row order. 'S->N' means row 0 is the southernmost. */
+  northUp: boolean;
+  values: (number | null)[];
+  unit?: string;
 }
 
 /**
@@ -101,6 +130,10 @@ export class PickWorker implements FbNodeWorker {
   }
 
   private pick(source: unknown): unknown {
+    if (this.shape === 'grid') {
+      return { grid: this.toGrid(source) };
+    }
+
     if (this.shape === 'value') {
       const value = this.config.a ? readConfigValue(source, this.config.a) : source;
 
@@ -144,6 +177,54 @@ export class PickWorker implements FbNodeWorker {
     this.count = points.length;
 
     return points;
+  }
+
+  /**
+   * A raster, read out of whatever named its parts.
+   *
+   * The defaults are the shape published data tends to have — a values array,
+   * the two bounds as [min, max] pairs, and a [rows, cols] shape — so a file
+   * written that way needs no configuration at all.
+   */
+  private toGrid(source: unknown): GeoGrid {
+    const values = readConfigValue(source, this.config.values || 'values');
+    const lat = readConfigValue(source, this.config.lat || 'lat');
+    const lon = readConfigValue(source, this.config.lon || 'lon');
+    const dims = readConfigValue(source, this.config.dims || 'shape');
+
+    if (!Array.isArray(values)) {
+      throw new Error(`No array at "${this.config.values || 'values'}"`);
+    }
+
+    if (!Array.isArray(lat) || !Array.isArray(lon) || !Array.isArray(dims)) {
+      throw new Error('Expected lat, lon and shape to be [min, max] and [rows, cols]');
+    }
+
+    const [rows, cols] = dims.map(Number);
+
+    if (rows * cols !== values.length) {
+      // Said plainly, because everything drawn from here depends on it: a grid
+      // whose shape disagrees with its data is not a grid we can place.
+      throw new Error(`${rows}×${cols} is ${rows * cols} cells, but ${values.length} values`);
+    }
+
+    const order = String(readConfigValue(source, 'order') ?? 'S->N');
+
+    this.count = values.length;
+
+    return {
+      rows,
+      cols,
+      latMin: Math.min(Number(lat[0]), Number(lat[1])),
+      latMax: Math.max(Number(lat[0]), Number(lat[1])),
+      lonMin: Math.min(Number(lon[0]), Number(lon[1])),
+      lonMax: Math.max(Number(lon[0]), Number(lon[1])),
+      northUp: !order.startsWith('N'),
+      values: values as (number | null)[],
+      unit: this.config.unit
+        ? String(readConfigValue(source, this.config.unit) ?? '')
+        : String(readConfigValue(source, 'unit') ?? ''),
+    };
   }
 
   private toPlace(item: unknown): { lat: number; lon: number; label?: string } | undefined {

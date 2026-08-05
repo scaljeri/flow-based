@@ -853,9 +853,40 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 1 },
+  config: { seedVersion: 2 },
   sockets: [],
   children: [
+    {
+      type: 'net-request',
+      title: 'PM2.5 over NL',
+      id: 400,
+      /*
+       * The raster TOPAS draws its own map from. The region is LOWERCASE in
+       * this path and capitalised everywhere else in the config — the thing
+       * that made every earlier guess return a 404.
+       */
+      config: { url: '../tno-topas/data/nl/grid/2026-07-01/PM2.5.json', method: 'GET', every: 0 },
+      sockets: [
+        { id: 409, type: 'in', name: 'when' },
+        { id: 410, type: 'out', format: 'data' },
+      ],
+      position: { x: 4, y: 54 },
+    },
+    {
+      type: 'data-pick',
+      title: 'As a raster',
+      id: 450,
+      /*
+       * Nothing typed but the shape: the published file already calls its
+       * parts values, lat, lon and shape, which is what Pick looks for.
+       */
+      config: { shape: 'grid' },
+      sockets: [
+        { id: 460, type: 'in', format: 'data' },
+        { id: 461, type: 'out', formats: ['geo', 'point', 'number', 'grid'] },
+      ],
+      position: { x: 26, y: 54 },
+    },
     {
       type: 'net-request',
       title: 'Official network',
@@ -915,11 +946,17 @@ export const tno = () => ({
        * is drawn later, and the 93 official stations would vanish under four
        * hundred sensors the other way round.
        */
+      /*
+       * Bottom to top: the measured air, then the three thousand sensors, then
+       * the 93 official stations. A socket declared later is drawn later, and
+       * the raster would bury both sets of markers the other way round.
+       */
       sockets: [
-        { id: 310, type: 'in', formats: ['geo'] },
-        { id: 311, type: 'in', formats: ['geo'] },
+        { id: 312, type: 'in', formats: ['geo', 'grid'] },
+        { id: 310, type: 'in', formats: ['geo', 'grid'] },
+        { id: 311, type: 'in', formats: ['geo', 'grid'] },
       ],
-      position: { x: 50, y: 14 },
+      position: { x: 50, y: 20 },
     },
   ],
   connections: [
@@ -927,5 +964,7 @@ export const tno = () => ({
     { id: 1001, from: 200, to: 250, out: 210, in: 260 },
     { id: 1002, from: 250, to: 300, out: 261, in: 310 },
     { id: 1003, from: 150, to: 300, out: 161, in: 311 },
+    { id: 1004, from: 400, to: 450, out: 410, in: 460 },
+    { id: 1005, from: 450, to: 300, out: 461, in: 312 },
   ],
 });

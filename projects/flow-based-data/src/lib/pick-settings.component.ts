@@ -12,6 +12,7 @@ import { PickConfig, PickShape, PickWorker } from './pick.worker';
       <select [value]="shape" (change)="write('shape', $event)">
         <option value="geo">Places (lat, lon, label)</option>
         <option value="point">Points (x, y)</option>
+        <option value="grid">A grid (a raster over an area)</option>
         <option value="value">One value</option>
       </select>
     </label>
@@ -91,6 +92,19 @@ export class PickSettingsComponent {
   get fields(): { key: keyof PickConfig; label: string; hint: string }[] {
     if (this.shape === 'value') {
       return [{ key: 'a', label: 'Path', hint: 'count' }];
+    }
+
+    /*
+     * A raster names its parts once, not per item — and the defaults are what
+     * published data tends to call them, so most files need nothing typed.
+     */
+    if (this.shape === 'grid') {
+      return [
+        { key: 'values', label: 'Values array', hint: 'values' },
+        { key: 'lat', label: 'Latitude bounds', hint: 'lat' },
+        { key: 'lon', label: 'Longitude bounds', hint: 'lon' },
+        { key: 'dims', label: 'Shape [rows, cols]', hint: 'shape' },
+      ];
     }
 
     const coordinates: { key: keyof PickConfig; label: string; hint: string }[] =

@@ -2,10 +2,36 @@ import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, OnDestroy, OnI
 import { NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 import type * as L from 'leaflet';
-import { MapLayer, MapWorker } from './map.worker';
+import { MapGrid, MapLayer, MapWorker } from './map.worker';
 
 /** One colour per layer, matching the plots so a flow reads the same throughout. */
 const LAYER_COLOURS = ['#bada55', '#ff4081', '#2aa7a0'];
+
+/**
+ * The colour ramp a raster is drawn with: cool and dim for little, hot and
+ * bright for much.
+ *
+ * Sampled rather than interpolated in some colour space, because the stops
+ * were chosen to be told apart on a dark basemap — which is a judgement about
+ * this map, not a property of a formula.
+ */
+const RAMP: [number, number, number][] = [
+  [ 40,  70, 130],
+  [ 40, 150, 160],
+  [120, 190, 100],
+  [235, 205,  80],
+  [230, 130,  50],
+  [200,  50,  60],
+];
+
+/** Web Mercator's y for a latitude, and back — see drawGrid. */
+function mercatorY(lat: number): number {
+  return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
+}
+
+function latitudeAt(y: number): number {
+  return (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
+}
 
 /**
  * Places on a map.
@@ -117,6 +143,113 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     this.map?.remove();
   }
 
+  /**
+   * A raster, drawn once into a canvas and laid over the map as an image.
+   *
+   * Not one rectangle per cell: forty thousand of those crawl, and they would
+   * be forty thousand layers for Leaflet to keep. One image is one layer.
+   *
+   * The rows are resampled through the MERCATOR projection rather than copied
+   * straight across. An image overlay is stretched linearly between its two
+   * corners, and this map's projection is not linear in latitude — over three
+   * degrees of the Netherlands that lands the grid visibly off its own
+   * coastline, which is exactly the sort of quiet lie a picture of measured
+   * air should not tell.
+   */
+  private drawGrid(
+    leaflet: typeof L,
+    map: L.Map,
+    grid: MapGrid,
+    bounds: [number, number][],
+  ): void {
+    const numbers = grid.values.filter((value): value is number => typeof value === 'number');
+
+    if (!numbers.length) {
+      return;
+    }
+
+    const low = this.worker.min ?? Math.min(...numbers);
+    const high = this.worker.max ?? Math.max(...numbers);
+    const span = high - low || 1;
+
+    /*
+     * The bounds published are cell CENTRES, so the drawn rectangle reaches
+     * half a cell further in each direction — otherwise the raster sits half
+     * a cell up and to the left of where it belongs.
+     */
+    const halfLat = (grid.latMax - grid.latMin) / (grid.rows - 1) / 2;
+    const halfLon = (grid.lonMax - grid.lonMin) / (grid.cols - 1) / 2;
+    const south = grid.latMin - halfLat;
+    const north = grid.latMax + halfLat;
+    const west = grid.lonMin - halfLon;
+    const east = grid.lonMax + halfLon;
+
+    const canvas = document.createElement('canvas');
+    const height = Math.min(grid.rows, 512);
+
+    canvas.width = grid.cols;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d')!;
+    const image = ctx.createImageData(grid.cols, height);
+    const topY = mercatorY(north);
+    const bottomY = mercatorY(south);
+
+    for (let y = 0; y < height; y += 1) {
+      // Where this image row falls in the projection, and therefore which
+      // row of the data belongs on it.
+      const latitude = latitudeAt(topY + (bottomY - topY) * ((y + 0.5) / height));
+      const fraction = (latitude - south) / (north - south);
+      const row = Math.min(grid.rows - 1, Math.max(0,
+        Math.round((grid.northUp ? fraction : 1 - fraction) * (grid.rows - 1))));
+
+      for (let x = 0; x < grid.cols; x += 1) {
+        const value = grid.values[row * grid.cols + x];
+        const target = (y * grid.cols + x) * 4;
+
+        if (typeof value !== 'number') {
+          image.data[target + 3] = 0;
+
+          continue;
+        }
+
+        const [r, g, b] = this.rampAt((value - low) / span);
+
+        image.data[target] = r;
+        image.data[target + 1] = g;
+        image.data[target + 2] = b;
+        image.data[target + 3] = 255;
+      }
+    }
+
+    ctx.putImageData(image, 0, 0);
+
+    const overlay = leaflet.imageOverlay(canvas.toDataURL(), [[south, west], [north, east]], {
+      opacity: this.worker.opacity,
+      // Under the markers and the labels: the raster is the ground a station
+      // stands on, not something to bury it under.
+      interactive: false,
+    }).addTo(map);
+
+    this.drawn.push(overlay);
+    bounds.push([south, west], [north, east]);
+  }
+
+  /** A colour from the ramp, mixed between its two nearest stops. */
+  private rampAt(fraction: number): [number, number, number] {
+    const at = Math.min(1, Math.max(0, fraction)) * (RAMP.length - 1);
+    const index = Math.min(RAMP.length - 2, Math.floor(at));
+    const mix = at - index;
+    const from = RAMP[index];
+    const to = RAMP[index + 1];
+
+    return [
+      Math.round(from[0] + (to[0] - from[0]) * mix),
+      Math.round(from[1] + (to[1] - from[1]) * mix),
+      Math.round(from[2] + (to[2] - from[2]) * mix),
+    ];
+  }
+
   /** Leaflet's stylesheet, added to the page once however many maps there are. */
   private static styleElement?: HTMLStyleElement;
 
@@ -172,6 +305,12 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     this.layers().forEach((layer, index) => {
       const colour = LAYER_COLOURS[index % LAYER_COLOURS.length];
       const line: [number, number][] = [];
+
+      if (layer.grid) {
+        this.drawGrid(leaflet, map, layer.grid, bounds);
+
+        return;
+      }
 
       layer.places.forEach((place, place_index) => {
         const at: [number, number] = [place.lat, place.lon];

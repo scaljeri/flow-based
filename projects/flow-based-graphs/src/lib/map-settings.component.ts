@@ -16,6 +16,29 @@ import { MapWorker } from './map.worker';
       <input type="checkbox" [checked]="follow" (change)="onFollow($event)">
       <span>Keep everything in view</span>
     </label>
+
+    <!--
+      Only worth showing when there is a raster to colour: three fields about
+      a scale nothing is drawn on is furniture.
+    -->
+    @if (hasGrid) {
+      <h4>Raster</h4>
+
+      <label class="field">
+        <span>Opacity</span>
+        <input type="text" inputmode="decimal" [value]="opacity" (change)="onNumber('opacity', $event)">
+      </label>
+
+      <label class="field">
+        <span>Scale from — empty follows the data</span>
+        <input type="text" inputmode="decimal" [value]="min" (change)="onNumber('min', $event)">
+      </label>
+
+      <label class="field">
+        <span>Scale to</span>
+        <input type="text" inputmode="decimal" [value]="max" (change)="onNumber('max', $event)">
+      </label>
+    }
   `,
   styles: [`
     :host {
@@ -30,6 +53,35 @@ import { MapWorker } from './map.worker';
       align-items: center;
       display: flex;
       gap: 8px;
+    }
+
+    h4 {
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      margin: 4px 0 0;
+      opacity: 0.6;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field span {
+      opacity: 0.8;
+    }
+
+    .field input {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      box-sizing: border-box;
+      color: #fff;
+      font: inherit;
+      padding: 6px 8px;
+      width: 100%;
     }
   `]
 })
@@ -56,6 +108,38 @@ export class MapSettingsComponent {
 
   onFollow(event: Event): void {
     this.worker?.setFollow((event.target as HTMLInputElement).checked);
+    this.cdr.detectChanges();
+  }
+
+  /** Whether any layer is a raster; the scale is about those only. */
+  get hasGrid(): boolean {
+    return (this.service.state.sockets ?? [])
+      .filter(socket => socket.type === 'in')
+      .some(socket => !!this.worker?.layerFor(socket.id!)?.grid);
+  }
+
+  get opacity(): string {
+    return String(this.worker?.opacity ?? 0.65);
+  }
+
+  get min(): string {
+    return this.worker?.min === null || this.worker?.min === undefined ? '' : String(this.worker.min);
+  }
+
+  get max(): string {
+    return this.worker?.max === null || this.worker?.max === undefined ? '' : String(this.worker.max);
+  }
+
+  onNumber(key: 'opacity' | 'min' | 'max', event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.trim().replace(',', '.');
+    const value = raw === '' ? null : Number(raw);
+
+    // An empty end of the scale means "follow the data"; unparseable text is
+    // not a value at all and leaves what stood.
+    if (value === null || Number.isFinite(value)) {
+      this.worker?.set(key, key === 'opacity' ? (value ?? 0.65) : value);
+    }
+
     this.cdr.detectChanges();
   }
 }

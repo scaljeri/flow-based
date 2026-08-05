@@ -47,6 +47,7 @@ export const GRAPHS_MODULE: FbModule = {
       description: 'A labelled place on the earth: {lat, lon}',
       color: '#4fa3d1',
     },
+    { name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a' },
   ],
 
   types: {
@@ -141,7 +142,7 @@ export const GRAPHS_MODULE: FbModule = {
         group: 'Graphs',
         resizable: true,
         config: { track: true, follow: true },
-        sockets: [{ type: 'in', formats: ['geo'] }],
+        sockets: [{ type: 'in', formats: ['geo', 'grid'] }],
         // One layer per input, drawn in the order the sockets are declared.
         addableSockets: 'in',
       },
