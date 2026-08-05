@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 8 },
+  config: { seedVersion: 9 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -324,6 +324,12 @@ export const demo = () => ({
    *
    * The voice is plain and explanatory, not literary: state what a thing is,
    * define the words as they arrive, and let the pictures carry the wonder.
+   * The opening section earns its geometry rather than asserting it: the
+   * reader multiplies by i four times, lands back at 1, and only THEN gets a
+   * second axis to put those four values on — because a quarter turn cannot
+   * be claimed before there is a plane to turn in. An earlier draft called
+   * multiplying by -1 a half turn and halved it, which put the conclusion
+   * before the scenery and lost people exactly there.
    * An earlier draft opened with plucked strings and buoys, which reads well
    * and teaches nothing — a reader who does not yet know what i is cannot
    * spend attention on decoding a metaphor.
@@ -367,25 +373,40 @@ export const demo = () => ({
           'itself, gives $-1$? A positive times itself is positive. A negative times ' +
           'itself is also positive. No number on the line works.\n' +
           '\n' +
-          'The fix was to define a new number. Call it $i$, and define it by exactly ' +
-          'the property that was missing:\n' +
+          'So define one. Call it $i$, and give it the property that was missing:\n' +
           '\n' +
           '$$i \\cdot i = -1$$\n' +
           '\n' +
-          'Here is a useful way to picture it. Multiplying by $-1$ is a half turn: it ' +
-          'takes $1$ to $-1$. So multiplying by $i$ — which gets you there in two equal ' +
-          'steps — is *half* of a half turn. A quarter turn.\n' +
+          'You may have seen this written as $i = \\sqrt{-1}$. Same idea, but ' +
+          '$i^2 = -1$ is the safer way to put it: $-i$ squares to $-1$ just as well, so ' +
+          'there is no single “the” square root to point at.\n' +
           '\n' +
-          'A quarter turn needs somewhere to go, and the line has no room, so numbers ' +
-          'get a second direction. Horizontal is the ordinary part, called the **real** ' +
-          'part; vertical is the **imaginary** part. Every number is then written ' +
-          '$a + b\\,i$: $a$ to the right, $b$ upward. That flat space is the complex ' +
-          'plane. Nothing exotic is stored: in this flow a complex number is the pair ' +
-          '`{re, im}`, and the connections carry it as ordinary data.\n' +
+          'Now watch what that one line does on its own. Start at $1$ and keep ' +
+          'multiplying by $i$:\n' +
           '\n' +
-          'Multiply $1$ by $i$ four times over and you get $i$, $-1$, $-i$, $1$: four ' +
-          'quarter turns, back where you started. Multiplication now does two things at ' +
-          'once — it scales, and it rotates.',
+          '$$1 \\to i \\to -1 \\to -i \\to 1$$\n' +
+          '\n' +
+          'Four multiplications, and you are exactly back where you started. Ordinary ' +
+          'numbers never do that: keep multiplying by $2$ and you run away, by ' +
+          '$\\tfrac12$ and you sink towards zero. This one comes home.\n' +
+          '\n' +
+          'Two of those four values sit on the line: $1$ and $-1$. The other two ' +
+          'cannot, because nothing on the line squares to $-1$. So draw a second axis ' +
+          'through zero, at right angles to the first, and plot $i$ on it one unit up — ' +
+          '$-i$ lands one unit down.\n' +
+          '\n' +
+          'The horizontal axis now carries the ordinary part of a number, called the ' +
+          '**real** part; the vertical axis carries the **imaginary** part. Every ' +
+          'number is $a + b\\,i$: $a$ along the real axis, $b$ along the imaginary one. ' +
+          'That flat space is the complex plane, and it is what the figures on this ' +
+          'page are drawn on — the axes marked `re` and `im`. Nothing exotic is ' +
+          'stored: in this flow a complex number is the pair `{re, im}`, and the ' +
+          'connections carry it as ordinary data.\n' +
+          '\n' +
+          'Now those four values have addresses: right, up, left, down. Each ' +
+          'multiplication by $i$ moved a quarter of the way round — and that is the ' +
+          'shift this whole page rests on. Multiplication no longer only stretches. It ' +
+          'stretches *and* turns.',
       },
 
       { type: 'heading', text: 'Turning without stopping', level: 2 },
