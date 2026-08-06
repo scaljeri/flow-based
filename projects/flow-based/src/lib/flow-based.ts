@@ -66,6 +66,16 @@ export const FB_NODE_TYPES = new InjectionToken<FbNodeTypes>('fb-node-types');
 export const FB_TYPE_ASSIGNABILITY =
   new InjectionToken<import('@scaljeri/flow-based-core').FbAssignable>('fb-type-assignability');
 
+/**
+ * What a format name MEANS, for the bar that names a pressed socket.
+ *
+ * The shell knows a socket's format as a name; the book of what those names
+ * mean belongs to whatever assembled the modules. An app with a registry
+ * provides this; without it a socket still says what it carries.
+ */
+export const FB_FORMAT_INFO =
+  new InjectionToken<import('@scaljeri/flow-based-core').FbFormatLookup>('fb-format-info');
+
 /** Optional hooks letting an app customise socket-format negotiation. */
 export const FB_NODE_HELPERS = new InjectionToken<FbNodeHelpers>('fb-node-helpers');
 

@@ -210,6 +210,96 @@ export class FbFlowCanvasElement extends LitElement {
       }
     }
 
+    /*
+     * Top centre, above the graph and below whatever the app puts above this
+     * element. Its own presses are stopped, so reading it does not pan the
+     * surface behind it.
+     */
+    .socket-note {
+      background: rgba(14, 14, 18, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      color: #fff;
+      font: 12px system-ui, sans-serif;
+      left: 50%;
+      max-width: min(90%, 420px);
+      padding: 8px 10px;
+      position: absolute;
+      top: 12px;
+      transform: translateX(-50%);
+      z-index: 70;
+    }
+
+    .socket-note .line {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+    }
+
+    .socket-note .dot {
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      flex: 0 0 auto;
+      height: 10px;
+      width: 10px;
+    }
+
+    .socket-note .what {
+      align-items: baseline;
+      display: flex;
+      flex: 1;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .socket-note .format {
+      opacity: 0.7;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .socket-note button {
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      cursor: pointer;
+      flex: 0 0 auto;
+      font: inherit;
+      height: 22px;
+      line-height: 22px;
+      padding: 0;
+      width: 22px;
+    }
+
+    .socket-note button.why {
+      font-family: Georgia, serif;
+      font-style: italic;
+    }
+
+    .socket-note .detail {
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      margin: 8px 0 0;
+      opacity: 0.85;
+      padding-top: 8px;
+    }
+
+    .socket-note .refines {
+      display: block;
+      margin-top: 4px;
+      opacity: 0.6;
+    }
+
+    @media (pointer: coarse) {
+      .socket-note button {
+        height: 30px;
+        line-height: 30px;
+        width: 30px;
+      }
+    }
+
     .marquee {
       background: var(--fb-selected-color, #bada55);
       border: 1px solid var(--fb-selected-color, #bada55);
@@ -251,6 +341,17 @@ export class FbFlowCanvasElement extends LitElement {
    * here, which on a touch screen is most of them.
    */
   private readonly pointers = new Map<number, FbPosition>();
+
+  /**
+   * When the note about a pressed socket goes away by itself.
+   *
+   * It is an answer to "what did I just press", and an answer nobody asked for
+   * any more is furniture sitting over the graph. Long enough to read a name
+   * and a type; cancelled while the type's description is open, because that
+   * is a longer read and closing it is a deliberate act.
+   */
+  private noteTimer?: ReturnType<typeof setTimeout>;
+  private notedSocket?: FbSocket;
   /** Distance between two fingers at the last move, for pinch zoom. */
   private pinchDistance = 0;
   private pinchCentre: FbPosition | null = null;
@@ -319,6 +420,8 @@ export class FbFlowCanvasElement extends LitElement {
      * state: a remount with two stale entries would treat the next single
      * touch as a third finger and refuse to pan.
      */
+    clearTimeout(this.noteTimer);
+    this.noteTimer = undefined;
     this.pointers.clear();
     this.pinchCentre = null;
     this.pinchDistance = 0;
@@ -380,6 +483,8 @@ export class FbFlowCanvasElement extends LitElement {
     if (this.editor?.flow) {
       this.renderNodes();
     }
+
+    this.tickNote();
   }
 
   private subscribe(): void {
@@ -527,6 +632,7 @@ export class FbFlowCanvasElement extends LitElement {
     // Reaching here means the press missed every node and socket — they stop
     // propagation — so it is a background press.
     this.editor.cancelPending();
+    this.editor.forgetTouchedSocket();
     this.focus();
 
     /*
@@ -868,6 +974,31 @@ export class FbFlowCanvasElement extends LitElement {
     );
   }
 
+  /** Start the note's countdown when it names a socket it was not naming. */
+  private tickNote(): void {
+    const touched = this.editor?.touchedSocket;
+
+    if (!touched) {
+      clearTimeout(this.noteTimer);
+      this.noteTimer = undefined;
+      this.notedSocket = undefined;
+
+      return;
+    }
+
+    if (touched.socket === this.notedSocket && touched.explain === undefined) {
+      return;
+    }
+
+    this.notedSocket = touched.socket;
+    clearTimeout(this.noteTimer);
+    this.noteTimer = undefined;
+
+    if (!touched.explain) {
+      this.noteTimer = setTimeout(() => this.editor?.forgetTouchedSocket(), 6000);
+    }
+  }
+
   protected override render() {
     if (!this.editor?.flow) {
       return nothing;
@@ -887,6 +1018,7 @@ export class FbFlowCanvasElement extends LitElement {
 
     return html`
       ${this.renderHead()}
+      ${this.renderSocketNote()}
       <div
         class="plane"
         data-full=${full ? 'true' : 'false'}
@@ -901,6 +1033,62 @@ export class FbFlowCanvasElement extends LitElement {
         <fb-connections .editor=${this.editor}></fb-connections>
 
         <slot></slot>
+      </div>
+    `;
+  }
+
+  /**
+   * What you just pressed, said out loud.
+   *
+   * A socket is a dot on the edge of a box. Pressing one starts a connection,
+   * and that was the whole of what it told you — what a socket CARRIES was
+   * knowable only from the colour of the line, or by reading the flow's JSON.
+   * This says the name and the type, top centre, under the header, and gets
+   * out of the way when you press something else.
+   *
+   * The `i` is a second question, asked separately: most of the time the type's
+   * name is the answer, and its description is only wanted when the name is not
+   * enough.
+   */
+  private renderSocketNote() {
+    const touched = this.editor.touchedSocket;
+
+    if (!touched) {
+      return nothing;
+    }
+
+    const { socket } = touched;
+    const format = socket.format ?? (socket.formats?.length ? socket.formats.join(' or ') : '');
+    const info = socket.format ? this.editor.formatInfo?.(socket.format) : undefined;
+    const colour = socket.format ? this.editor.socketColors[socket.format] : undefined;
+
+    return html`
+      <div class="socket-note" role="status"
+           @pointerdown=${(event: PointerEvent) => event.stopPropagation()}>
+        <div class="line">
+          <span class="dot" style=${colour ? `background:${colour}` : ''}></span>
+          <span class="what">
+            <strong>${socket.name || (socket.type === 'in' ? 'input' : 'output')}</strong>
+            <span class="format">${format || 'anything'}</span>
+          </span>
+
+          ${info
+            ? html`<button type="button" class="why"
+                    aria-label=${touched.explain ? 'Hide what this type is' : 'What is this type?'}
+                    aria-expanded=${touched.explain ? 'true' : 'false'}
+                    @click=${() => this.editor.explainSocket(!touched.explain)}>i</button>`
+            : nothing}
+
+          <button type="button" class="close" aria-label="Dismiss"
+                  @click=${() => this.editor.forgetTouchedSocket()}>&times;</button>
+        </div>
+
+        ${touched.explain && info
+          ? html`<p class="detail">
+              ${info.description ?? 'No description was given for this type.'}
+              ${info.refines ? html`<span class="refines">refines ${info.refines}</span>` : nothing}
+            </p>`
+          : nothing}
       </div>
     `;
   }

@@ -3,7 +3,7 @@ import { FbAlignment, FbNodeState, FbRouting, FbSocketColors } from '@scaljeri/f
 // Imported for the side effect as well as the types: this registers
 // <fb-flow-canvas> and friends with the custom-element registry.
 import { FbEditor, FbFlowCanvasElement } from '@scaljeri/flow-based-lit';
-import { FB_NODE_HELPERS, FB_NODE_TYPES, FB_SOCKET_COLORS, FB_TYPE_ASSIGNABILITY, FbNodeHelpers, FbNodeTypes } from './flow-based';
+import { FB_FORMAT_INFO, FB_NODE_HELPERS, FB_NODE_TYPES, FB_SOCKET_COLORS, FB_TYPE_ASSIGNABILITY, FbNodeHelpers, FbNodeTypes } from './flow-based';
 import { FlowBasedService } from './flow-based.service';
 import { FbHistoryService } from './utils/history.service';
 import { angularNodeTypes } from './angular-node';
@@ -100,12 +100,14 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
     const helpers = inject<FbNodeHelpers>(FB_NODE_HELPERS, { optional: true });
     const socketColors = inject<FbSocketColors>(FB_SOCKET_COLORS, { optional: true });
     const assignable = inject(FB_TYPE_ASSIGNABILITY, { optional: true });
+    const formatInfo = inject(FB_FORMAT_INFO, { optional: true });
 
     this.editor = new FbEditor({
       types: angularNodeTypes(types, environmentInjector),
       helpers: helpers ?? undefined,
       socketColors: socketColors ?? undefined,
       assignable: assignable ?? undefined,
+      formatInfo: formatInfo ?? undefined,
       /*
        * The app's undo stack, not a second one. FbHistoryService is what a
        * template binds its undo button to; if the editor pushed to a private

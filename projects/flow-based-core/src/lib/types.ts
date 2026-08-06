@@ -257,3 +257,22 @@ export interface FbNodeWorker {
 }
 
 export type FbSocketColors = Record<string, string>;
+
+/**
+ * What a data type IS, for a reader who just pressed a socket.
+ *
+ * The shell knows a socket's format as a NAME and nothing else — the book of
+ * what those names mean belongs to whatever assembled the modules. A host that
+ * keeps one answers this; without it a socket can still say what it carries,
+ * just not what that means.
+ */
+export interface FbFormatInfo {
+  name: string;
+  description?: string;
+  /** The type this one refines: `temperature` refines `number`. */
+  refines?: string;
+  color?: string;
+}
+
+/** Look up what a format means. */
+export type FbFormatLookup = (name: string) => FbFormatInfo | undefined;

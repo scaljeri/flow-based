@@ -3134,6 +3134,55 @@ test('a choice offers what arrived, and sends on the field it was told to', asyn
     .editor.nodeById(nodeId).position), id)).toBe(before);
 });
 
+
+/**
+ * A pressed socket says what it is.
+ *
+ * A socket is a dot on the edge of a box, and pressing one starts a
+ * connection — which was the whole of what it told you. What a socket CARRIES
+ * was knowable from the colour of a line, or by reading the flow's JSON. Now
+ * it says so: name and type, top centre, under the header.
+ *
+ * The `i` is a second question, asked separately. Most of the time the type's
+ * name is the answer; its description is wanted only when the name is not
+ * enough, and the app's own registry is what knows it.
+ */
+test('pressing a socket names it, and can be asked what its type means', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const canvas = page.locator('fb-flow-canvas');
+  const note = canvas.locator('.socket-note');
+
+  await expect(note).toHaveCount(0);
+
+  // A real press on a real dot, not a call into the editor.
+  const dot = page.locator('fb-flow-canvas fb-node-box').first()
+    .locator('.socket-out').first();
+
+  await dot.click();
+
+  await expect(note).toContainText('function');
+
+  // The type's meaning is a second question.
+  await expect(note.locator('.detail')).toHaveCount(0);
+  await note.locator('button.why').click();
+  await expect(note.locator('.detail')).toContainText('A symbolic function of x');
+
+  // Closing it is a deliberate act while its details are open — a longer read
+  // than a name and a type.
+  await note.locator('button.close').click();
+  await expect(note).toHaveCount(0);
+
+  /*
+   * And left alone it goes away by itself. An answer to "what did I just
+   * press" that nobody asked for any more is furniture sitting over the graph.
+   */
+  await dot.click();
+  await expect(note).toHaveCount(1);
+  await expect(note).toHaveCount(0, { timeout: 12_000 });
+});
+
 /**
  * At most one, or none.
  *

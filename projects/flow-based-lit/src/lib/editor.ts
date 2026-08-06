@@ -1,9 +1,10 @@
 import {
   FbAlignment,
+  FbAssignable,
   FbClipboard,
-  FbRouting,
   FbConnection,
   FbEmitter,
+  FbFormatLookup,
   FbGeometry,
   FbHistory,
   FbNodeEvents,
@@ -11,12 +12,13 @@ import {
   FbNodeMount,
   FbNodeState,
   FbNodeTypes,
+  FbNodeView,
   FbPosition,
+  FbRouting,
+  FbSize,
   FbSocket,
   FbSocketSide,
   FbSocketType,
-  FbNodeView,
-  FbSize,
   FbViewport,
   Flow,
   IdGenerator,
@@ -24,12 +26,11 @@ import {
   boundarySocketPosition,
   copyNodes,
   distributeNodes,
-  FbAssignable,
   formatsCompatible,
-  sameName,
   formatsOf,
   moveSocket,
   pasteNodes,
+  sameName,
   supportedViews,
   viewOf,
   writeConfigValue,
@@ -94,6 +95,11 @@ export interface FbEditorOptions {
    * its answer; the default is plain name equality.
    */
   assignable?: FbAssignable;
+  /**
+   * What a format name MEANS. A host with a registry of types provides it;
+   * without one, a pressed socket can say what it carries but not what that is.
+   */
+  formatInfo?: FbFormatLookup;
 }
 
 /**
@@ -118,6 +124,38 @@ export class FbEditor {
 
   readonly types: FbNodeTypes<FbNodeMount>;
   readonly socketColors: Record<string, string>;
+
+  /** See FbEditorOptions.formatInfo. */
+  readonly formatInfo?: FbFormatLookup;
+
+  /**
+   * The socket the reader last pressed, and whether they asked what it is.
+   *
+   * A socket is a dot. Pressing one starts a connection — and that is all it
+   * used to say, so what a socket carried was knowable only by reading the
+   * flow's JSON or by guessing from the colour of the line. This is the answer
+   * to "what did I just press", shown until something else is pressed.
+   */
+  touchedSocket: { socket: FbSocket; nodeId: number; explain?: boolean } | null = null;
+
+  /** Show or hide the details of the touched socket's type. */
+  explainSocket(explain: boolean): void {
+    if (!this.touchedSocket) {
+      return;
+    }
+
+    this.touchedSocket = { ...this.touchedSocket, explain };
+    this.changes.emit({ kind: 'interaction' });
+  }
+
+  forgetTouchedSocket(): void {
+    if (!this.touchedSocket) {
+      return;
+    }
+
+    this.touchedSocket = null;
+    this.changes.emit({ kind: 'interaction' });
+  }
 
   /** How connections are drawn. A view concern: nothing in the JSON changes. */
   routing: FbRouting;
@@ -171,6 +209,7 @@ export class FbEditor {
     this.helpers = options.helpers;
     this.assignable = options.assignable ?? sameName;
     this.socketColors = options.socketColors ?? {};
+    this.formatInfo = options.formatInfo;
     this.routing = options.routing ?? 'curved';
 
     this.coreUnsubscribes.push(
@@ -1038,6 +1077,10 @@ export class FbEditor {
      ---------------------------------------------------------------------- */
 
   socketClicked(socket: FbSocket, nodeId: number): void {
+    // Whatever else this press does — start a connection, finish one, cancel
+    // one — it was a press on a socket, and the reader may want to know which.
+    this.touchedSocket = { socket, nodeId };
+
     if (!this.pending) {
       this.pending = { socket, nodeId };
       this.changes.emit({ kind: 'interaction' });
