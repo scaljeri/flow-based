@@ -107,15 +107,28 @@ export class SwitchSmallComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
 
   private worker?: SwitchWorker;
-  private subscription?: Subscription;
+  private readonly subscriptions: Subscription[] = [];
 
   ngOnInit(): void {
     this.worker = this.service.worker as SwitchWorker;
-    this.subscription = this.worker?.getStream().subscribe(() => this.cdr.detectChanges());
+
+    if (!this.worker) {
+      return;
+    }
+
+    /*
+     * Both channels. What is sent on changes when the choice does; what is
+     * DRAWN also changes when an input nobody picked finally arrives and says
+     * what it is called.
+     */
+    this.subscriptions.push(
+      this.worker.getStream().subscribe(() => this.cdr.detectChanges()),
+      this.worker.changes.subscribe(() => this.cdr.detectChanges()),
+    );
   }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
   }
 
   get which(): number {

@@ -28,6 +28,21 @@ export class SwitchWorker implements FbNodeWorker {
   /** Input socket ids in the node's own order, which is what `which` counts. */
   private readonly order: number[] = [];
 
+  /**
+   * Told about anything that changes what the node should SHOW, which is not
+   * the same as what it should send on.
+   *
+   * A source that is not selected still names itself when it arrives, and the
+   * switch draws that name — but sending its value downstream would be the
+   * one thing this node exists to prevent. Two channels, because there are
+   * two audiences.
+   */
+  private readonly ticks = new ReplaySubject<void>(1);
+
+  get changes(): Observable<void> {
+    return this.ticks.asObservable();
+  }
+
   constructor(private readonly config: SwitchConfig = {}, sockets?: FbSocket[]) {
     this.order = (sockets ?? [])
       .filter(socket => socket.type === 'in' && socket.id !== undefined)
@@ -39,6 +54,7 @@ export class SwitchWorker implements FbNodeWorker {
   destroy(): void {
     Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
     this.subject.complete();
+    this.ticks.complete();
   }
 
   getStream(): Observable<unknown> {
@@ -56,6 +72,7 @@ export class SwitchWorker implements FbNodeWorker {
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
       this.latest.set(id, value);
+      this.ticks.next();
 
       if (id === this.chosenId) {
         this.subject.next(value);
@@ -115,5 +132,6 @@ export class SwitchWorker implements FbNodeWorker {
      * layer for it.
      */
     this.subject.next(id === undefined ? { places: [] } : this.latest.get(id) ?? { places: [] });
+    this.ticks.next();
   }
 }
