@@ -1,5 +1,11 @@
 import { LitElement, PropertyValues, css, html, nothing, render, svg } from 'lit';
-import { FbNodeState, FbPosition, FbSocket, boundarySocketPosition } from '@scaljeri/flow-based-core';
+import {
+  FB_DRAG_IGNORE,
+  FbNodeState,
+  FbPosition,
+  FbSocket,
+  boundarySocketPosition,
+} from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
 import { FbEditor, FbEditorChange } from './editor';
 
@@ -416,6 +422,22 @@ export class FbFlowCanvasElement extends LitElement {
    */
 
   private onPointerTracked = (event: PointerEvent): void => {
+    /*
+     * Except inside content that owns its own pointers.
+     *
+     * The capture phase exists so a pinch STARTING ON A NODE still zooms the
+     * graph — nodes stop pointerdown from bubbling, and without this most
+     * pinches on a touch screen would be invisible here. But a map zooms
+     * itself on two fingers, and counting those fingers here zoomed the whole
+     * graph instead of the map under them.
+     *
+     * Same rule as the press and the wheel: what owns the pointer owns the
+     * gesture, including the two-fingered one.
+     */
+    if ((event.target as Element | null)?.closest(`.${FB_DRAG_IGNORE}`)) {
+      return;
+    }
+
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
     if (this.pointers.size === 2) {

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { Locator, expect, test } from '@playwright/test';
 
 /**
  * Smoke test for the migrated demo.
@@ -2297,6 +2297,23 @@ test('a map is dragged at rest and panned when open, and the header still moves 
 });
 
 
+/*
+ * Zoom read off the TILES, taking the level that most of them are at.
+ * Leaflet keeps the old level's tiles until the new ones have loaded, so the
+ * first one in the DOM is sometimes a straggler from where the map WAS.
+ */
+const tileZoom = (locator: Locator) => locator.locator('img.leaflet-tile').evaluateAll(tiles => {
+  const counts = new Map<number, number>();
+
+  for (const tile of tiles) {
+    const z = Number(/\/(\d+)\/\d+\/\d+/.exec((tile as HTMLImageElement).src)?.[1] ?? -1);
+
+    counts.set(z, (counts.get(z) ?? 0) + 1);
+  }
+
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? -1;
+});
+
 /**
  * A map node is a window onto one dataset, not an atlas.
  *
@@ -2339,13 +2356,9 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
   await expect(node.locator('.leaflet-container')).toBeVisible();
   await expect(page.locator('path.leaflet-interactive').first()).toBeVisible();
 
-  /*
-   * Zoom read off the TILES. Leaflet keeps no reference to its map on the
-   * container, and reaching into its internals to test it would be testing
-   * something other than what a reader sees: the tiles are the map.
-   */
-  const zoom = () => node.locator('img.leaflet-tile').first()
-    .evaluate(el => Number(/\/(\d+)\/\d+\/\d+/.exec((el as HTMLImageElement).src)?.[1] ?? -1));
+  // The tiles are the map: Leaflet keeps no reference to its own map on the
+  // container, and reaching into its internals would be testing something else.
+  const zoom = () => tileZoom(node);
 
   /*
    * Where the map is looking, measured on the thing the reader is looking at:
@@ -2365,7 +2378,6 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
   await expect(zoomOut).toHaveClass(/leaflet-disabled/);
 
   const floor = await zoom();
-  const fitted = await looking();
 
   expect(floor).toBeGreaterThan(3);
 
@@ -2390,6 +2402,21 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
   await page.waitForTimeout(400);
   await expect(zoomOut).toHaveClass(/leaflet-disabled/);
   expect(await zoom()).toBe(floor);
+
+  /*
+   * The reference for the refit below comes from the refit itself, asked for
+   * once here. Taking it at open would compare two different things: the
+   * opening fit is clamped by the wall as it was then, and a few pixels of
+   * that difference would read as the refit having failed.
+   */
+  await page.evaluate(nodeId => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId).clearView();
+  }, id);
+
+  await page.waitForTimeout(600);
+
+  const fitted = await looking();
 
   /*
    * And there is nowhere to pan to where the data is not. Dragged hard to the
@@ -2446,6 +2473,204 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
   }
 
   expect(await zoom()).toBeLessThan(floor);
+});
+
+
+/**
+ * A wheel over a map zooms the map, not the graph.
+ *
+ * The canvas zooms the whole graph on a wheel, on the same understanding as
+ * the pan: anything that reaches it was nobody else's. A map is somebody
+ * else's — it scrolls to zoom itself — so the graph used to zoom out from
+ * under the thing the reader was pointing at.
+ */
+test('the wheel over an open map zooms the map and leaves the graph alone', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const map = editor.addNode('graph-map');
+
+    places.position = { x: 6, y: 66 };
+    map.position = { x: 26, y: 66 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    return map.id as number;
+  });
+
+  await expect(page.locator('fb-flow-canvas fb-node-box')).not.toHaveCount(0);
+  await page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, id);
+
+  const node = page.locator('fb-flow-canvas fb-node-box').last();
+
+  await expect(node.locator('img.leaflet-tile').first()).toBeVisible();
+
+  const mapZoom = () => tileZoom(node);
+  const graphZoom = () => page.evaluate(() => (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.viewport.zoom as number);
+
+  const before = { map: await mapZoom(), graph: await graphZoom() };
+  const box = (await node.locator('.canvas').boundingBox())!;
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, -240);
+  await page.waitForTimeout(600);
+
+  expect(await mapZoom()).toBeGreaterThan(before.map);
+  expect(await graphZoom()).toBe(before.graph);
+
+  /*
+   * And the wheel over an ordinary node still zooms the graph — the rule is
+   * "content that owns the pointer owns the wheel", not "nodes swallow it".
+   */
+  const plain = page.locator('fb-flow-canvas fb-node-box').first();
+  const plainBox = (await plain.boundingBox())!;
+
+  await page.mouse.move(plainBox.x + plainBox.width / 2, plainBox.y + plainBox.height / 2);
+  await page.mouse.wheel(0, -240);
+  await page.waitForTimeout(400);
+
+  expect(await graphZoom()).toBeGreaterThan(before.graph);
+
+  /*
+   * The map was never the whole of it. Leaflet stops the wheel itself, so a
+   * map was already safe; a scrollable panel inside a node is not, and reading
+   * a long value used to zoom the graph instead of scrolling the text.
+   */
+  const tap = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const logger = editor.addNode('tap');
+
+    places.position = { x: 6, y: 26 };
+    logger.position = { x: 26, y: 26 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(logger.sockets.find((s: any) => s.type === 'in'), logger.id);
+
+    return logger.id as number;
+  });
+
+  await page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, tap);
+
+  const whole = page.locator('fb-flow-canvas pre.whole').first();
+
+  await expect(whole).toBeVisible();
+
+  const settled = await graphZoom();
+  const wholeBox = (await whole.boundingBox())!;
+
+  await page.mouse.move(wholeBox.x + wholeBox.width / 2, wholeBox.y + wholeBox.height / 2);
+  await page.mouse.wheel(0, 200);
+  await page.waitForTimeout(400);
+
+  expect(await graphZoom()).toBe(settled);
+  expect(await whole.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+});
+
+
+/**
+ * Two fingers on a map zoom the map.
+ *
+ * The canvas tracks pointers in the CAPTURE phase on purpose — nodes stop
+ * pointerdown from bubbling, so without it a pinch that began on a node would
+ * be invisible and pinching would fail almost everywhere on a touch screen.
+ * But a map zooms itself on two fingers, and counting those fingers zoomed the
+ * whole graph instead of the map underneath them.
+ *
+ * Same rule as the press and the wheel: what owns the pointer owns the
+ * gesture, including the two-fingered one.
+ */
+test('a pinch on a map zooms the map, and on the canvas still zooms the graph', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const map = editor.addNode('graph-map');
+
+    places.position = { x: 4, y: 20 };
+    map.position = { x: 20, y: 40 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    return map.id as number;
+  });
+
+  await expect(page.locator('fb-flow-canvas fb-node-box')).not.toHaveCount(0);
+  await page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, id);
+
+  const node = page.locator('fb-flow-canvas fb-node-box').last();
+
+  await expect(node.locator('img.leaflet-tile').first()).toBeVisible();
+
+  const graphZoom = () => page.evaluate(() => (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.viewport.zoom as number);
+
+  /*
+   * Real touches, through CDP. Leaflet listens for its own touch events on the
+   * document, and synthetic PointerEvents dispatched from the page never reach
+   * it — the test would then measure the harness rather than the app.
+   */
+  const cdp = await page.context().newCDPSession(page);
+  const spread = async (centre: { x: number; y: number }, from: number, to: number) => {
+    const points = (gap: number) => [
+      { x: centre.x - gap, y: centre.y, id: 1 },
+      { x: centre.x + gap, y: centre.y, id: 2 },
+    ];
+
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points(from) });
+
+    for (let i = 1; i <= 8; i++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: points(from + (to - from) * (i / 8)),
+      });
+      // Back-to-back CDP touch moves are coalesced into nothing; each needs a
+      // frame of its own.
+      await page.waitForTimeout(40);
+    }
+
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(700);
+  };
+
+  const box = (await node.locator('.canvas').boundingBox())!;
+  const before = { map: await tileZoom(node), graph: await graphZoom() };
+
+  await spread({ x: box.x + box.width / 2, y: box.y + box.height / 2 }, 30, 110);
+
+  expect(await tileZoom(node)).toBeGreaterThan(before.map);
+  expect(await graphZoom()).toBe(before.graph);
+
+  // And the graph's own pinch is untouched: on bare canvas it still zooms.
+  await spread({ x: 60, y: 600 }, 30, 110);
+
+  expect(await graphZoom()).toBeGreaterThan(before.graph);
 });
 
 /**

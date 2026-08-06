@@ -1110,6 +1110,25 @@ export class FbNodeElement extends LitElement {
     window.addEventListener('pointercancel', this.onPointerUp);
   };
 
+  /**
+   * Content that owns the pointer owns the wheel.
+   *
+   * The canvas zooms the whole graph on a wheel, on the same understanding as
+   * the pan: anything that reaches it was nobody else's. But a map scrolls to
+   * zoom ITSELF, and a scrollable panel scrolls — so the wheel over one of
+   * those did both, and the graph zoomed out from under the thing the reader
+   * was actually pointing at.
+   *
+   * Deliberately only inside `.fb-drag-ignore`. A wheel over an ordinary node
+   * still zooms the graph, which is what makes zooming feel like it works
+   * everywhere rather than everywhere-except-on-nodes.
+   */
+  private onWheel = (event: WheelEvent): void => {
+    if ((event.target as Element | null)?.closest(`.${FB_DRAG_IGNORE}`)) {
+      event.stopPropagation();
+    }
+  };
+
   private onPointerMove = (event: PointerEvent): void => {
     if (event.pointerId !== this.dragPointerId || !this.dragFrom) {
       return;
@@ -1338,7 +1357,10 @@ export class FbNodeElement extends LitElement {
     const sockets = this.state?.sockets ?? [];
 
     return html`
-      <div class="box" @pointerdown=${this.onPointerDown} @dblclick=${this.onDoubleClick}>
+      <div class="box"
+           @pointerdown=${this.onPointerDown}
+           @wheel=${this.onWheel}
+           @dblclick=${this.onDoubleClick}>
         ${this.renderHeader()}
 
         <div class="body" style=${this.bodyFloor()}>
