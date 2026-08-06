@@ -18,6 +18,9 @@ import { PickWorker } from './pick.worker';
 
     @if (worker?.error) {
       <span class="error">{{worker?.error}}</span>
+    } @else if (worker?.shape === 'text') {
+      <!-- A count of one says nothing; the string itself is the whole news. -->
+      <span class="text" [title]="worker?.preview ?? ''">{{worker?.preview}}</span>
     } @else {
       <span class="count">{{count}}</span>
       <span class="unit">{{unit}}</span>
@@ -50,6 +53,20 @@ import { PickWorker } from './pick.worker';
 
     .unit {
       opacity: 0.6;
+    }
+
+    /*
+     * Right-aligned overflow: a path and a date differ at the END, and the
+     * first thirty characters of two URLs from one publisher are identical.
+     */
+    .text {
+      direction: rtl;
+      font: 11px/1.3 ui-monospace, monospace;
+      max-width: 100%;
+      overflow: hidden;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .error {
@@ -86,6 +103,7 @@ export class PickSmallComponent implements OnInit, OnDestroy {
       case 'grid': return 'cells';
       case 'point': return 'points';
       case 'value': return 'value';
+      case 'text': return 'text';
       default: return 'places';
     }
   }

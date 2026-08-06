@@ -13,7 +13,8 @@ import { PickConfig, PickShape, PickWorker } from './pick.worker';
         <option value="geo">Places (lat, lon, label)</option>
         <option value="point">Points (x, y)</option>
         <option value="grid">A grid (a raster over an area)</option>
-        <option value="value">One value</option>
+        <option value="value">One value (a number)</option>
+        <option value="text">One value (as text)</option>
       </select>
     </label>
 
@@ -90,7 +91,7 @@ export class PickSettingsComponent {
 
   /** The fields a shape actually uses; the others would be furniture. */
   get fields(): { key: keyof PickConfig; label: string; hint: string }[] {
-    if (this.shape === 'value') {
+    if (this.shape === 'value' || this.shape === 'text') {
       return [{ key: 'a', label: 'Path', hint: 'count' }];
     }
 

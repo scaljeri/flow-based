@@ -861,30 +861,136 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 9 },
+  config: { seedVersion: 10 },
   sockets: [],
   children: [
+    /*
+     * The grid is not fetched from a URL somebody typed. TOPAS publishes its
+     * own path pattern and the date it currently has grids for, both in
+     * config.json — so the flow reads them and follows them. Change the day
+     * they publish and this flow moves with it; nothing here has to be edited.
+     */
     {
       type: 'net-request',
-      title: 'PM2.5 over NL',
-      id: 400,
-      /*
-       * The raster TOPAS draws its own map from. The region is LOWERCASE in
-       * this path and capitalised everywhere else in the config — the thing
-       * that made every earlier guess return a 404.
-       */
+      title: 'TOPAS config',
+      id: 600,
       config: {
-        url: '../tno-topas/data/nl/grid/2026-07-01/PM2.5.json',
+        url: '../tno-topas/config.json',
         method: 'GET',
         every: 0,
-        title: 'PM2.5, 1 July 2026',
-        description: 'Modelled concentration over the Netherlands (TNO TOPAS / LOTOS-EUROS).',
+        title: 'TOPAS configuration',
+        description: 'What the publisher says about its own data: paths, dates, regions, pollutants.',
+      },
+      sockets: [
+        { id: 609, type: 'in', name: 'when' },
+        { id: 608, type: 'in', name: 'url', format: 'string' },
+        { id: 610, type: 'out', format: 'data' },
+      ],
+      position: { x: 4, y: 52 },
+    },
+    {
+      type: 'data-pick',
+      title: 'grid path',
+      id: 620,
+      // The pattern itself: `data/{region}/grid/{date}/{pollutant}.json`.
+      config: { shape: 'text', a: 'regions.0.gridPath' },
+      sockets: [
+        { id: 621, type: 'in', format: 'data' },
+        { id: 622, type: 'out', format: 'string' },
+      ],
+      position: { x: 21, y: 44 },
+    },
+    {
+      type: 'data-pick',
+      title: 'current date',
+      id: 630,
+      config: { shape: 'text', a: 'currentDate' },
+      sockets: [
+        { id: 631, type: 'in', format: 'data' },
+        { id: 632, type: 'out', format: 'string' },
+      ],
+      position: { x: 21, y: 54 },
+    },
+    {
+      type: 'data-pick',
+      title: 'region',
+      id: 640,
+      config: { shape: 'text', a: 'regions.0.id' },
+      sockets: [
+        { id: 641, type: 'in', format: 'data' },
+        { id: 642, type: 'out', format: 'string' },
+      ],
+      position: { x: 21, y: 64 },
+    },
+    {
+      type: 'data-pick',
+      title: 'pollutant',
+      id: 650,
+      // The first of the five this region publishes. A reader choosing among
+      // them is the next thing to build; the flow already knows the list.
+      config: { shape: 'text', a: 'regions.0.pollutants.0' },
+      sockets: [
+        { id: 651, type: 'in', format: 'data' },
+        { id: 652, type: 'out', format: 'string' },
+      ],
+      position: { x: 21, y: 74 },
+    },
+    {
+      type: 'data-template',
+      title: 'the path',
+      id: 660,
+      /*
+       * No pattern of its own: it arrives on the `pattern` socket. And
+       * `region|lower` rather than `{region|lower}` in the pattern — the
+       * pattern is the publisher's and is not ours to edit, while TOPAS
+       * lowercases the region in its own code. That one detail is what made
+       * every earlier guess at this URL return a 404.
+       */
+      config: { pattern: '' },
+      sockets: [
+        { id: 661, type: 'in', name: 'pattern' },
+        { id: 662, type: 'in', name: 'region|lower' },
+        { id: 663, type: 'in', name: 'date' },
+        { id: 664, type: 'in', name: 'pollutant' },
+        { id: 665, type: 'out', format: 'string' },
+      ],
+      position: { x: 40, y: 56 },
+    },
+    {
+      type: 'data-template',
+      title: 'the whole URL',
+      id: 670,
+      // The published path is relative to the publisher, not to us.
+      config: { pattern: '../tno-topas/{path}' },
+      sockets: [
+        { id: 671, type: 'in', name: 'path' },
+        { id: 672, type: 'out', format: 'string' },
+      ],
+      position: { x: 57, y: 56 },
+    },
+    {
+      type: 'net-request',
+      title: 'the grid',
+      id: 400,
+      /*
+       * No URL of its own. It fetches what arrives on `url`, and that is
+       * deliberately not written back into this config: a URL worked out from
+       * somebody else's data a moment ago is not something this flow should
+       * claim as its own.
+       */
+      config: {
+        url: '',
+        method: 'GET',
+        every: 0,
+        title: 'Modelled concentration',
+        description: 'The raster TOPAS draws its own map from (TNO TOPAS / LOTOS-EUROS).',
       },
       sockets: [
         { id: 409, type: 'in', name: 'when' },
+        { id: 408, type: 'in', name: 'url', format: 'string' },
         { id: 410, type: 'out', format: 'data' },
       ],
-      position: { x: 4, y: 54 },
+      position: { x: 74, y: 56 },
     },
     {
       type: 'data-pick',
@@ -899,7 +1005,7 @@ export const tno = () => ({
         { id: 460, type: 'in', format: 'data' },
         { id: 461, type: 'out', formats: ['geo', 'point', 'number', 'grid'] },
       ],
-      position: { x: 26, y: 54 },
+      position: { x: 88, y: 56 },
     },
     {
       type: 'net-request',
@@ -1022,7 +1128,7 @@ export const tno = () => ({
         // Where a pressed marker comes out, waiting for something to ask.
         { id: 313, type: 'out', format: 'geo' },
       ],
-      position: { x: 62, y: 20 },
+      position: { x: 104, y: 30 },
     },
   ],
   connections: [
@@ -1031,6 +1137,18 @@ export const tno = () => ({
     { id: 1002, from: 150, to: 500, out: 161, in: 510 },
     { id: 1003, from: 250, to: 500, out: 261, in: 511 },
     { id: 1006, from: 500, to: 300, out: 512, in: 310 },
+    // The config feeds four picks, the picks feed the template, the template
+    // feeds the request. Every part of that URL comes from the publisher.
+    { id: 1010, from: 600, to: 620, out: 610, in: 621 },
+    { id: 1011, from: 600, to: 630, out: 610, in: 631 },
+    { id: 1012, from: 600, to: 640, out: 610, in: 641 },
+    { id: 1013, from: 600, to: 650, out: 610, in: 651 },
+    { id: 1014, from: 620, to: 660, out: 622, in: 661 },
+    { id: 1015, from: 640, to: 660, out: 642, in: 662 },
+    { id: 1016, from: 630, to: 660, out: 632, in: 663 },
+    { id: 1017, from: 650, to: 660, out: 652, in: 664 },
+    { id: 1018, from: 660, to: 670, out: 665, in: 671 },
+    { id: 1019, from: 670, to: 400, out: 672, in: 408 },
     { id: 1004, from: 400, to: 450, out: 410, in: 460 },
     { id: 1005, from: 450, to: 300, out: 461, in: 312 },
   ],

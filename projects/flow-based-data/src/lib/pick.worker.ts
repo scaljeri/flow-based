@@ -1,7 +1,7 @@
 import { FbConnection, FbNodeWorker, FbSocket, readConfigValue, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
-export type PickShape = 'value' | 'geo' | 'point' | 'grid';
+export type PickShape = 'value' | 'text' | 'geo' | 'point' | 'grid';
 
 export interface PickConfig {
   /** What to build out of what arrives. */
@@ -84,6 +84,9 @@ export class PickWorker implements FbNodeWorker {
     this.declareOutput();
   }
 
+  /** The last single value taken, for the node to draw. Empty for the sets. */
+  preview = '';
+
   private declareOutput(): void {
     const out = this.sockets?.find(socket => socket.type === 'out');
 
@@ -91,7 +94,16 @@ export class PickWorker implements FbNodeWorker {
       return;
     }
 
-    const format = this.shape === 'value' ? 'number' : this.shape;
+    /*
+     * `value` means a NUMBER out of anything — that is what it was for, and
+     * what the plots drink. `text` is the same walk down a path saying it will
+     * come back with a string: a publisher's path pattern, a date, an id. Two
+     * shapes rather than one that guesses, because a socket's declared type is
+     * a promise made before any data has arrived.
+     */
+    const format = this.shape === 'value' ? 'number'
+      : this.shape === 'text' ? 'string'
+        : this.shape;
 
     out.formats = [format];
     out.format = format;
@@ -187,7 +199,7 @@ export class PickWorker implements FbNodeWorker {
       return { grid: this.toGrid(source), ...this.meta };
     }
 
-    if (this.shape === 'value') {
+    if (this.shape === 'value' || this.shape === 'text') {
       const value = this.config.a ? readConfigValue(source, this.config.a) : source;
 
       this.count = value === undefined ? 0 : 1;
@@ -196,7 +208,9 @@ export class PickWorker implements FbNodeWorker {
         throw new Error(`Nothing at "${this.config.a}"`);
       }
 
-      return value;
+      this.preview = String(value);
+
+      return this.shape === 'text' ? this.preview : value;
     }
 
     const list = this.config.list ? readConfigValue(source, this.config.list) : source;
