@@ -3169,6 +3169,25 @@ test('pressing a socket names it, and can be asked what its type means', async (
   await note.locator('button.why').click();
   await expect(note.locator('.detail')).toContainText('A symbolic function of x');
 
+  /*
+   * And where a module wrote down the shape, the type is shown the way a
+   * programmer reads types. `function` has only a description; `geo` has both,
+   * and the second lands faster than the first.
+   */
+  const geo = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const node = editor.root.children.find((child: any) =>
+      (child.sockets ?? []).some((s: any) => s.format === 'point'));
+
+    editor.socketClicked(node.sockets.find((s: any) => s.format === 'point'), node.id);
+
+    return !!node;
+  });
+
+  expect(geo).toBe(true);
+  await note.locator('button.why').click();
+  await expect(note.locator('.signature')).toHaveText('type point = [number, number, ...number[]]');
+
   // Closing it is a deliberate act while its details are open — a longer read
   // than a name and a type.
   await note.locator('button.close').click();

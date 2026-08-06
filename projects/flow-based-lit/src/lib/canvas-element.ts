@@ -223,8 +223,15 @@ export class FbFlowCanvasElement extends LitElement {
       color: #fff;
       font: 12px system-ui, sans-serif;
       left: 50%;
-      max-width: min(90%, 420px);
-      padding: 8px 10px;
+      /*
+       * Wide, and free to grow downwards. On a phone the first version wrapped
+       * "NL grid" onto two lines and still cut the type down to "gr…", which
+       * is the one thing this bar exists to say.
+       */
+      max-height: 60%;
+      max-width: min(94%, 560px);
+      overflow-y: auto;
+      padding: 10px 12px;
       position: absolute;
       top: 12px;
       transform: translateX(-50%);
@@ -249,15 +256,18 @@ export class FbFlowCanvasElement extends LitElement {
       align-items: baseline;
       display: flex;
       flex: 1;
-      gap: 6px;
+      flex-wrap: wrap;
+      gap: 2px 6px;
       min-width: 0;
     }
 
+    /*
+     * Wrapped rather than truncated. A name and a type are the whole content
+     * of this bar; an ellipsis in either is the bar failing at its one job.
+     */
     .socket-note .format {
       opacity: 0.7;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
     }
 
     .socket-note button {
@@ -281,13 +291,31 @@ export class FbFlowCanvasElement extends LitElement {
 
     .socket-note .detail {
       border-top: 1px solid rgba(255, 255, 255, 0.12);
-      margin: 8px 0 0;
-      opacity: 0.85;
+      margin-top: 8px;
       padding-top: 8px;
     }
 
+    .socket-note .detail p {
+      margin: 0;
+      opacity: 0.85;
+    }
+
+    /*
+     * The type as a programmer reads it. Monospace and scrollable sideways: an
+     * object with eight fields is a long line, and wrapping it at arbitrary
+     * points would make it harder to read rather than easier.
+     */
+    .socket-note .signature {
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      font: 11px/1.5 ui-monospace, monospace;
+      margin: 0 0 8px;
+      overflow-x: auto;
+      padding: 6px 8px;
+      white-space: pre;
+    }
+
     .socket-note .refines {
-      display: block;
       margin-top: 4px;
       opacity: 0.6;
     }
@@ -1084,10 +1112,13 @@ export class FbFlowCanvasElement extends LitElement {
         </div>
 
         ${touched.explain && info
-          ? html`<p class="detail">
-              ${info.description ?? 'No description was given for this type.'}
-              ${info.refines ? html`<span class="refines">refines ${info.refines}</span>` : nothing}
-            </p>`
+          ? html`<div class="detail">
+              ${info.type
+                ? html`<pre class="signature">type ${info.name} = ${info.type}</pre>`
+                : nothing}
+              <p>${info.description ?? 'No description was given for this type.'}</p>
+              ${info.refines ? html`<p class="refines">refines ${info.refines}</p>` : nothing}
+            </div>`
           : nothing}
       </div>
     `;

@@ -1,4 +1,5 @@
 import { FbModule } from '@scaljeri/flow-based';
+import { fbArray, fbNumber, fbObject } from '@scaljeri/flow-based-core';
 import { TimeseriesWorker } from './timeseries.worker';
 import { TimeseriesSmallComponent } from './timeseries-small.component';
 import { TimeseriesNormalComponent } from './timeseries-normal.component';
@@ -29,13 +30,27 @@ export const GRAPHS_MODULE: FbModule = {
 
   // The same identities Mathematics declares, so the two SHARE these types —
   // which is what lets a sampled function flow straight into a plot.
+  /*
+   * With their SHAPES, which is what a reader is shown when they press a socket
+   * and ask what it carries. A description says what a type means; the shape
+   * says what it looks like, and a reader who has written TypeScript takes the
+   * second in faster than any prose.
+   */
   formats: [
-    { name: 'number', description: 'A plain numeric value', color: '#025d04' },
-    { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
+    {
+      name: 'number', description: 'A plain numeric value', color: '#025d04',
+      shape: fbNumber,
+    },
+    {
+      name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf',
+      // Two at least: an [x] is not a coordinate.
+      shape: fbArray(fbNumber, 2),
+    },
     {
       name: 'marks',
       description: 'A labelled set of complex points, with one of them current',
       color: '#d081b8',
+      shape: fbObject({ marks: fbArray(fbObject({ re: fbNumber, im: fbNumber })) }),
     },
     /*
      * Deliberately not `point`. An [x, y] is a sample of a function and a
@@ -46,8 +61,18 @@ export const GRAPHS_MODULE: FbModule = {
       name: 'geo',
       description: 'A labelled place on the earth: {lat, lon}',
       color: '#4fa3d1',
+      shape: fbObject({ places: fbArray(fbObject({ lat: fbNumber, lon: fbNumber })) }),
     },
-    { name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a' },
+    {
+      name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a',
+      shape: fbObject({
+        grid: fbObject({
+          rows: fbNumber, cols: fbNumber,
+          latMin: fbNumber, latMax: fbNumber, lonMin: fbNumber, lonMax: fbNumber,
+          values: fbArray(fbNumber),
+        }),
+      }),
+    },
   ],
 
   types: {

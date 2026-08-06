@@ -1,3 +1,4 @@
+import { FbShape } from '@scaljeri/flow-based-core';
 import { FbNodeTypes } from './flow-based';
 
 /**
@@ -21,6 +22,16 @@ export interface FbFormatDef {
   refines?: string;
   /** A default colour for its lines; presentation, so never part of identity. */
   color?: string;
+  /**
+   * What a value of this type LOOKS like, structurally.
+   *
+   * Optional, and not part of identity — two modules meaning the same thing by
+   * `geo` agree because their descriptions agree, not because they wrote the
+   * same fields. It exists so a reader who presses a socket can be shown the
+   * type the way a programmer reads types, which lands faster than any prose
+   * about it.
+   */
+  shape?: FbShape;
 }
 
 /**
@@ -94,6 +105,17 @@ export class FbFormatRegistry {
     if (this.sameType(existing.def, def)) {
       if (!existing.def.description && def.description) {
         existing.def.description = def.description;
+      }
+
+      /*
+       * And the shape, on the same reasoning: whichever module happens to load
+       * first should not decide how much is known about a type they agree on.
+       * Two modules declaring `grid` are the same type — the description says
+       * so — and if only one of them wrote down the fields, that is the answer
+       * for both.
+       */
+      if (!existing.def.shape && def.shape) {
+        existing.def.shape = def.shape;
       }
 
       return def.name;

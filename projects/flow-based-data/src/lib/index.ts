@@ -1,4 +1,5 @@
 import { FbModule } from '@scaljeri/flow-based';
+import { fbAny, fbArray, fbNumber, fbObject, fbString } from '@scaljeri/flow-based-core';
 import { PickWorker } from './pick.worker';
 import { PickSmallComponent } from './pick-small.component';
 import { PickSettingsComponent } from './pick-settings.component';
@@ -27,13 +28,44 @@ export const DATA_MODULE: FbModule = {
 
   // The same identities the other modules declare, so a picked value flows
   // straight into a map or a plot.
+  /*
+   * Each with its SHAPE as well as its description. The shape is what a reader
+   * is shown when they press a socket and ask what it carries — the same
+   * information, written the way a programmer reads types.
+   */
   formats: [
-    { name: 'string', description: 'A piece of text', color: '#7fb069' },
-    { name: 'data', description: 'Whatever a source returned, parsed', color: '#8f7ee6' },
-    { name: 'geo', description: 'A labelled place on the earth: {lat, lon}', color: '#4fa3d1' },
-    { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
-    { name: 'number', description: 'A plain numeric value', color: '#025d04' },
-    { name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a' },
+    {
+      name: 'string', description: 'A piece of text', color: '#7fb069',
+      shape: fbString,
+    },
+    {
+      name: 'data', description: 'Whatever a source returned, parsed', color: '#8f7ee6',
+      // Deliberately unknown: a request cannot know what is on the other end,
+      // and a shape that claimed otherwise would be the lie in the socket.
+      shape: fbAny,
+    },
+    {
+      name: 'geo', description: 'A labelled place on the earth: {lat, lon}', color: '#4fa3d1',
+      shape: fbObject({ places: fbArray(fbObject({ lat: fbNumber, lon: fbNumber })) }),
+    },
+    {
+      name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf',
+      shape: fbArray(fbNumber, 2),
+    },
+    {
+      name: 'number', description: 'A plain numeric value', color: '#025d04',
+      shape: fbNumber,
+    },
+    {
+      name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a',
+      shape: fbObject({
+        grid: fbObject({
+          rows: fbNumber, cols: fbNumber,
+          latMin: fbNumber, latMax: fbNumber, lonMin: fbNumber, lonMax: fbNumber,
+          values: fbArray(fbNumber),
+        }),
+      }),
+    },
   ],
 
   types: {

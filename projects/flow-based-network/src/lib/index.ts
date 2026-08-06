@@ -1,4 +1,5 @@
 import { FbModule } from '@scaljeri/flow-based';
+import { fbAny } from '@scaljeri/flow-based-core';
 import { RequestWorker } from './request.worker';
 import { RequestSmallComponent } from './request-small.component';
 import { RequestSettingsComponent } from './request-settings.component';
@@ -22,7 +23,12 @@ export const NETWORK_MODULE: FbModule = {
      * the socket colours. Turning it into something specific is a job for
      * another node.
      */
-    { name: 'data', description: 'Whatever a source returned, parsed', color: '#8f7ee6' },
+    {
+      name: 'data', description: 'Whatever a source returned, parsed', color: '#8f7ee6',
+      // Unknown, and that is the point: pretending to know what a stranger's
+      // server returns would put the lie in the socket colour.
+      shape: fbAny,
+    },
   ],
 
   types: {

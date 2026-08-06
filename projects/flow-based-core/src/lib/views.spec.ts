@@ -158,10 +158,16 @@ describe('previewChild', () => {
     expect(previewChild(subflow({ preview: 2 }))?.id).toBe(2);
   });
 
-  it('falls back to the first child, so older flows still show something', () => {
-    expect(previewChild(subflow())?.id).toBe(1);
-    // Named child gone: the fallback still applies rather than showing nothing.
-    expect(previewChild(subflow({ preview: 99 }))?.id).toBe(1);
+  it('shows nothing unless it was told which child to show', () => {
+    /*
+     * It used to fall back to `children[0]` — whichever node happened to be
+     * written first, which for a subflow of fifteen fetches is a config file
+     * nobody wants on the outside of the box. A face is a decision; unmade,
+     * the node draws a picture of its own graph instead.
+     */
+    expect(previewChild(subflow())).toBeUndefined();
+    // And a named child that has since been deleted is no longer a name.
+    expect(previewChild(subflow({ preview: 99 }))).toBeUndefined();
   });
 
   it('has nothing to show for an empty subflow', () => {

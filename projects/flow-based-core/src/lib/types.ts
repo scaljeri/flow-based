@@ -272,6 +272,13 @@ export interface FbFormatInfo {
   /** The type this one refines: `temperature` refines `number`. */
   refines?: string;
   color?: string;
+  /**
+   * The type as a programmer reads it: `{ lat: number; lon: number }`.
+   *
+   * Rendered by whoever holds the registry — see `typeScriptOf` — because the
+   * shell has no shapes, only names.
+   */
+  type?: string;
 }
 
 /** Look up what a format means. */

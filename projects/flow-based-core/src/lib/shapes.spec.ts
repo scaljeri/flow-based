@@ -10,6 +10,7 @@ import {
   fbString,
   shapeFits,
   shapeSignature,
+  typeScriptOf,
 } from './shapes';
 
 describe('canonicalShape', () => {
@@ -75,5 +76,30 @@ describe('shapeFits', () => {
     expect(shapeFits(fbObject({ a: fbNumber }), FB_BASE_SHAPES['object'])).toBe(true);
     expect(shapeFits(FB_BASE_SHAPES['number'], fbNumber)).toBe(true);
     expect(shapeFits(fbNumber, FB_BASE_SHAPES['string'])).toBe(false);
+  });
+});
+
+describe('typeScriptOf', () => {
+  it('writes the primitives as themselves, and any as unknown', () => {
+    expect(typeScriptOf(fbNumber)).toBe('number');
+    expect(typeScriptOf(fbString)).toBe('string');
+    // `any` means nothing is promised, which is what unknown says.
+    expect(typeScriptOf(fbAny)).toBe('unknown');
+  });
+
+  it('writes an object as its fields', () => {
+    expect(typeScriptOf(fbObject({ lat: fbNumber, lon: fbNumber })))
+      .toBe('{ lat: number; lon: number }');
+    expect(typeScriptOf(fbObject())).toBe('object');
+  });
+
+  it('writes a minimum length as a tuple with a rest', () => {
+    expect(typeScriptOf(fbArray(fbNumber))).toBe('number[]');
+    // A point demands two, and a reader should see the demand.
+    expect(typeScriptOf(fbArray(fbNumber, 2))).toBe('[number, number, ...number[]]');
+  });
+
+  it('parenthesises an element type that would otherwise re-bind', () => {
+    expect(typeScriptOf(fbArray(fbArray(fbNumber, 2)))).toBe('([number, number, ...number[]])[]');
   });
 });

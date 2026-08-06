@@ -47,6 +47,7 @@ import { BasicGraphNormalComponent } from './nodes/basic-graph/basic-graph-norma
 import { BasicGraphFullComponent } from './nodes/basic-graph/basic-graph-full.component';
 import { MergeStreamsSmallComponent } from './nodes/merge-streams/merge-streams-small.component';
 import { MergeStreamsNormalComponent } from './nodes/merge-streams/merge-streams-normal.component';
+import { typeScriptOf } from '@scaljeri/flow-based-core';
 import { FB_CONFIG, FB_SOCKET_PALETTE } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
 import { StatsSmallComponent } from './nodes/stats/stats-small.component';
@@ -165,9 +166,17 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
       useFactory: (modules: ModulesService) => (name: string) => {
         const def = modules.formats.get(name);
 
-        return def
-          ? { ...def, color: def.color ?? (FB_SOCKET_PALETTE as FbSocketColors)[name] }
-          : undefined;
+        if (!def) {
+          return undefined;
+        }
+
+        return {
+          ...def,
+          color: def.color ?? (FB_SOCKET_PALETTE as FbSocketColors)[name],
+          // Rendered here rather than in the shell: shapes live with the
+          // registry, and the shell knows a format only by its name.
+          type: def.shape ? typeScriptOf(def.shape) : undefined,
+        };
       },
       deps: [ModulesService]
     }

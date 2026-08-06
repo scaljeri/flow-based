@@ -54,6 +54,59 @@ export function fbObject(fields: Record<string, FbShape> = {}): FbShape {
  * something, so a module declares "point", not "array") and anything opaque
  * like a function type — those belong to the module that gives them meaning.
  */
+/**
+ * A shape written the way a programmer reads types.
+ *
+ * The shape language answers "does this fit there"; this answers "what am I
+ * looking at". They are the same information, and a reader who has ever
+ * written TypeScript can take in `{ lat: number; lon: number }` faster than
+ * any prose about it — so the note on a pressed socket shows the type, and
+ * keeps the description for what a type cannot say.
+ *
+ * `any` renders as `unknown` rather than `any`: it means "nothing is promised
+ * about this", which is what unknown says and what any denies.
+ */
+export function typeScriptOf(shape: FbShape): string {
+  switch (shape.kind) {
+    case 'any':
+      return 'unknown';
+
+    case 'number':
+    case 'boolean':
+    case 'string':
+      return shape.kind;
+
+    case 'array': {
+      const of = typeScriptOf(shape.of);
+
+      /*
+       * A minimum length IS expressible — as a tuple with a rest — and it is
+       * the difference between "some numbers" and "a coordinate". A point
+       * demands two, and a reader should see that demand.
+       */
+      if (shape.minItems) {
+        const fixed = Array.from({ length: shape.minItems }, () => of).join(', ');
+
+        return `[${fixed}, ...${of}[]]`;
+      }
+
+      // Parenthesised when the element type is itself a union or a tuple, or
+      // `a | b[]` would read as `a | (b[])`.
+      return /[|\]]/.test(of) ? `(${of})[]` : `${of}[]`;
+    }
+
+    case 'object': {
+      const fields = Object.entries(shape.fields);
+
+      if (!fields.length) {
+        return 'object';
+      }
+
+      return `{ ${fields.map(([name, field]) => `${name}: ${typeScriptOf(field)}`).join('; ')} }`;
+    }
+  }
+}
+
 export const FB_BASE_SHAPES: Record<string, FbShape> = {
   number: fbNumber,
   boolean: fbBoolean,
