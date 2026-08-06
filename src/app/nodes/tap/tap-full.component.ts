@@ -106,11 +106,32 @@ import { TapView } from './tap-view';
       white-space: pre;
     }
 
+    /*
+     * On a narrow screen the two panels stop being columns. Side by side, a
+     * phone gives each about 180px — too little to read a value in, and half
+     * of it spent on a history that is usually one line.
+     */
+    @media (max-width: 700px) {
+      :host {
+        flex-direction: column;
+      }
+
+      .current {
+        flex: 1 1 auto;
+      }
+
+      .history {
+        flex: 0 0 auto;
+        max-height: 30%;
+      }
+    }
+
     ol {
       columns: 4;
       /* Long enough to be worth the column rule; ellipsis rather than reflow. */
       overflow-x: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
       font-size: 18px;
       list-style: none;
       margin: 0;
