@@ -48,8 +48,8 @@ function meterNode(
     let subscription: Subscription | undefined;
 
     if (worker) {
-      draw(worker.currentValue);
-      subscription = worker.getStream().subscribe(() => draw(worker.currentValue));
+      draw(worker.currentNumber);
+      subscription = worker.getStream().subscribe(() => draw(worker.currentNumber));
     }
 
     host.appendChild(root);

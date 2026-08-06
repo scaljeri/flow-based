@@ -1839,6 +1839,63 @@ test('a switch lets one input through, or none', async ({ page }) => {
 
 
 /**
+ * A tap shows what arrived, and an object is not a number.
+ *
+ * Every value used to go through String(), which turns any object at all into
+ * the same nine characters: "[object Object]". Small has one line and says WHAT
+ * the value is; the bigger views have room for the value itself and scroll
+ * through it.
+ */
+test('a tap says what a structured value is, and the open views show it whole', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const wired = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const tap = editor.addNode('tap');
+
+    [places, tap].forEach((node, index) => (node.position = { x: 4 + index * 20, y: 84 }));
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(tap.sockets.find((s: any) => s.type === 'in'), tap.id);
+
+    return { tap: tap.id };
+  });
+
+  // The node just added, which is the last one drawn. Its content mounts into
+  // a plain div in the light DOM, so there is no element named for the
+  // component to filter on.
+  const box = () => page.locator('fb-flow-canvas fb-node-box').last();
+
+  // Not "[object Object]", and not a number either: a set of places is an
+  // object, and at this size that IS the reading.
+  await expect(box().locator('.reading')).toHaveText('object');
+
+  await page.evaluate(id => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === id)!;
+
+    node.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, wired.tap);
+
+  const whole = box().locator('pre.whole');
+
+  await expect(whole).toHaveCount(1);
+  await expect(whole).toContainText('"places"');
+  await expect(whole).toContainText('Amsterdam');
+
+  /*
+   * And it scrolls rather than growing: four places pretty-print to more lines
+   * than the panel is tall, and a node that grew to fit its value would cover
+   * the graph the moment a big one arrived.
+   */
+  expect(await whole.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  expect(await whole.evaluate(el => getComputedStyle(el).touchAction)).toBe('pan-y');
+});
+
+/**
  * A source says what it is, and that travels with the data.
  *
  * Only the request knows: further down, a list of coordinates is a list of

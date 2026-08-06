@@ -17,7 +17,9 @@ export const BASIC_GRAPH_CONFIG: FbNodeSettings = {
 
 export class BasicGraphWorker extends TapWorker {
   get values(): number[] {
-    return this.history;
+    // A line can only be drawn through numbers; anything else on the wire is
+    // logged by the tap and skipped here.
+    return this.numbers;
   }
 
   // connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {

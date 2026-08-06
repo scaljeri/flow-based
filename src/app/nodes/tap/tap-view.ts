@@ -20,10 +20,19 @@ export abstract class TapView implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
 
   worker?: TapWorker;
-  /** The last value seen, or an em dash before anything has arrived. */
-  value: number | string = '—';
+  /** The last value seen, exactly as it arrived. Formatting is per view. */
+  value: unknown = undefined;
 
   private subscription?: Subscription;
+
+  /**
+   * Past this, the drawing stops being a reading and starts being a download.
+   *
+   * A grid of 42,456 numbers pretty-prints to half a megabyte of text; laying
+   * that out costs more than looking at it is worth, and nobody reads past the
+   * first screen anyway.
+   */
+  private static readonly LIMIT = 20000;
 
   ngOnInit(): void {
     this.worker = this.service.worker as TapWorker | undefined;
@@ -45,13 +54,72 @@ export abstract class TapView implements OnInit, OnDestroy {
    * the worker is what remembers them.
    */
   private read(): void {
-    const current = this.worker?.currentValue;
-
-    this.value = typeof current === 'number' ? current : (current ?? '—');
+    this.value = this.worker?.currentValue;
   }
 
-  get history(): number[] {
+  get history(): unknown[] {
     return this.worker?.history ?? [];
+  }
+
+  /** True when there is more to this value than one line can hold. */
+  get structured(): boolean {
+    return this.value !== null && typeof this.value === 'object';
+  }
+
+  /** The reading in one line, for the sizes that only have one. */
+  get short(): string {
+    return this.label(this.value);
+  }
+
+  /**
+   * One line for any value at all.
+   *
+   * A number reads as a number and a string as itself — the ellipsis is CSS's
+   * job, because where the text runs out depends on how wide the node is drawn.
+   * Anything structured says WHAT IT IS instead of being flattened: String() on
+   * an object produces "[object Object]", which is the same nine characters for
+   * a station list, a grid and a mistake.
+   */
+  label(value: unknown): string {
+    if (value === undefined || value === null) {
+      return '—';
+    }
+
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    // The count, because for a list it is the one thing worth knowing before
+    // opening the node: 93 is the official network, 400 is the sensors.
+    return Array.isArray(value) ? `array (${value.length})` : 'object';
+  }
+
+  /**
+   * The whole value, laid out — what the bigger views are FOR.
+   *
+   * Cut off at a length, not at a depth: a truncated tree hides the very field
+   * you opened the node to find, while a truncated text at least got there in
+   * reading order. The cut says so, so a short object is never mistaken for a
+   * long one that stopped.
+   */
+  get pretty(): string {
+    if (this.value === undefined) {
+      return '—';
+    }
+
+    let text: string;
+
+    try {
+      text = JSON.stringify(this.value, null, 2) ?? String(this.value);
+    } catch {
+      // A value that refers to itself has no JSON; say that rather than throw
+      // inside a template, where the error takes the whole node down with it.
+      return String(this.value);
+    }
+
+    return text.length > TapView.LIMIT
+      ? `${text.slice(0, TapView.LIMIT)}\n\n… cut off: ${text.length.toLocaleString('en')} characters in total`
+      : text;
   }
 
   get count(): number {
