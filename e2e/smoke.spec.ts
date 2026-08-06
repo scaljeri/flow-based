@@ -1890,6 +1890,16 @@ test('a map draws smaller dots the further out it is zoomed', async ({ page }) =
   const radius = () => page.locator('path.leaflet-interactive').first()
     .evaluate(el => Number(/a([\d.]+),/.exec(el.getAttribute('d') ?? '')?.[1] ?? 0));
 
+  /*
+   * Free of the limits for this one. A map holds itself to its data by
+   * default, so the fit is also the floor and there is no zooming out to
+   * measure — which is a different test, two below this one.
+   */
+  await page.evaluate(nodeId => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId).setBounded(false);
+  }, id);
+
   const near = await radius();
 
   /*
@@ -2284,6 +2294,112 @@ test('a map is dragged at rest and panned when open, and the header still moves 
   // Left of the header, clear of the buttons on its right.
   await drag({ x: head.x + 20, y: head.y + head.height / 2 }, 40, 30);
   expect(await at()).not.toBe(opened);
+});
+
+
+/**
+ * A map node is a window onto one dataset, not an atlas.
+ *
+ * Left free, a reader who scrolls out twice is looking at Kazakhstan with
+ * their own data a pixel wide somewhere off screen. So the widest view IS the
+ * data: the minimum zoom is the zoom at which it fits, and there is nowhere to
+ * pan to where the data is not. Both come from the data rather than from
+ * numbers typed by hand — these layers arrive over the network, and a minimum
+ * zoom written down is wrong the moment the layer changes.
+ */
+test('a map cannot be zoomed out past its own data, or panned away from it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const map = editor.addNode('graph-map');
+
+    places.position = { x: 6, y: 66 };
+    map.position = { x: 26, y: 66 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    return map.id as number;
+  });
+
+  await expect(page.locator('fb-flow-canvas fb-node-box')).not.toHaveCount(0);
+  await page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, id);
+
+  const node = page.locator('fb-flow-canvas fb-node-box').last();
+
+  await expect(node.locator('.leaflet-container')).toBeVisible();
+  await expect(page.locator('path.leaflet-interactive').first()).toBeVisible();
+
+  /*
+   * Zoom read off the TILES. Leaflet keeps no reference to its map on the
+   * container, and reaching into its internals to test it would be testing
+   * something other than what a reader sees: the tiles are the map.
+   */
+  const zoom = () => node.locator('img.leaflet-tile').first()
+    .evaluate(el => Number(/\/(\d+)\/\d+\/\d+/.exec((el as HTMLImageElement).src)?.[1] ?? -1));
+
+  const zoomOut = node.locator('.leaflet-control-zoom-out');
+
+  /*
+   * The fit IS the floor, so the control is dead on arrival — which is the
+   * requirement stated as plainly as an interface can state it: the layer just
+   * fills the view, and from here the only direction is closer.
+   */
+  await expect(zoomOut).toHaveClass(/leaflet-disabled/);
+
+  const floor = await zoom();
+
+  expect(floor).toBeGreaterThan(3);
+
+  /*
+   * And there is nowhere to pan to where the data is not. Dragged hard to the
+   * east three times, the places are still on the map — which is the only form
+   * of this claim a reader would recognise.
+   */
+  const box = (await node.locator('.canvas').boundingBox())!;
+
+  for (let i = 0; i < 3; i++) {
+    await page.mouse.move(box.x + 40, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 20, box.y + box.height / 2, { steps: 10 });
+    await page.mouse.up();
+    await page.waitForTimeout(250);
+  }
+
+  const onScreen = await page.locator('path.leaflet-interactive').evaluateAll((paths, rect) =>
+    paths.filter(path => {
+      const at = path.getBoundingClientRect();
+
+      return at.left >= rect.x - 2 && at.right <= rect.x + rect.width + 2
+        && at.top >= rect.y - 2 && at.bottom <= rect.y + rect.height + 2;
+    }).length, box);
+
+  expect(onScreen).toBeGreaterThan(0);
+
+  // And the switch turns the limits off again, rather than leaving the map
+  // locked to whatever it last held.
+  await page.evaluate(nodeId => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId).setBounded(false);
+  }, id);
+
+  await expect(zoomOut).not.toHaveClass(/leaflet-disabled/);
+
+  for (let i = 0; i < 3; i++) {
+    await zoomOut.click();
+    await page.waitForTimeout(300);
+  }
+
+  expect(await zoom()).toBeLessThan(floor);
 });
 
 /**

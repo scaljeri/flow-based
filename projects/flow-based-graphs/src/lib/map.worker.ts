@@ -56,6 +56,27 @@ export interface MapConfig {
    */
   min?: number | null;
   max?: number | null;
+  /**
+   * Keep the reader with the data: no zooming out past the fit, no panning
+   * away from it.
+   *
+   * A map node is a window onto one dataset, not an atlas. Left free, a
+   * reader who scrolls twice is looking at Kazakhstan with their own data a
+   * pixel wide somewhere off screen, and the way back is not obvious — the
+   * map still works, it is just no longer about anything. Bounded, the widest
+   * view IS the data and every gesture from there is a closer look.
+   */
+  bounded?: boolean;
+  /**
+   * How much room around the data, as a fraction of its own width and height.
+   *
+   * Separate for the two directions because data is rarely square: a country
+   * is wider than it is tall, and a quarter of its width is a very different
+   * distance from a quarter of its height. Zero pins the edges exactly to the
+   * data, which is honest and feels cramped.
+   */
+  slackX?: number;
+  slackY?: number;
 }
 
 /**
@@ -177,6 +198,41 @@ export class MapWorker implements FbNodeWorker {
 
   get opacity(): number {
     return this.config.opacity ?? 0.65;
+  }
+
+  /*
+   * On by default, including for maps saved before this existed. A map that
+   * cannot lose its own data is the better behaviour, and a reader who wants
+   * the whole world has one switch to find rather than a lost dataset to
+   * hunt for.
+   */
+  get bounded(): boolean {
+    return this.config.bounded ?? true;
+  }
+
+  setBounded(on: boolean): void {
+    this.config.bounded = on;
+    this.subject.next();
+  }
+
+  get slackX(): number {
+    return this.config.slackX ?? 0.15;
+  }
+
+  get slackY(): number {
+    return this.config.slackY ?? 0.15;
+  }
+
+  setSlack(axis: 'x' | 'y', fraction: number): void {
+    const value = Math.max(0, Math.min(3, fraction));
+
+    if (axis === 'x') {
+      this.config.slackX = value;
+    } else {
+      this.config.slackY = value;
+    }
+
+    this.subject.next();
   }
 
   get min(): number | null {

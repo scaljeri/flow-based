@@ -17,6 +17,31 @@ import { MapWorker } from './map.worker';
       <span>Keep everything in view</span>
     </label>
 
+    <label class="check">
+      <input type="checkbox" [checked]="bounded" (change)="onBounded($event)">
+      <span>Stay with the data</span>
+    </label>
+
+    <!--
+      Only when the limits are on. Two numbers about a wall that is not there
+      is furniture, and worse, it suggests the wall exists.
+    -->
+    @if (bounded) {
+      <p class="state">
+        The widest view is the data itself — from there, only closer.
+      </p>
+
+      <label class="field">
+        <span>Room sideways (× the data's width)</span>
+        <input type="text" inputmode="decimal" [value]="slackX" (change)="onSlack('x', $event)">
+      </label>
+
+      <label class="field">
+        <span>Room up and down (× its height)</span>
+        <input type="text" inputmode="decimal" [value]="slackY" (change)="onSlack('y', $event)">
+      </label>
+    }
+
     <!--
       The view is remembered by moving the map, not by filling in a form. All
       that is left to offer is forgetting it again.
@@ -159,6 +184,35 @@ export class MapSettingsComponent {
 
   onFollow(event: Event): void {
     this.worker?.setFollow((event.target as HTMLInputElement).checked);
+    this.cdr.detectChanges();
+  }
+
+  get bounded(): boolean {
+    return this.worker?.bounded ?? true;
+  }
+
+  get slackX(): string {
+    return String(this.worker?.slackX ?? 0.15);
+  }
+
+  get slackY(): string {
+    return String(this.worker?.slackY ?? 0.15);
+  }
+
+  onBounded(event: Event): void {
+    this.worker?.setBounded((event.target as HTMLInputElement).checked);
+    this.cdr.detectChanges();
+  }
+
+  onSlack(axis: 'x' | 'y', event: Event): void {
+    const value = Number((event.target as HTMLInputElement).value);
+
+    // A field left as nonsense keeps the value it had rather than becoming
+    // zero, which would silently pin the edges to the data.
+    if (Number.isFinite(value)) {
+      this.worker?.setSlack(axis, value);
+    }
+
     this.cdr.detectChanges();
   }
 

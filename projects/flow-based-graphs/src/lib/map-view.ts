@@ -111,6 +111,12 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       touchZoom: this.interactive,
       doubleClickZoom: this.interactive,
       zoomControl: this.interactive,
+      /*
+       * A hard wall rather than a rubber band. Leaflet's default lets a drag
+       * past the edge succeed and then springs back, which reads as the map
+       * fighting the finger; at 1 the edge simply does not move.
+       */
+      maxBoundsViscosity: 1,
     });
 
     /*
@@ -377,6 +383,60 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** The input sockets' layers, in the order the node declares them. */
+  /**
+   * Hold the reader to the data: the widest view is the fit, and there is
+   * nowhere to pan to where the data is not.
+   *
+   * Both limits come from the data rather than from numbers somebody typed —
+   * a minimum zoom written by hand is wrong the moment the layer changes, and
+   * these layers arrive over the network. What IS configured is how much room
+   * to leave around it, which is a matter of taste and does not go stale.
+   *
+   * Recomputed on every draw, because the data is what it is measuring. Only
+   * the LIMITS move; the view the reader is on is left alone unless it has
+   * become impossible, which Leaflet corrects itself.
+   */
+  private limit(leaflet: typeof L, map: L.Map, points: [number, number][]): void {
+    if (!points.length || !this.worker.bounded) {
+      // Off, or nothing to be bounded by. Both limits are dropped, or a map
+      // switched back to free would stay locked to whatever it last held.
+      map.setMinZoom(0);
+      map.setMaxBounds(undefined as unknown as L.LatLngBounds);
+
+      return;
+    }
+
+    const data = leaflet.latLngBounds(points);
+    const south = data.getSouth();
+    const north = data.getNorth();
+    const west = data.getWest();
+    const east = data.getEast();
+
+    /*
+     * A fraction of the data's own size, and a floor in degrees: a single
+     * place has no width at all, and a fraction of nothing is nothing — the
+     * bounds would be a point and the map would refuse to move.
+     */
+    const padX = Math.max((east - west) * this.worker.slackX, 0.02);
+    const padY = Math.max((north - south) * this.worker.slackY, 0.02);
+    const roomy = leaflet.latLngBounds(
+      [Math.max(-85, south - padY), Math.max(-180, west - padX)],
+      [Math.min(85, north + padY), Math.min(180, east + padX)],
+    );
+
+    map.setMaxBounds(roomy);
+
+    /*
+     * The zoom at which the padded rectangle fits, which is the widest view
+     * worth having. `inside: false` means "fits within", so nothing is cut
+     * off at the limit — a minimum that hid part of the data would be a
+     * strange thing to enforce.
+     */
+    const fit = map.getBoundsZoom(roomy, false);
+
+    map.setMinZoom(fit);
+  }
+
   /** The zoom the resting radii were chosen at: the whole of the Netherlands. */
   private static readonly BASE_ZOOM = 7;
   /** The radius a chosen dot has at that zoom. */
@@ -539,6 +599,7 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       map.fitBounds(leaflet.latLngBounds(bounds), { padding: [24, 24], maxZoom: 12 });
     }
 
+    this.limit(leaflet, map, bounds);
     this.cdr.detectChanges();
   }
 }
