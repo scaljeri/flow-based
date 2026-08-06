@@ -2673,6 +2673,105 @@ test('a pinch on a map zooms the map, and on the canvas still zooms the graph', 
   expect(await graphZoom()).toBeGreaterThan(before.graph);
 });
 
+
+/**
+ * A publisher's own path, followed rather than copied.
+ *
+ * TOPAS publishes `data/{region}/grid/{date}/{pollutant}.json` as a field in
+ * its config file, along with the date it currently has grids for. A flow that
+ * types that pattern into a request has forked it: the day the publisher moves
+ * their grids, the copy is wrong and nothing says so.
+ *
+ * So the pattern is fetched, filled from named inputs, and handed to a request
+ * as a URL. Everything here is generic — Pick takes a value out of anything,
+ * Template fills any pattern — and the TOPAS case is just the shape it is
+ * pointed at.
+ */
+test('a config file supplies the pattern, and the template builds the URL from it', async ({ page }) => {
+  await page.route('**/data/nl/grid/**', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ pollutant: 'PM2.5', values: [1, 2, 3] }),
+  }));
+
+  await page.route('**/topas-config.json', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({
+      currentDate: '2026-07-01',
+      regions: [{ id: 'NL', gridPath: 'data/{region|lower}/grid/{date}/{pollutant}.json' }],
+    }),
+  }));
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const built = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const config = editor.addNode('net-request');
+    const path = editor.addNode('data-pick');
+    const date = editor.addNode('data-pick');
+    const template = editor.addNode('data-template');
+
+    [config, path, date, template].forEach((node, index) => (node.position = { x: 4 + index * 16, y: 84 }));
+
+    // Through the worker, not by writing the state: setting the field is what
+    // makes it fetch, exactly as typing it in the panel does.
+    editor.flow.getWorker(config.id).set('url', '/topas-config.json');
+
+    // Two values out of one file: the pattern itself, and the date it wants.
+    Object.assign(path.config, { shape: 'value', a: 'regions.0.gridPath' });
+    Object.assign(date.config, { shape: 'value', a: 'currentDate' });
+
+    const out = (node: any) => node.sockets.find((s: any) => s.type === 'out');
+    const ins = (node: any) => node.sockets.filter((s: any) => s.type === 'in');
+
+    editor.socketClicked(out(config), config.id);
+    editor.socketClicked(ins(path)[0], path.id);
+    editor.socketClicked(out(config), config.id);
+    editor.socketClicked(ins(date)[0], date.id);
+
+    /*
+     * The template's sockets are named after the placeholders. `pattern` comes
+     * with the type; the other three are added and named here, which is what a
+     * reader does in the panel.
+     */
+    const template_ins = ins(template);
+
+    editor.socketClicked(out(path), path.id);
+    editor.socketClicked(template_ins[0], template.id);          // pattern
+
+    for (const name of ['region', 'date', 'pollutant']) {
+      editor.flow.addSocket({ type: 'in', name }, template.id);
+    }
+
+    const named = (name: string) => ins(template).find((s: any) => s.name === name);
+
+    editor.socketClicked(out(date), date.id);
+    editor.socketClicked(named('date'), template.id);
+
+    const worker = editor.flow.getWorker(template.id);
+
+    // The two the reader chooses rather than fetches.
+    worker.setStream({ subscribe: (fn: (v: unknown) => void) => { fn('NL'); return { unsubscribe() {} }; } },
+      named('region'), { id: 901 });
+    worker.setStream({ subscribe: (fn: (v: unknown) => void) => { fn('PM2.5'); return { unsubscribe() {} }; } },
+      named('pollutant'), { id: 902 });
+
+    await new Promise(resolve => setTimeout(resolve, 900));
+
+    return {
+      pattern: worker.pattern as string,
+      missing: worker.missing as string[],
+      result: worker.result as string,
+    };
+  });
+
+  expect(built.pattern).toBe('data/{region|lower}/grid/{date}/{pollutant}.json');
+  expect(built.missing).toEqual([]);
+
+  // Lowercased in the path and nowhere else — the trap TOPAS actually sets.
+  expect(built.result).toBe('data/nl/grid/2026-07-01/PM2.5.json');
+});
+
 /**
  * At most one, or none.
  *

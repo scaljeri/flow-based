@@ -37,6 +37,13 @@ export const NETWORK_MODULE: FbModule = {
           // Anything at all means "ask again"; a trigger is a moment, not a
           // message, so the value is ignored.
           { type: 'in', name: 'when' },
+          /*
+           * Where to fetch from, when that is computed rather than typed. The
+           * wire beats the field, and it is deliberately NOT written into the
+           * config: a URL worked out a moment ago from somebody else's data is
+           * not something the flow should claim as its own.
+           */
+          { type: 'in', name: 'url', format: 'string' },
           { type: 'out', format: 'data' },
         ],
       },

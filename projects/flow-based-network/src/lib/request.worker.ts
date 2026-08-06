@@ -56,6 +56,13 @@ export interface RequestConfig {
  * into a field would travel with all three. Anything needing one belongs
  * behind a server you control.
  */
+/** The value itself, whether or not it arrived wearing its source's name. */
+function unwrapValue(value: unknown): unknown {
+  return value && typeof value === 'object' && 'meta' in value && 'value' in value
+    ? (value as FetchedValue).value
+    : value;
+}
+
 export class RequestWorker implements FbNodeWorker {
   private readonly subject = new ReplaySubject<unknown>(1);
   private readonly subscriptions: { [id: number]: Subscription } = {};
@@ -102,7 +109,32 @@ export class RequestWorker implements FbNodeWorker {
    * button, the end of some other request.
    */
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    this.subscriptions[connection.id] = stream.subscribe(() => void this.send());
+    const named = (socket.name ?? '').trim();
+
+    this.subscriptions[connection.id] = stream.subscribe(value => {
+      /*
+       * A socket named `url` carries where to fetch from, and the wire beats
+       * the field. This is what lets a flow follow a publisher's own paths
+       * instead of a copy of them typed in here — see the Template node.
+       *
+       * Held apart from the config rather than written into it: the config is
+       * what the flow SAYS, and a URL computed a moment ago from somebody
+       * else's data is not that. Saving it would bake one date into a document
+       * that is meant to follow the current one.
+       */
+      if (named === 'url') {
+        const next = value === undefined || value === null ? '' : String(unwrapValue(value));
+
+        if (next && next !== this.wiredUrl) {
+          this.wiredUrl = next;
+          void this.send();
+        }
+
+        return;
+      }
+
+      void this.send();
+    });
   }
 
   removeStream(connection: FbConnection): void {
@@ -110,8 +142,11 @@ export class RequestWorker implements FbNodeWorker {
     delete this.subscriptions[connection.id];
   }
 
+  /** A URL that arrived on the wire, which outranks the one in the panel. */
+  private wiredUrl?: string;
+
   get url(): string {
-    return this.config.url ?? '';
+    return this.wiredUrl || this.config.url || '';
   }
 
   get method(): RequestMethod {

@@ -1,0 +1,153 @@
+import { FbConnection, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
+import { Observable, ReplaySubject, Subscription } from 'rxjs';
+import { unwrap } from './envelope';
+
+export interface TemplateConfig {
+  /** The pattern, when it is not arriving on a wire. */
+  pattern?: string;
+}
+
+/** `{name}` or `{name|lower}` — a placeholder and what to do to it first. */
+const PLACEHOLDER = /\{([A-Za-z0-9_]+)(?:\|([a-z]+))?\}/g;
+
+/**
+ * A string built from a pattern and the values arriving on named inputs.
+ *
+ * This exists because a URL is not data and should not be typed twice. TOPAS
+ * publishes its own paths — `data/{region}/grid/{date}/{pollutant}.json` is a
+ * field in its config file — and a flow that copies that pattern into a
+ * request's URL box has quietly forked it: the day the publisher moves their
+ * grids, the copy is wrong and nothing says so. Fetch the pattern, fill it,
+ * follow it.
+ *
+ * A placeholder is filled by the input socket with that NAME. Names rather
+ * than positions, because `{date}` and `{pollutant}` are both strings and a
+ * flow whose meaning depends on which socket is uppermost is a flow nobody can
+ * read.
+ *
+ * Nothing is emitted until every placeholder has a value. A half-filled URL is
+ * not a smaller answer, it is a wrong one — and it would be fetched.
+ */
+export class TemplateWorker implements FbNodeWorker {
+  private readonly subject = new ReplaySubject<string>(1);
+  private readonly subscriptions: { [id: number]: Subscription } = {};
+
+  /** The latest value per input name. */
+  private readonly values = new Map<string, string>();
+  /** The socket id each name came from, so a rename does not orphan a value. */
+  private readonly names = new Map<number, string>();
+
+  /** A pattern that arrived on a wire beats the one in the panel. */
+  private wired?: string;
+
+  /** Told about anything the node should redraw for. */
+  private readonly ticks = new ReplaySubject<void>(1);
+
+  get changes(): Observable<void> {
+    return this.ticks.asObservable();
+  }
+
+  constructor(private readonly config: TemplateConfig = {}) {
+    this.emit();
+  }
+
+  destroy(): void {
+    Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
+    this.subject.complete();
+    this.ticks.complete();
+  }
+
+  getStream(): Observable<string> {
+    return this.subject.asObservable();
+  }
+
+  setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
+    const id = socket.id ?? -connection.id;
+
+    this.names.set(id, (socket.name ?? '').trim());
+
+    this.subscriptions[connection.id] = stream.subscribe(value => {
+      const name = this.names.get(id) ?? '';
+      const plain = unwrap(value);
+
+      /*
+       * A socket named `pattern` carries the pattern itself. That is what lets
+       * the shape of a URL be data — picked out of a config file — rather than
+       * something typed into this node and left to rot.
+       */
+      if (name === 'pattern') {
+        this.wired = plain === undefined || plain === null ? undefined : String(plain);
+      } else if (name) {
+        this.values.set(name, plain === undefined || plain === null ? '' : String(plain));
+      }
+
+      this.emit();
+    });
+  }
+
+  removeStream(connection: FbConnection): void {
+    this.subscriptions[connection.id]?.unsubscribe();
+    delete this.subscriptions[connection.id];
+  }
+
+  /** What the node is filling in. The wire wins over the panel. */
+  get pattern(): string {
+    return this.wired ?? this.config.pattern ?? '';
+  }
+
+  /** The names this pattern asks for, in the order it asks for them. */
+  get placeholders(): string[] {
+    return [...new Set([...this.pattern.matchAll(PLACEHOLDER)].map(match => match[1]))];
+  }
+
+  /** The ones nothing has supplied yet, which is why nothing is coming out. */
+  get missing(): string[] {
+    return this.placeholders.filter(name => this.values.get(name) === undefined);
+  }
+
+  /** The finished string, or empty while it cannot be finished. */
+  get result(): string {
+    return this.missing.length ? '' : this.fill();
+  }
+
+  setPattern(pattern: string): void {
+    this.config.pattern = pattern;
+    this.emit();
+  }
+
+  /** Tunable from a document: a pattern is exactly the kind of thing to try. */
+  setConfigValue(path: string, value: unknown): void {
+    if (path === 'pattern') {
+      this.setPattern(String(value));
+    }
+  }
+
+  private fill(): string {
+    return this.pattern.replace(PLACEHOLDER, (_, name: string, modifier?: string) => {
+      const value = this.values.get(name) ?? '';
+
+      /*
+       * Modifiers, because the difference between a value and the form a URL
+       * wants it in is not worth a node. TOPAS is the case in point: its
+       * regions are `NL` and `EU` everywhere in the config, and lowercase in
+       * the grid path alone. Every hour lost to that was spent looking for a
+       * missing file.
+       */
+      switch (modifier) {
+        case 'lower': return value.toLowerCase();
+        case 'upper': return value.toUpperCase();
+        case 'trim': return value.trim();
+        case 'url': return encodeURIComponent(value);
+        default: return value;
+      }
+    });
+  }
+
+  private emit(): void {
+    this.ticks.next();
+
+    if (this.pattern && !this.missing.length) {
+      this.subject.next(this.fill());
+    }
+  }
+}

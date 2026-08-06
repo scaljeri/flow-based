@@ -3,6 +3,9 @@ import { PickWorker } from './pick.worker';
 import { PickSmallComponent } from './pick-small.component';
 import { PickSettingsComponent } from './pick-settings.component';
 import { SwitchWorker } from './switch.worker';
+import { TemplateWorker } from './template.worker';
+import { TemplateSmallComponent } from './template-small.component';
+import { TemplateSettingsComponent } from './template-settings.component';
 import { SwitchSmallComponent } from './switch-small.component';
 import { SwitchSettingsComponent } from './switch-settings.component';
 
@@ -22,6 +25,7 @@ export const DATA_MODULE: FbModule = {
   // The same identities the other modules declare, so a picked value flows
   // straight into a map or a plot.
   formats: [
+    { name: 'string', description: 'A piece of text', color: '#7fb069' },
     { name: 'data', description: 'Whatever a source returned, parsed', color: '#8f7ee6' },
     { name: 'geo', description: 'A labelled place on the earth: {lat, lon}', color: '#4fa3d1' },
     { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
@@ -57,6 +61,32 @@ export const DATA_MODULE: FbModule = {
      * flow means to rule out — and "at most one of these" is worth making
      * impossible rather than merely discouraged.
      */
+    /*
+     * A URL is not data and should not be typed twice. TOPAS publishes its own
+     * paths — `data/{region}/grid/{date}/{pollutant}.json` is a field in its
+     * config — and a flow that copies that into a request has forked it: the
+     * day the publisher moves their grids, the copy is wrong and silent.
+     */
+    'data-template': {
+      component: { small: TemplateSmallComponent },
+      settingsComponent: TemplateSettingsComponent,
+      settings: {
+        title: 'Template',
+        group: 'Data',
+        config: { pattern: '' },
+        sockets: [
+          // Named by hand, one per placeholder. A socket called `pattern`
+          // carries the pattern itself.
+          { type: 'in', name: 'pattern' },
+          { type: 'out', format: 'string' },
+        ],
+        // As many inputs as the pattern asks for; an output would have nothing
+        // to be a second of.
+        addableSockets: 'in',
+      },
+      worker: TemplateWorker,
+    },
+
     'data-switch': {
       component: { small: SwitchSmallComponent },
       settingsComponent: SwitchSettingsComponent,
