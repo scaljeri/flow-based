@@ -60,6 +60,8 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
   private drawn: L.Layer[] = [];
   /** The marker drawn as chosen, and how it looked before it was. */
   private chosen?: { marker: L.CircleMarker; resting: L.CircleMarkerOptions };
+  /** Every place's dot with the radius it has at rest, before zoom scales it. */
+  private dots: { marker: L.CircleMarker; radius: number }[] = [];
   /** Set once the user moves the map by hand; following stops there. */
   private moved = false;
 
@@ -145,6 +147,15 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
      * having to then press something to keep it is a step that exists only
      * because it was easier to build.
      */
+    /*
+     * Dots follow the zoom. A marker is a fixed number of screen pixels, so
+     * zooming out packs the same dots into less map until the country is one
+     * blob — the drawing stops being a set of places and becomes a stain. Only
+     * the size changes, not the markers, so this is cheap enough to do on every
+     * zoom of 400 of them.
+     */
+    this.map.on('zoomend', () => this.resize());
+
     this.map.on('moveend', () => {
       if (this.interactive && this.moved && this.map) {
         const centre = this.map.getCenter();
@@ -366,6 +377,38 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** The input sockets' layers, in the order the node declares them. */
+  /** The zoom the resting radii were chosen at: the whole of the Netherlands. */
+  private static readonly BASE_ZOOM = 7;
+  /** The radius a chosen dot has at that zoom. */
+  private static readonly CHOSEN_RADIUS = 9;
+
+  /**
+   * A radius at the zoom the map is on now.
+   *
+   * Not proportional to the scale, deliberately: a dot that grew with the map
+   * would be a circle of fixed WIDTH ON THE GROUND, kilometres across, and a
+   * station is a point. Half a step per zoom level keeps the dots readable when
+   * you come in close and small enough not to merge when you go out, and the
+   * clamp stops both ends running away.
+   */
+  private scaled(radius: number): number {
+    const zoom = this.map?.getZoom() ?? MapView.BASE_ZOOM;
+    const factor = Math.min(2, Math.max(0.5, 1 + (zoom - MapView.BASE_ZOOM) * 0.16));
+
+    // Never below a pixel and a half: at that size a dot reads as dirt on the
+    // screen, and there is no zoom at which "invisible" is the right answer.
+    return Math.max(1.5, radius * factor);
+  }
+
+  /** Give every dot the size it should have at the zoom the map is on. */
+  private resize(): void {
+    for (const dot of this.dots) {
+      const radius = this.chosen?.marker === dot.marker ? MapView.CHOSEN_RADIUS : dot.radius;
+
+      dot.marker.setRadius(this.scaled(radius));
+    }
+  }
+
   /**
    * Draw this marker as the chosen one, and give the last one back its own
    * looks.
@@ -381,11 +424,11 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       // The radius is not a style in Leaflet's sense and has its own setter,
       // so putting it back takes both calls.
       this.chosen.marker.setStyle(this.chosen.resting);
-      this.chosen.marker.setRadius(this.chosen.resting.radius ?? 5);
+      this.chosen.marker.setRadius(this.scaled(this.chosen.resting.radius ?? 5));
     }
 
     marker.setStyle({ color: '#fff', fillOpacity: 1, weight: 3 });
-    marker.setRadius(9);
+    marker.setRadius(this.scaled(MapView.CHOSEN_RADIUS));
     marker.bringToFront();
 
     this.chosen = { marker, resting };
@@ -411,6 +454,7 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.drawn = [];
+    this.dots = [];
     // The marker it pointed at has just been removed from the map; the choice
     // itself lives in the worker and is re-applied as the new markers are made.
     this.chosen = undefined;
@@ -441,7 +485,11 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
           radius: active ? 8 : 5,
           weight: 2,
         };
-        const marker = leaflet.circleMarker(at, resting).addTo(map);
+        const marker = leaflet
+          .circleMarker(at, { ...resting, radius: this.scaled(resting.radius!) })
+          .addTo(map);
+
+        this.dots.push({ marker, radius: resting.radius! });
 
         /*
          * A press is a question about this spot, and the node's output is

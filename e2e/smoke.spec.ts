@@ -1842,6 +1842,80 @@ test('a clicked place stays marked on the map, including across a redraw', async
     .editor.flow.getWorker(id).isPicked(place), { id: ids.map, place: chosen })).toBe(true);
 });
 
+
+/**
+ * And the dots follow the zoom.
+ *
+ * A marker is a fixed number of screen pixels, so zooming out packs the same
+ * dots into less map until a country is one blob — the drawing stops being a
+ * set of places and becomes a stain. Zooming in has the opposite problem: dots
+ * sized for the whole country are specks once you are over a city.
+ */
+test('a map draws smaller dots the further out it is zoomed', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const map = editor.addNode('graph-map');
+
+    places.position = { x: 6, y: 70 };
+    map.position = { x: 30, y: 70 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    return map.id;
+  });
+
+  await expect(page.locator('fb-flow-canvas fb-node-box')).not.toHaveCount(0);
+  await page.evaluate(nodeId => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    node.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, id);
+
+  await expect(page.locator('path.leaflet-interactive').first()).toBeVisible();
+
+  /*
+   * The radius is in the path itself — an arc of that radius, twice. Reading it
+   * out of the drawing rather than off the object is the point: what a reader
+   * sees is the SVG.
+   */
+  const radius = () => page.locator('path.leaflet-interactive').first()
+    .evaluate(el => Number(/a([\d.]+),/.exec(el.getAttribute('d') ?? '')?.[1] ?? 0));
+
+  const near = await radius();
+
+  /*
+   * One press at a time, each waited out. Leaflet ignores a zoom press while it
+   * is still animating the last one, so a burst of three lands as one and the
+   * test measures a zoom that never happened.
+   */
+  const step = async (direction: 'in' | 'out') => {
+    const before = await page.evaluate(nodeId => (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId).view?.zoom ?? 7, id);
+
+    await page.locator(`.leaflet-control-zoom-${direction}`).click();
+    await expect.poll(() => page.evaluate(nodeId => (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId).view?.zoom ?? 7, id)).toBe(direction === 'in' ? before + 1 : before - 1);
+  };
+
+  // Out: the same places over a wider area, so the dots have to give way.
+  await step('out');
+  await step('out');
+  expect(await radius()).toBeLessThan(near);
+
+  // And back in, past where it started.
+  await step('in');
+  await step('in');
+  await step('in');
+  expect(await radius()).toBeGreaterThan(near);
+});
+
 /**
  * At most one, or none.
  *
