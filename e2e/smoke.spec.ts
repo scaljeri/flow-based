@@ -1805,24 +1805,36 @@ test('a switch lets one input through, or none', async ({ page }) => {
 
   /*
    * And it is a control on the NODE, not a read-out with the decision hidden
-   * in a panel — including the part that matters most: pressing it must not
-   * drag the node it is drawn on.
+   * in a panel. Which puts two gestures on the same pixels: a tap chooses, a
+   * drag moves the node. Both have to work, and neither may do the other's
+   * job — a switch that could not be picked up made most of the node
+   * undraggable, and a switch that changed while being dragged is worse.
    */
   const node = page.locator('fb-flow-canvas fb-node-box').filter({ hasText: 'Switch' }).first();
-  const before = await page.evaluate(id => {
+  const position = () => page.evaluate(id => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
 
     return JSON.stringify(editor.nodeById(id).position);
   }, wired.gate);
 
+  const before = await position();
+
   await node.locator('.position').nth(1).click();
 
   expect(await through()).toBe(4);
-  expect(await page.evaluate(id => {
-    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+  expect(await position()).toBe(before);
 
-    return JSON.stringify(editor.nodeById(id).position);
-  }, wired.gate)).toBe(before);
+  // Now the other gesture, started on the very same position: the node
+  // travels and the choice stays where it was.
+  const grip = await node.locator('.position').nth(2).boundingBox();
+
+  await page.mouse.move(grip!.x + grip!.width / 2, grip!.y + grip!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip!.x + grip!.width / 2 + 90, grip!.y + grip!.height / 2 + 60, { steps: 12 });
+  await page.mouse.up();
+
+  expect(await through()).toBe(4);
+  expect(await position()).not.toBe(before);
 });
 
 

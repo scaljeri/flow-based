@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { FB_DRAG_IGNORE, NodeService } from '@scaljeri/flow-based';
+import { NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 import { SwitchWorker } from './switch.worker';
 
@@ -19,11 +19,17 @@ import { SwitchWorker } from './switch.worker';
   selector: 'fb-switch-small',
   template: `
     <!--
-      The whole control opts out of dragging. A node is moved by pressing it,
-      and that is the same press that throws this switch; the shell can only
-      tell them apart if the content says which of its parts are controls.
+      This control does NOT opt out of dragging, and that is the point.
+
+      A press and a drag start identically; what tells them apart is whether
+      the pointer then travels. Opting out of dragging altogether made the
+      switch the one part of the node you could not pick the node up by — and
+      it is nearly the whole node. So every press starts a drag as usual, and
+      the tap is only acted on if the pointer stayed put. Same 6px of slop the
+      shell uses, so the two agree on what counts as still.
     -->
-    <div class="track ${FB_DRAG_IGNORE}" role="radiogroup" aria-label="Let through">
+    <div class="track" role="radiogroup" aria-label="Let through"
+         (pointerdown)="onPress($event)">
       <span class="knob" [style.top.%]="knobTop" [style.height.%]="knobHeight"></span>
 
       @for (position of positions; track position.value) {
@@ -33,7 +39,7 @@ import { SwitchWorker } from './switch.worker';
           role="radio"
           [attr.aria-checked]="position.value === which"
           [class.on]="position.value === which"
-          (click)="choose(position.value)">{{position.label}}</button>
+          (click)="choose(position.value, $event)">{{position.label}}</button>
       }
     </div>
   `,
@@ -167,7 +173,31 @@ export class SwitchSmallComponent implements OnInit, OnDestroy {
     return this.knobHeight * Math.min(this.which, this.positions.length - 1);
   }
 
-  choose(value: number): void {
+  /** Where the press that may become this click started, in screen pixels. */
+  private pressedAt?: { x: number; y: number };
+
+  onPress(event: PointerEvent): void {
+    this.pressedAt = { x: event.clientX, y: event.clientY };
+  }
+
+  choose(value: number, event: MouseEvent): void {
+    const from = this.pressedAt;
+
+    this.pressedAt = undefined;
+
+    /*
+     * A press that travelled was a drag of the node that happens to have
+     * ended over a position — the node moves with the finger, so the button
+     * is still underneath when it lifts and the browser calls that a click.
+     * Dragging a node must not change what it does.
+     *
+     * No stored press means this came from the keyboard, where there is no
+     * such ambiguity: Enter on a focused radio is only ever a choice.
+     */
+    if (from && Math.hypot(event.clientX - from.x, event.clientY - from.y) > 6) {
+      return;
+    }
+
     this.worker?.set(value);
     this.cdr.detectChanges();
   }
