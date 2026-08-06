@@ -1568,7 +1568,18 @@ test('a map draws the places it is given', async ({ page }) => {
   await expect(page.locator('.leaflet-container')).toHaveCount(1);
   await expect.poll(() => page.locator('path.leaflet-interactive').count(), { timeout: 15_000 })
     .toBeGreaterThanOrEqual(4);
-  await expect(page.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
+  /*
+   * Credit is required and a line of it across a node this size is most of
+   * what you can see, so it collapses to a button and opens when asked.
+   */
+  const credit = page.locator('.fb-map-credit');
+
+  await expect(credit).toBeVisible();
+  await expect(credit.locator('.fb-map-credit-text')).toBeHidden();
+
+  await credit.locator('button').click();
+
+  await expect(credit.locator('.fb-map-credit-text')).toContainText('OpenStreetMap');
 });
 
 /**

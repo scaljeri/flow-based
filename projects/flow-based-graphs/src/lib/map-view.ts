@@ -98,7 +98,9 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     MapView.adoptStyles(styles.LEAFLET_CSS);
 
     this.map = leaflet.map(host, {
-      attributionControl: true,
+      // Its own attribution control is a line of text across the bottom of
+      // the map; see attributionControl below for what stands in for it.
+      attributionControl: false,
       dragging: this.interactive,
       keyboard: this.interactive,
       scrollWheelZoom: this.interactive,
@@ -114,10 +116,11 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
      * require it.
      */
     leaflet.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(this.map);
+
+    this.addAttribution(leaflet, this.map);
 
     /*
      * A saved view wins over the default, and fitting the data wins over both
@@ -270,6 +273,45 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     ];
   }
 
+  /**
+   * Credit where it is due, without a sentence across the bottom of the map.
+   *
+   * Both the tiles and the data behind them require attribution, and a node
+   * this size cannot spend a line of text on it — at the small view that line
+   * was most of what you could see. So: a button that says i, and the names
+   * when it is pressed. The same shape the TOPAS map uses, for the same
+   * reason.
+   */
+  private addAttribution(leaflet: typeof L, map: L.Map): void {
+    const control = new leaflet.Control({ position: 'bottomright' });
+
+    control.onAdd = () => {
+      const root = leaflet.DomUtil.create('div', 'fb-map-credit');
+      const text = leaflet.DomUtil.create('span', 'fb-map-credit-text', root);
+      const button = leaflet.DomUtil.create('button', '', root);
+
+      text.textContent = '© OpenStreetMap · © CARTO';
+      text.hidden = true;
+      button.type = 'button';
+      button.textContent = 'i';
+      button.setAttribute('aria-label', 'Attribution');
+      button.setAttribute('aria-expanded', 'false');
+
+      button.addEventListener('click', event => {
+        event.stopPropagation();
+        text.hidden = !text.hidden;
+        button.setAttribute('aria-expanded', String(!text.hidden));
+      });
+
+      // A press here is about the credit, not about the map underneath it.
+      leaflet.DomEvent.disableClickPropagation(root);
+
+      return root;
+    };
+
+    control.addTo(map);
+  }
+
   /** Leaflet's stylesheet, added to the page once however many maps there are. */
   private static styleElement?: HTMLStyleElement;
 
@@ -283,8 +325,30 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
 
       /* The node's own additions: a label on a dark map, and no white box. */
       .leaflet-container { background: #10131a; font: 11px system-ui, sans-serif; }
-      .leaflet-control-attribution { background: rgba(0, 0, 0, 0.5); color: #bbb; font-size: 9px; }
-      .leaflet-control-attribution a { color: #ddd; }
+      .fb-map-credit {
+        align-items: center;
+        background: rgba(0, 0, 0, 0.55);
+        border-radius: 10px;
+        color: #ccc;
+        display: flex;
+        font: 10px system-ui, sans-serif;
+        gap: 4px;
+        padding: 1px 2px 1px 0;
+      }
+      .fb-map-credit-text { padding-left: 6px; }
+      .fb-map-credit-text[hidden] { display: none; }
+      .fb-map-credit button {
+        background: rgba(255, 255, 255, 0.12);
+        border: none;
+        border-radius: 50%;
+        color: #ddd;
+        cursor: pointer;
+        font: italic 600 10px serif;
+        height: 16px;
+        line-height: 16px;
+        padding: 0;
+        width: 16px;
+      }
       .fb-map-label {
         background: rgba(0, 0, 0, 0.65);
         border: none;
