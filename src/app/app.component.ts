@@ -323,6 +323,9 @@ export class AppComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // Which fetched modules this flow needs, written into the flow itself —
+    // so it can be reopened in a browser that has never heard of them.
+    this.modules.stamp(this.flow);
     this.store.save(this.currentFlowId, this.flow);
     this.store.setCurrent(this.currentFlowId);
   }
@@ -373,6 +376,10 @@ export class AppComponent implements OnInit, AfterViewInit {
      ---------------------------------------------------------------------- */
 
   save(): void {
+    // The downloaded file is the one most likely to be opened somewhere else,
+    // which is exactly where a module URL is not optional.
+    this.modules.stamp(this.flow);
+
     const json = serializeFlowToJson(this.flow);
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     const link = document.createElement('a');
@@ -394,6 +401,14 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     try {
       const restored = deserializeFlowFromJson(await file.text());
+
+      /*
+       * A file from somebody else speaks whatever modules they had. Fetching
+       * them BEFORE the flow is shown is the same rule the stored flows
+       * follow: a document drawn before its types are registered is a screen
+       * of empty boxes with no workers behind them.
+       */
+      await this.modules.enableFor(restored);
 
       this.history.capture(this.flow);
       this.flow = restored;

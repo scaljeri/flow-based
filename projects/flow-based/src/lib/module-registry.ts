@@ -35,6 +35,14 @@ export interface FbModule {
   /** How the module introduces itself to a human. */
   name: string;
   /**
+   * One line about what is in it, for the list a reader chooses from.
+   *
+   * Optional, and the module's own: a module fetched from a URL has nothing
+   * else to say for itself, and a row reading only its address tells a reader
+   * nothing about whether they want it.
+   */
+  description?: string;
+  /**
    * Short code that disambiguates this module's types when a NAME collides
    * with a different type: its 'score' becomes '<prefix>:score'.
    */

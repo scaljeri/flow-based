@@ -190,33 +190,104 @@ Then three registrations outside the package:
 
 ### And how the app finds it
 
-`src/app/modules.service.ts` holds three lists that must agree:
+`src/app/modules.service.ts` holds two lists that must agree:
 
 ```ts
-const PREFIXES = { ..., weather: 'weather' };            // type-name prefix → module id
-const LOADERS  = { ..., weather: () => import('@scaljeri/flow-based-weather').then(m => m.WEATHER_MODULE) };
-readonly modules = [ ..., { id: 'weather', title: 'Weather', description: '...' } ];
+const LOADERS = { ..., weather: () => import('@scaljeri/flow-based-weather').then(m => m.WEATHER_MODULE) };
+
+readonly modules = [
+  ...,
+  { id: 'weather', prefix: 'weather', title: 'Weather', description: '…' },
+];
 ```
 
-`PREFIXES` exists because a saved flow names its node types (`weather-forecast`)
-and the app must decide whether to download a module **before** it has the module
-to ask. Get this wrong and a flow using your types opens as empty boxes with no
-workers behind them — which looks like a broken document rather than a missing
-download.
+The `prefix` on that entry is not decoration. A saved flow names its node types
+(`weather-forecast`) and the app must decide whether to download a module
+**before** it has the module to ask what its prefix is. Get it wrong and a flow
+using your types opens as empty boxes with no workers behind them — which looks
+like a broken document rather than a missing download.
+
+---
+
+## The other way: a module from a URL
+
+Everything above is what it takes to add a module **to this build**. A module
+that lives on the internet needs none of it: no package, no `angular.json`, no
+entry in any list. Paste the URL into the Modules dialog and it loads.
+
+The catch is what such a module may depend on at runtime, and the answer is
+pleasant: **nothing**. `FbModule`, `FbNodeMount` and `FbNodeWorker` are
+interfaces, so they compile away. `nodeMount(fn)` returns `{ mount: fn }` — an
+object literal does the same. `FB_DRAG_IGNORE` is the string `'fb-drag-ignore'`.
+So a whole module can be one self-contained file:
+
+```ts check
+import type { FbModule } from '@scaljeri/flow-based';
+
+// A type-only import: erased at compile time, so the built file imports nothing
+// and the browser needs no import map to load it.
+export default {
+  name: 'Greeting',
+  prefix: 'greet',
+  description: 'One node, fetched from a URL',
+  types: {
+    'greet-hello': {
+      component: {
+        small: {
+          mount: (host: HTMLElement) => {
+            const el = document.createElement('span');
+
+            el.textContent = 'hello';
+            host.appendChild(el);
+
+            return { destroy: () => el.remove() };
+          },
+        },
+      },
+      settings: {
+        title: 'Hello',
+        group: 'Greeting',
+        sockets: [{ type: 'out', format: 'string' }],
+      },
+    },
+  },
+} satisfies FbModule;
+```
+
+Rules for a module served over the web:
+
+- **An ES module**, served with a JavaScript content type. The default export is
+  taken first; failing that, the first export that looks like a module, so
+  `export const WEATHER_MODULE = …` works too.
+- **CORS** must allow this app's origin, exactly as for any other fetch. A
+  browser will not import from an origin that has not said yes.
+- **No Angular components.** Two Angular runtimes in one page do not
+  co-operate. Draw with `FbNodeMount`, as above.
+- **rxjs**, if a worker needs it, must be bundled in. Two copies are heavier but
+  they do work: nothing in the editor tests an Observable with `instanceof`.
+
+A flow that uses such a module **records its URL** — `config.modules` on the
+root — so opening that flow anywhere fetches what it needs first. Nothing about
+`greet-hello` says where on the internet to find it; the type name only names a
+module for the ones shipped in the build.
+
+And the part with no clever answer: a fetched module is code running in this
+page, with the flows in this browser's storage within reach. The dialog says so
+next to the field. See [MODULES-FROM-A-URL.md](MODULES-FROM-A-URL.md) for what a
+community server would have to do about that.
 
 ---
 
 ## What this costs today, honestly
 
-Adding a module is one file of real content and **six registrations around it**.
-Three of those (`angular.json`, `tsconfig.json`, `build:lib`) exist only because
-modules are workspace packages built by ng-packagr, and three
-(`PREFIXES`, `LOADERS`, `modules`) exist only because the app decides at build
-time which modules can exist at all.
+Adding a module **to this build** is one file of real content and **five
+registrations around it**. Three of those (`angular.json`, `tsconfig.json`,
+`build:lib`) exist only because modules are workspace packages built by
+ng-packagr, and two (`LOADERS`, `modules`) exist only because the app decides at
+build time which shipped modules can exist at all.
 
-None of that is a property of the module contract. `FbModule` is one object; a
-module loaded from a URL would need none of the six. That is the subject of
-[MODULES-FROM-A-URL.md](MODULES-FROM-A-URL.md).
+None of that is a property of the module contract, which is why the URL path
+needs none of it.
 
 ---
 
@@ -230,5 +301,6 @@ module loaded from a URL would need none of the six. That is the subject of
 - [ ] controls inside a node carry `FB_DRAG_IGNORE`, or handle drag-versus-tap
       themselves (see [NODE-AUTHORING.md](NODE-AUTHORING.md))
 - [ ] package files copied, three workspace registrations done
-- [ ] `PREFIXES`, `LOADERS` and `modules` all mention the new id
+- [ ] `LOADERS` and `modules` both mention the new id, and the `modules` entry
+      carries the type-name `prefix`
 - [ ] `npm run build:lib && npx playwright test smoke.spec.ts` passes

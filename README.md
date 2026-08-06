@@ -84,8 +84,9 @@ Three published packages in one repo:
   * **[docs/MODULES.md](docs/MODULES.md)** — writing a module: a bundle of node
     types that joins a running editor. One exported object; the rest of the page
     is what goes inside it.
-  * **[docs/MODULES-FROM-A-URL.md](docs/MODULES-FROM-A-URL.md)** — design note for
-    loading modules from a URL and what a community server would need.
+  * **[docs/MODULES-FROM-A-URL.md](docs/MODULES-FROM-A-URL.md)** — loading a
+    module from a URL: what the Modules dialog does today, and what a community
+    server would still need.
 
 [docs/README.md](docs/README.md) indexes all of it, including
 [docs/AUDIT.md](docs/AUDIT.md) for the architecture assessment and staged roadmap

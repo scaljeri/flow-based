@@ -1916,6 +1916,214 @@ test('a map draws smaller dots the further out it is zoomed', async ({ page }) =
   expect(await radius()).toBeGreaterThan(near);
 });
 
+
+/**
+ * A module from the internet.
+ *
+ * The four that ship with this build are dynamic imports the bundler resolved;
+ * this one is a URL typed by a reader, fetched at runtime, and it goes down the
+ * same path afterwards — settle its formats, patch the running editors, persist
+ * the choice. A module from elsewhere is not a lesser kind of module.
+ *
+ * The fixture below is the honest proof of the claim in docs/MODULES.md that a
+ * module needs NOTHING from the editor at runtime: `FbModule`, `FbNodeMount`
+ * and `FbNodeWorker` are interfaces, which compile away, and what is left is an
+ * object literal. This file imports nothing at all.
+ */
+const REMOTE_MODULE = `
+  export default {
+    name: 'Greeting',
+    prefix: 'greet',
+    description: 'One node, fetched from a URL',
+    types: {
+      'greet-hello': {
+        component: {
+          small: {
+            mount: (host) => {
+              const el = document.createElement('span');
+
+              el.textContent = 'hello from a URL';
+              host.appendChild(el);
+
+              return { destroy: () => el.remove() };
+            },
+          },
+        },
+        settings: {
+          title: 'Hello',
+          group: 'Greeting',
+          sockets: [{ type: 'out', format: 'string' }],
+        },
+      },
+    },
+  };
+`;
+
+test('a module can be fetched from a URL, and is remembered', async ({ page }) => {
+  // Served from this origin so the import is not also a CORS test; a real
+  // community server would have to send the header, which is its own subject.
+  await page.route('**/greeting-module.js', route => route.fulfill({
+    body: REMOTE_MODULE,
+    contentType: 'text/javascript',
+  }));
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const openModules = async () => {
+    await page.locator('mat-toolbar button.overflow').click();
+    await page.locator('.cdk-overlay-container button.modules').click();
+  };
+
+  await openModules();
+  await page.locator('fb-modules-dialog input.url').fill('/greeting-module.js');
+  await page.locator('fb-modules-dialog button[type=submit]').click();
+
+  // It names ITSELF in the list, rather than being known by its address.
+  const row = page.locator('fb-modules-dialog li', { hasText: 'Greeting' });
+
+  await expect(row).toContainText('One node, fetched from a URL');
+  await expect(row.locator('input[type=checkbox]')).toBeChecked();
+
+  await page.locator('fb-modules-dialog button[mat-dialog-close]').click();
+
+  // Its type is in the palette, under the group the module declared.
+  await page.locator('mat-toolbar button.add').click();
+  await expect(page.locator('.cdk-overlay-container')).toContainText('Greeting');
+
+  const added = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const node = editor.addNode('greet-hello');
+
+    node.position = { x: 8, y: 78 };
+
+    return node.id as number;
+  });
+
+  void added;
+  await expect(page.locator('fb-flow-canvas')).toContainText('hello from a URL');
+
+  /*
+   * The flow SAVES the module it needs. This is the part that makes a shared
+   * document openable: a type name says which shipped module it belongs to,
+   * but nothing about `greet-hello` says where on the internet to find it.
+   */
+  await expect.poll(() => page.evaluate(() => {
+    const id = localStorage.getItem('fb-flow-current');
+    const raw = id ? localStorage.getItem('fb-flow-' + id) : null;
+    const flow = raw ? JSON.parse(raw) : null;
+
+    return (flow?.flow ?? flow)?.config?.modules ?? [];
+  })).toEqual([{ url: expect.stringContaining('/greeting-module.js'), prefix: 'greet' }]);
+
+  /*
+   * And it survives a reload: the URL is remembered, not just the module. A
+   * choice you have to make again every morning is not a choice, it is a chore.
+   */
+  await page.reload();
+  await waitUntilReady(page);
+  await expect(page.locator('fb-flow-canvas')).toContainText('hello from a URL');
+
+  await openModules();
+  await expect(page.locator('fb-modules-dialog li', { hasText: 'Greeting' })
+    .locator('input[type=checkbox]')).toBeChecked();
+});
+
+/**
+ * A URL that is not a module says so.
+ *
+ * The failure a reader actually hits is a typo, and the worst possible answer
+ * is a dialog that appears to do nothing.
+ */
+test('a URL that loads no module is reported, not swallowed', async ({ page }) => {
+  await page.route('**/not-a-module.js', route => route.fulfill({
+    body: 'export const hello = 1;',
+    contentType: 'text/javascript',
+  }));
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.modules').click();
+  await page.locator('fb-modules-dialog input.url').fill('/not-a-module.js');
+  await page.locator('fb-modules-dialog button[type=submit]').click();
+
+  await expect(page.locator('fb-modules-dialog .error').first())
+    .toContainText('exports no module');
+});
+
+
+/**
+ * A flow may ASK for a module. It may not run one.
+ *
+ * A flow is a file, files arrive by email, and a document that fetched and
+ * executed a script from a stranger's server merely by being opened is the
+ * shape of a drive-by. So a module this browser has never seen is listed with
+ * its switch off, next to the warning, and the nodes that need it draw as empty
+ * boxes until somebody turns it on — which is honest, because they ARE missing
+ * something.
+ */
+test('opening a flow that asks for an unknown module lists it, and does not run it', async ({ page }) => {
+  let fetched = 0;
+
+  await page.route('**/stranger-module.js', route => {
+    fetched += 1;
+
+    return route.fulfill({ body: REMOTE_MODULE, contentType: 'text/javascript' });
+  });
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // A flow from somebody else, arriving with a module URL written into it.
+  await page.evaluate(() => {
+    const flow = {
+      type: 'flow',
+      title: 'from a stranger',
+      config: { modules: [{ url: '/stranger-module.js', prefix: 'greet' }] },
+      sockets: [],
+      connections: [],
+      children: [{ type: 'greet-hello', id: 1, title: 'Hello', sockets: [], position: { x: 10, y: 70 } }],
+    };
+
+    localStorage.setItem('fb-flow-stranger', JSON.stringify({ version: 1, flow }));
+    localStorage.setItem('fb-flows', JSON.stringify([{ id: 'stranger', title: 'from a stranger' }]));
+    localStorage.setItem('fb-flow-current', 'stranger');
+  });
+
+  await page.reload();
+
+  // Not waitUntilReady: that waits for the demo, and this browser opens on the
+  // stranger's flow.
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title), { timeout: 15_000 }).toBe('from a stranger');
+
+  // Listed, named by its address because nothing has asked it what it is.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.modules').click();
+
+  const row = page.locator('fb-modules-dialog li', { hasText: 'stranger-module.js' });
+
+  await expect(row).toContainText('enable it if you trust it');
+  await expect(row.locator('input[type=checkbox]')).not.toBeChecked();
+
+  // And the file itself was never fetched.
+  expect(fetched).toBe(0);
+
+  /*
+   * Turning it on is a deliberate act, and then it loads — and the row stops
+   * being an address and starts being a module with a name, which is why this
+   * looks for a different row than the one it just clicked.
+   */
+  await row.locator('input[type=checkbox]').click();
+
+  await expect(page.locator('fb-modules-dialog li', { hasText: 'Greeting' })
+    .locator('input[type=checkbox]')).toBeChecked();
+  expect(fetched).toBe(1);
+});
+
 /**
  * At most one, or none.
  *
