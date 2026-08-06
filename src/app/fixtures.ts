@@ -855,7 +855,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 5 },
+  config: { seedVersion: 6 },
   sockets: [],
   children: [
     {
@@ -904,7 +904,13 @@ export const tno = () => ({
       type: 'data-pick',
       title: 'Stations',
       id: 150,
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: 'name', limit: 200 },
+      /*
+       * No label: 93 names over a map of 400 more dots is a wall of text
+       * where a map should be. The station's CODE travels instead — nothing
+       * is drawn from it, and it is what a click needs to ask this station
+       * for its measurements.
+       */
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 200 },
       sockets: [
         { id: 160, type: 'in', format: 'data' },
         { id: 161, type: 'out', formats: ['geo', 'point', 'number'] },
