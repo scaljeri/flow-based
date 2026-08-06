@@ -2347,6 +2347,14 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
   const zoom = () => node.locator('img.leaflet-tile').first()
     .evaluate(el => Number(/\/(\d+)\/\d+\/\d+/.exec((el as HTMLImageElement).src)?.[1] ?? -1));
 
+  /*
+   * Where the map is looking, measured on the thing the reader is looking at:
+   * a marker's position on screen. Tiles are too coarse — a pan of 250px can
+   * stay inside the same four of them and prove nothing.
+   */
+  const looking = () => page.locator('path.leaflet-interactive').first()
+    .evaluate(el => Math.round(el.getBoundingClientRect().x));
+
   const zoomOut = node.locator('.leaflet-control-zoom-out');
 
   /*
@@ -2357,8 +2365,31 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
   await expect(zoomOut).toHaveClass(/leaflet-disabled/);
 
   const floor = await zoom();
+  const fitted = await looking();
 
   expect(floor).toBeGreaterThan(3);
+
+  /*
+   * Room to pan is not room to zoom out. Tripling the slack widens the wall
+   * the reader can drag to and must leave the floor exactly where it was.
+   *
+   * Stated as a property rather than as a regression: the fault that prompted
+   * it — a floor computed from the padded box rather than from the data —
+   * survives this fixture, and was only visible on a map that had been panned
+   * before. Measured by running the old code against this very assertion, so
+   * the comment is not a guess.
+   */
+  await page.evaluate(nodeId => {
+    const worker = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId);
+
+    worker.setSlack('x', 1);
+    worker.setSlack('y', 1);
+  }, id);
+
+  await page.waitForTimeout(400);
+  await expect(zoomOut).toHaveClass(/leaflet-disabled/);
+  expect(await zoom()).toBe(floor);
 
   /*
    * And there is nowhere to pan to where the data is not. Dragged hard to the
@@ -2384,6 +2415,21 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
     }).length, box);
 
   expect(onScreen).toBeGreaterThan(0);
+
+  /*
+   * Forgetting the saved view fits the data again — including after the
+   * reader has panned, which is exactly when they would press it. It used to
+   * clear the position and leave the map where it stood, keeping the
+   * consequence of the gesture whose record it had just deleted.
+   */
+  expect(await looking()).not.toBe(fitted);
+
+  await page.evaluate(nodeId => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId).clearView();
+  }, id);
+
+  await expect.poll(looking).toBe(fitted);
 
   // And the switch turns the limits off again, rather than leaving the map
   // locked to whatever it last held.

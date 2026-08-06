@@ -4,6 +4,17 @@ import { Subscription } from 'rxjs';
 import type * as L from 'leaflet';
 import { MapGrid, MapLayer, MapWorker } from './map.worker';
 
+/**
+ * How the map fits its data — used BOTH to do the fitting and to work out the
+ * floor below which it may not zoom.
+ *
+ * One constant, because the requirement is that the two agree: the layer just
+ * fills the view, and from there the only direction is closer. Two separate
+ * expressions of the same intent drift, and the drift is invisible — the map
+ * looks right and lets you zoom out one step anyway.
+ */
+const FIT = { padding: [24, 24] as [number, number], maxZoom: 12 };
+
 /** One colour per layer, matching the plots so a flow reads the same throughout. */
 const LAYER_COLOURS = ['#bada55', '#ff4081', '#2aa7a0'];
 
@@ -427,14 +438,22 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     map.setMaxBounds(roomy);
 
     /*
-     * The zoom at which the padded rectangle fits, which is the widest view
-     * worth having. `inside: false` means "fits within", so nothing is cut
-     * off at the limit — a minimum that hid part of the data would be a
-     * strange thing to enforce.
+     * The floor is the FIT — the zoom at which the data itself just fills the
+     * view — and not the zoom at which the padded rectangle fits.
+     *
+     * The distinction is the whole of the requirement. The slack is room to
+     * pan into, which is a different question from how far out the reader may
+     * stand; computing the floor from the padded box let the map zoom out one
+     * step past its own data, which is where this was measured and found
+     * wrong. Same bounds, same padding, same cap as the fit above, so the two
+     * cannot disagree.
      */
-    const fit = map.getBoundsZoom(roomy, false);
+    const floor = Math.min(
+      map.getBoundsZoom(data, false, leaflet.point(FIT.padding[0], FIT.padding[1])),
+      FIT.maxZoom,
+    );
 
-    map.setMinZoom(fit);
+    map.setMinZoom(floor);
   }
 
   /** The zoom the resting radii were chosen at: the whole of the Netherlands. */
@@ -595,8 +614,15 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
+    if (this.worker.refit) {
+      // The reader asked for the fit back; a gesture from before that is not
+      // an argument against it.
+      this.moved = false;
+      this.worker.refit = false;
+    }
+
     if (bounds.length && this.worker.follow && !this.moved && !this.worker.view) {
-      map.fitBounds(leaflet.latLngBounds(bounds), { padding: [24, 24], maxZoom: 12 });
+      map.fitBounds(leaflet.latLngBounds(bounds), { padding: FIT.padding, maxZoom: FIT.maxZoom });
     }
 
     this.limit(leaflet, map, bounds);

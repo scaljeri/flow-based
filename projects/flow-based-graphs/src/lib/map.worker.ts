@@ -265,10 +265,28 @@ export class MapWorker implements FbNodeWorker {
     this.config.follow = false;
   }
 
+  /**
+   * Set when the reader forgets the saved view, so the next draw fits again.
+   *
+   * The drawing stops following once a gesture has moved it, and that memory
+   * lives in the drawing rather than here — so forgetting the view has to say
+   * out loud that it wants the fit back. Without this, "Forget" cleared the
+   * saved position and the map simply stayed exactly where it was, which is
+   * the one outcome the button cannot mean.
+   */
+  refit = false;
+
   clearView(): void {
     this.config.lat = undefined;
     this.config.lon = undefined;
     this.config.zoom = undefined;
+    /*
+     * And following is back on. It was turned off by the reader moving the
+     * map, which is the same act that saved the view being forgotten here;
+     * leaving it off would forget the position and keep its consequence.
+     */
+    this.config.follow = true;
+    this.refit = true;
     this.subject.next();
   }
 
