@@ -199,18 +199,22 @@ export function stepView(
  * show something rather than an empty box.
  */
 export function previewChild(node: FbNodeState): FbNodeState | undefined {
-  const children = node.children ?? [];
   const preferred = node.config?.preview;
 
-  if (typeof preferred === 'number') {
-    const match = children.find(child => child.id === preferred);
-
-    if (match) {
-      return match;
-    }
+  /*
+   * Only what the flow was told to show.
+   *
+   * It used to fall back to `children[0]`, which is whichever node happened to
+   * be written first — for the TOPAS sources that is a fetch of a config file,
+   * a reading nobody wants on the outside of the box. A subflow is a thing
+   * with a face, and which face is a decision; unmade, it draws a picture of
+   * itself instead.
+   */
+  if (typeof preferred !== 'number') {
+    return undefined;
   }
 
-  return children[0];
+  return (node.children ?? []).find(child => child.id === preferred);
 }
 
 /**

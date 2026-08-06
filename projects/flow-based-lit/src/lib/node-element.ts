@@ -776,6 +776,26 @@ export class FbNodeElement extends LitElement {
     const source = this.contentSource();
     const component = source && this.editor?.types[source.type]?.component;
 
+    if (!component) {
+      return undefined;
+    }
+
+    /*
+     * A preview child is drawn at ITS OWN smallest view, not at the subflow's.
+     *
+     * The subflow opened to `normal` and asked its child for a normal drawing;
+     * a Request has only a small one, so nothing mounted and the box was
+     * empty. A preview is the child AT REST — the picture it shows when it is
+     * one node among many — and every type has one of those, because the
+     * smallest view is the one a type cannot decline to have.
+     */
+    if (source !== this.state) {
+      const settings = this.editor?.types[source.type]?.settings;
+      const [smallest] = supportedViews(settings, component);
+
+      return componentFor<FbNodeMount>(component, smallest ?? 'small');
+    }
+
     return componentFor<FbNodeMount>(component, this.view);
   }
 
@@ -902,6 +922,12 @@ export class FbNodeElement extends LitElement {
       socketElement: (socketId: number) =>
         this.renderRoot.querySelector<HTMLElement>(`[data-socket-id="${socketId}"]`) ?? undefined,
       calibrate: () => this.measure(),
+      /*
+       * A re-render, which is what re-runs mountContent's source check. The
+       * settings panel changing `config.preview` changes which child this node
+       * draws, and nothing else would notice.
+       */
+      refresh: () => this.requestUpdate(),
       register: (callback, type) => editor.events.register(state.id!, callback, type),
       unregister: type => editor.events.unregister(state.id!, type),
       unregisterAll: () => editor.events.unregisterAll(state.id!),

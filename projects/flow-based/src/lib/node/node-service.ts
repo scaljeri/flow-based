@@ -108,6 +108,16 @@ export class NodeService {
     this.api.calibrate();
   }
 
+  /**
+   * Ask the shell to decide again what this node draws.
+   *
+   * `calibrate` re-measures what is drawn; this re-reads what SHOULD be. A
+   * subflow told to show a different child needs the second one.
+   */
+  refresh(): void {
+    this.api.refresh();
+  }
+
   /* ----------------------------------------------------------------------
      Clicks
      ---------------------------------------------------------------------- */
@@ -227,9 +237,11 @@ export class NodeService {
     this.api.refreshWiring();
   }
 
-  refresh(): void {
-    this.api.refreshWiring();
-  }
+  /*
+   * `refresh()` used to be a second name for refreshWiring and nothing called
+   * it by that name. It now means what it says — see above — and the wiring
+   * has the one method that describes it.
+   */
 
   /* ----------------------------------------------------------------------
      Graph

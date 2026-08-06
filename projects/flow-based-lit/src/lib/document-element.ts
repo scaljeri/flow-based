@@ -922,6 +922,9 @@ export class FbFlowDocumentElement extends LitElement {
       // A document has no sockets to point at, and no layer to draw wires on.
       socketElement: () => undefined,
       calibrate: () => undefined,
+      // A figure in a document has no chrome to re-decide; it is drawn once at
+      // the size the prose gives it.
+      refresh: () => undefined,
       register: () => undefined,
       unregister: () => undefined,
       unregisterAll: () => undefined,

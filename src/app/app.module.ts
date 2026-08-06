@@ -7,6 +7,7 @@ import { TapSmallComponent } from './nodes/tap/tap-small.component';
 import { TapNormalComponent } from './nodes/tap/tap-normal.component';
 import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { SubflowComponent } from './nodes/subflow/subflow.component';
+import { SubflowSettingsComponent } from './nodes/subflow/subflow-settings.component';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
 import { FlowsDialogComponent } from './components/flows/flows-dialog.component';
@@ -73,6 +74,7 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
     TapNormalComponent,
     TapFullComponent,
     SubflowComponent,
+    SubflowSettingsComponent,
     TypeColorsComponent,
     ModulesDialogComponent,
     FlowsDialogComponent,

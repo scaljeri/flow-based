@@ -20,6 +20,7 @@ import { TapFullComponent } from './nodes/tap/tap-full.component';
 import { TAP_SETTINGS, TapWorker } from './workers/tap';
 import { METER_SETTINGS, meterNormal, meterSmall } from './nodes/meter/meter.node';
 import { SubflowComponent } from './nodes/subflow/subflow.component';
+import { SubflowSettingsComponent } from './nodes/subflow/subflow-settings.component';
 import { CustomCodeSmallComponent } from './nodes/custom-code/custom-code-small.component';
 import { CustomCodeNormalComponent } from './nodes/custom-code/custom-code-normal.component';
 import { CustomCodeFullComponent } from './nodes/custom-code/custom-code-full.component';
@@ -146,7 +147,16 @@ export const FB_CONFIG: FbNodeTypes = {
    * A subflow: a node that is itself a flow. The type key stays `flow` because
    * it is in every saved file; only what it is CALLED changed.
    */
-  'flow': {component: SubflowComponent, settings: {title: 'Subflow', isFlow: true}},
+  /*
+   * A subflow wears one of its children's faces when told which — see
+   * `previewChild` and the settings below. Unchosen, it draws a small picture
+   * of its own graph instead.
+   */
+  'flow': {
+    component: SubflowComponent,
+    settingsComponent: SubflowSettingsComponent,
+    settings: {title: 'Subflow', isFlow: true},
+  },
 
   /*
    * A node type with no framework in it — plain DOM against FbNodeApi, sitting

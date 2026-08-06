@@ -66,6 +66,16 @@ export interface FbNodeApi {
   /** Re-measure after the content changed size in a way ResizeObserver misses. */
   calibrate(): void;
 
+  /**
+   * Ask the shell to look at this node again.
+   *
+   * For the things only the shell acts on and only the content knows have
+   * changed — a subflow being told which of its children to wear on the
+   * outside, say. Distinct from `calibrate`, which re-measures what is already
+   * drawn; this re-decides WHAT to draw.
+   */
+  refresh(): void;
+
   /** Listen for framework events addressed to this node (`blur`, and so on). */
   register(callback: FbNodeEventCallback, type?: string): void;
 

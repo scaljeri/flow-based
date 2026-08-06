@@ -2961,6 +2961,83 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   await expect.poll(async () => (await state()).places).toBe(7);
 });
 
+
+/**
+ * A subflow has a face, and it is a choice.
+ *
+ * Every subflow looks like every other subflow: a box with sockets. Told which
+ * of its children to wear — `config.preview`, set in its own settings panel —
+ * it draws that node's OWN smallest view instead. Untold, it draws a small
+ * read-only picture of its graph: how many nodes, roughly where, how they hang
+ * together. That says "this is a graph, and this is how big a graph" without
+ * pretending to be readable.
+ *
+ * It used to fall back to whichever child happened to be written first, drawn
+ * at the SUBFLOW's view — and a Request has no normal view, so nothing mounted
+ * at all and the box was empty.
+ */
+test('a subflow draws a picture of itself, or the child it is told to wear', async ({ page }) => {
+  await page.route('**/tno-topas/**', route => route.fulfill({ status: 404, body: 'not published' }));
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  await page.locator('fb-flows-dialog li', { hasText: 'tno' }).locator('button').first().click();
+
+  const box = page.locator('fb-flow-canvas fb-node-box').filter({ hasText: 'TOPAS sources' }).first();
+
+  // Unchosen: one dot per node, one line per connection, and a count.
+  await expect(box).toContainText('28 nodes', { timeout: 20_000 });
+  expect(await box.locator('svg rect.dot').count()).toBe(28);
+  expect(await box.locator('svg line.edge').count()).toBeGreaterThan(20);
+
+  // Open it, then its own settings.
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'flow')!;
+
+    node.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  });
+
+  await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'flow')!;
+
+    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+  });
+
+  const panel = page.locator('fb-node-settings[open] .panel').first();
+
+  await expect(panel).toContainText('Show on the outside');
+
+  // Every child is offered, by the name it goes by.
+  const choice = panel.locator('select');
+  const chosen = await choice.evaluate(el => {
+    const option = [...(el as HTMLSelectElement).options].find(o => o.textContent!.trim() === 'RIVM LML');
+
+    return option?.value ?? '';
+  });
+
+  expect(chosen).not.toBe('');
+  await choice.selectOption(chosen);
+
+  /*
+   * And the subflow is wearing it — a Request's small drawing, which it has,
+   * rather than the normal one it does not.
+   */
+  await expect(box).not.toContainText('28 nodes');
+  await expect(box).toContainText('GET');
+
+  expect(await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return editor.root.children.find((child: any) => child.type === 'flow').config.preview as number;
+  })).toBe(Number(chosen));
+});
+
 /**
  * At most one, or none.
  *
