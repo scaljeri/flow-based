@@ -19,7 +19,14 @@ import { TapView } from './tap-view';
   selector: 'fb-tap-normal',
   template: `
     <div class="reading">
-      <span class="value">{{short}}</span>
+      <!--
+        The word "object" in 28px above the object itself says nothing twice.
+        A one-line value keeps its line; a structured one is its own heading.
+      -->
+      @if (!structured) {
+        <span class="value">{{short}}</span>
+      }
+
       <span class="count">{{count}} received</span>
     </div>
 
@@ -56,7 +63,9 @@ import { TapView } from './tap-view';
     .reading {
       align-items: baseline;
       display: flex;
+      flex: 0 0 auto;
       gap: 8px;
+      /* Right-aligned on its own, which is where the count already sits. */
       justify-content: space-between;
     }
 
