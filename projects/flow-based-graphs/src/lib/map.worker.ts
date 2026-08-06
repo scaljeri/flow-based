@@ -1,5 +1,5 @@
 import { FbConnection, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { GeoPlaces, Place } from './places.worker';
 
 /**
@@ -67,6 +67,16 @@ export interface MapConfig {
  */
 export class MapWorker implements FbNodeWorker {
   private readonly subject = new Subject<void>();
+
+  /**
+   * The place last clicked, sent on the node's output.
+   *
+   * A map is not only a way of looking: pressing a marker is a question about
+   * that spot, and the answer belongs downstream — a station's measurements,
+   * a place's forecast. Emitted in the same shape a set of places arrives in,
+   * a set of exactly one, so whatever reads places can read this too.
+   */
+  private readonly picked = new ReplaySubject<GeoPlaces>(1);
   private readonly subscriptions: { [id: number]: Subscription } = {};
   private readonly bySocket = new Map<number, MapLayer>();
 
@@ -76,10 +86,21 @@ export class MapWorker implements FbNodeWorker {
   destroy(): void {
     Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
     this.subject.complete();
+    this.picked.complete();
   }
 
-  getStream(): Observable<void> {
-    return this.subject.asObservable();
+  /**
+   * The views listen for "something changed"; the graph downstream listens on
+   * the OUT socket for what was clicked. Which of the two a caller gets is
+   * decided by whether it asks for a socket, the way the engine asks.
+   */
+  getStream(socket?: FbSocket): Observable<unknown> {
+    return socket?.type === 'out' ? this.picked.asObservable() : this.subject.asObservable();
+  }
+
+  /** Called by the drawing when a marker is pressed. */
+  pick(place: Place): void {
+    this.picked.next({ places: [{ ...place }] });
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {

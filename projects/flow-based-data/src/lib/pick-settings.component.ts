@@ -112,7 +112,8 @@ export class PickSettingsComponent {
         ? [
           { key: 'a', label: 'Latitude field', hint: 'lat' },
           { key: 'b', label: 'Longitude field', hint: 'lon' },
-          { key: 'label', label: 'Label field', hint: 'name' },
+          { key: 'label', label: 'Label field — empty draws none', hint: 'name' },
+          { key: 'ref', label: 'Reference field', hint: 'code' },
         ]
         : [
           { key: 'a', label: 'X field', hint: 'x' },

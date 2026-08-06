@@ -7,6 +7,16 @@ export interface Place {
   lon: number;
   /** Drawn beside the marker. Optional: an anonymous track is fine. */
   label?: string;
+  /**
+   * What this place is called by whoever published it — a station code, an
+   * id, a key.
+   *
+   * Separate from the label because they answer different questions: a label
+   * is for the reader and a reference is for the next request. A map of three
+   * thousand sensors wants no labels at all and still has to be able to say
+   * WHICH one was clicked.
+   */
+  ref?: string;
 }
 
 export interface PlacesConfig {

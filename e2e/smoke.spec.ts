@@ -1695,3 +1695,44 @@ test('a full node fits the screen on a phone, and keeps its way out', async ({ p
   expect(measured.overflow).toBeLessThanOrEqual(0);
   expect(measured.wayOutVisible).toBe(true);
 });
+
+/**
+ * A map answers a click with the place that was pressed.
+ *
+ * Pressing a marker is a question about that spot, and the answer belongs
+ * downstream — a station's measurements, a place's forecast. It carries the
+ * place's REFERENCE rather than its label, because a map may draw no labels
+ * at all and still has to be able to say which one was clicked.
+ */
+test('clicking a marker sends that place out of the map', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const emitted = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const map = editor.addNode('graph-map');
+    const places = editor.addNode('graph-places');
+
+    map.position = { x: 30, y: 70 };
+    places.position = { x: 6, y: 70 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    const worker = editor.flow.getWorker(map.id);
+    const out = map.sockets.find((s: any) => s.type === 'out');
+
+    // What the graph downstream would receive, without needing a second node.
+    const seen: unknown[] = [];
+
+    worker.getStream(out).subscribe((value: unknown) => seen.push(value));
+    worker.pick({ lat: 52.1, lon: 5.3, ref: 'NL01485' });
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    return seen as { places: { lat: number; ref?: string }[] }[];
+  });
+
+  expect(emitted).toHaveLength(1);
+  expect(emitted[0].places).toEqual([{ lat: 52.1, lon: 5.3, ref: 'NL01485' }]);
+});

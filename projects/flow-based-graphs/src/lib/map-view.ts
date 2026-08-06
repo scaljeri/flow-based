@@ -294,6 +294,7 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
         padding: 1px 5px;
       }
       .fb-map-label::before { display: none; }
+      .fb-map-pickable { cursor: pointer; }
     `;
     document.head.appendChild(MapView.styleElement);
   }
@@ -346,6 +347,14 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
           radius: active ? 8 : 5,
           weight: 2,
         }).addTo(map);
+
+        /*
+         * A press is a question about this spot, and the node's output is
+         * where the answer goes. The cursor says so, because a dot that does
+         * something and a dot that does not look identical otherwise.
+         */
+        marker.on('click', () => this.worker.pick(place));
+        marker.options.className = 'fb-map-pickable';
 
         if (place.label) {
           /*

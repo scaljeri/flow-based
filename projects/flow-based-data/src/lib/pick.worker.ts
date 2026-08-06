@@ -12,6 +12,8 @@ export interface PickConfig {
   a?: string;
   b?: string;
   label?: string;
+  /** Path to what identifies a place, when its name is not that. */
+  ref?: string;
   /** How many items to keep. */
   limit?: number;
   /** Where a raster's parts are, when the shape is a grid. */
@@ -185,7 +187,7 @@ export class PickWorker implements FbNodeWorker {
     if (this.shape === 'geo') {
       const places = list
         .map(item => this.toPlace(item))
-        .filter((place): place is { lat: number; lon: number; label?: string } => !!place)
+        .filter((place): place is { lat: number; lon: number; label?: string; ref?: string } => !!place)
         .slice(0, limit);
 
       this.count = places.length;
@@ -255,7 +257,8 @@ export class PickWorker implements FbNodeWorker {
     };
   }
 
-  private toPlace(item: unknown): { lat: number; lon: number; label?: string } | undefined {
+  private toPlace(item: unknown):
+    { lat: number; lon: number; label?: string; ref?: string } | undefined {
     const lat = Number(readConfigValue(item, this.config.a || 'lat'));
     const lon = Number(readConfigValue(item, this.config.b || 'lon'));
 
@@ -264,7 +267,13 @@ export class PickWorker implements FbNodeWorker {
     }
 
     const label = this.config.label ? readConfigValue(item, this.config.label) : undefined;
+    const ref = this.config.ref ? readConfigValue(item, this.config.ref) : undefined;
 
-    return { lat, lon, label: label === undefined ? undefined : String(label) };
+    return {
+      lat,
+      lon,
+      label: label === undefined ? undefined : String(label),
+      ref: ref === undefined ? undefined : String(ref),
+    };
   }
 }

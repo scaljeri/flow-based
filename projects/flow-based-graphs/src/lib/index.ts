@@ -142,8 +142,12 @@ export const GRAPHS_MODULE: FbModule = {
         group: 'Graphs',
         resizable: true,
         config: { track: true, follow: true },
-        sockets: [{ type: 'in', formats: ['geo', 'grid'] }],
-        // One layer per input, drawn in the order the sockets are declared.
+        sockets: [
+          // One layer per input, drawn in the order the sockets are declared.
+          { type: 'in', formats: ['geo', 'grid'] },
+          // And one way out: the place that was last clicked.
+          { type: 'out', format: 'geo' },
+        ],
         addableSockets: 'in',
       },
       worker: MapWorker,

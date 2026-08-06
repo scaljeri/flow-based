@@ -781,7 +781,7 @@ export const pollution = () => ({
   id: 1,
   type: 'flow',
   title: 'pollution',
-  config: { seedVersion: 2 },
+  config: { seedVersion: 3 },
   sockets: [],
   children: [
     {
@@ -804,7 +804,9 @@ export const pollution = () => ({
       type: 'data-pick',
       title: 'Their positions',
       id: 150,
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: 'name', limit: 200 },
+      // The name is what a reader wants here — one network, 93 dots — and the
+      // code is what a click will need.
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: 'name', ref: 'code', limit: 200 },
       sockets: [
         { id: 160, type: 'in', format: 'data' },
         { id: 161, type: 'out', formats: ['geo', 'point', 'number'] },
@@ -853,7 +855,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 4 },
+  config: { seedVersion: 5 },
   sockets: [],
   children: [
     {
@@ -925,11 +927,11 @@ export const tno = () => ({
       title: 'Sensors',
       id: 250,
       /*
-       * No label field: the file has no names, and a tooltip per sensor would
-       * bury the map it is drawn on. The limit is deliberately short of all
-       * 3166 — raise it in the panel and watch what that costs.
+       * These have no names in the file at all, only codes. The limit is
+       * deliberately short of all 3166 — raise it in the panel and watch what
+       * that costs.
        */
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', limit: 400 },
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
       sockets: [
         { id: 260, type: 'in', format: 'data' },
         { id: 261, type: 'out', formats: ['geo', 'point', 'number'] },
@@ -961,6 +963,8 @@ export const tno = () => ({
         { id: 312, type: 'in', formats: ['geo', 'grid'] },
         { id: 310, type: 'in', formats: ['geo', 'grid'] },
         { id: 311, type: 'in', formats: ['geo', 'grid'] },
+        // Where a pressed marker comes out, waiting for something to ask.
+        { id: 313, type: 'out', format: 'geo' },
       ],
       position: { x: 50, y: 20 },
     },
