@@ -78,9 +78,19 @@ Three published packages in one repo:
   * Composite ("flow") nodes nest a whole flow inside a node, bridged by
     `FlowWorker` — this is the "leveling" the diagrams above show.
 
-See [docs/AUDIT.md](docs/AUDIT.md) for an architecture assessment and the staged
-roadmap, and [docs/MIGRATION-CHECKLIST.md](docs/MIGRATION-CHECKLIST.md) for the
-Angular 7 → 22 migration record.
+## Extending it
+
+  * **[docs/NODE-AUTHORING.md](docs/NODE-AUTHORING.md)** — writing one node type.
+  * **[docs/MODULES.md](docs/MODULES.md)** — writing a module: a bundle of node
+    types that joins a running editor. One exported object; the rest of the page
+    is what goes inside it.
+  * **[docs/MODULES-FROM-A-URL.md](docs/MODULES-FROM-A-URL.md)** — design note for
+    loading modules from a URL and what a community server would need.
+
+[docs/README.md](docs/README.md) indexes all of it, including
+[docs/AUDIT.md](docs/AUDIT.md) for the architecture assessment and staged roadmap
+and [docs/MIGRATION-CHECKLIST.md](docs/MIGRATION-CHECKLIST.md) for the Angular
+7 → 22 migration record.
 
 ## Editing
 

@@ -15,6 +15,7 @@
     "test": "ng test @scaljeri/flow-based-core && ng test @scaljeri/flow-based && ng test flow-based-demo",
     "test:lib": "ng test @scaljeri/flow-based",
     "lint": "ng lint",
+    "check:docs": "node scripts/check-doc-examples.mjs",
     "e2e": "playwright test",
     "ngh": "npm run build:demo -- --base-href \"https://scaljeri.github.io/flow-based/\" && ngh --dir=dist/demo/browser",
     "build:core": "ng build @scaljeri/flow-based-core",
