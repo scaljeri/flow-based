@@ -72,11 +72,11 @@ export class SwitchSettingsComponent {
     return Array.from({ length: inputs }, (_, index) => index + 1);
   }
 
-  /** A socket's own name if it has one, so the choice reads as what it is. */
+  /** What arrived calls itself; the socket's own name is the fallback. */
   name(option: number): string {
     const socket = (this.service.state.sockets ?? []).filter(s => s.type === 'in')[option - 1];
 
-    return socket?.name || `Input ${option}`;
+    return this.worker?.titleOf(option - 1) || socket?.name || `Input ${option}`;
   }
 
   choose(which: number): void {

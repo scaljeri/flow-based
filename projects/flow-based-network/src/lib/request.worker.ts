@@ -3,8 +3,31 @@ import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export type RequestMethod = 'GET' | 'POST';
 
+/**
+ * What a source is, travelling with what it returned.
+ *
+ * The request is the only place that knows: further down, an array of numbers
+ * is an array of numbers whatever it came from. A switch that has to label its
+ * inputs, or a legend beside a layer, is asking a question only the fetch can
+ * answer — so the answer travels with the data rather than being typed in
+ * again at every node that needs it.
+ */
+export interface SourceMeta {
+  title?: string;
+  description?: string;
+}
+
+/** What a request puts on the wire: what it got, and what it is. */
+export interface FetchedValue {
+  meta: SourceMeta;
+  value: unknown;
+}
+
 export interface RequestConfig {
   url?: string;
+  /** What this source IS. Travels with every answer. */
+  title?: string;
+  description?: string;
   method?: RequestMethod;
   /** Sent as the body of a POST. Text, because a body is bytes. */
   body?: string;
@@ -104,6 +127,10 @@ export class RequestWorker implements FbNodeWorker {
 
     if (key === 'every') {
       this.restart();
+    } else if (key === 'title' || key === 'description') {
+      // Naming a source is not a reason to ask for it again; re-send what is
+      // already held, wearing the new name.
+      this.resend();
     } else {
       void this.send();
     }
@@ -165,9 +192,14 @@ export class RequestWorker implements FbNodeWorker {
 
       const value = type.includes('json') ? JSON.parse(text) : text;
 
+      this.last = value;
+
       this.error = null;
       this.received += 1;
-      this.subject.next(value);
+      this.subject.next({
+        meta: { title: this.config.title, description: this.config.description },
+        value,
+      } satisfies FetchedValue);
     } catch (error) {
       const message = (error as Error).message ?? String(error);
 
@@ -184,6 +216,19 @@ export class RequestWorker implements FbNodeWorker {
       this.ticks.next();
     }
   }
+
+  /** The last answer, wearing whatever the source is now called. */
+  private resend(): void {
+    if (this.last !== undefined) {
+      this.subject.next({
+        meta: { title: this.config.title, description: this.config.description },
+        value: this.last,
+      } satisfies FetchedValue);
+    }
+  }
+
+  /** The last thing fetched, so renaming the source needs no second request. */
+  private last: unknown;
 
   /** The last answer's size, said the way a person would. */
   get size(): string {

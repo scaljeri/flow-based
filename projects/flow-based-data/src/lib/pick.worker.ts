@@ -142,6 +142,29 @@ export class PickWorker implements FbNodeWorker {
     }
   }
 
+  /** What the last value said it was, carried on to whatever is built. */
+  private meta: { title?: string; description?: string } = {};
+
+  /**
+   * A fetched value arrives wrapped in what it IS; anything else arrives bare.
+   *
+   * Unwrapped here rather than by every path in the settings, so a file's own
+   * field names keep working: `list` means the list in the response, not
+   * `value.list`. Both keys must be present, so a response that happens to
+   * have a `value` of its own is not mistaken for an envelope.
+   */
+  private unwrap(source: unknown): unknown {
+    if (source && typeof source === 'object' && 'meta' in source && 'value' in source) {
+      const envelope = source as { meta: { title?: string; description?: string }; value: unknown };
+
+      this.meta = envelope.meta ?? {};
+
+      return envelope.value;
+    }
+
+    return source;
+  }
+
   /** Re-run the pick on the value already held; the panel calls this. */
   emit(): void {
     if (this.latest === undefined) {
@@ -149,7 +172,7 @@ export class PickWorker implements FbNodeWorker {
     }
 
     try {
-      const value = this.pick(this.latest);
+      const value = this.pick(this.unwrap(this.latest));
 
       this.error = null;
       this.subject.next(value);
@@ -161,7 +184,7 @@ export class PickWorker implements FbNodeWorker {
 
   private pick(source: unknown): unknown {
     if (this.shape === 'grid') {
-      return { grid: this.toGrid(source) };
+      return { grid: this.toGrid(source), ...this.meta };
     }
 
     if (this.shape === 'value') {
@@ -192,7 +215,9 @@ export class PickWorker implements FbNodeWorker {
 
       this.count = places.length;
 
-      return { places };
+      // What it is travels with it: a switch labelling its inputs and a legend
+      // beside a layer are both asking a question only the source can answer.
+      return { places, ...this.meta };
     }
 
     // A sweep of [x, y] points, which is what the plots drink.

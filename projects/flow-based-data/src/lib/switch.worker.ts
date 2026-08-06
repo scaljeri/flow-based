@@ -76,6 +76,19 @@ export class SwitchWorker implements FbNodeWorker {
     return this.order.length;
   }
 
+  /**
+   * What arrived on an input calls itself.
+   *
+   * This is why a switch does not need its sockets named by hand: the thing
+   * flowing in already says what it is, and a label typed on the socket is a
+   * second copy to keep in step with the first.
+   */
+  titleOf(index: number): string | undefined {
+    const value = this.latest.get(this.order[index]) as { title?: string } | undefined;
+
+    return value?.title;
+  }
+
   set(which: number): void {
     this.config.which = Math.max(0, Math.min(this.order.length, Math.round(which)));
     this.emit();

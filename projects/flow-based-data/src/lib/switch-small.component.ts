@@ -123,8 +123,11 @@ export class SwitchSmallComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Nothing first, then one position per input socket — named where the
-   * socket is named, because "Sensors" is a choice and "Input 2" is a puzzle.
+   * Nothing first, then one position per input.
+   *
+   * Named by WHAT ARRIVED, falling back to the socket's own name and then to
+   * its number. A source knows what it is and says so on the wire, so a name
+   * typed onto the socket would be a second copy of that to keep in step.
    */
   get positions(): { value: number; label: string }[] {
     const inputs = (this.service.state.sockets ?? []).filter(socket => socket.type === 'in');
@@ -133,7 +136,7 @@ export class SwitchSmallComponent implements OnInit, OnDestroy {
       { value: 0, label: 'none' },
       ...inputs.map((socket, index) => ({
         value: index + 1,
-        label: socket.name || `input ${index + 1}`,
+        label: this.worker?.titleOf(index) || socket.name || `input ${index + 1}`,
       })),
     ];
   }

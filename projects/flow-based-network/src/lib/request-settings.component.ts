@@ -20,6 +20,25 @@ import { RequestConfig, RequestMethod, RequestWorker } from './request.worker';
              (change)="write('url', $event)">
     </label>
 
+    <!--
+      What this source IS. It travels with the data, because a node further
+      down cannot work it out from an array of numbers — and this is the one
+      place that knows.
+    -->
+    <label class="field">
+      <span class="label">Name</span>
+      <input type="text" autocomplete="off"
+             [value]="read('title')" placeholder="Officieel meetnet (RIVM LML)"
+             (change)="write('title', $event)">
+    </label>
+
+    <label class="field">
+      <span class="label">Description</span>
+      <input type="text" autocomplete="off"
+             [value]="read('description')" placeholder="What this source is"
+             (change)="write('description', $event)">
+    </label>
+
     <label class="field">
       <span class="label">Method</span>
       <select [value]="method" (change)="write('method', $event)">

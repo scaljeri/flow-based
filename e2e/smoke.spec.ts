@@ -1824,3 +1824,50 @@ test('a switch lets one input through, or none', async ({ page }) => {
     return JSON.stringify(editor.nodeById(id).position);
   }, wired.gate)).toBe(before);
 });
+
+
+/**
+ * A source says what it is, and that travels with the data.
+ *
+ * Only the request knows: further down, a list of coordinates is a list of
+ * coordinates whatever network it came from. So a switch labels its inputs
+ * from what actually arrived rather than from names typed onto its sockets,
+ * which would be a second copy of the same fact to keep in step.
+ */
+test('what a source is travels with what it returned', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const named = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const request = editor.addNode('net-request');
+    const pick = editor.addNode('data-pick');
+    const gate = editor.addNode('data-switch');
+
+    [request, pick, gate].forEach((node, index) => (node.position = { x: 4 + index * 18, y: 74 }));
+
+    editor.socketClicked(request.sockets.find((s: any) => s.type === 'out'), request.id);
+    editor.socketClicked(pick.sockets.find((s: any) => s.type === 'in'), pick.id);
+    editor.socketClicked(pick.sockets.find((s: any) => s.type === 'out'), pick.id);
+    editor.socketClicked(gate.sockets.filter((s: any) => s.type === 'in')[0], gate.id);
+
+    const worker = editor.flow.getWorker(request.id);
+
+    worker.set('title', 'Officieel meetnet (RIVM LML)');
+    editor.flow.getWorker(pick.id).set('list', 'list');
+
+    const body = encodeURIComponent(JSON.stringify({ list: [{ lat: 52, lon: 5 }] }));
+
+    worker.set('url', `data:application/json,${body}`);
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    return {
+      throughPick: editor.flow.getWorker(pick.id).count,
+      switchLabel: editor.flow.getWorker(gate.id).titleOf(0),
+    };
+  });
+
+  expect(named.throughPick).toBe(1);
+  expect(named.switchLabel).toBe('Officieel meetnet (RIVM LML)');
+});

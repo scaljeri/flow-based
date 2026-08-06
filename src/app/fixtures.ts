@@ -781,7 +781,7 @@ export const pollution = () => ({
   id: 1,
   type: 'flow',
   title: 'pollution',
-  config: { seedVersion: 3 },
+  config: { seedVersion: 4 },
   sockets: [],
   children: [
     {
@@ -793,7 +793,13 @@ export const pollution = () => ({
        * position and which pollutants the station measures. Asked once —
        * a list of stations does not change while you look at it.
        */
-      config: { url: '../tno-topas/lml.json', method: 'GET', every: 0 },
+      config: {
+        url: '../tno-topas/lml.json',
+        method: 'GET',
+        every: 0,
+        title: 'Officieel meetnet (RIVM LML)',
+        description: 'The national air-quality network: professional instruments at fixed sites.',
+      },
       sockets: [
         { id: 109, type: 'in', name: 'when' },
         { id: 110, type: 'out', format: 'data' },
@@ -855,7 +861,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 7 },
+  config: { seedVersion: 8 },
   sockets: [],
   children: [
     {
@@ -867,7 +873,13 @@ export const tno = () => ({
        * this path and capitalised everywhere else in the config — the thing
        * that made every earlier guess return a 404.
        */
-      config: { url: '../tno-topas/data/nl/grid/2026-07-01/PM2.5.json', method: 'GET', every: 0 },
+      config: {
+        url: '../tno-topas/data/nl/grid/2026-07-01/PM2.5.json',
+        method: 'GET',
+        every: 0,
+        title: 'PM2.5, 1 July 2026',
+        description: 'Modelled concentration over the Netherlands (TNO TOPAS / LOTOS-EUROS).',
+      },
       sockets: [
         { id: 409, type: 'in', name: 'when' },
         { id: 410, type: 'out', format: 'data' },
@@ -891,9 +903,20 @@ export const tno = () => ({
     },
     {
       type: 'net-request',
-      title: 'Official network',
+      title: 'RIVM LML',
       id: 100,
-      config: { url: '../tno-topas/lml.json', method: 'GET', every: 0 },
+      /*
+       * The name travels with the answer, because this is the only node that
+       * knows what it asked for: further down, a list of coordinates is a
+       * list of coordinates whatever network it came from.
+       */
+      config: {
+        url: '../tno-topas/lml.json',
+        method: 'GET',
+        every: 0,
+        title: 'Officieel meetnet (RIVM LML)',
+        description: 'The national air-quality network: professional instruments at fixed sites.',
+      },
       sockets: [
         { id: 109, type: 'in', name: 'when' },
         { id: 110, type: 'out', format: 'data' },
@@ -919,9 +942,15 @@ export const tno = () => ({
     },
     {
       type: 'net-request',
-      title: 'Citizen sensors',
+      title: 'Samen Meten',
       id: 200,
-      config: { url: '../tno-topas/samenmeten.json', method: 'GET', every: 0 },
+      config: {
+        url: '../tno-topas/samenmeten.json',
+        method: 'GET',
+        every: 0,
+        title: 'Burgersensoren (Samen Meten)',
+        description: 'Sensors run by residents: many more of them, and less precise.',
+      },
       sockets: [
         { id: 209, type: 'in', name: 'when' },
         { id: 210, type: 'out', format: 'data' },
@@ -949,15 +978,20 @@ export const tno = () => ({
       title: 'Which network',
       id: 500,
       /*
-       * Its sockets are NAMED, because the settings panel offers them by name
-       * — "Stations" and "Sensors" is a choice somebody can make, "Input 1"
-       * and "Input 2" is a puzzle. The output says `geo` outright: the type
-       * cannot know what a switch carries, but this flow does.
+       * No names on the sockets. What flows in already says what it is —
+       * "Officieel meetnet (RIVM LML)" — and a label typed here would be a
+       * second copy of that to keep in step. The names on the switch are the
+       * names of the networks, which is the distinction that matters: both
+       * are measuring stations, and calling one of them "sensors" said
+       * nothing at all.
+       *
+       * The output says `geo` outright: the type cannot know what a switch
+       * carries, but this flow does.
        */
       config: { which: 1 },
       sockets: [
-        { id: 510, type: 'in', formats: ['geo'], name: 'Stations' },
-        { id: 511, type: 'in', formats: ['geo'], name: 'Sensors' },
+        { id: 510, type: 'in', formats: ['geo'] },
+        { id: 511, type: 'in', formats: ['geo'] },
         { id: 512, type: 'out', format: 'geo' },
       ],
       position: { x: 42, y: 20 },
