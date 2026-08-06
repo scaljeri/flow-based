@@ -2,6 +2,9 @@ import { FbModule } from '@scaljeri/flow-based';
 import { PickWorker } from './pick.worker';
 import { PickSmallComponent } from './pick-small.component';
 import { PickSettingsComponent } from './pick-settings.component';
+import { SwitchWorker } from './switch.worker';
+import { SwitchSmallComponent } from './switch-small.component';
+import { SwitchSettingsComponent } from './switch-settings.component';
 
 /**
  * The Data module: reshaping what flows, without writing code.
@@ -45,6 +48,35 @@ export const DATA_MODULE: FbModule = {
         ],
       },
       worker: PickWorker,
+    },
+
+    /*
+     * One of several, or none.
+     *
+     * A gate per input would allow every combination, including the ones a
+     * flow means to rule out — and "at most one of these" is worth making
+     * impossible rather than merely discouraged.
+     */
+    'data-switch': {
+      component: { small: SwitchSmallComponent },
+      settingsComponent: SwitchSettingsComponent,
+      settings: {
+        title: 'Switch',
+        group: 'Data',
+        config: { which: 1 },
+        sockets: [
+          { type: 'in', formats: ['geo', 'grid', 'point', 'number', 'data'], name: 'a' },
+          { type: 'in', formats: ['geo', 'grid', 'point', 'number', 'data'], name: 'b' },
+          /*
+           * As broad as the inputs, because a switch cannot know what it
+           * carries until something is wired into it. A flow that does know
+           * says so on its own socket — see the tno fixture.
+           */
+          { type: 'out', formats: ['geo', 'grid', 'point', 'number', 'data'] },
+        ],
+        addableSockets: 'in',
+      },
+      worker: SwitchWorker,
     },
   },
 };

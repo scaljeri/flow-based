@@ -1736,3 +1736,59 @@ test('clicking a marker sends that place out of the map', async ({ page }) => {
   expect(emitted).toHaveLength(1);
   expect(emitted[0].places).toEqual([{ lat: 52.1, lon: 5.3, ref: 'NL01485' }]);
 });
+
+/**
+ * At most one, or none.
+ *
+ * Two gates would allow both, and the point of this node is that a flow can
+ * rule that out in its shape rather than by discipline. Choosing nothing has
+ * to CLEAR what was drawn: a stream going quiet is not the same message as
+ * "there is nothing here", so the switch sends an empty set.
+ */
+test('a switch lets one input through, or none', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const wired = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const a = editor.addNode('graph-places');
+    const b = editor.addNode('graph-places');
+    const gate = editor.addNode('data-switch');
+
+    [a, b, gate].forEach((node, index) => (node.position = { x: 4 + index * 18, y: 72 }));
+
+    // Two different sets, so which one arrived is visible in the count.
+    editor.flow.getWorker(b.id).removePlace(0);
+
+    const ins = gate.sockets.filter((s: any) => s.type === 'in');
+
+    editor.socketClicked(a.sockets.find((s: any) => s.type === 'out'), a.id);
+    editor.socketClicked(ins[0], gate.id);
+    editor.socketClicked(b.sockets.find((s: any) => s.type === 'out'), b.id);
+    editor.socketClicked(ins[1], gate.id);
+
+    return { gate: gate.id };
+  });
+
+  const through = () => page.evaluate(id => new Promise(resolve => {
+    const worker = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(id);
+
+    worker.getStream().subscribe((value: { places?: unknown[] }) => resolve(value?.places?.length ?? -1));
+  }), wired.gate);
+
+  const choose = (which: number) => page.evaluate(({ id, which: pick }) => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(id).set(pick);
+  }, { id: wired.gate, which });
+
+  await choose(1);
+  expect(await through()).toBe(4);
+
+  await choose(2);
+  expect(await through()).toBe(3);
+
+  // Nothing: an empty set, not silence, so a map would clear its layer.
+  await choose(0);
+  expect(await through()).toBe(0);
+});

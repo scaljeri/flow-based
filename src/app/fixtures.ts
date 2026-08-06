@@ -855,7 +855,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 6 },
+  config: { seedVersion: 7 },
   sockets: [],
   children: [
     {
@@ -945,8 +945,26 @@ export const tno = () => ({
       position: { x: 26, y: 30 },
     },
     {
+      type: 'data-switch',
+      title: 'Which network',
+      id: 500,
+      /*
+       * Its sockets are NAMED, because the settings panel offers them by name
+       * — "Stations" and "Sensors" is a choice somebody can make, "Input 1"
+       * and "Input 2" is a puzzle. The output says `geo` outright: the type
+       * cannot know what a switch carries, but this flow does.
+       */
+      config: { which: 1 },
+      sockets: [
+        { id: 510, type: 'in', formats: ['geo'], name: 'Stations' },
+        { id: 511, type: 'in', formats: ['geo'], name: 'Sensors' },
+        { id: 512, type: 'out', format: 'geo' },
+      ],
+      position: { x: 42, y: 20 },
+    },
+    {
       type: 'graph-map',
-      title: 'Both networks',
+      title: 'One network',
       id: 300,
       config: { track: false, follow: true },
       /*
@@ -960,26 +978,25 @@ export const tno = () => ({
        * the raster would bury both sets of markers the other way round.
        */
       /*
-       * Generic inputs: a layer is a layer, and which kind it carries is the
-       * business of whatever is wired into it. That works because a Pick now
-       * declares the ONE shape it builds rather than every shape it could —
-       * the engine had two candidates before, and said so.
+       * Two layers now, not three: the air underneath, and whichever network
+       * the switch is letting through. A generic input — a layer is a layer,
+       * and which kind it carries is the business of whatever is wired in.
        */
       sockets: [
         { id: 312, type: 'in', formats: ['geo', 'grid'] },
         { id: 310, type: 'in', formats: ['geo', 'grid'] },
-        { id: 311, type: 'in', formats: ['geo', 'grid'] },
         // Where a pressed marker comes out, waiting for something to ask.
         { id: 313, type: 'out', format: 'geo' },
       ],
-      position: { x: 50, y: 20 },
+      position: { x: 62, y: 20 },
     },
   ],
   connections: [
     { id: 1000, from: 100, to: 150, out: 110, in: 160 },
     { id: 1001, from: 200, to: 250, out: 210, in: 260 },
-    { id: 1002, from: 250, to: 300, out: 261, in: 310 },
-    { id: 1003, from: 150, to: 300, out: 161, in: 311 },
+    { id: 1002, from: 150, to: 500, out: 161, in: 510 },
+    { id: 1003, from: 250, to: 500, out: 261, in: 511 },
+    { id: 1006, from: 500, to: 300, out: 512, in: 310 },
     { id: 1004, from: 400, to: 450, out: 410, in: 460 },
     { id: 1005, from: 450, to: 300, out: 461, in: 312 },
   ],
