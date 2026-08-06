@@ -1791,4 +1791,25 @@ test('a switch lets one input through, or none', async ({ page }) => {
   // Nothing: an empty set, not silence, so a map would clear its layer.
   await choose(0);
   expect(await through()).toBe(0);
+
+  /*
+   * And it is a control on the NODE, not a read-out with the decision hidden
+   * in a panel — including the part that matters most: pressing it must not
+   * drag the node it is drawn on.
+   */
+  const node = page.locator('fb-flow-canvas fb-node-box').filter({ hasText: 'Switch' }).first();
+  const before = await page.evaluate(id => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return JSON.stringify(editor.nodeById(id).position);
+  }, wired.gate);
+
+  await node.locator('.position').nth(1).click();
+
+  expect(await through()).toBe(4);
+  expect(await page.evaluate(id => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return JSON.stringify(editor.nodeById(id).position);
+  }, wired.gate)).toBe(before);
 });

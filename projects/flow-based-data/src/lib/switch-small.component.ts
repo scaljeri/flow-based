@@ -1,58 +1,104 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { NodeService } from '@scaljeri/flow-based';
+import { FB_DRAG_IGNORE, NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 import { SwitchWorker } from './switch.worker';
 
 /**
- * At rest: which one is live, said as a row of pips.
+ * The switch itself, on the node.
  *
- * A number would be shorter and worse: the pips line up with the sockets down
- * the node's edge, so the drawing says WHICH input in the same order the node
- * shows them.
+ * Not a read-out with the controls hidden in a panel: this is a thing whose
+ * whole content is one decision, and a decision you have to open a dialog to
+ * change is a decision you make less often than you meant to. So the node IS
+ * the switch — a track with a knob that slides between the positions.
+ *
+ * The positions are laid out down the node in the same order as the sockets
+ * beside them, so the knob points at the input it is letting through.
  */
 @Component({
   standalone: true,
   selector: 'fb-switch-small',
   template: `
-    <div class="pips">
-      @for (pip of pips; track $index) {
-        <span class="pip" [class.on]="$index + 1 === which"></span>
+    <!--
+      The whole control opts out of dragging. A node is moved by pressing it,
+      and that is the same press that throws this switch; the shell can only
+      tell them apart if the content says which of its parts are controls.
+    -->
+    <div class="track ${FB_DRAG_IGNORE}" role="radiogroup" aria-label="Let through">
+      <span class="knob" [style.top.%]="knobTop" [style.height.%]="knobHeight"></span>
+
+      @for (position of positions; track position.value) {
+        <button
+          type="button"
+          class="position"
+          role="radio"
+          [attr.aria-checked]="position.value === which"
+          [class.on]="position.value === which"
+          (click)="choose(position.value)">{{position.label}}</button>
       }
     </div>
-
-    <span class="value">{{label}}</span>
   `,
   styles: [`
     :host {
-      align-items: center;
       color: #fff;
+      display: block;
+      font: 12px system-ui, sans-serif;
+      padding: 8px 10px;
+      width: 132px;
+    }
+
+    .track {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
       display: flex;
       flex-direction: column;
-      font: 12px system-ui, sans-serif;
-      gap: 6px;
-      justify-content: center;
-      padding: 10px 12px;
-      width: 116px;
+      overflow: hidden;
+      position: relative;
     }
 
-    .pips {
-      display: flex;
-      gap: 5px;
+    /*
+     * One moving piece rather than a background per row: what makes this read
+     * as a switch instead of a list is that the mark TRAVELS, so the change
+     * is a movement you can follow rather than one light going out and
+     * another coming on somewhere else.
+     */
+    .knob {
+      background: rgba(186, 218, 85, 0.22);
+      border-left: 3px solid #bada55;
+      left: 0;
+      position: absolute;
+      right: 0;
+      transition: top 140ms ease;
     }
 
-    .pip {
-      background: rgba(255, 255, 255, 0.18);
-      border-radius: 50%;
-      height: 9px;
-      width: 9px;
+    @media (prefers-reduced-motion: reduce) {
+      .knob {
+        transition: none;
+      }
     }
 
-    .pip.on {
-      background: #bada55;
+    .position {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      opacity: 0.65;
+      overflow: hidden;
+      padding: 7px 10px;
+      position: relative;
+      text-align: left;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .value {
-      opacity: 0.75;
+    .position.on {
+      opacity: 1;
+    }
+
+    .position:focus-visible {
+      outline: 1px solid #bada55;
+      outline-offset: -2px;
     }
   `]
 })
@@ -76,14 +122,32 @@ export class SwitchSmallComponent implements OnInit, OnDestroy {
     return this.worker?.which ?? 0;
   }
 
-  /** One pip per input socket, which is what the choice is between. */
-  get pips(): number[] {
-    const inputs = (this.service.state.sockets ?? []).filter(socket => socket.type === 'in').length;
+  /**
+   * Nothing first, then one position per input socket — named where the
+   * socket is named, because "Sensors" is a choice and "Input 2" is a puzzle.
+   */
+  get positions(): { value: number; label: string }[] {
+    const inputs = (this.service.state.sockets ?? []).filter(socket => socket.type === 'in');
 
-    return Array.from({ length: Math.max(1, inputs) }, (_, index) => index);
+    return [
+      { value: 0, label: 'none' },
+      ...inputs.map((socket, index) => ({
+        value: index + 1,
+        label: socket.name || `input ${index + 1}`,
+      })),
+    ];
   }
 
-  get label(): string {
-    return this.which === 0 ? 'none' : `input ${this.which}`;
+  get knobHeight(): number {
+    return 100 / this.positions.length;
+  }
+
+  get knobTop(): number {
+    return this.knobHeight * Math.min(this.which, this.positions.length - 1);
+  }
+
+  choose(value: number): void {
+    this.worker?.set(value);
+    this.cdr.detectChanges();
   }
 }
