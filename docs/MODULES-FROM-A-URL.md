@@ -1,9 +1,11 @@
 # Loading a module from a URL
 
-**Status: built, for a single module at a time.** Paste a URL into the Modules
-dialog and it loads, joins the palette, and is remembered. What is *not* built is
-everything a community server would add around that: hosting, versioning,
-discovery, and any answer at all to running a stranger's code.
+**Status: built.** Paste a URL into the Modules dialog and it loads, joins the
+palette, and is remembered. This deployment also hosts a few modules itself —
+`playground/modules/*.ts`, published beside the app and offered in the dialog
+with one click — which stands in for a server for now. What is *not* built is
+everything else a community server would add: uploads, versioning, discovery,
+and any answer at all to running a stranger's code.
 
 For how to write such a module, see [MODULES.md](MODULES.md#the-other-way-a-module-from-a-url).
 
@@ -54,7 +56,15 @@ And in the flow itself:
   branch. Every path that can load has to hold it, which is what the test now
   measures by counting requests.
 
-Covered by three end-to-end tests. The fixture in them imports nothing at all,
+- **The playground is its own server for now.** `npm run build:playground`
+  bundles each module in `playground/modules` and generates
+  `modules/index.json` by importing what it built and asking it what it is. The
+  dialog offers those, and adding one takes the same path a stranger's module
+  would — which is what keeps that path honest: if it breaks, it breaks for us
+  first.
+
+Covered by four end-to-end tests, one of which uses the real published file with
+nothing intercepted. The fixture in them imports nothing at all,
 which is the proof of the claim that a module needs nothing from the editor at
 runtime.
 

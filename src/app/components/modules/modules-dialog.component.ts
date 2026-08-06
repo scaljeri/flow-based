@@ -56,6 +56,25 @@ import { FbModuleInfo, ModulesService } from '../../modules.service';
         }
       </ul>
 
+      @if (modules.offered.length) {
+        <section class="offered">
+          <h3>On this playground</h3>
+
+          <ul>
+            @for (entry of modules.offered; track entry.url) {
+              <li>
+                <div class="text">
+                  <span class="name">{{entry.title}}</span>
+                  <span class="description">{{entry.description}}</span>
+                </div>
+
+                <button type="button" mat-button (click)="onAddKnown(entry.url)">Add</button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
       <section class="add">
         <h3>From a URL</h3>
 
@@ -156,7 +175,8 @@ import { FbModuleInfo, ModulesService } from '../../modules.service';
       opacity: 1;
     }
 
-    .add {
+    .add,
+    .offered {
       border-top: 1px solid rgba(128, 128, 128, 0.3);
       margin-top: 20px;
       padding-top: 12px;
@@ -198,6 +218,23 @@ export class ModulesDialogComponent {
 
   constructor() {
     this.modules.changed.subscribe(() => this.cdr.markForCheck());
+
+    // Fetched when the dialog opens rather than at startup: a reader who never
+    // opens this never pays for it.
+    void this.modules.loadCatalogue();
+  }
+
+  /** One of ours: the address is already known, so there is nothing to type. */
+  async onAddKnown(url: string): Promise<void> {
+    this.addError = null;
+
+    try {
+      await this.modules.addFromUrl(url);
+    } catch (error) {
+      this.addError = (error as Error).message;
+    } finally {
+      this.cdr.detectChanges();
+    }
   }
 
   onToggle(id: string, event: Event): void {

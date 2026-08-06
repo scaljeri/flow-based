@@ -1803,7 +1803,9 @@ test('a clicked place stays marked on the map, including across a redraw', async
 
   const markers = page.locator('path.leaflet-interactive');
 
-  await expect(markers).toHaveCount(4);
+  // Leaflet arrives by dynamic import and the map only draws once it has a
+  // size; under a full parallel run that takes longer than the default wait.
+  await expect(markers).toHaveCount(4, { timeout: 15_000 });
 
   const ringed = () => page.locator('path.leaflet-interactive[stroke="#fff"]');
 
@@ -1836,7 +1838,7 @@ test('a clicked place stays marked on the map, including across a redraw', async
       .editor.flow.getWorker(id).setPlace(0, { label: 'Amsterdam ' });
   }, ids.places);
 
-  await expect(markers).toHaveCount(4);
+  await expect(markers).toHaveCount(4, { timeout: 15_000 });
   await expect(ringed()).toHaveCount(1);
   expect(await page.evaluate(({ id, place }) => (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
     .editor.flow.getWorker(id).isPicked(place), { id: ids.map, place: chosen })).toBe(true);
@@ -2122,6 +2124,72 @@ test('opening a flow that asks for an unknown module lists it, and does not run 
   await expect(page.locator('fb-modules-dialog li', { hasText: 'Greeting' })
     .locator('input[type=checkbox]')).toBeChecked();
   expect(fetched).toBe(1);
+});
+
+
+/**
+ * The playground hosts its own modules, because there is no server yet.
+ *
+ * `playground/modules/*.ts` is bundled beside the app and listed in
+ * `modules/index.json`, so adding one is a click rather than an address typed
+ * from memory. It travels the same path a stranger's module would — fetched by
+ * URL, at runtime — which is what keeps that path honest: if it breaks, it
+ * breaks for us first.
+ *
+ * This test uses the REAL built file. Nothing is intercepted.
+ */
+test('a module published beside the app is offered, added, and works', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.modules').click();
+
+  const offered = page.locator('fb-modules-dialog .offered li', { hasText: 'Triggers' });
+
+  await expect(offered).toContainText('Make something happen');
+  await offered.locator('button').click();
+
+  // It moves out of the offered list and into the enabled one, named by itself.
+  await expect(page.locator('fb-modules-dialog .offered li', { hasText: 'Triggers' })).toHaveCount(0);
+  await expect(page.locator('fb-modules-dialog ul > li', { hasText: 'Triggers' })
+    .locator('input[type=checkbox]')).toBeChecked();
+
+  await page.locator('fb-modules-dialog button[mat-dialog-close]').click();
+
+  const button = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const node = editor.addNode('trig-button');
+
+    node.position = { x: 8, y: 76 };
+
+    return node.id as number;
+  });
+
+  const node = page.locator('fb-flow-canvas fb-node-box').last();
+
+  await expect(node).toContainText('not sent yet');
+
+  /*
+   * Pressing it must send, and must not drag the node it is drawn on — the
+   * module marks its own control with the drag-ignore class, which is a string
+   * it had to write out by hand because nothing of the editor reaches it.
+   */
+  const before = await page.evaluate(id => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.nodeById(id).position), button);
+
+  await node.locator('button.trig-button').click();
+
+  await expect(node).toContainText('sent 1');
+  expect(await page.evaluate(id => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.nodeById(id).position), button)).toBe(before);
+
+  // And what it sent is on its output, which is the whole point of a trigger.
+  expect(await page.evaluate(id => new Promise(resolve => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    editor.flow.getWorker(id).getStream().subscribe((value: number) => resolve(value));
+  }), button)).toBe(1);
 });
 
 /**

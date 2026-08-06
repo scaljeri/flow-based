@@ -36,6 +36,14 @@ export interface FbModuleInfo {
   error?: string;
 }
 
+/** A module this deployment hosts, offered without anybody typing an address. */
+export interface FbCatalogueEntry {
+  url: string;
+  title: string;
+  description: string;
+  prefix?: string;
+}
+
 /** What a flow records about the modules it needs. */
 export interface FbFlowModule {
   url: string;
@@ -146,6 +154,16 @@ export class ModulesService {
   /** The type names each loaded module brought, so forgetting one is exact. */
   private readonly loadedTypes = new Map<string, string[]>();
 
+  /**
+   * What this deployment hosts itself.
+   *
+   * There is no community server yet, so the server is the site the app is
+   * served from: a handful of modules published beside it, listed in
+   * `modules/index.json`. They are fetched by URL like anybody else's — the
+   * shortcut is only that the address is already known.
+   */
+  catalogue: FbCatalogueEntry[] = [];
+
   constructor() {
     /*
      * The framework's base types first — number, boolean, string, object, as
@@ -207,6 +225,38 @@ export class ModulesService {
     }
 
     await Promise.all(stored.enabled.map(id => this.enable(id)));
+  }
+
+  /**
+   * Read the list of modules published beside this app.
+   *
+   * Absent is not an error: a development build has no catalogue, and a
+   * dialog that shouted about it would be wrong every day. The section simply
+   * is not drawn.
+   */
+  async loadCatalogue(): Promise<void> {
+    try {
+      const index = new URL('modules/index.json', document.baseURI);
+      const response = await fetch(index.href);
+
+      if (!response.ok) {
+        return;
+      }
+
+      const entries = await response.json() as FbCatalogueEntry[];
+
+      // Resolved against the catalogue, not the page: the list says
+      // `modules/triggers.js` and stays true wherever the app is mounted.
+      this.catalogue = entries.map(entry => ({ ...entry, url: new URL(entry.url, index).href }));
+      this.changed.emit();
+    } catch {
+      // Offline, or no such file. Nothing to offer, and nothing to say.
+    }
+  }
+
+  /** The published ones this browser does not already know about. */
+  get offered(): FbCatalogueEntry[] {
+    return this.catalogue.filter(entry => !this.modules.some(info => info.url === entry.url));
   }
 
   /**
