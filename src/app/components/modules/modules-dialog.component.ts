@@ -59,6 +59,16 @@ import { FbModuleInfo, ModulesService } from '../../modules.service';
       <section class="add">
         <h3>From a URL</h3>
 
+        <!--
+          Above the field, not below it. A warning under the last control is a
+          warning the reader meets after deciding — and this one is clipped by
+          the dialog's own scroll, so it was a warning they could miss entirely.
+        -->
+        <p class="warning">
+          A module is code. It runs in this page with the same reach as the
+          editor, including the flows saved in this browser.
+        </p>
+
         <form (submit)="onAdd($event)">
           <input
             type="url"
@@ -74,11 +84,6 @@ import { FbModuleInfo, ModulesService } from '../../modules.service';
         @if (addError) {
           <p class="error">{{addError}}</p>
         }
-
-        <p class="warning">
-          A module is code, and it runs in this page with the same reach as the
-          editor — including the flows saved in this browser. Add ones you trust.
-        </p>
       </section>
     </mat-dialog-content>
 
@@ -178,7 +183,7 @@ import { FbModuleInfo, ModulesService } from '../../modules.service';
 
     .warning {
       font-size: 12px;
-      margin: 10px 0 0;
+      margin: 0 0 10px;
       opacity: 0.7;
     }
   `]
