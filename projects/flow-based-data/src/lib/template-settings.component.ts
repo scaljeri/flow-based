@@ -30,7 +30,9 @@ import { TemplateWorker } from './template.worker';
 
     <p class="state hint">
       After a bar: <code>lower</code>, <code>upper</code>, <code>trim</code>,
-      <code>url</code>. A socket named <code>pattern</code> supplies the pattern
+      <code>url</code> — in the pattern, or in the socket's name
+      (<code>region|lower</code>) when the pattern is somebody else's and must
+      not be edited. A socket named <code>pattern</code> supplies the pattern
       itself.
     </p>
   `,

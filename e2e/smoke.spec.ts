@@ -2697,7 +2697,9 @@ test('a config file supplies the pattern, and the template builds the URL from i
     contentType: 'application/json',
     body: JSON.stringify({
       currentDate: '2026-07-01',
-      regions: [{ id: 'NL', gridPath: 'data/{region|lower}/grid/{date}/{pollutant}.json' }],
+      // The publisher's own pattern, verbatim: no modifier in it, because
+      // TOPAS does its lowercasing in code rather than in the path it hands out.
+      regions: [{ id: 'NL', gridPath: 'data/{region}/grid/{date}/{pollutant}.json' }],
     }),
   }));
 
@@ -2739,11 +2741,17 @@ test('a config file supplies the pattern, and the template builds the URL from i
     editor.socketClicked(out(path), path.id);
     editor.socketClicked(template_ins[0], template.id);          // pattern
 
-    for (const name of ['region', 'date', 'pollutant']) {
+    /*
+     * `region|lower` — the modifier on the SOCKET, because the pattern is the
+     * publisher's and must not be edited. TOPAS spells its regions NL and EU
+     * everywhere except in that path.
+     */
+    for (const name of ['region|lower', 'date', 'pollutant']) {
       editor.flow.addSocket({ type: 'in', name }, template.id);
     }
 
-    const named = (name: string) => ins(template).find((s: any) => s.name === name);
+    const named = (name: string) =>
+      ins(template).find((s: any) => (s.name ?? '').split('|')[0] === name);
 
     editor.socketClicked(out(date), date.id);
     editor.socketClicked(named('date'), template.id);
@@ -2765,7 +2773,7 @@ test('a config file supplies the pattern, and the template builds the URL from i
     };
   });
 
-  expect(built.pattern).toBe('data/{region|lower}/grid/{date}/{pollutant}.json');
+  expect(built.pattern).toBe('data/{region}/grid/{date}/{pollutant}.json');
   expect(built.missing).toEqual([]);
 
   // Lowercased in the path and nowhere else — the trap TOPAS actually sets.

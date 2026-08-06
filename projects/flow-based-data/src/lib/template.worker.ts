@@ -11,6 +11,23 @@ export interface TemplateConfig {
 const PLACEHOLDER = /\{([A-Za-z0-9_]+)(?:\|([a-z]+))?\}/g;
 
 /**
+ * The small differences between a value and the form a URL wants it in.
+ *
+ * Deliberately a fixed handful rather than an expression language: these are
+ * the ones publishers' paths actually ask for, and a node that evaluates code
+ * would stop being a node you can read off a canvas.
+ */
+function applyModifier(value: string, modifier?: string): string {
+  switch (modifier) {
+    case 'lower': return value.toLowerCase();
+    case 'upper': return value.toUpperCase();
+    case 'trim': return value.trim();
+    case 'url': return encodeURIComponent(value);
+    default: return value;
+  }
+}
+
+/**
  * A string built from a pattern and the values arriving on named inputs.
  *
  * This exists because a URL is not data and should not be typed twice. TOPAS
@@ -67,7 +84,7 @@ export class TemplateWorker implements FbNodeWorker {
     this.names.set(id, (socket.name ?? '').trim());
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
-      const name = this.names.get(id) ?? '';
+      const [name] = (this.names.get(id) ?? '').split('|');
       const plain = unwrap(value);
 
       /*
@@ -78,7 +95,21 @@ export class TemplateWorker implements FbNodeWorker {
       if (name === 'pattern') {
         this.wired = plain === undefined || plain === null ? undefined : String(plain);
       } else if (name) {
-        this.values.set(name, plain === undefined || plain === null ? '' : String(plain));
+        /*
+         * The socket's own name may carry a modifier: `region|lower` fills
+         * `{region}` with the lowercased value.
+         *
+         * This matters because the pattern is usually somebody else's. TOPAS
+         * publishes `data/{region}/grid/{date}/{pollutant}.json` and spells
+         * its regions NL and EU everywhere — except in that path, where their
+         * own app lowercases them in code. The flow has to be able to say so
+         * WITHOUT editing the fetched pattern, or it is back to keeping a copy
+         * of somebody else's URL.
+         */
+        const [, modifier] = (this.names.get(id) ?? '').split('|');
+        const text = plain === undefined || plain === null ? '' : String(plain);
+
+        this.values.set(name, applyModifier(text, modifier));
       }
 
       this.emit();
@@ -98,6 +129,11 @@ export class TemplateWorker implements FbNodeWorker {
   /** The names this pattern asks for, in the order it asks for them. */
   get placeholders(): string[] {
     return [...new Set([...this.pattern.matchAll(PLACEHOLDER)].map(match => match[1]))];
+  }
+
+  /** The names being filled, modifier and all, for the node's own drawing. */
+  get filled(): string[] {
+    return [...this.values.keys()];
   }
 
   /** The ones nothing has supplied yet, which is why nothing is coming out. */
@@ -133,13 +169,7 @@ export class TemplateWorker implements FbNodeWorker {
        * the grid path alone. Every hour lost to that was spent looking for a
        * missing file.
        */
-      switch (modifier) {
-        case 'lower': return value.toLowerCase();
-        case 'upper': return value.toUpperCase();
-        case 'trim': return value.trim();
-        case 'url': return encodeURIComponent(value);
-        default: return value;
-      }
+      return applyModifier(value, modifier);
     });
   }
 
