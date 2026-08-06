@@ -861,7 +861,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 8 },
+  config: { seedVersion: 9 },
   sockets: [],
   children: [
     {
@@ -925,7 +925,7 @@ export const tno = () => ({
     },
     {
       type: 'data-pick',
-      title: 'Stations',
+      title: 'LML locations',
       id: 150,
       /*
        * No label: 93 names over a map of 400 more dots is a wall of text
@@ -959,7 +959,7 @@ export const tno = () => ({
     },
     {
       type: 'data-pick',
-      title: 'Sensors',
+      title: 'Samen Meten locations',
       id: 250,
       /*
        * These have no names in the file at all, only codes. The limit is
