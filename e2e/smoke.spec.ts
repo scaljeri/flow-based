@@ -81,6 +81,27 @@ async function waitUntilReady(page: import('@playwright/test').Page): Promise<vo
   ).toBe(true);
 }
 
+
+/**
+ * Press a marker until the press lands.
+ *
+ * Leaflet rebuilds every marker on each draw, and a map redraws several times
+ * as its data, its track setting and its limits arrive. A locator resolved
+ * before the last of those points at an element that has since been thrown
+ * away: the click is delivered to a detached node and nothing happens. The
+ * geometry is identical each time, so waiting for the drawing to "stop
+ * changing" cannot see it either — the elements differ, the picture does not.
+ *
+ * Retrying the whole press-and-check is what a person does, and it is the only
+ * thing that distinguishes a stale element from a marker that does nothing.
+ */
+async function pressMarker(marker: Locator, landed: () => Promise<unknown>): Promise<void> {
+  await expect(async () => {
+    await marker.click();
+    await landed();
+  }).toPass({ timeout: 15_000 });
+}
+
 test('renders the flow editor and draws connections, with no console errors', async ({ page }) => {
   const errors: string[] = [];
 
@@ -1831,17 +1852,18 @@ test('a clicked place stays marked on the map, including across a redraw', async
 
   const picks = () => page.evaluate(() => (window as unknown as { picks: { lat: number }[] }).picks);
 
-  await markers.nth(1).click();
-
   // One chosen place, not two, and it is the one that was pressed: Rotterdam
   // is the second of the four this producer starts with.
-  await expect(ringed()).toHaveCount(1);
+  await pressMarker(markers.nth(1), () => expect(ringed()).toHaveCount(1, { timeout: 1000 }));
+
   expect((await picks()).at(-1)?.lat).toBe(51.9244);
 
   // Choosing another gives the first one its own looks back, so there is still
   // exactly one ring — the whole point of a choice.
-  await markers.first().click();
-  await expect(ringed()).toHaveCount(1);
+  await pressMarker(markers.first(), async () => {
+    await expect(ringed()).toHaveCount(1, { timeout: 1000 });
+    expect((await picks()).at(-1)?.lat).not.toBe(51.9244);
+  });
 
   const chosen = (await picks()).at(-1)!;
 
@@ -2124,11 +2146,14 @@ test('opening a flow that asks for an unknown module lists it, and does not run 
 
   await page.reload();
 
-  // Not waitUntilReady: that waits for the demo, and this browser opens on the
-  // stranger's flow.
+  /*
+   * Not waitUntilReady: that waits for the demo, and this browser opens on the
+   * stranger's flow. Generous, because startup seeds every shipped flow before
+   * it opens anything — and under a full parallel run that has taken 20s.
+   */
   await expect.poll(() => page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
-      ?.editor?.state?.title), { timeout: 15_000 }).toBe('from a stranger');
+      ?.editor?.state?.title), { timeout: 40_000 }).toBe('from a stranger');
 
   // Listed, named by its address because nothing has asked it what it is.
   await page.locator('mat-toolbar button.overflow').click();
@@ -2796,6 +2821,113 @@ test('a config file supplies the pattern, and the template builds the URL from i
 
   // Lowercased in the path and nowhere else — the trap TOPAS actually sets.
   expect(built.result).toBe('data/nl/grid/2026-07-01/PM2.5.json');
+});
+
+
+/**
+ * The sources, behind one node.
+ *
+ * Fifteen fetches and their string-building is machinery, and machinery on the
+ * same canvas as the picture drowns the picture. Inside a subflow it is one
+ * node with seven sockets, and those sockets say what this place can give you
+ * without saying anything about how.
+ *
+ * Every URL in there is worked out from the publisher's own config — the path
+ * patterns, the date, the region ids, the network file names. Nothing is typed
+ * but the address of that one file, which is what this test measures: the
+ * routes below answer only the URLs a correct reading of that config produces.
+ */
+test('the TOPAS subflow fetches everything from the publisher\'s own config', async ({ page }) => {
+  const asked: string[] = [];
+  const answer = (body: unknown) => ({ contentType: 'application/json', body: JSON.stringify(body) });
+  const places = (count: number) => ({
+    list: Array.from({ length: count }, (_, i) => ({ code: `S${i}`, lat: 52 + i / 100, lon: 5 + i / 100 })),
+  });
+  const grid = (label: string) => ({
+    pollutant: label,
+    shape: [2, 2],
+    lat: [50, 54],
+    lon: [3, 8],
+    order: 'S->N,W->E',
+    values: [1, 2, 3, 4],
+  });
+
+  await page.route('**/tno-topas/**', route => {
+    const url = new URL(route.request().url()).pathname;
+
+    asked.push(url.replace(/^.*tno-topas\//, ''));
+
+    if (url.endsWith('config.json')) {
+      return route.fulfill(answer({
+        currentDate: '2026-07-01',
+        regions: [
+          { id: 'NL', gridPath: 'data/{region}/grid/{date}/{pollutant}.json', pollutants: ['PM2.5', 'NO2'] },
+          { id: 'EU', gridPath: 'data/{region}/grid/{date}/{pollutant}.json', pollutants: ['PM2.5'] },
+        ],
+        networks: [
+          { id: 'lml', path: 'lml.json' },
+          { id: 'samenmeten', path: 'samenmeten.json' },
+          { id: 'eea', path: '{region}-eea.json' },
+        ],
+      }));
+    }
+
+    if (url.endsWith('data/nl/grid/2026-07-01/PM2.5.json')) return route.fulfill(answer(grid('nl')));
+    if (url.endsWith('data/eu/grid/2026-07-01/PM2.5.json')) return route.fulfill(answer(grid('eu')));
+    if (url.endsWith('lml.json')) return route.fulfill(answer(places(3)));
+    if (url.endsWith('samenmeten.json')) return route.fulfill(answer(places(5)));
+    if (url.endsWith('eu-eea.json')) return route.fulfill(answer(places(7)));
+
+    // Anything else is a URL this flow should never have built.
+    return route.fulfill({ status: 404, body: 'not published' });
+  });
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  await page.locator('fb-flows-dialog li', { hasText: 'tno' }).locator('button').first().click();
+
+  const state = () => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    // Guarded: the flow is swapped in a tick after the dialog closes, and the
+    // first poll can land before that.
+    const map = flow.getWorker(300) as { layerFor(id: number): any } | undefined;
+    const gate = flow.getWorker(500) as { titleOf(i: number): string } | undefined;
+
+    return {
+      cells: map?.layerFor(312)?.grid?.values?.length ?? 0,
+      places: map?.layerFor(310)?.places?.length ?? 0,
+      choices: [0, 1, 2].map(i => gate?.titleOf(i) ?? ''),
+    };
+  });
+
+  // The Dutch raster underneath, and the first network on top of it.
+  await expect.poll(async () => (await state()).cells, { timeout: 20_000 }).toBe(4);
+  await expect.poll(async () => (await state()).places).toBe(3);
+
+  /*
+   * Every file the publisher's config points at, and not one URL besides.
+   * `{region}` lowercased in the paths and capitalised in the ids — the detail
+   * that made every earlier guess at these addresses return a 404.
+   */
+  expect([...new Set(asked)].sort()).toEqual([
+    'config.json',
+    'data/eu/grid/2026-07-01/PM2.5.json',
+    'data/nl/grid/2026-07-01/PM2.5.json',
+    'eu-eea.json',
+    'lml.json',
+    'samenmeten.json',
+  ]);
+
+  // And the switch is fed by three of the subflow's seven sockets.
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(500).set(3);
+  });
+
+  await expect.poll(async () => (await state()).places).toBe(7);
 });
 
 /**

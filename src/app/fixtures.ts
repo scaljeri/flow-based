@@ -857,250 +857,294 @@ export const pollution = () => ({
  *
  * A function, because ids must be fresh per creation.
  */
+
+/* ------------------------------------------------------------------------
+   The TOPAS sources subflow
+   ------------------------------------------------------------------------
+   Fifteen fetches and their plumbing, written as a function rather than as
+   four hundred lines of literal. What matters about this flow is its SHAPE —
+   config in, seven typed things out — and a shape is easier to check in code
+   that names its parts than in a wall of ids.
+
+   Ids are handed out from one counter so they cannot collide, and the layout
+   is columns: what was asked for, what was read out of it, what was built
+   from that, what was fetched, and what shape it came back as.
+ */
+
+/*
+ * Well clear of the subflow's own ids: it is 2000 and its out sockets are
+ * 2001–2007. The first version started here at 2000, so the first node inside
+ * took 2001 — the same number as the EU grid socket — and two of the switch's
+ * inputs quietly resolved against the wrong socket. Ids are a namespace; this
+ * counter has its own end of it.
+ */
+let sourceId = 2100;
+
+const nextId = () => (sourceId += 1);
+
+/** A request that fetches whatever arrives on its `url` socket. */
+function fetches(title: string, position: { x: number; y: number }, url = '') {
+  const id = nextId();
+
+  return {
+    node: {
+      type: 'net-request',
+      title,
+      id,
+      config: { url, method: 'GET', every: 0, title },
+      sockets: [
+        { id: nextId(), type: 'in', name: 'when' },
+        { id: nextId(), type: 'in', name: 'url', format: 'string' },
+        { id: nextId(), type: 'out', format: 'data' },
+      ],
+      position,
+    },
+    id,
+    get in() { return this.node.sockets[1].id!; },
+    get out() { return this.node.sockets[2].id!; },
+  };
+}
+
+/** A value taken out of whatever arrived, as text. */
+function reads(title: string, path: string, position: { x: number; y: number }) {
+  const id = nextId();
+
+  return {
+    node: {
+      type: 'data-pick',
+      title,
+      id,
+      config: { shape: 'text', a: path },
+      sockets: [
+        { id: nextId(), type: 'in', format: 'data' },
+        { id: nextId(), type: 'out', format: 'string' },
+      ],
+      position,
+    },
+    id,
+    get in() { return this.node.sockets[0].id!; },
+    get out() { return this.node.sockets[1].id!; },
+  };
+}
+
+/** A string built from a pattern; the named sockets are its placeholders. */
+function builds(title: string, names: string[], position: { x: number; y: number }, pattern = '') {
+  const id = nextId();
+  const node = {
+    type: 'data-template',
+    title,
+    id,
+    config: { pattern },
+    sockets: [
+      // The out socket carries a `name` too, unused, so the array has one type
+      // and `socket(name)` can search it without narrowing gymnastics.
+      ...names.map(name => ({ id: nextId(), type: 'in', name, format: undefined as string | undefined })),
+      { id: nextId(), type: 'out', name: 'built', format: 'string' as string | undefined },
+    ],
+    position,
+  };
+
+  return {
+    node,
+    id,
+    socket: (name: string) => node.sockets.find(s => s.name === name)!.id!,
+    get out() { return node.sockets[node.sockets.length - 1].id!; },
+  };
+}
+
+/** What a fetched file turns into: a raster, or a set of places. */
+function shapes(title: string, config: Record<string, unknown>, format: string, position: { x: number; y: number }) {
+  const id = nextId();
+
+  return {
+    node: {
+      type: 'data-pick',
+      title,
+      id,
+      config,
+      sockets: [
+        { id: nextId(), type: 'in', format: 'data' },
+        { id: nextId(), type: 'out', format },
+      ],
+      position,
+    },
+    id,
+    get in() { return this.node.sockets[0].id!; },
+    get out() { return this.node.sockets[1].id!; },
+  };
+}
+
+/**
+ * Everything TOPAS publishes, behind one node with seven outputs.
+ *
+ * The subflow is not decoration. Fifteen nodes of fetching and string-building
+ * is the machinery, and machinery on the same canvas as the picture drowns the
+ * picture — while the seven sockets on the outside say exactly what this place
+ * can give you and nothing about how.
+ *
+ * Every URL in here is worked out from the publisher's own config: the path
+ * patterns, the date, the region ids and the network file names all come out
+ * of config.json. Nothing is typed but the address of that one file.
+ */
+function topasSources() {
+  const stations = { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 };
+
+  const config = fetches('TOPAS config', { x: 2, y: 42 }, '../tno-topas/config.json');
+
+  // What the publisher says about itself.
+  const gridPathNl = reads('NL grid path', 'regions.0.gridPath', { x: 14, y: 4 });
+  const gridPathEu = reads('EU grid path', 'regions.1.gridPath', { x: 14, y: 16 });
+  const date = reads('date', 'currentDate', { x: 14, y: 28 });
+  const idNl = reads('NL', 'regions.0.id', { x: 14, y: 40 });
+  const idEu = reads('EU', 'regions.1.id', { x: 14, y: 52 });
+  const pollutant = reads('pollutant', 'regions.0.pollutants.0', { x: 14, y: 64 });
+  const lmlPath = reads('LML file', 'networks.0.path', { x: 14, y: 76 });
+  const samenPath = reads('Samen Meten file', 'networks.1.path', { x: 14, y: 88 });
+  const eeaPath = reads('EEA file', 'networks.2.path', { x: 14, y: 100 });
+
+  // What that makes: a file name, then a whole URL.
+  const gridFileNl = builds('NL grid file', ['pattern', 'region|lower', 'date', 'pollutant'], { x: 30, y: 4 });
+  const gridFileEu = builds('EU grid file', ['pattern', 'region|lower', 'date', 'pollutant'], { x: 30, y: 20 });
+  const eeaFile = builds('EEA file name', ['pattern', 'region|lower'], { x: 30, y: 88 });
+
+  const base = '../tno-topas/{path}';
+  const urlGridNl = builds('NL grid URL', ['path'], { x: 46, y: 4 }, base);
+  const urlGridEu = builds('EU grid URL', ['path'], { x: 46, y: 20 }, base);
+  const urlLml = builds('LML URL', ['path'], { x: 46, y: 40 }, base);
+  const urlSamen = builds('Samen Meten URL', ['path'], { x: 46, y: 60 }, base);
+  const urlEea = builds('EEA URL', ['path'], { x: 46, y: 88 }, base);
+
+  // What is fetched, and what it turns into.
+  const getGridNl = fetches('NL grid', { x: 62, y: 4 });
+  const getGridEu = fetches('EU grid', { x: 62, y: 20 });
+  const getLml = fetches('RIVM LML', { x: 62, y: 40 });
+  const getSamen = fetches('Samen Meten', { x: 62, y: 60 });
+  const getEea = fetches('EEA', { x: 62, y: 88 });
+
+  const rasterNl = shapes('NL raster', { shape: 'grid' }, 'grid', { x: 78, y: 4 });
+  const rasterEu = shapes('EU raster', { shape: 'grid' }, 'grid', { x: 78, y: 20 });
+  const placesLml = shapes('LML places', { ...stations, limit: 200 }, 'geo', { x: 78, y: 40 });
+  const placesSamen = shapes('Samen Meten places', stations, 'geo', { x: 78, y: 60 });
+  const placesEea = shapes('EEA places', stations, 'geo', { x: 78, y: 88 });
+
+  const flowId = 2000;
+  const out = {
+    gridNl: 2001, gridEu: 2002, lml: 2003, samen: 2004, eea: 2005, config: 2006, date: 2007,
+  };
+
+  const wire = (from: { id: number }, out_: number, to: { id: number }, in_: number) =>
+    ({ id: nextId(), from: from.id, to: to.id, out: out_, in: in_ });
+
+  // Into the subflow's own out sockets: `to` is the subflow itself.
+  const emit = (from: { id: number }, out_: number, socket: number) =>
+    ({ id: nextId(), from: from.id, to: flowId, out: out_, in: socket });
+
+  return {
+    type: 'flow',
+    title: 'TOPAS sources',
+    id: flowId,
+    config: {},
+    position: { x: 4, y: 30 },
+    sockets: [
+      { id: out.gridNl, type: 'out', name: 'NL grid', format: 'grid' },
+      { id: out.gridEu, type: 'out', name: 'EU grid', format: 'grid' },
+      { id: out.lml, type: 'out', name: 'NL · RIVM LML', format: 'geo' },
+      { id: out.samen, type: 'out', name: 'NL · Samen Meten', format: 'geo' },
+      { id: out.eea, type: 'out', name: 'EU · EEA', format: 'geo' },
+      { id: out.config, type: 'out', name: 'config', format: 'data' },
+      { id: out.date, type: 'out', name: 'date', format: 'string' },
+    ],
+    children: [
+      config.node,
+      gridPathNl.node, gridPathEu.node, date.node, idNl.node, idEu.node, pollutant.node,
+      lmlPath.node, samenPath.node, eeaPath.node,
+      gridFileNl.node, gridFileEu.node, eeaFile.node,
+      urlGridNl.node, urlGridEu.node, urlLml.node, urlSamen.node, urlEea.node,
+      getGridNl.node, getGridEu.node, getLml.node, getSamen.node, getEea.node,
+      rasterNl.node, rasterEu.node, placesLml.node, placesSamen.node, placesEea.node,
+    ],
+    connections: [
+      // One file, read nine ways.
+      ...[gridPathNl, gridPathEu, date, idNl, idEu, pollutant, lmlPath, samenPath, eeaPath]
+        .map(pick => wire(config, config.out, pick, pick.in)),
+
+      // The grid file names.
+      wire(gridPathNl, gridPathNl.out, gridFileNl, gridFileNl.socket('pattern')),
+      wire(idNl, idNl.out, gridFileNl, gridFileNl.socket('region|lower')),
+      wire(date, date.out, gridFileNl, gridFileNl.socket('date')),
+      wire(pollutant, pollutant.out, gridFileNl, gridFileNl.socket('pollutant')),
+
+      wire(gridPathEu, gridPathEu.out, gridFileEu, gridFileEu.socket('pattern')),
+      wire(idEu, idEu.out, gridFileEu, gridFileEu.socket('region|lower')),
+      wire(date, date.out, gridFileEu, gridFileEu.socket('date')),
+      wire(pollutant, pollutant.out, gridFileEu, gridFileEu.socket('pollutant')),
+
+      // The EEA file name is itself a pattern: `{region}-eea.json`.
+      wire(eeaPath, eeaPath.out, eeaFile, eeaFile.socket('pattern')),
+      wire(idEu, idEu.out, eeaFile, eeaFile.socket('region|lower')),
+
+      // A published path is relative to the publisher, not to us.
+      wire(gridFileNl, gridFileNl.out, urlGridNl, urlGridNl.socket('path')),
+      wire(gridFileEu, gridFileEu.out, urlGridEu, urlGridEu.socket('path')),
+      wire(lmlPath, lmlPath.out, urlLml, urlLml.socket('path')),
+      wire(samenPath, samenPath.out, urlSamen, urlSamen.socket('path')),
+      wire(eeaFile, eeaFile.out, urlEea, urlEea.socket('path')),
+
+      // Fetch, then shape.
+      wire(urlGridNl, urlGridNl.out, getGridNl, getGridNl.in),
+      wire(urlGridEu, urlGridEu.out, getGridEu, getGridEu.in),
+      wire(urlLml, urlLml.out, getLml, getLml.in),
+      wire(urlSamen, urlSamen.out, getSamen, getSamen.in),
+      wire(urlEea, urlEea.out, getEea, getEea.in),
+
+      wire(getGridNl, getGridNl.out, rasterNl, rasterNl.in),
+      wire(getGridEu, getGridEu.out, rasterEu, rasterEu.in),
+      wire(getLml, getLml.out, placesLml, placesLml.in),
+      wire(getSamen, getSamen.out, placesSamen, placesSamen.in),
+      wire(getEea, getEea.out, placesEea, placesEea.in),
+
+      // And out, where the rest of the flow can see them.
+      emit(rasterNl, rasterNl.out, out.gridNl),
+      emit(rasterEu, rasterEu.out, out.gridEu),
+      emit(placesLml, placesLml.out, out.lml),
+      emit(placesSamen, placesSamen.out, out.samen),
+      emit(placesEea, placesEea.out, out.eea),
+      emit(config, config.out, out.config),
+      emit(date, date.out, out.date),
+    ],
+  };
+}
+
 export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 10 },
+  config: { seedVersion: 11 },
   sockets: [],
   children: [
     /*
-     * The grid is not fetched from a URL somebody typed. TOPAS publishes its
-     * own path pattern and the date it currently has grids for, both in
-     * config.json — so the flow reads them and follows them. Change the day
-     * they publish and this flow moves with it; nothing here has to be edited.
+     * Everything TOPAS publishes, behind one node. Fifteen fetches and their
+     * string-building live inside it; what is left out here is a picture of
+     * air quality, which is what this flow is about.
      */
-    {
-      type: 'net-request',
-      title: 'TOPAS config',
-      id: 600,
-      config: {
-        url: '../tno-topas/config.json',
-        method: 'GET',
-        every: 0,
-        title: 'TOPAS configuration',
-        description: 'What the publisher says about its own data: paths, dates, regions, pollutants.',
-      },
-      sockets: [
-        { id: 609, type: 'in', name: 'when' },
-        { id: 608, type: 'in', name: 'url', format: 'string' },
-        { id: 610, type: 'out', format: 'data' },
-      ],
-      position: { x: 4, y: 52 },
-    },
-    {
-      type: 'data-pick',
-      title: 'grid path',
-      id: 620,
-      // The pattern itself: `data/{region}/grid/{date}/{pollutant}.json`.
-      config: { shape: 'text', a: 'regions.0.gridPath' },
-      sockets: [
-        { id: 621, type: 'in', format: 'data' },
-        { id: 622, type: 'out', format: 'string' },
-      ],
-      position: { x: 21, y: 44 },
-    },
-    {
-      type: 'data-pick',
-      title: 'current date',
-      id: 630,
-      config: { shape: 'text', a: 'currentDate' },
-      sockets: [
-        { id: 631, type: 'in', format: 'data' },
-        { id: 632, type: 'out', format: 'string' },
-      ],
-      position: { x: 21, y: 54 },
-    },
-    {
-      type: 'data-pick',
-      title: 'region',
-      id: 640,
-      config: { shape: 'text', a: 'regions.0.id' },
-      sockets: [
-        { id: 641, type: 'in', format: 'data' },
-        { id: 642, type: 'out', format: 'string' },
-      ],
-      position: { x: 21, y: 64 },
-    },
-    {
-      type: 'data-pick',
-      title: 'pollutant',
-      id: 650,
-      // The first of the five this region publishes. A reader choosing among
-      // them is the next thing to build; the flow already knows the list.
-      config: { shape: 'text', a: 'regions.0.pollutants.0' },
-      sockets: [
-        { id: 651, type: 'in', format: 'data' },
-        { id: 652, type: 'out', format: 'string' },
-      ],
-      position: { x: 21, y: 74 },
-    },
-    {
-      type: 'data-template',
-      title: 'the path',
-      id: 660,
-      /*
-       * No pattern of its own: it arrives on the `pattern` socket. And
-       * `region|lower` rather than `{region|lower}` in the pattern — the
-       * pattern is the publisher's and is not ours to edit, while TOPAS
-       * lowercases the region in its own code. That one detail is what made
-       * every earlier guess at this URL return a 404.
-       */
-      config: { pattern: '' },
-      sockets: [
-        { id: 661, type: 'in', name: 'pattern' },
-        { id: 662, type: 'in', name: 'region|lower' },
-        { id: 663, type: 'in', name: 'date' },
-        { id: 664, type: 'in', name: 'pollutant' },
-        { id: 665, type: 'out', format: 'string' },
-      ],
-      position: { x: 40, y: 56 },
-    },
-    {
-      type: 'data-template',
-      title: 'the whole URL',
-      id: 670,
-      // The published path is relative to the publisher, not to us.
-      config: { pattern: '../tno-topas/{path}' },
-      sockets: [
-        { id: 671, type: 'in', name: 'path' },
-        { id: 672, type: 'out', format: 'string' },
-      ],
-      position: { x: 57, y: 56 },
-    },
-    {
-      type: 'net-request',
-      title: 'the grid',
-      id: 400,
-      /*
-       * No URL of its own. It fetches what arrives on `url`, and that is
-       * deliberately not written back into this config: a URL worked out from
-       * somebody else's data a moment ago is not something this flow should
-       * claim as its own.
-       */
-      config: {
-        url: '',
-        method: 'GET',
-        every: 0,
-        title: 'Modelled concentration',
-        description: 'The raster TOPAS draws its own map from (TNO TOPAS / LOTOS-EUROS).',
-      },
-      sockets: [
-        { id: 409, type: 'in', name: 'when' },
-        { id: 408, type: 'in', name: 'url', format: 'string' },
-        { id: 410, type: 'out', format: 'data' },
-      ],
-      position: { x: 74, y: 56 },
-    },
-    {
-      type: 'data-pick',
-      title: 'As a raster',
-      id: 450,
-      /*
-       * Nothing typed but the shape: the published file already calls its
-       * parts values, lat, lon and shape, which is what Pick looks for.
-       */
-      config: { shape: 'grid' },
-      sockets: [
-        { id: 460, type: 'in', format: 'data' },
-        { id: 461, type: 'out', formats: ['geo', 'point', 'number', 'grid'] },
-      ],
-      position: { x: 88, y: 56 },
-    },
-    {
-      type: 'net-request',
-      title: 'RIVM LML',
-      id: 100,
-      /*
-       * The name travels with the answer, because this is the only node that
-       * knows what it asked for: further down, a list of coordinates is a
-       * list of coordinates whatever network it came from.
-       */
-      config: {
-        url: '../tno-topas/lml.json',
-        method: 'GET',
-        every: 0,
-        title: 'Officieel meetnet (RIVM LML)',
-        description: 'The national air-quality network: professional instruments at fixed sites.',
-      },
-      sockets: [
-        { id: 109, type: 'in', name: 'when' },
-        { id: 110, type: 'out', format: 'data' },
-      ],
-      position: { x: 4, y: 6 },
-    },
-    {
-      type: 'data-pick',
-      title: 'LML locations',
-      id: 150,
-      /*
-       * No label: 93 names over a map of 400 more dots is a wall of text
-       * where a map should be. The station's CODE travels instead — nothing
-       * is drawn from it, and it is what a click needs to ask this station
-       * for its measurements.
-       */
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 200 },
-      sockets: [
-        { id: 160, type: 'in', format: 'data' },
-        { id: 161, type: 'out', formats: ['geo', 'point', 'number'] },
-      ],
-      position: { x: 26, y: 6 },
-    },
-    {
-      type: 'net-request',
-      title: 'Samen Meten',
-      id: 200,
-      config: {
-        url: '../tno-topas/samenmeten.json',
-        method: 'GET',
-        every: 0,
-        title: 'Burgersensoren (Samen Meten)',
-        description: 'Sensors run by residents: many more of them, and less precise.',
-      },
-      sockets: [
-        { id: 209, type: 'in', name: 'when' },
-        { id: 210, type: 'out', format: 'data' },
-      ],
-      position: { x: 4, y: 30 },
-    },
-    {
-      type: 'data-pick',
-      title: 'Samen Meten locations',
-      id: 250,
-      /*
-       * These have no names in the file at all, only codes. The limit is
-       * deliberately short of all 3166 — raise it in the panel and watch what
-       * that costs.
-       */
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
-      sockets: [
-        { id: 260, type: 'in', format: 'data' },
-        { id: 261, type: 'out', formats: ['geo', 'point', 'number'] },
-      ],
-      position: { x: 26, y: 30 },
-    },
+    topasSources(),
     {
       type: 'data-switch',
       title: 'Which network',
       id: 500,
       /*
-       * No names on the sockets. What flows in already says what it is —
-       * "Officieel meetnet (RIVM LML)" — and a label typed here would be a
-       * second copy of that to keep in step. The names on the switch are the
-       * names of the networks, which is the distinction that matters: both
-       * are measuring stations, and calling one of them "sensors" said
-       * nothing at all.
-       *
-       * The output says `geo` outright: the type cannot know what a switch
-       * carries, but this flow does.
+       * One measuring network on the map, or none. Three now: two Dutch and
+       * one European. Named by what arrives — a request says what it IS, and
+       * a name typed on a socket would be a second copy of that.
        */
       config: { which: 1 },
       sockets: [
         { id: 510, type: 'in', formats: ['geo'] },
         { id: 511, type: 'in', formats: ['geo'] },
+        { id: 513, type: 'in', formats: ['geo'] },
         { id: 512, type: 'out', format: 'geo' },
       ],
-      position: { x: 42, y: 20 },
+      position: { x: 40, y: 26 },
     },
     {
       type: 'graph-map',
@@ -1108,19 +1152,9 @@ export const tno = () => ({
       id: 300,
       config: { track: false, follow: true },
       /*
-       * The dense set first, the sparse one second: a socket declared later
-       * is drawn later, and the 93 official stations would vanish under four
-       * hundred sensors the other way round.
-       */
-      /*
-       * Bottom to top: the measured air, then the three thousand sensors, then
-       * the 93 official stations. A socket declared later is drawn later, and
-       * the raster would bury both sets of markers the other way round.
-       */
-      /*
-       * Two layers now, not three: the air underneath, and whichever network
-       * the switch is letting through. A generic input — a layer is a layer,
-       * and which kind it carries is the business of whatever is wired in.
+       * The air underneath, and whichever network the switch is letting
+       * through. Generic inputs — a layer is a layer, and which kind it
+       * carries is the business of whatever is wired in.
        */
       sockets: [
         { id: 312, type: 'in', formats: ['geo', 'grid'] },
@@ -1128,28 +1162,17 @@ export const tno = () => ({
         // Where a pressed marker comes out, waiting for something to ask.
         { id: 313, type: 'out', format: 'geo' },
       ],
-      position: { x: 104, y: 30 },
+      position: { x: 62, y: 20 },
     },
   ],
   connections: [
-    { id: 1000, from: 100, to: 150, out: 110, in: 160 },
-    { id: 1001, from: 200, to: 250, out: 210, in: 260 },
-    { id: 1002, from: 150, to: 500, out: 161, in: 510 },
-    { id: 1003, from: 250, to: 500, out: 261, in: 511 },
+    // Three networks into the switch, one of them onto the map.
+    { id: 1002, from: 2000, to: 500, out: 2003, in: 510 },
+    { id: 1003, from: 2000, to: 500, out: 2004, in: 511 },
+    { id: 1007, from: 2000, to: 500, out: 2005, in: 513 },
     { id: 1006, from: 500, to: 300, out: 512, in: 310 },
-    // The config feeds four picks, the picks feed the template, the template
-    // feeds the request. Every part of that URL comes from the publisher.
-    { id: 1010, from: 600, to: 620, out: 610, in: 621 },
-    { id: 1011, from: 600, to: 630, out: 610, in: 631 },
-    { id: 1012, from: 600, to: 640, out: 610, in: 641 },
-    { id: 1013, from: 600, to: 650, out: 610, in: 651 },
-    { id: 1014, from: 620, to: 660, out: 622, in: 661 },
-    { id: 1015, from: 640, to: 660, out: 642, in: 662 },
-    { id: 1016, from: 630, to: 660, out: 632, in: 663 },
-    { id: 1017, from: 650, to: 660, out: 652, in: 664 },
-    { id: 1018, from: 660, to: 670, out: 665, in: 671 },
-    { id: 1019, from: 670, to: 400, out: 672, in: 408 },
-    { id: 1004, from: 400, to: 450, out: 410, in: 460 },
-    { id: 1005, from: 450, to: 300, out: 461, in: 312 },
+    // The Dutch raster underneath it. The European one is on the subflow's
+    // second socket, waiting for a second map.
+    { id: 1005, from: 2000, to: 300, out: 2001, in: 312 },
   ],
 });

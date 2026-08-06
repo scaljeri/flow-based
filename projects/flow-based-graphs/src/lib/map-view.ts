@@ -614,6 +614,19 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
+    /*
+     * The limits BEFORE the fit, not after it.
+     *
+     * setMaxBounds nudges the map back inside its wall, and a nudge issued
+     * after a fit is a second, animated move — during which Leaflet reads the
+     * position of markers that the next draw has already thrown away. It threw
+     * (`_leaflet_pos` of undefined) and, worse, left the map somewhere other
+     * than where the fit had just put it, so a press aimed at a marker landed
+     * on empty water. Set the wall first, then fit inside it, and nothing has
+     * to be corrected afterwards.
+     */
+    this.limit(leaflet, map, bounds);
+
     if (this.worker.refit) {
       // The reader asked for the fit back; a gesture from before that is not
       // an argument against it.
@@ -625,7 +638,6 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       map.fitBounds(leaflet.latLngBounds(bounds), { padding: FIT.padding, maxZoom: FIT.maxZoom });
     }
 
-    this.limit(leaflet, map, bounds);
     this.cdr.detectChanges();
   }
 }
