@@ -116,13 +116,17 @@ import { TapView } from './tap-view';
         flex-direction: column;
       }
 
+      /*
+       * A share each, not "as much as the content wants". Sized from its
+       * content, the value pushed the history off the bottom of the screen —
+       * where it is not smaller, it is gone.
+       */
       .current {
-        flex: 1 1 auto;
+        flex: 1 1 0;
       }
 
       .history {
-        flex: 0 0 auto;
-        max-height: 30%;
+        flex: 0 0 25%;
       }
     }
 
