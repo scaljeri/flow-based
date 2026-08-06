@@ -2228,7 +2228,13 @@ test('a module published beside the app is offered, added, and works', async ({ 
 
   const offered = page.locator('fb-modules-dialog .offered li', { hasText: 'Triggers' });
 
-  await expect(offered).toContainText('Make something happen');
+  /*
+   * Longer than the default, because this waits on a FETCH: the dialog reads
+   * modules/index.json when it opens. Measured at 4x contention this was the
+   * assertion that ran out — five seconds is a fine budget for a re-render and
+   * a poor one for a round trip on a loaded machine.
+   */
+  await expect(offered).toContainText('Make something happen', { timeout: 20_000 });
   await offered.locator('button').click();
 
   // It moves out of the offered list and into the enabled one, named by itself.
