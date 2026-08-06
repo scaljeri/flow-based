@@ -102,6 +102,31 @@ async function pressMarker(marker: Locator, landed: () => Promise<unknown>): Pro
   }).toPass({ timeout: 15_000 });
 }
 
+
+/**
+ * One transparent pixel, standing in for CARTO's basemap.
+ *
+ * Every map node fetches tiles the moment it exists — including the small one,
+ * which is a picture and takes no gestures. That is a few hundred requests to
+ * somebody else's server per suite run, from a machine on a domestic line, and
+ * it made the map tests the slowest and the flakiest in the file. Worse than
+ * slow: `tileZoom` reads the level MOST tiles are at, and Leaflet prunes the
+ * old level only once the new one has LOADED, so a slow tile server made that
+ * reading wrong rather than late.
+ *
+ * Fulfilled rather than aborted, deliberately. The tests wait for a tile to be
+ * visible and read the zoom out of its src; an aborted request has neither.
+ */
+const TILE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/basemaps.cartocdn.com/**', route =>
+    route.fulfill({ contentType: 'image/png', body: TILE }));
+});
+
 test('renders the flow editor and draws connections, with no console errors', async ({ page }) => {
   const errors: string[] = [];
 
@@ -2153,7 +2178,7 @@ test('opening a flow that asks for an unknown module lists it, and does not run 
    */
   await expect.poll(() => page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
-      ?.editor?.state?.title), { timeout: 40_000 }).toBe('from a stranger');
+      ?.editor?.state?.title), { timeout: 30_000 }).toBe('from a stranger');
 
   // Listed, named by its address because nothing has asked it what it is.
   await page.locator('mat-toolbar button.overflow').click();

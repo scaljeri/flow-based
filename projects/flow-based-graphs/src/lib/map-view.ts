@@ -75,6 +75,16 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
   private dots: { marker: L.CircleMarker; radius: number }[] = [];
   /** Set once the user moves the map by hand; following stops there. */
   private moved = false;
+  /**
+   * Whether this drawing has been torn down.
+   *
+   * Leaflet arrives by dynamic import, so everything below the await runs
+   * later — and a node switching from small to normal destroys this component
+   * synchronously in between. Without the flag the continuation builds a map,
+   * a tile layer and a ResizeObserver on a host nobody holds any more, and
+   * nothing ever calls remove() on it.
+   */
+  private destroyed = false;
 
   /** The open views take the controls; the small one is a picture. */
   protected readonly interactive: boolean = false;
@@ -107,6 +117,11 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
      * through the namespace failed with "t.map is not a function", which says
      * nothing at all about why.
      */
+    // Gone while the chunk was in the air, which a view change does.
+    if (this.destroyed) {
+      return;
+    }
+
     const leaflet = ((module as unknown as { default?: typeof L }).default ?? module) as typeof L;
 
     this.leaflet = leaflet;
@@ -185,15 +200,41 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
 
     if (typeof ResizeObserver !== 'undefined') {
       // Leaflet measures its container once; a node that grows has to say so.
-      this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
+      /*
+       * Nothing to invalidate for a container with no size or no document: a
+       * detached host measures 0x0, and Leaflet then computes a centre from
+       * that and reports it as where the reader left the map.
+       */
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.map && host.isConnected && host.clientWidth > 0) {
+          this.map.invalidateSize();
+        }
+      });
       this.resizeObserver.observe(host);
     }
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.subscription?.unsubscribe();
     this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+
+    /*
+     * Stop, then unbind, then remove — in that order, and then forget it.
+     *
+     * `remove()` deletes the map's pane but cancels neither the 250ms
+     * zoom-transition timer nor the deferred animation frame that arm on every
+     * pan and zoom. Those fire on a dead map and read the position of an
+     * element that is gone: "Cannot read properties of undefined (reading
+     * '_leaflet_pos')", which this suite has been printing for a while. Our own
+     * draw arms them on every pass — setMaxBounds pans, setMinZoom zooms — so
+     * the window is open nearly all the time.
+     */
+    this.map?.stop();
+    this.map?.off();
     this.map?.remove();
+    this.map = undefined;
   }
 
   /**

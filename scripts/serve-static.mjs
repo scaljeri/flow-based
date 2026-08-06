@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 
 const root = process.argv[2];
@@ -27,6 +27,32 @@ const types = {
   '.ttf': 'font/ttf',
 };
 
+/*
+ * Files, kept, keyed on how recently they changed.
+ *
+ * Every page load in the test suite re-read the whole bundle from disk — 1.9 MB
+ * of lit-demo, ninety-nine times a run — and the process serving it is
+ * competing for the same four cores as the browsers reading it. Keyed on mtime
+ * rather than cached blindly: a stale dist is exactly the kind of bug a test
+ * server must not hide.
+ */
+const cache = new Map();
+
+async function serve(file) {
+  const { mtimeMs } = await stat(file);
+  const held = cache.get(file);
+
+  if (held && held.mtimeMs === mtimeMs) {
+    return held.body;
+  }
+
+  const body = await readFile(file);
+
+  cache.set(file, { body, mtimeMs });
+
+  return body;
+}
+
 createServer(async (req, res) => {
   const rel = normalize(decodeURI(new URL(req.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
   // Resolve to the actual FILE first: the content type must come from that, not
@@ -34,7 +60,7 @@ createServer(async (req, res) => {
   const file = join(root, rel.endsWith('/') ? join(rel, 'index.html') : rel);
 
   try {
-    const body = await readFile(file);
+    const body = await serve(file);
     res.writeHead(200, { 'content-type': types[extname(file)] ?? 'application/octet-stream' });
     res.end(body);
   } catch {

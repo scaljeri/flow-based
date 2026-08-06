@@ -90,6 +90,19 @@ export class StatsFullComponent extends StatsView {
       return;
     }
 
+    /*
+     * The library, when this node needs it — bootstrap no longer waits for
+     * Google on behalf of every page load. `load` is idempotent and calls back
+     * immediately once the script is there, so the common case is one extra
+     * function call and the first case is one round trip paid by the node that
+     * wants it.
+     */
+    if (!GoogleCharts.api) {
+      GoogleCharts.load(() => this.onData(data));
+
+      return;
+    }
+
     const dataTable = new GoogleCharts.api.visualization.DataTable();
 
     dataTable.addColumn('number', 'Value');

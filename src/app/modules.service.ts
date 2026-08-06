@@ -155,6 +155,18 @@ export class ModulesService {
   private readonly loadedTypes = new Map<string, string[]>();
 
   /**
+   * The load in flight per module id.
+   *
+   * Because `await enable(id)` has to mean "its types are registered", not
+   * "somebody else started fetching it". It returned immediately when a load
+   * was already running, so a second caller — the Flows dialog, a test, a flow
+   * naming the same module — carried on with an empty registry: `addNode`
+   * answered undefined and the nodes drew as empty boxes. The window is a
+   * network fetch wide, which on a slow machine is most of the time.
+   */
+  private readonly loading = new Map<string, Promise<void>>();
+
+  /**
    * What this deployment hosts itself.
    *
    * There is no community server yet, so the server is the site the app is
@@ -374,12 +386,29 @@ export class ModulesService {
     }
   }
 
-  async enable(id: string): Promise<void> {
+  enable(id: string): Promise<void> {
     const info = this.modules.find(m => m.id === id);
 
-    if (!info || info.enabled || info.loading) {
-      return;
+    if (!info || info.enabled) {
+      return Promise.resolve();
     }
+
+    // Everyone waiting on this module waits on the SAME load.
+    const running = this.loading.get(id);
+
+    if (running) {
+      return running;
+    }
+
+    const load = this.load(info).finally(() => this.loading.delete(id));
+
+    this.loading.set(id, load);
+
+    return load;
+  }
+
+  private async load(info: FbModuleInfo): Promise<void> {
+    const id = info.id;
 
     info.loading = true;
     info.error = undefined;
