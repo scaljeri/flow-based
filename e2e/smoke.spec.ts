@@ -2136,7 +2136,10 @@ test('opening a flow that asks for an unknown module lists it, and does not run 
  * URL, at runtime — which is what keeps that path honest: if it breaks, it
  * breaks for us first.
  *
- * This test uses the REAL built file. Nothing is intercepted.
+ * This test uses the REAL built file. Nothing is intercepted — which means it
+ * needs `npm run build:demo` (or `deploy`) rather than a bare
+ * `ng build flow-based-demo`: that clears dist, taking the published modules
+ * with it, and this is the test that then fails.
  */
 test('a module published beside the app is offered, added, and works', async ({ page }) => {
   await page.goto('/');
@@ -2190,6 +2193,97 @@ test('a module published beside the app is offered, added, and works', async ({ 
 
     editor.flow.getWorker(id).getStream().subscribe((value: number) => resolve(value));
   }), button)).toBe(1);
+});
+
+
+/**
+ * One gesture, two things it could mean.
+ *
+ * A press on a node moves the node; a press on a map pans the map. On the same
+ * pixels they cannot both happen, and when they did, the node crept away while
+ * the map slid under it.
+ *
+ * So the answer is per view, and it follows from what each view is for. Small
+ * is a picture of where the data is and takes no gestures at all, so a press
+ * moves the node — the only thing a node that size has to do. Normal is a map
+ * you look around in, so the canvas takes the press and the node is picked up
+ * by the header, which normal has and small does not.
+ */
+test('a map is dragged at rest and panned when open, and the header still moves it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const map = editor.addNode('graph-map');
+
+    places.position = { x: 6, y: 66 };
+    map.position = { x: 26, y: 66 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    return map.id as number;
+  });
+
+  const at = () => page.evaluate(nodeId => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.nodeById(nodeId).position), id);
+  const centre = () => page.evaluate(nodeId => {
+    const view = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId).view;
+
+    return view ? `${view.lat},${view.lon}` : 'unmoved';
+  }, id);
+
+  const node = page.locator('fb-flow-canvas fb-node-box').last();
+  const drag = async (from: { x: number; y: number }, dx: number, dy: number) => {
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + dx, from.y + dy, { steps: 12 });
+    await page.mouse.up();
+  };
+
+  const middle = (box: { x: number; y: number; width: number; height: number }) =>
+    ({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+
+  // At rest: the press is the node's.
+  const small = await node.locator('.canvas').boundingBox();
+  const restPosition = await at();
+
+  await drag(middle(small!), 70, 50);
+  expect(await at()).not.toBe(restPosition);
+
+  // Opened, the same press is the map's.
+  await page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, id);
+
+  await expect(node.locator('.leaflet-container')).toBeVisible();
+
+  const opened = await at();
+  const openBox = await node.locator('.canvas').boundingBox();
+
+  await drag(middle(openBox!), 60, 40);
+
+  expect(await centre()).not.toBe('unmoved');
+  expect(await at()).toBe(opened);
+
+  // And the header is how the node is moved once it has one.
+  const head = await node.evaluate(el => {
+    const rect = (el as unknown as { shadowRoot: ShadowRoot }).shadowRoot
+      .querySelector('.head')!.getBoundingClientRect();
+
+    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+  });
+
+  // Left of the header, clear of the buttons on its right.
+  await drag({ x: head.x + 20, y: head.y + head.height / 2 }, 40, 30);
+  expect(await at()).not.toBe(opened);
 });
 
 /**

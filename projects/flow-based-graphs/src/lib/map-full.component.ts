@@ -1,11 +1,19 @@
 import { Component } from '@angular/core';
+import { FB_DRAG_IGNORE } from '@scaljeri/flow-based';
 import { MapView } from './map-view';
 
 /** The whole surface: the map is the node now. */
 @Component({
   standalone: true,
   selector: 'fb-map-full',
-  template: `<div #canvas class="canvas"></div>`,
+  /*
+   * The canvas opts out of the shell's dragging, and that is what makes this
+   * view usable: a press here is a pan of the MAP. The two gestures are the
+   * same gesture, so one of them has to give — and a map you cannot pan is not
+   * a map, while a node can still be picked up by its header, which this view
+   * has and the small one does not.
+   */
+  template: `<div #canvas class="canvas ${FB_DRAG_IGNORE}"></div>`,
   styles: [`
     :host {
       box-sizing: border-box;

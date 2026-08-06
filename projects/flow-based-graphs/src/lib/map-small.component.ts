@@ -1,7 +1,14 @@
 import { Component } from '@angular/core';
 import { MapView } from './map-view';
 
-/** At rest: the places, no controls — a node is an icon until opened. */
+/**
+ * At rest: the places, no controls — a node is an icon until opened.
+ *
+ * The map takes no gestures here (see `interactive`), and deliberately does not
+ * opt out of dragging either: at this size the drawing is a picture of where
+ * the data is, and a press on it moves the node, which is the only thing a node
+ * this small has to be able to do.
+ */
 @Component({
   standalone: true,
   selector: 'fb-map-small',
