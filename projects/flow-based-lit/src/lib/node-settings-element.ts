@@ -50,7 +50,13 @@ export class FbNodeSettingsElement extends LitElement {
      * panel can do once a sibling establishes its own context.
      */
     .config {
-      background: var(--fb-node-background, rgba(0, 0, 0, 0.9));
+      /*
+       * Nearly opaque, and its OWN variable rather than the node background.
+       * A node is a thing on the canvas and may be seen through; this is a
+       * panel over it, and a graph showing through the field you are typing
+       * in is noise dressed as depth.
+       */
+      background: var(--fb-settings-background, rgba(14, 14, 18, 0.98));
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 10px;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
@@ -67,7 +73,7 @@ export class FbNodeSettingsElement extends LitElement {
     }
 
     .config::backdrop {
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(0, 0, 0, 0.6);
     }
 
     /*
@@ -97,12 +103,38 @@ export class FbNodeSettingsElement extends LitElement {
      * underneath it.
      */
     .panel > header {
-      background: rgba(18, 18, 22, 0.97);
+      align-items: baseline;
+      background: rgba(14, 14, 18, 0.98);
+      display: flex;
+      gap: 8px;
       margin: -4px 0 12px;
       padding: 4px 0;
       position: sticky;
       top: 0;
       z-index: 3;
+    }
+
+    /*
+     * Which KIND of node this is, beside the word Settings.
+     *
+     * The panel is otherwise identical for every type — title, sockets, delete
+     * — so opening one on the wrong node looks exactly like opening one on the
+     * right node. The type's own name says which, and the registered type name
+     * beside it says which module it came from, which is the thing you need
+     * when a flow will not open somewhere else.
+     */
+    .kind {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .kind .raw {
+      font-family: ui-monospace, monospace;
+      font-size: 10px;
+      opacity: 0.5;
+      padding-left: 6px;
     }
 
     /*
@@ -574,6 +606,13 @@ export class FbNodeSettingsElement extends LitElement {
     }
   }
 
+  /** What this type calls itself, falling back to its registered name. */
+  private get kindName(): string {
+    const type = this.state?.type ?? '';
+
+    return this.editor?.types?.[type]?.settings?.title ?? type;
+  }
+
   protected override updated(_changed: PropertyValues<this>): void {
     this.syncDialog();
     this.syncSocketDialog();
@@ -685,6 +724,9 @@ export class FbNodeSettingsElement extends LitElement {
         <div class="panel">
         <header>
           <strong>Settings</strong>
+          <span class="kind">
+            ${this.kindName}<span class="raw">${this.state?.type ?? ''}</span>
+          </span>
           <button type="button" title="Close" aria-label="Close"
                   @click=${() => this.close()}>×</button>
         </header>

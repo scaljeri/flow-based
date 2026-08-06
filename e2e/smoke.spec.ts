@@ -737,6 +737,24 @@ test('a node type contributes its own settings to the panel', async ({ page }) =
   expect(own).toEqual({ sliders: ['Start', 'End', 'Interval'], switches: 1 });
 
   /*
+   * And the panel says which KIND of node it is opened on. Everything else in
+   * it — title, sockets, delete — is identical for every type, so a panel
+   * opened on the wrong node looks exactly like one opened on the right node.
+   * The registered name sits beside the friendly one because that is what a
+   * flow file says, and what names the module it came from.
+   */
+  const heading = await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+
+    return box.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('.panel > header')!.textContent!.replace(/\s+/g, ' ').trim();
+  });
+
+  expect(heading).toContain('Random number generator');
+  expect(heading).toContain('random-numbers');
+
+  /*
    * And it drives the same worker the node's drawing reads. The settings
    * component shares the node's NodeService — two services over one node would
    * be two views of one thing that could disagree.
