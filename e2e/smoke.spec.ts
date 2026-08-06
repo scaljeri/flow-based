@@ -1748,6 +1748,100 @@ test('clicking a marker sends that place out of the map', async ({ page }) => {
   expect(emitted[0].places).toEqual([{ lat: 52.1, lon: 5.3, ref: 'NL01485' }]);
 });
 
+
+/**
+ * And it marks the one that was pressed.
+ *
+ * A click that only changes something downstream is a click you cannot be sure
+ * landed: the answer appears in a panel somewhere else while the map still
+ * looks exactly as it did. So the chosen dot is ringed in white — the fill
+ * keeps saying which layer it belongs to, which is a different question — and
+ * it survives the redraw that arrives with the next data.
+ */
+test('a clicked place stays marked on the map, including across a redraw', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const ids = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');
+    const map = editor.addNode('graph-map');
+
+    places.position = { x: 6, y: 70 };
+    map.position = { x: 30, y: 70 };
+
+    editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    const worker = editor.flow.getWorker(map.id);
+
+    // The line between them is drawn as an interactive path too; without it
+    // there are exactly as many paths as there are places.
+    worker.setTrack(false);
+
+    // What the map says was chosen, which is how the test knows WHICH marker
+    // the ring is on: a chosen marker is raised to the front, so its position
+    // among the paths is no longer the one it was clicked at.
+    (window as unknown as { picks: { lat: number }[] }).picks = [];
+    worker.getStream(map.sockets.find((s: any) => s.type === 'out'))
+      .subscribe((value: { places: { lat: number }[] }) =>
+        (window as unknown as { picks: { lat: number }[] }).picks.push(value.places[0]));
+
+    return { map: map.id, places: places.id };
+  });
+
+  // The map only draws once it has room to draw in, and the node it draws in
+  // only exists after the shell has rendered it.
+  await expect(page.locator('fb-flow-canvas fb-node-box')).not.toHaveCount(0);
+  await page.evaluate(id => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === id)!;
+
+    node.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, ids.map);
+
+  const markers = page.locator('path.leaflet-interactive');
+
+  await expect(markers).toHaveCount(4);
+
+  const ringed = () => page.locator('path.leaflet-interactive[stroke="#fff"]');
+
+  await expect(ringed()).toHaveCount(0);
+
+  const picks = () => page.evaluate(() => (window as unknown as { picks: { lat: number }[] }).picks);
+
+  await markers.nth(1).click();
+
+  // One chosen place, not two, and it is the one that was pressed: Rotterdam
+  // is the second of the four this producer starts with.
+  await expect(ringed()).toHaveCount(1);
+  expect((await picks()).at(-1)?.lat).toBe(51.9244);
+
+  // Choosing another gives the first one its own looks back, so there is still
+  // exactly one ring — the whole point of a choice.
+  await markers.first().click();
+  await expect(ringed()).toHaveCount(1);
+
+  const chosen = (await picks()).at(-1)!;
+
+  expect(chosen.lat).not.toBe(51.9244);
+
+  /*
+   * Now the data arrives again, which throws every marker away and builds new
+   * ones. The choice is the reader's, not the marker's, so it comes back.
+   */
+  await page.evaluate(id => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(id).setPlace(0, { label: 'Amsterdam ' });
+  }, ids.places);
+
+  await expect(markers).toHaveCount(4);
+  await expect(ringed()).toHaveCount(1);
+  expect(await page.evaluate(({ id, place }) => (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.flow.getWorker(id).isPicked(place), { id: ids.map, place: chosen })).toBe(true);
+});
+
 /**
  * At most one, or none.
  *

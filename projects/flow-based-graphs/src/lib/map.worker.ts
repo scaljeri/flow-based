@@ -77,6 +77,8 @@ export class MapWorker implements FbNodeWorker {
    * a set of exactly one, so whatever reads places can read this too.
    */
   private readonly picked = new ReplaySubject<GeoPlaces>(1);
+  /** Which place is drawn as chosen; see isPicked. */
+  private pickedKey?: string;
   private readonly subscriptions: { [id: number]: Subscription } = {};
   private readonly bySocket = new Map<number, MapLayer>();
 
@@ -100,7 +102,34 @@ export class MapWorker implements FbNodeWorker {
 
   /** Called by the drawing when a marker is pressed. */
   pick(place: Place): void {
+    this.pickedKey = MapWorker.keyOf(place);
     this.picked.next({ places: [{ ...place }] });
+  }
+
+  /**
+   * Is this the place the reader chose?
+   *
+   * Kept here rather than in the drawing because the drawing is rebuilt every
+   * time data arrives — and a station that stays selected while its own
+   * network reloads is the whole point of selecting it.
+   *
+   * Deliberately NOT in the config: a selection is something the reader is
+   * doing now, not something the flow is. Saving it would reopen the document
+   * with somebody else's station highlighted and no way to tell why.
+   */
+  isPicked(place: Place): boolean {
+    return this.pickedKey !== undefined && MapWorker.keyOf(place) === this.pickedKey;
+  }
+
+  /**
+   * What identifies a place across redraws.
+   *
+   * The publisher's own reference when there is one — that is what it is FOR,
+   * and it survives a list arriving in a different order. Coordinates
+   * otherwise, which is weaker but is all an anonymous point has.
+   */
+  private static keyOf(place: Place): string {
+    return place.ref ?? `${place.lat},${place.lon}`;
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {

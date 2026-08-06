@@ -58,6 +58,8 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
   private leaflet?: typeof L;
   private map?: L.Map;
   private drawn: L.Layer[] = [];
+  /** The marker drawn as chosen, and how it looked before it was. */
+  private chosen?: { marker: L.CircleMarker; resting: L.CircleMarkerOptions };
   /** Set once the user moves the map by hand; following stops there. */
   private moved = false;
 
@@ -364,6 +366,31 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** The input sockets' layers, in the order the node declares them. */
+  /**
+   * Draw this marker as the chosen one, and give the last one back its own
+   * looks.
+   *
+   * A white ring rather than another colour: the fill keeps saying which layer
+   * the place belongs to, which is a different question from which place is
+   * selected, and answering both with one colour makes both unreadable. Raised
+   * to the front because a chosen dot under an unchosen one is not chosen as
+   * far as the reader can tell.
+   */
+  private markChosen(marker: L.CircleMarker, resting: L.CircleMarkerOptions): void {
+    if (this.chosen && this.chosen.marker !== marker) {
+      // The radius is not a style in Leaflet's sense and has its own setter,
+      // so putting it back takes both calls.
+      this.chosen.marker.setStyle(this.chosen.resting);
+      this.chosen.marker.setRadius(this.chosen.resting.radius ?? 5);
+    }
+
+    marker.setStyle({ color: '#fff', fillOpacity: 1, weight: 3 });
+    marker.setRadius(9);
+    marker.bringToFront();
+
+    this.chosen = { marker, resting };
+  }
+
   private layers(): MapLayer[] {
     return (this.service.state.sockets ?? [])
       .filter(socket => socket.type === 'in')
@@ -384,6 +411,9 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.drawn = [];
+    // The marker it pointed at has just been removed from the map; the choice
+    // itself lives in the worker and is re-applied as the new markers are made.
+    this.chosen = undefined;
 
     const bounds: [number, number][] = [];
 
@@ -404,21 +434,36 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
         line.push(at);
 
         const active = place_index === layer.current;
-        const marker = leaflet.circleMarker(at, {
+        const resting: L.CircleMarkerOptions = {
           color: colour,
           fillColor: colour,
           fillOpacity: active ? 0.95 : 0.55,
           radius: active ? 8 : 5,
           weight: 2,
-        }).addTo(map);
+        };
+        const marker = leaflet.circleMarker(at, resting).addTo(map);
 
         /*
          * A press is a question about this spot, and the node's output is
          * where the answer goes. The cursor says so, because a dot that does
          * something and a dot that does not look identical otherwise.
+         *
+         * And the answer is not only downstream: pressing a dot marks it, so
+         * the map still says which of four hundred it was after the panel
+         * below it fills in. A click that changes something out of sight is a
+         * click you cannot be sure landed.
          */
-        marker.on('click', () => this.worker.pick(place));
+        marker.on('click', () => {
+          this.worker.pick(place);
+          this.markChosen(marker, resting);
+        });
         marker.options.className = 'fb-map-pickable';
+
+        // A redraw rebuilds every marker, so the choice is re-applied from the
+        // worker rather than remembered by the marker that no longer exists.
+        if (this.worker.isPicked(place)) {
+          this.markChosen(marker, resting);
+        }
 
         if (place.label) {
           /*
