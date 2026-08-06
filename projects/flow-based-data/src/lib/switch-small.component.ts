@@ -48,7 +48,7 @@ import { SwitchWorker } from './switch.worker';
        * arrived is only better than numbered inputs if the name is legible,
        * and "Officieel meetnet (RIVM LML)" is the length these names run to.
        */
-      width: 208px;
+      width: 228px;
     }
 
     .track {
