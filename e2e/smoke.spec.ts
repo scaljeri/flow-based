@@ -2838,20 +2838,33 @@ test('a config file supplies the pattern, and the template builds the URL from i
     worker.setStream({ subscribe: (fn: (v: unknown) => void) => { fn('PM2.5'); return { unsubscribe() {} }; } },
       named('pollutant'), { id: 902 });
 
-    await new Promise(resolve => setTimeout(resolve, 900));
-
-    return {
-      pattern: worker.pattern as string,
-      missing: worker.missing as string[],
-      result: worker.result as string,
-    };
+    return template.id as number;
   });
 
-  expect(built.pattern).toBe('data/{region}/grid/{date}/{pollutant}.json');
-  expect(built.missing).toEqual([]);
+  /*
+   * Polled from out here rather than slept for in there. A fixed wait inside
+   * the evaluate reads the answer ONCE and has nothing to retry with — it is
+   * the shape that fails first on a slow machine, and this one did.
+   */
+  const state = () => page.evaluate(nodeId => {
+    const worker = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(nodeId);
+
+    return {
+      pattern: worker?.pattern as string ?? '',
+      missing: worker?.missing as string[] ?? ['not built yet'],
+      result: worker?.result as string ?? '',
+    };
+  }, built);
+
+  await expect.poll(async () => (await state()).missing).toEqual([]);
+
+  const filled = await state();
+
+  expect(filled.pattern).toBe('data/{region}/grid/{date}/{pollutant}.json');
 
   // Lowercased in the path and nowhere else — the trap TOPAS actually sets.
-  expect(built.result).toBe('data/nl/grid/2026-07-01/PM2.5.json');
+  expect(filled.result).toBe('data/nl/grid/2026-07-01/PM2.5.json');
 });
 
 
@@ -3036,6 +3049,89 @@ test('a subflow draws a picture of itself, or the child it is told to wear', asy
 
     return editor.root.children.find((child: any) => child.type === 'flow').config.preview as number;
   })).toBe(Number(chosen));
+});
+
+
+/**
+ * The options are data too.
+ *
+ * A Switch chooses between the streams wired into it; a Choice chooses a value
+ * out of a list a source published. TOPAS says which pollutants it has for a
+ * region and which networks measure it — a flow whose options were typed into
+ * a config would go stale the day the publisher adds one.
+ */
+test('a choice offers what arrived, and sends on the field it was told to', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const choice = editor.addNode('data-choice');
+
+    choice.position = { x: 8, y: 74 };
+    Object.assign(choice.config, { list: 'networks', label: 'name.nl', value: 'id', as: 'text' });
+
+    return choice.id as number;
+  });
+
+  // Fed the way a request would feed it: the publisher's own list, untouched.
+  const sent: string[] = await page.evaluate(async nodeId => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const worker = flow.getWorker(nodeId);
+    const seen: string[] = [];
+
+    worker.getStream().subscribe((value: string) => seen.push(value));
+    worker.setStream({
+      subscribe: (fn: (v: unknown) => void) => {
+        fn({
+          meta: { title: 'TOPAS' },
+          value: {
+            networks: [
+              { id: 'lml', name: { nl: 'Officieel (RIVM LML)' } },
+              { id: 'samenmeten', name: { nl: 'Burgersensoren' } },
+              { id: 'eea', name: { nl: 'EEA' } },
+            ],
+          },
+        });
+
+        return { unsubscribe() { /* nothing held */ } };
+      },
+    }, { id: 1, type: 'in' }, { id: 900 });
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    return seen;
+  }, id);
+
+  // The first option, by the field it was told to send — not the one shown.
+  expect(sent).toEqual(['lml']);
+
+  const node = page.locator('fb-flow-canvas fb-node-box').last();
+
+  await expect(node).toContainText('Officieel (RIVM LML)');
+  await expect(node).toContainText('Burgersensoren');
+
+  // Choosing another sends that one. The unwrapping matters: this arrived
+  // wearing its source's name, as everything from a request does.
+  await node.locator('button', { hasText: 'EEA' }).click();
+
+  await expect.poll(() => page.evaluate(nodeId => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return new Promise(resolve => flow.getWorker(nodeId).getStream().subscribe(resolve));
+  }, id)).toBe('eea');
+
+  /*
+   * And pressing an option must not drag the node it is drawn on — the same
+   * bargain the Switch strikes, because the two gestures start identically.
+   */
+  const before = await page.evaluate(nodeId => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.nodeById(nodeId).position), id);
+
+  await node.locator('button', { hasText: 'Burgersensoren' }).click();
+
+  expect(await page.evaluate(nodeId => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+    .editor.nodeById(nodeId).position), id)).toBe(before);
 });
 
 /**

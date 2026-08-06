@@ -3,6 +3,9 @@ import { PickWorker } from './pick.worker';
 import { PickSmallComponent } from './pick-small.component';
 import { PickSettingsComponent } from './pick-settings.component';
 import { SwitchWorker } from './switch.worker';
+import { ChoiceWorker } from './choice.worker';
+import { ChoiceSmallComponent } from './choice-small.component';
+import { ChoiceSettingsComponent } from './choice-settings.component';
 import { TemplateWorker } from './template.worker';
 import { TemplateSmallComponent } from './template-small.component';
 import { TemplateSettingsComponent } from './template-settings.component';
@@ -85,6 +88,28 @@ export const DATA_MODULE: FbModule = {
         addableSockets: 'in',
       },
       worker: TemplateWorker,
+    },
+
+    /*
+     * The Switch chooses between STREAMS; this chooses a VALUE out of a list a
+     * source published. Two nodes because they are two questions — and because
+     * a flow whose options were typed into a config goes stale the day the
+     * publisher adds one.
+     */
+    'data-choice': {
+      component: { small: ChoiceSmallComponent },
+      settingsComponent: ChoiceSettingsComponent,
+      settings: {
+        title: 'Choice',
+        group: 'Data',
+        config: { list: '', label: '', value: '', as: 'text', which: 0 },
+        sockets: [
+          { type: 'in', formats: ['data', 'geo', 'point', 'number', 'grid'] },
+          { type: 'out', format: 'string' },
+        ],
+        addableSockets: 'none',
+      },
+      worker: ChoiceWorker,
     },
 
     'data-switch': {
