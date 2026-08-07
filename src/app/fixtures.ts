@@ -1133,7 +1133,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 13 },
+  config: { seedVersion: 14 },
   sockets: [],
   children: [
     /*
@@ -1166,32 +1166,22 @@ export const tno = () => ({
       position: { x: 2, y: 6 },
     },
     {
-      type: 'data-filter',
-      title: 'Pollutants we map',
-      id: 620,
-      /*
-       * Five are published — PM2.5, PM10, NO2, O3 and SO2 — and this map is
-       * about the first four. The rule is written down rather than the answer,
-       * so the day they add a sixth the flow has an opinion somebody chose.
-       */
-      config: { list: 'regions.0.pollutants', path: '', test: 'oneOf', value: 'PM2.5, PM10, NO2, O3' },
-      sockets: [
-        { id: 621, type: 'in', formats: ['data'] },
-        { id: 622, type: 'out', format: 'data' },
-      ],
-      position: { x: 18, y: 6 },
-    },
-    {
       type: 'data-choice',
       title: 'Which pollutant',
       id: 630,
-      // The list itself arrives; each item IS the name, so no paths.
-      config: { list: '', label: '', value: '', as: 'text', which: 0 },
+      /*
+       * Whatever TOPAS publishes, all of it. A filter used to sit in front of
+       * this naming four of the five — and a list typed into a flow is a
+       * second copy of a fact the publisher already states, wrong the day they
+       * add a sixth. Each item IS the name, so no paths beyond the list.
+       */
+      config: { list: 'regions.0.pollutants', label: '', value: '', as: 'text', which: 0 },
       sockets: [
         { id: 631, type: 'in', formats: ['data', 'geo', 'point', 'number', 'grid'] },
         { id: 632, type: 'out', format: 'string' },
       ],
-      position: { x: 33, y: 4 },
+      // Where the filter stood: the config feeds it directly now.
+      position: { x: 20, y: 5 },
     },
     {
       type: 'data-switch',
@@ -1233,8 +1223,7 @@ export const tno = () => ({
   connections: [
     // The config, into the machinery and into the chooser beside it.
     { id: 1020, from: 600, to: 2000, out: 610, in: 2010 },
-    { id: 1021, from: 600, to: 620, out: 610, in: 621 },
-    { id: 1022, from: 620, to: 630, out: 622, in: 631 },
+    { id: 1021, from: 600, to: 630, out: 610, in: 631 },
     { id: 1023, from: 630, to: 2000, out: 632, in: 2011 },
 
     // Three networks into the switch, one of them onto the map.

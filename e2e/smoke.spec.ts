@@ -2996,22 +2996,21 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
   /*
    * The pollutant is a decision, and it is made OUTSIDE the machinery: the
-   * config feeds a filter that states which pollutants this map is about, and
-   * a choice that picks one of them. Both used to be buried — the config was
-   * fetched fifteen nodes deep and the pollutant was whichever one the
-   * publisher happened to list first.
+   * config feeds a chooser that offers whatever the publisher publishes. It
+   * used to be buried — the config was fetched fifteen nodes deep and the
+   * pollutant was whichever one the publisher happened to list first. A filter
+   * once stood in front of this naming four of the five it should offer; a
+   * list typed into a flow is a second copy of a fact the publisher already
+   * states, and it is wrong the day they add a sixth.
    */
   const chooser = () => page.evaluate(() => {
     const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
-    const filter = flow.getWorker(620) as { kept: number; total: number; dropped: string[] };
     const choice = flow.getWorker(630) as { labels: string[]; chosenLabel: string };
     const sub = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
       .editor.root.children.find((child: any) => child.type === 'flow');
     const grid = sub.children.find((child: any) => child.title === 'NL grid');
 
     return {
-      kept: `${filter.kept} of ${filter.total}`,
-      dropped: filter.dropped,
       offered: choice.labels,
       chosen: choice.chosenLabel,
       url: (flow.getWorker(grid.id) as { url: string }).url,
@@ -3019,11 +3018,8 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   });
 
   /*
-   * And both nodes say what they are doing. A request that only says "200"
-   * cannot tell 200-in-40ms from 200-in-nine-seconds, and a filter that only
-   * says "2 of 3" makes its two failure modes — keeping everything, keeping
-   * the wrong ones — look identical. The name of what was DROPPED is the half
-   * a count cannot give you, and the first thing a reader asks for.
+   * And the request says what it is doing. One that only says "200" cannot
+   * tell 200-in-40ms from 200-in-nine-seconds.
    */
   const boxes = () => page.evaluate(() => {
     const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')];
@@ -3034,26 +3030,19 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
       return found ? content(found) : '';
     };
 
-    return {
-      request: byId(600),
-      filter: byId(620),
-    };
+    return { request: byId(600) };
   });
 
   // No spaces between the spans: textContent runs them together, and pinning
-  // that is pinning the layout rather than what the node says.
-  // Both follow a fetch, so both get a fetch-sized budget rather than the
-  // five seconds a re-render deserves.
+  // that is pinning the layout rather than what the node says. It follows a
+  // fetch, so it gets a fetch-sized budget rather than the five seconds a
+  // re-render deserves.
   await expect.poll(async () => (await boxes()).request, { timeout: 20_000 })
     .toMatch(/GET200.*ms.*config\.json/);
-  await expect.poll(async () => (await boxes()).filter, { timeout: 20_000 })
-    .toMatch(/2 of 3\s*PM2\.5, NO2\s*without SO2/);
 
-  // Three are published; SO2 is not one this map draws, and the node says so
-  // rather than leaving a reader to work out which of the three went missing.
-  await expect.poll(async () => (await chooser()).kept).toBe('2 of 3');
-  expect((await chooser()).dropped).toEqual(['SO2']);
-  expect((await chooser()).offered).toEqual(['PM2.5', 'NO2']);
+  // Everything the publisher lists, in the order it lists them.
+  await expect.poll(async () => (await chooser()).offered, { timeout: 20_000 })
+    .toEqual(['PM2.5', 'NO2', 'SO2']);
   expect((await chooser()).url).toContain('PM2.5.json');
 
   // Choosing the other one moves the whole chain: the file name is built from
@@ -3922,4 +3911,56 @@ test('a half-typed script says so, and the last working one keeps running', asyn
   // The broken one never compiled, so what still runs is the one that did.
   expect(state.last).toBe('first');
   expect(state.stillRunning).toBe(true);
+});
+
+
+/**
+ * A filter says which ones it dropped, not just how many.
+ *
+ * No flow in the demo uses one any more — the TOPAS map offers whatever its
+ * publisher publishes rather than a list typed into the flow — but the node is
+ * in the palette and this is the whole of what it has to say. "2 of 3" makes
+ * its two failure modes look identical: keeping everything, and keeping the
+ * wrong ones. The name of what went is the half a count cannot give you.
+ */
+test('a filter names what it dropped', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const shown = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const filter = editor.addNode('data-filter');
+
+    filter.position = { x: 6, y: 62 };
+
+    const worker = editor.flow.getWorker(filter.id);
+
+    worker.write('test', 'oneOf');
+    worker.write('value', 'PM2.5, NO2');
+
+    worker.setStream(
+      { subscribe: (fn: (v: unknown) => void) => { fn(['PM2.5', 'NO2', 'SO2']); return { unsubscribe() { /* kept */ } }; } },
+      { id: 1, type: 'in' },
+      { id: 9001 },
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    return {
+      kept: worker.labels as string[],
+      dropped: worker.dropped as string[],
+      id: filter.id as number,
+    };
+  });
+
+  expect(shown.kept).toEqual(['PM2.5', 'NO2']);
+  expect(shown.dropped).toEqual(['SO2']);
+
+  // And on the node itself, which is where anyone reading the flow will look.
+  await expect.poll(() => page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(node => (node as unknown as { state?: { id?: number } }).state?.id === nodeId);
+
+    return box?.textContent!.replace(/\s+/g, ' ').trim() ?? '';
+  }, shown.id)).toMatch(/2 of 3\s*PM2\.5, NO2\s*without SO2/);
 });
