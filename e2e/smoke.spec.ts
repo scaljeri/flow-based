@@ -3748,3 +3748,168 @@ test('what a source is travels with what it returned', async ({ page }) => {
   expect(named.throughPick).toBe(1);
   expect(named.switchLabel).toBe('Officieel meetnet (RIVM LML)');
 });
+
+
+/**
+ * A node whose behaviour is typed rather than configured.
+ *
+ * Three things have to be true at once and each fails differently: Monaco has
+ * to actually render (it is loaded lazily, from a chunk that carries its own
+ * stylesheet — without it the editor is a bare textarea and nothing throws),
+ * the code has to run for values arriving over a real connection, and what it
+ * emits has to leave by the out socket like any other node's output.
+ *
+ * The source is set through the editor rather than through the config, because
+ * every keystroke recompiles and that path is the one a person uses.
+ */
+test('a script node runs what is typed in it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const source = editor.addNode('random-numbers');
+    const script = editor.addNode('script');
+
+    source.position = { x: 4, y: 62 };
+    script.position = { x: 24, y: 62 };
+
+    editor.socketClicked(source.sockets.find((s: any) => s.type === 'out'), source.id);
+    editor.socketClicked(script.sockets.find((s: any) => s.type === 'in'), script.id);
+
+    return script.id as number;
+  });
+
+  await page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, id);
+
+  // Rendered by Monaco itself: a `.view-line` per line means it is really up.
+  await expect(page.locator('fb-flow-canvas .monaco-editor').first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('fb-flow-canvas .view-line').first()).toBeVisible();
+
+  /*
+   * Typed, not written into the config — this is the compile-per-keystroke
+   * path. Clicked on the LINES: Monaco's real input is a textarea underneath
+   * its own scroller, so a click aimed at it hits the scroller instead.
+   */
+  await page.locator('fb-flow-canvas .monaco-editor .view-lines').first().click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('emit("saw a " + typeof value);');
+
+  const ran = await page.evaluate(async nodeId => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const worker = editor.flow.getWorker(nodeId);
+    const seen: unknown[] = [];
+
+    worker.getStream().subscribe((value: unknown) => seen.push(value));
+
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    return { seen, runs: worker.runs as number, problem: worker.compileError ?? worker.runtimeError };
+  }, id);
+
+  expect(ran.problem).toBe(null);
+  expect(ran.runs).toBeGreaterThan(0);
+  expect(ran.seen).toContain('saw a number');
+});
+
+
+/**
+ * Half-written code is the normal state of code.
+ *
+ * Compiling on every keystroke means most keystrokes are a syntax error, and a
+ * flow that stopped dead at each of them would be unusable — so the last
+ * function that compiled keeps running while the next one is being written,
+ * and the node says what is wrong instead of going quiet.
+ */
+test('a half-typed script says so, and the last working one keeps running', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const source = editor.addNode('random-numbers');
+    const script = editor.addNode('script');
+
+    source.position = { x: 4, y: 62 };
+    script.position = { x: 24, y: 62 };
+
+    editor.socketClicked(source.sockets.find((s: any) => s.type === 'out'), source.id);
+    editor.socketClicked(script.sockets.find((s: any) => s.type === 'in'), script.id);
+
+    return script.id as number;
+  });
+
+  await page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)!;
+
+    box.shadowRoot!.querySelector('.box')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }, id);
+
+  await expect(page.locator('fb-flow-canvas .monaco-editor').first()).toBeVisible({ timeout: 30_000 });
+
+  // The lines, not the textarea beneath them — see the test above.
+  const editorArea = page.locator('fb-flow-canvas .monaco-editor .view-lines').first();
+
+  await editorArea.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('emit("first");');
+
+  await expect.poll(() => page.evaluate(nodeId => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return editor.flow.getWorker(nodeId).last as unknown;
+  }, id)).toBe('first');
+
+  /*
+   * Now break it. Not by leaving a bracket open, which is the obvious way and
+   * the one Monaco quietly repairs as you type — an unfinished statement is
+   * the half-written code that actually reaches the compiler.
+   *
+   * Inserted rather than typed, so that the broken version is the only one
+   * that compiles here. Typing it letter by letter would compile a dozen
+   * shorter programs on the way, and the last one to succeed would be some
+   * prefix that emits nothing — true of the editor, but not what this test is
+   * about.
+   */
+  await editorArea.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.insertText('state.count = ;');
+
+  const state = await page.evaluate(async nodeId => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const worker = editor.flow.getWorker(nodeId);
+    const before = worker.emitted as number;
+
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    return {
+      compileError: worker.compileError as string | null,
+      last: worker.last as unknown,
+      stillRunning: (worker.emitted as number) > before,
+    };
+  }, id);
+
+  expect(state.compileError).toBeTruthy();
+
+  /*
+   * Said on the node, not only in the console. The counts it usually shows are
+   * the wrong thing to read while the code does not compile — they would keep
+   * ticking up from the previous version and look like agreement.
+   */
+  const footer = page.locator('fb-flow-canvas .fb-node-content > footer').first();
+
+  await expect(footer).toContainText(state.compileError!);
+  await expect(footer).not.toContainText('in ·');
+
+  // The broken one never compiled, so what still runs is the one that did.
+  expect(state.last).toBe('first');
+  expect(state.stillRunning).toBe(true);
+});

@@ -25,6 +25,10 @@ import { CustomCodeSmallComponent } from './nodes/custom-code/custom-code-small.
 import { CustomCodeNormalComponent } from './nodes/custom-code/custom-code-normal.component';
 import { CustomCodeFullComponent } from './nodes/custom-code/custom-code-full.component';
 import { CUSTOM_CODE_SETTINGS, CustomCodeWorker } from './workers/custom-code';
+import { SCRIPT_SETTINGS, ScriptWorker } from './workers/script';
+import { ScriptSmallComponent } from './nodes/script/script-small.component';
+import { ScriptNormalComponent } from './nodes/script/script-normal.component';
+import { ScriptFullComponent } from './nodes/script/script-full.component';
 import { FractalSmallComponent } from './nodes/fractal/fractal-small.component';
 import { FractalSettingsComponent } from './nodes/fractal/fractal-settings.component';
 import { FRACTALS_SETTINGS, FractalsWorker } from './workers/fractals';
@@ -102,6 +106,22 @@ export const FB_CONFIG: FbNodeTypes = {
     settings: TAP_SETTINGS,
     worker: TapWorker,
   },
+  /*
+   * The escape hatch: a node whose behaviour is written rather than
+   * configured. Every other node answers one question well; this one answers
+   * whatever you can express, in a real editor — Monaco, fetched only when a
+   * script is actually opened.
+   */
+  'script': {
+    component: {
+      small: ScriptSmallComponent,
+      normal: ScriptNormalComponent,
+      full: ScriptFullComponent,
+    },
+    settings: { ...SCRIPT_SETTINGS, resizable: true },
+    worker: ScriptWorker,
+  },
+
   'custom': {
     component: {
       small: CustomCodeSmallComponent,

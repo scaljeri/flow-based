@@ -44,7 +44,12 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              {
+                "input": "node_modules/monaco-editor/min/vs/editor/editor.main.css",
+                "bundleName": "monaco",
+                "inject": false
+              }
             ],
             "stylePreprocessorOptions": {
               "includePaths": [
@@ -58,6 +63,9 @@
                   "slash-div"
                 ]
               }
+            },
+            "loader": {
+              ".ttf": "file"
             }
           },
           "configurations": {
