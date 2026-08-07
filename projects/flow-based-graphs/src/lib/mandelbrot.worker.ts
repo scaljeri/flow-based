@@ -40,10 +40,19 @@ export class MandelbrotWorker implements FbNodeWorker {
   private readonly subject = new ReplaySubject<{ re: number; im: number }>(1);
   private readonly subscriptions: { [id: number]: Subscription } = {};
 
-  /** Told when the view has to redraw: a new region, or a new marker. */
-  private readonly ticks = new Subject<void>();
+  /**
+   * What changed, not merely that something did.
+   *
+   * A new region means ninety thousand pixels of arithmetic; a new marker
+   * means one small circle over pixels that are already correct. Telling the
+   * view only that "something happened" made pressing a point recompute the
+   * entire set to draw a five-pixel ring — visible as the picture blanking and
+   * rebuilding under the reader's finger, on the one interaction the whole
+   * section rests on.
+   */
+  private readonly ticks = new Subject<'view' | 'mark'>();
 
-  get changes(): Observable<void> {
+  get changes(): Observable<'view' | 'mark'> {
     return this.ticks.asObservable();
   }
 
@@ -71,7 +80,7 @@ export class MandelbrotWorker implements FbNodeWorker {
       if (region && typeof region.re === 'number' && typeof region.im === 'number'
         && typeof region.span === 'number' && region.span > 0) {
         this.config.view = { re: region.re, im: region.im, span: region.span };
-        this.ticks.next();
+        this.ticks.next('view');
       }
     });
   }
@@ -105,25 +114,25 @@ export class MandelbrotWorker implements FbNodeWorker {
 
   setView(view: Region): void {
     this.config.view = view;
-    this.ticks.next();
+    this.ticks.next('view');
   }
 
   set(key: 'iterations', value: number): void {
     this.config[key] = value;
-    this.ticks.next();
+    this.ticks.next('view');
   }
 
   /** Somebody pressed the picture. */
   pick(re: number, im: number): void {
     this.marked = { re, im };
     this.subject.next(this.marked);
-    this.ticks.next();
+    this.ticks.next('mark');
   }
 
   /** A document's inline inputs reach the region and the detail. */
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
-      this.ticks.next();
+      this.ticks.next('view');
     }
   }
 }

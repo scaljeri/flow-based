@@ -7,8 +7,9 @@ import { IterateWorker } from './iterate.worker';
  *
  * `c` gets two fields because it is two numbers, and they are the only two
  * that change what the picture MEANS — the rest is how long to watch and how
- * fast. A wired `c` overwrites these, which is what lets a picture of the set
- * drive the orbit; the fields then show what arrived.
+ * fast. A wired `c` takes over while it is wired — that is what lets a picture
+ * of the set drive the orbit — and the fields then show what arrived. Typing
+ * one takes control back.
  */
 @Component({
   standalone: true,

@@ -41,10 +41,18 @@ export abstract class MandelbrotView implements OnInit, AfterViewInit, OnDestroy
   private resizeObserver?: ResizeObserver;
   private frame?: number;
 
+  /** The finished picture, so a marker can be drawn without recomputing it. */
+  private painted?: ImageData;
+
   ngOnInit(): void {
     this.worker = this.service.worker as MandelbrotWorker;
-    this.subscription = this.worker?.changes.subscribe(() => {
-      this.draw();
+    this.subscription = this.worker?.changes.subscribe(what => {
+      if (what === 'mark') {
+        this.remark();
+      } else {
+        this.draw();
+      }
+
       this.cdr.detectChanges();
     });
   }
@@ -123,6 +131,7 @@ export abstract class MandelbrotView implements OnInit, AfterViewInit, OnDestroy
     }
 
     this.stop();
+    this.painted = undefined;
 
     const view = this.worker.view;
     const iterations = this.worker.iterations;
@@ -176,11 +185,32 @@ export abstract class MandelbrotView implements OnInit, AfterViewInit, OnDestroy
         this.frame = undefined;
         shade(image.data, counts, 0, counts.length, range);
         context.putImageData(image, 0, 0);
+        this.painted = image;
         this.mark(context, width, height, view);
       }
     };
 
     paint(0);
+  }
+
+  /**
+   * Put the marker somewhere else on a picture that is already right.
+   *
+   * Nothing about the set changed — only which point of it is being asked
+   * about — so this restores the last finished pixels and draws over them. If
+   * the picture is still computing there is nothing to restore, and the run in
+   * progress will place the marker when it finishes.
+   */
+  private remark(): void {
+    const canvas = this.plot?.nativeElement;
+    const context = canvas?.getContext('2d');
+
+    if (!canvas || !context || !this.painted) {
+      return;
+    }
+
+    context.putImageData(this.painted, 0, 0);
+    this.mark(context, canvas.width, canvas.height, this.worker.view);
   }
 
   /** Where the last press landed, so the wire out of this node is visible. */

@@ -4039,3 +4039,49 @@ test('the Mandelbrot section answers the reader, both ways', async ({ page }) =>
   await expect.poll(async () => (await state()).escapedAt).not.toBe(null);
   expect((await state()).escapedAt).toBeLessThan(10);
 });
+
+
+/**
+ * A wire drives a node without editing what the flow saves.
+ *
+ * Pressing the set sends a `c` into the orbit node, and the obvious way to
+ * receive it is to write it into the config — which quietly means the flow you
+ * saved is not the flow you opened, and a document's inline input for that
+ * value is showing a number nobody typed. So the arriving value takes over
+ * while it is wired, the written-down one stays underneath, and typing takes
+ * control back.
+ */
+test('a wired value overrides the written one without replacing it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const state = () => page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return {
+      used: editor.flow.getWorker(1900).c as { re: number; im: number },
+      saved: editor.nodeById(1900).config.c as { re: number; im: number },
+    };
+  });
+
+  expect((await state()).saved).toEqual({ re: -0.5, im: 0.5 });
+
+  // A press on the picture, faked at the worker: the point is what it does to
+  // the two values, not how the pointer got there.
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(1800).pick(-0.2, 0.7);
+  });
+
+  await expect.poll(async () => (await state()).used.re).toBe(-0.2);
+  expect((await state()).saved).toEqual({ re: -0.5, im: 0.5 });
+
+  // And typing takes it back, wire or no wire.
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.setNodeConfigValue(1900, 'c.re', 0.1);
+  });
+
+  await expect.poll(async () => (await state()).used.re).toBe(0.1);
+  expect((await state()).saved.re).toBe(0.1);
+});

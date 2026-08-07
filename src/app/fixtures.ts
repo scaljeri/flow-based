@@ -554,7 +554,7 @@ export const demo = () => ({
           'application of the rule. For this $c$ it spirals inwards and stops moving — ' +
           'the walk has found a point that the rule sends back to itself.\n' +
           '\n' +
-          'Now move $c$ and watch it break. It is at $c =$ {{1900:c.re}} $+$ ' +
+          'Now move $c$ and watch it break. It starts at $c =$ {{1900:c.re}} $+$ ' +
           '{{1900:c.im}}$\\,i$ — raise the first number to $0.4$ and the spiral stops ' +
           'being a spiral: three or four dots, each further out than the last, and the ' +
           'walk is gone. Put it back to $-0.5$ and it settles again.\n' +
@@ -579,9 +579,11 @@ export const demo = () => ({
           'whose walk ran away. The shape is the answer, not the question.\n' +
           '\n' +
           'The two figures are wired together: press a point in the picture and the walk ' +
-          'beside it is that point\u2019s walk. Press deep inside the black and it ' +
-          'settles. Press well outside and it is gone in a few steps. Press *just* on ' +
-          'the edge and it does neither for a long time — which is what the edge is.\n' +
+          'beside it is that point\u2019s walk — the press takes over from the two ' +
+          'numbers above, until you type one of them again. Press deep inside the black ' +
+          'and the walk settles. Press well outside and it is gone in a few steps. Press ' +
+          '*just* on the edge and it does neither for a long time — which is what the ' +
+          'edge is.\n' +
           '\n' +
           'And that edge is where it stops being ordinary. Look closer at it and it does ' +
           'not smooth out, the way a circle does. There is always more of it, at every ' +

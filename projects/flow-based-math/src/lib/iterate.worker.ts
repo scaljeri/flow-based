@@ -58,6 +58,17 @@ export class IterateWorker implements FbNodeWorker {
   /** The step it escaped on, or null when it stayed. */
   escapedAt: number | null = null;
 
+  /**
+   * A `c` that arrived on the wire, kept apart from the one in the config.
+   *
+   * A wire must not rewrite what a flow SAVES. Pressing a picture of the set
+   * would otherwise edit this node's stored `c`, so the flow you saved is not
+   * the flow you opened, and a document's inline input for that value would be
+   * showing a number nobody typed. What is wired wins while it is wired, and
+   * the written-down value is still underneath it.
+   */
+  private wired?: { re: number; im: number };
+
   constructor(private readonly config: IterateConfig = {}) {
     this.recompute();
     this.restart();
@@ -74,9 +85,9 @@ export class IterateWorker implements FbNodeWorker {
   }
 
   /**
-   * A `c` from somewhere else wins over the one in the config.
+   * A `c` from somewhere else takes over from the one in the config.
    *
-   * Which is how a picture of the set can drive this: click a place on it and
+   * Which is how a picture of the set can drive this: press a place on it and
    * the orbit for that place is what walks. Nothing is wired by default, and
    * then the config's own `c` is the answer.
    */
@@ -85,20 +96,27 @@ export class IterateWorker implements FbNodeWorker {
       const point = value as { re?: number; im?: number } | null;
 
       if (point && typeof point.re === 'number' && typeof point.im === 'number') {
-        this.config.c = { re: point.re, im: point.im };
+        this.wired = { re: point.re, im: point.im };
         this.recompute();
         this.restart();
       }
     });
   }
 
+  /** The wire is gone, so the written-down value is the answer again. */
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    if (!Object.keys(this.subscriptions).length) {
+      this.wired = undefined;
+      this.recompute();
+      this.restart();
+    }
   }
 
   get c(): { re: number; im: number } {
-    return this.config.c ?? DEFAULT_C;
+    return this.wired ?? this.config.c ?? DEFAULT_C;
   }
 
   get z0(): { re: number; im: number } {
@@ -139,8 +157,10 @@ export class IterateWorker implements FbNodeWorker {
     this.restart();
   }
 
+  /** Typing a number takes control back from whatever is wired in. */
   setC(part: 're' | 'im', value: number): void {
     this.config.c = { ...this.c, [part]: value };
+    this.wired = undefined;
     this.recompute();
     this.restart();
   }
@@ -154,6 +174,11 @@ export class IterateWorker implements FbNodeWorker {
   setConfigValue(path: string, value: unknown): void {
     if (!writeConfigValue(this.config as Record<string, unknown>, path, value)) {
       return;
+    }
+
+    // Same as typing in the panel: a hand on the number wins over a wire.
+    if (path.startsWith('c')) {
+      this.wired = undefined;
     }
 
     this.recompute();
