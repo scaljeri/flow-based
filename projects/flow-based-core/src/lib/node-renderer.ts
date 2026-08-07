@@ -76,6 +76,16 @@ export interface FbNodeApi {
    */
   refresh(): void;
 
+  /**
+   * This node has changed what its sockets carry; cut the wires that no
+   * longer fit.
+   *
+   * For a worker whose settings decide its output type — a Pick told to build
+   * places instead of a number. Without it the socket says one thing and a
+   * wire made before the change says another, and both are believed.
+   */
+  retype(): void;
+
   /** Listen for framework events addressed to this node (`blur`, and so on). */
   register(callback: FbNodeEventCallback, type?: string): void;
 

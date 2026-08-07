@@ -221,6 +221,7 @@ export class ModulesService {
    */
   defineType(def: FbFormatDef): void {
     this.formats.seed(def);
+    this.formats.audit();
 
     if (def.color) {
       this.colors[def.name] ??= def.color;

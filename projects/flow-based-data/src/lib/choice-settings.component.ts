@@ -103,6 +103,13 @@ export class ChoiceSettingsComponent {
 
   write(key: keyof ChoiceConfig, event: Event): void {
     this.worker?.write(key, (event.target as HTMLInputElement | HTMLSelectElement).value);
+
+    // `as` decides whether this sends text or the item itself, and the worker
+    // rewrites its out socket to say so. Wires made before that are re-checked.
+    if (key === 'as') {
+      this.service.retype();
+    }
+
     this.cdr.detectChanges();
   }
 }

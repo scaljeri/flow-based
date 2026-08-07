@@ -3213,6 +3213,14 @@ test('pressing a socket names it, and can be asked what its type means', async (
   await expect(page.locator('fb-socket-types-dialog')).toHaveCount(1);
   await page.locator('fb-socket-types-dialog button[mat-dialog-close]').click();
 
+  /*
+   * Pressed again, because by now the first note is long gone: it expires on
+   * its own after six seconds, and the two dialogs above take longer than
+   * that under load. Waiting for it here was a test assuming a bar that
+   * outlives its own design.
+   */
+  await dot.click();
+  await expect(note).toHaveCount(1);
   await note.locator('button.close').click();
   await expect(note).toHaveCount(0);
 
@@ -3416,6 +3424,61 @@ test('a settled socket keeps one type, and forgets it when the wire goes', async
   // Forgotten, and the declaration is intact — the socket may be typed again.
   expect(seen.afterRemoval).toBeNull();
   expect(seen.stillDeclared).toEqual(seen.declared);
+});
+
+
+/**
+ * Changing what a node produces cuts the wires that no longer fit.
+ *
+ * A Pick told to build a raster instead of places rewrites its own out socket.
+ * Nothing noticed: the socket said `grid`, the wire into a map's `geo` input
+ * said otherwise, and the engine went on believing both. A node that re-types
+ * itself now says so, and the shell prunes.
+ */
+test('re-typing a node cuts the wires that no longer fit', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const ids = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const start = editor.root.connections.length;
+    const pick = editor.addNode('data-pick');
+    const map = editor.addNode('graph-map');
+
+    [pick, map].forEach((node: any, index: number) =>
+      (node.position = { x: 4 + index * 18, y: 90 }));
+
+    /*
+     * Pick(geo) → Map. Its INPUT takes `data` — whatever a source returned —
+     * so a Places node cannot feed it, which the editor now refuses rather
+     * than merely painting red. Only the out side matters here.
+     */
+    editor.socketClicked(pick.sockets.find((s: any) => s.type === 'out'), pick.id);
+    editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
+
+    return { pick: pick.id, wired: editor.root.connections.length, before: start };
+  });
+
+  // Counted as a delta: the demo this test is dropped into has wires of its own.
+  expect(ids.wired - ids.before).toBe(1);
+
+  // Now tell it to build a raster instead, the way its settings panel does.
+  const after = await page.evaluate(nodeId => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const node = editor.nodeById(nodeId);
+
+    editor.flow.getWorker(nodeId).set('shape', 'grid');
+    editor.retypeNode(node);
+
+    return {
+      declared: node.sockets.find((s: any) => s.type === 'out').format,
+      connections: editor.root.connections.length,
+    };
+  }, ids.pick);
+
+  expect(after.declared).toBe('grid');
+  // And the wire into the map's geo input is gone.
+  expect(after.connections - ids.before).toBe(0);
 });
 
 /**

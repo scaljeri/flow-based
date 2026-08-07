@@ -138,6 +138,17 @@ export class PickSettingsComponent {
     const raw = (event.target as HTMLInputElement | HTMLSelectElement).value;
 
     this.worker?.set(key, key === 'limit' ? Number(raw) || 500 : raw);
+
+    /*
+     * The shape decides what the out socket carries, and the worker rewrites
+     * it. Anything already wired to that socket was wired to the OLD type, so
+     * the shell is told to cut what no longer fits — otherwise the socket says
+     * one thing, the wire says another, and both are believed.
+     */
+    if (key === 'shape') {
+      this.service.retype();
+    }
+
     this.cdr.detectChanges();
   }
 }

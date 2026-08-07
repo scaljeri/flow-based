@@ -55,6 +55,25 @@ import { ModulesService } from '../../modules.service';
       } @else {
         <p class="what">No types are registered yet. Enable a module.</p>
       }
+      @if (problems.length) {
+        <!--
+          What the registry could not make sense of. A dangling base is the
+          worst of them: the assignability walk follows a chain that ends
+          nowhere, answers no, and a wire refuses to connect with nothing at
+          all to read. (No backticks in here: this is inside a template
+          literal, and one would close it.)
+        -->
+        <section class="problems">
+          <h3>Problems</h3>
+
+          <ul>
+            @for (problem of problems; track problem) {
+              <li>{{problem}}</li>
+            }
+          </ul>
+        </section>
+      }
+
       <!--
         A type nobody wrote a module for. A flow may need one — a station code,
         a temperature — and inventing it should not require writing code. It is
@@ -144,6 +163,22 @@ import { ModulesService } from '../../modules.service';
      * nesting, and a line broken at an arbitrary column is harder to follow
      * than one you have to push.
      */
+    .problems {
+      border-top: 1px solid rgba(128, 128, 128, 0.3);
+      margin-top: 16px;
+      padding-top: 12px;
+    }
+
+    .problems ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .problems li {
+      color: #b26500;
+      margin-bottom: 4px;
+    }
+
     .new {
       border-top: 1px solid rgba(128, 128, 128, 0.3);
       margin-top: 16px;
@@ -199,6 +234,10 @@ export class SocketTypesDialogComponent {
     const shape = this.chosen?.shape;
 
     return shape ? `type ${this.selected} = ${typeScriptOf(shape)}` : '';
+  }
+
+  get problems(): string[] {
+    return this.modules.formats.problems;
   }
 
   get json(): string {

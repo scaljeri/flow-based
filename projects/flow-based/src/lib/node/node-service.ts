@@ -118,6 +118,14 @@ export class NodeService {
     this.api.refresh();
   }
 
+  /**
+   * Say that this node now carries something else, so wires that no longer
+   * fit are cut rather than left to contradict the socket.
+   */
+  retype(): void {
+    this.api.retype();
+  }
+
   /* ----------------------------------------------------------------------
      Clicks
      ---------------------------------------------------------------------- */

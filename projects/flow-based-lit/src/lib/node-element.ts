@@ -928,6 +928,7 @@ export class FbNodeElement extends LitElement {
        * draws, and nothing else would notice.
        */
       refresh: () => this.requestUpdate(),
+      retype: () => editor.retypeNode(state),
       register: (callback, type) => editor.events.register(state.id!, callback, type),
       unregister: type => editor.events.unregister(state.id!, type),
       unregisterAll: () => editor.events.unregisterAll(state.id!),

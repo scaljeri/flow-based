@@ -1,4 +1,4 @@
-import { FbShape } from '@scaljeri/flow-based-core';
+import { FbShape, shapeFits, typeScriptOf } from '@scaljeri/flow-based-core';
 import { FbNodeTypes } from './flow-based';
 
 /**
@@ -127,6 +127,16 @@ export class FbFormatRegistry {
       this.formats.set(prefixed, { def: { ...def, name: prefixed }, owner: prefix });
     }
 
+    /*
+     * Said out loud. A module whose `score` became `game:score` has had its
+     * sockets rewritten under it, which is the right outcome and a confusing
+     * one to meet for the first time in a dropdown.
+     */
+    this.problems.push(
+      `${prefix} declares ${def.name} differently from the ${existing.owner ?? 'app'}'s, `
+      + `so its own sockets speak ${prefixed}.`,
+    );
+
     return prefixed;
   }
 
@@ -169,7 +179,65 @@ export class FbFormatRegistry {
       return false;
     }
 
+    /*
+     * A missing description makes no claim, so it agrees with anything.
+     *
+     * That rule is deliberately not transitive, and cannot be: a bare seed
+     * matches two modules that contradict each other. What follows from it is
+     * that whoever describes a name FIRST owns it — the second module to
+     * describe it differently is prefixed. That is an ordering, not an
+     * accident, and it is the only answer available: sockets in a saved flow
+     * already speak the incumbent's name, so the incumbent cannot be renamed
+     * to make room. `problems` records it so the loser can see what happened.
+     */
     return !a.description || !b.description || a.description === b.description;
+  }
+
+  /**
+   * What went wrong while types were being registered.
+   *
+   * Reported rather than thrown. A module that declares a base it never
+   * defines is broken, but it is somebody else's module and half of it may
+   * still work — and the failure it causes otherwise is the worst kind:
+   * `assignable` walks a chain that ends nowhere, answers false, and a wire
+   * silently refuses to connect with nothing at all to read.
+   */
+  readonly problems: string[] = [];
+
+  /**
+   * Check what a definition claims against what is already known.
+   *
+   * Called after registration, when the whole module is in — a type may refine
+   * a base its own module declares later in the same list.
+   */
+  audit(): void {
+    this.problems.length = 0;
+
+    for (const { def } of this.formats.values()) {
+      if (def.refines && !this.formats.has(def.refines)) {
+        this.problems.push(
+          `${def.name} refines ${def.refines}, which is not a registered type — `
+          + 'every connection to it will be refused with no explanation.',
+        );
+
+        continue;
+      }
+
+      const base = def.refines ? this.formats.get(def.refines)?.def : undefined;
+
+      /*
+       * A refinement is its base's shape wearing a meaning. One that is not
+       * even the same shape is not a refinement — and since shapes are not
+       * enforced when connecting, this is the only place the contradiction
+       * can be caught at all.
+       */
+      if (def.shape && base?.shape && !shapeFits(def.shape, base.shape)) {
+        this.problems.push(
+          `${def.name} says it refines ${base.name}, but its shape does not fit it: `
+          + `${typeScriptOf(def.shape)} is not a ${typeScriptOf(base.shape)}.`,
+        );
+      }
+    }
   }
 }
 
@@ -208,6 +276,12 @@ export function prepareModule(
       colors[finalName] = def.color;
     }
   }
+
+  /*
+   * Audited once the whole module is in, not per type: a type may refine a
+   * base its own module declares later in the same list.
+   */
+  registry.audit();
 
   if (renames.size === 0) {
     return { types: module.types, colors };

@@ -925,6 +925,8 @@ export class FbFlowDocumentElement extends LitElement {
       // A figure in a document has no chrome to re-decide; it is drawn once at
       // the size the prose gives it.
       refresh: () => undefined,
+      // A figure in a document has no wires to cut.
+      retype: () => undefined,
       register: () => undefined,
       unregister: () => undefined,
       unregisterAll: () => undefined,

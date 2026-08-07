@@ -729,6 +729,28 @@ export class FbEditor {
    * Connections the new set cannot carry are cut, because a connection that can
    * carry nothing is not a connection.
    */
+  /**
+   * A node has re-declared its own sockets; cut what no longer fits.
+   *
+   * A worker may change what it produces when its settings change — a Pick
+   * told to build places instead of a number rewrites its out socket. Nothing
+   * noticed: the socket said one thing and a wire from before said another,
+   * and the engine went on believing both. This is `setSocketFormats`'s
+   * pruning without its writing, for the case where the type was changed by
+   * the node rather than by the panel.
+   */
+  retypeNode(state: FbNodeState): void {
+    let dropped = 0;
+
+    for (const socket of state.sockets ?? []) {
+      if (socket.id !== undefined) {
+        dropped += this.flow.pruneIncompatible(socket.id);
+      }
+    }
+
+    this.changes.emit({ kind: dropped ? 'structure' : 'sockets' });
+  }
+
   setSocketFormats(socket: FbSocket, formats: string[]): void {
     this.history.capture(this.root);
 
