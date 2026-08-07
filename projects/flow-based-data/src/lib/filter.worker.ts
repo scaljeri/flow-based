@@ -84,6 +84,25 @@ export class FilterWorker implements FbNodeWorker {
     return this.incoming;
   }
 
+  /**
+   * What survived, as text.
+   *
+   * "4 of 5" says a rule ran; it does not say what the rule decided, and the
+   * two mistakes a filter makes — keeping everything, keeping the wrong four —
+   * both look like that. The names are the answer.
+   */
+  get labels(): string[] {
+    return this.latest
+      .filter(item => this.judge(item) !== !!this.config.negate)
+      .map((item, index) => {
+        const field = this.config.path ? readConfigValue(item, this.config.path) : item;
+
+        return field === null || field === undefined || typeof field === 'object'
+          ? `item ${index + 1}`
+          : String(field);
+      });
+  }
+
   get test(): FilterTest {
     return this.config.test ?? 'oneOf';
   }

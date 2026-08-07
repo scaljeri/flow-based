@@ -1974,9 +1974,12 @@ test('pressing a socket on the rim opens that socket', async ({ page }) => {
 
   expect(editor).toEqual({
     open: true,
-    // Text only. No colour picker: a colour belongs to a data TYPE and is
-    // chosen once in the colours menu, or the same type could look like two.
-    fields: ['text'],
+    /*
+     * Two text fields: what this socket is called, and what travels through
+     * it. No colour picker — a colour belongs to a data TYPE and is chosen
+     * once in the colours menu, or the same type could look like two.
+     */
+    fields: ['text', 'text'],
     title: 'Socket in',
     offersAChoice: false,
     lit: 1,

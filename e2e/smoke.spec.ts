@@ -3017,6 +3017,30 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     };
   });
 
+  /*
+   * And both nodes say what they are doing. A request that only says "200"
+   * cannot tell 200-in-40ms from 200-in-nine-seconds, and a filter that only
+   * says "4 of 5" makes its two failure modes — keeping everything, keeping
+   * the wrong four — look identical.
+   */
+  const boxes = () => page.evaluate(() => {
+    const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')];
+    const text = (match: string) => nodes
+      .map(node => node.textContent!.replace(/\s+/g, ' ').trim())
+      .find(content => content.includes(match)) ?? '';
+
+    return { request: text('GET'), filter: text('kept') };
+  });
+
+  // No spaces between the spans: textContent runs them together, and pinning
+  // that is pinning the layout rather than what the node says.
+  // Both follow a fetch, so both get a fetch-sized budget rather than the
+  // five seconds a re-render deserves.
+  await expect.poll(async () => (await boxes()).request, { timeout: 20_000 })
+    .toMatch(/GET200.*ms.*config\.json/);
+  await expect.poll(async () => (await boxes()).filter, { timeout: 20_000 })
+    .toMatch(/kept 2 of 2\s*PM2\.5, NO2/);
+
   // The published list is PM2.5 and NO2; both survive the rule.
   await expect.poll(async () => (await chooser()).kept).toBe('2 of 2');
   expect((await chooser()).offered).toEqual(['PM2.5', 'NO2']);
@@ -3236,6 +3260,10 @@ test('pressing a socket names it, and can be asked what its type means', async (
    */
   const types = page.locator('fb-socket-types-dialog');
 
+  // Pressed again first: the note expires by design, and everything above it
+  // in this test — a dialog, a select, a close — can outlast it under load.
+  await dot.click();
+  await expect(note).toHaveCount(1);
   await note.locator('button.why').click();
   await expect(types).toHaveCount(1);
 

@@ -68,6 +68,13 @@ export default defineConfig({
       timeout: 360_000,
     },
     {
+      /*
+       * Builds what it serves. `build:e2e` sits in the OTHER server's command,
+       * which `reuseExistingServer` skips whenever a server is already up — so
+       * a harness built once stayed built, and this suite spent a day testing
+       * a shell from the day before. It caught nothing that changed, which is
+       * the worst way for a test to pass.
+       */
       command: 'npm run serve:lit-demo',
       url: 'http://localhost:4400/',
       reuseExistingServer: !process.env['CI'],

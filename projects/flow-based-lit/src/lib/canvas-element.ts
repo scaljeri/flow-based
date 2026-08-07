@@ -1025,7 +1025,12 @@ export class FbFlowCanvasElement extends LitElement {
 
     this.notedSocket = touched.socket;
     clearTimeout(this.noteTimer);
-    this.noteTimer = setTimeout(() => this.editor?.forgetTouchedSocket(), 6000);
+    /*
+     * Ten seconds, not six. Six is enough to read a name and a type and not
+     * enough to read them, decide the type is worth asking about, and reach
+     * for the `i` — which is the one thing this bar exists to lead to.
+     */
+    this.noteTimer = setTimeout(() => this.editor?.forgetTouchedSocket(), 10_000);
   }
 
   protected override render() {

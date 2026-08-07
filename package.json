@@ -23,7 +23,7 @@
     "test:core": "ng test @scaljeri/flow-based-core",
     "build:lit": "npm run build:core && ng build @scaljeri/flow-based-lit",
     "build:lit-demo": "npm run build:lit && node scripts/build-lit-demo.mjs",
-    "serve:lit-demo": "node scripts/serve-static.mjs dist/lit-demo 4400",
+    "serve:lit-demo": "npm run build:lit-demo && node scripts/serve-static.mjs dist/lit-demo 4400",
     "build:e2e": "npm run build:lib && node scripts/build-lit-demo.mjs",
     "deploy": "npm run build:lib && node scripts/stamp-version.mjs && ng build flow-based-demo --base-href /fbp/ && node scripts/build-playground.mjs && node scripts/deploy.mjs dist/demo/browser fbp",
     "build:network": "ng build @scaljeri/flow-based-network",

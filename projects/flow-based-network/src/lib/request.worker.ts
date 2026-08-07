@@ -77,6 +77,15 @@ export class RequestWorker implements FbNodeWorker {
   received = 0;
   /** Bytes in the last answer, which is the other half of "did that work". */
   bytes = 0;
+  /**
+   * How long the last answer took, in milliseconds.
+   *
+   * The other question a reader has about a fetch, and the one a status code
+   * cannot answer: 200 in 40ms and 200 in nine seconds are the same node
+   * saying the same word about very different data. It is also the first
+   * thing worth knowing when a flow feels slow.
+   */
+  ms = 0;
 
   /** Told about every state change, so a spinner can start and stop. */
   private readonly ticks = new ReplaySubject<void>(1);
@@ -199,6 +208,8 @@ export class RequestWorker implements FbNodeWorker {
     this.loading = true;
     this.ticks.next();
 
+    const started = performance.now();
+
     try {
       const response = await fetch(url, {
         method: this.method,
@@ -247,6 +258,10 @@ export class RequestWorker implements FbNodeWorker {
         ? 'Could not fetch — blocked, offline, or another origin'
         : message;
     } finally {
+      // Measured around the whole thing, failures included: a request that
+      // took eight seconds to fail is the most useful eight seconds to know
+      // about.
+      this.ms = Math.round(performance.now() - started);
       this.loading = false;
       this.ticks.next();
     }
@@ -264,6 +279,35 @@ export class RequestWorker implements FbNodeWorker {
 
   /** The last thing fetched, so renaming the source needs no second request. */
   private last: unknown;
+
+  /** How long it took, said the way a person would. */
+  get took(): string {
+    if (!this.ms) {
+      return '';
+    }
+
+    return this.ms < 1000 ? `${this.ms} ms` : `${(this.ms / 1000).toFixed(1)} s`;
+  }
+
+  /**
+   * Where it is fetching from, shortened to the part that differs.
+   *
+   * Every URL from one publisher opens with the same stretch; the file at the
+   * end is what tells two requests apart, and it is what a reader is looking
+   * for when a node says 404.
+   */
+  get where(): string {
+    const url = this.url;
+
+    if (!url) {
+      return '';
+    }
+
+    const clean = url.split('?')[0].replace(/\/$/, '');
+    const tail = clean.slice(clean.lastIndexOf('/') + 1);
+
+    return tail || clean;
+  }
 
   /** The last answer's size, said the way a person would. */
   get size(): string {

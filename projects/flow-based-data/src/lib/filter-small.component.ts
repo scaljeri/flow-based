@@ -17,8 +17,16 @@ import { FilterWorker } from './filter.worker';
     @if (worker?.error) {
       <span class="error">{{worker?.error}}</span>
     } @else {
-      <span class="count">{{worker?.kept ?? 0}}</span>
-      <span class="of">of {{worker?.total ?? 0}}</span>
+      <span class="of">kept {{worker?.kept ?? 0}} of {{worker?.total ?? 0}}</span>
+
+      <!--
+        And WHICH ones. "4 of 5" says a rule ran; it does not say what the rule
+        decided, and the two mistakes a filter makes — keeping everything, and
+        keeping the wrong four — look identical from a count.
+      -->
+      @if (labels.length) {
+        <span class="kept" [title]="labels.join(', ')">{{labels.join(', ')}}</span>
+      }
     }
   `,
   styles: [`
@@ -31,17 +39,21 @@ import { FilterWorker } from './filter.worker';
       gap: 1px;
       justify-content: center;
       padding: 10px 12px;
-      width: 96px;
-    }
-
-    .count {
-      font-size: 20px;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.2;
+      width: 140px;
     }
 
     .of {
+      letter-spacing: 0.04em;
       opacity: 0.6;
+    }
+
+    .kept {
+      line-height: 1.35;
+      max-width: 100%;
+      overflow: hidden;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .error {
@@ -67,5 +79,12 @@ export class FilterSmallComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
+  }
+
+  /** At most a handful; a filter that kept forty says so by its count. */
+  get labels(): string[] {
+    const kept = this.worker?.labels ?? [];
+
+    return kept.length > 6 ? [...kept.slice(0, 6), '…'] : kept;
   }
 }

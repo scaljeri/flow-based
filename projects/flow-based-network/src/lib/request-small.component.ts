@@ -22,8 +22,22 @@ import { RequestWorker } from './request.worker';
 
     <span class="value" [class.error]="!!worker?.error">{{value}}</span>
 
-    @if (worker?.size && !worker?.error) {
-      <span class="size">{{worker?.size}}</span>
+    <!--
+      Size AND how long it took: 200 in 40ms and 200 in nine seconds are the
+      same node saying the same word about very different data, and the second
+      one is the first thing worth knowing when a flow feels slow.
+    -->
+    @if (!worker?.error && (worker?.size || worker?.took)) {
+      <span class="size">{{[worker?.size, worker?.took].join(' · ')}}</span>
+    }
+
+    <!--
+      And WHERE from — the file at the end, which is the part that differs
+      between two requests to the same publisher and the part a reader is
+      looking for when this says 404.
+    -->
+    @if (worker?.where) {
+      <span class="where" [title]="worker?.url ?? ''">{{worker?.where}}</span>
     }
   `,
   styles: [`
@@ -48,6 +62,21 @@ import { RequestWorker } from './request.worker';
     .method {
       letter-spacing: 0.1em;
       opacity: 0.75;
+    }
+
+    /*
+     * Right-aligned overflow: a file name differs at its END, and the first
+     * twenty characters of two paths from one publisher are identical.
+     */
+    .where {
+      direction: rtl;
+      font: 10px/1.3 ui-monospace, monospace;
+      max-width: 100%;
+      opacity: 0.55;
+      overflow: hidden;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     /*
