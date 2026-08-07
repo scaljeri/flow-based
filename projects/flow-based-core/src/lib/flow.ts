@@ -511,20 +511,22 @@ export class Flow {
    * point at it.
    */
   findCycles(): number[][] {
-    const edges = new Map<number, number[]>();
+    const edges = new Map<string, string[]>();
 
     for (const connection of this.allConnections()) {
-      const list = edges.get(connection.from);
+      const from = this.vertexOf(connection.from as number, connection.out as number);
+      const to = this.vertexOf(connection.to as number, connection.in as number);
+      const list = edges.get(from);
 
       if (list) {
-        list.push(connection.to);
+        list.push(to);
       } else {
-        edges.set(connection.from, [connection.to]);
+        edges.set(from, [to]);
       }
     }
 
-    const cycles: number[][] = [];
-    const seen = new Set<number>();
+    const cycles: string[][] = [];
+    const seen = new Set<string>();
 
     for (const start of edges.keys()) {
       if (seen.has(start)) {
@@ -532,7 +534,7 @@ export class Flow {
       }
 
       // path doubles as the "on current stack" set, via index lookup.
-      const stack: { node: number; next: number }[] = [{ node: start, next: 0 }];
+      const stack: { node: string; next: number }[] = [{ node: start, next: 0 }];
       const path = [start];
 
       while (stack.length) {
@@ -561,7 +563,41 @@ export class Flow {
       }
     }
 
-    return cycles;
+    /*
+     * Back to node ids for whoever reads the report, and still a CLOSED loop:
+     * the first entry repeats at the end, which is how a reader tells a cycle
+     * from a path. Only a node following itself is collapsed — that is one
+     * flow's two sides in a row, not a loop.
+     */
+    return cycles.map(cycle => {
+      const ids = cycle.map(vertex => Number(vertex.split('#')[0]));
+
+      return ids.filter((id, index) => index === 0 || id !== ids[index - 1]);
+    });
+  }
+
+  /**
+   * Which END of a node a connection touches.
+   *
+   * A subflow is ONE node with data going in and coming out, and a cycle
+   * detector that works on node ids sees that as a loop: every path from an
+   * input socket through the machinery to an output socket came back to the
+   * same id. The tno flow reported seven cycles, all of them a subflow doing
+   * exactly what a subflow is for.
+   *
+   * So the two sides are two vertices. Which side a connection touches is
+   * decided by the SOCKET it touches, not by whether the node is the `from` or
+   * the `to`: a flow bridging inward is the `from` of an inner connection
+   * through one of its own IN sockets.
+   */
+  private vertexOf(nodeId: number, socketId: number): string {
+    const node = this.getNode(nodeId)?.state;
+
+    if (!node?.children) {
+      return String(nodeId);
+    }
+
+    return `${nodeId}#${this.getSocket(socketId)?.type === 'in' ? 'in' : 'out'}`;
   }
 
   private connect(connection: FbConnection): boolean {

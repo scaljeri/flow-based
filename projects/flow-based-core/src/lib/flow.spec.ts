@@ -567,6 +567,56 @@ describe('Flow.findCycles', () => {
     expect(cycles[0][0]).toBe(cycles[0][cycles[0].length - 1]);
   });
 
+  it('does not call a subflow a cycle for having both an in and an out', () => {
+    /*
+     * A subflow is ONE node with data going in and coming out, and a detector
+     * working on node ids saw that as a loop: every path from an input socket
+     * through the machinery to an output socket came back to the same id. The
+     * tno flow reported seven of them, all of them a subflow doing exactly
+     * what a subflow is for.
+     */
+    const root = {
+      id: 1,
+      type: 'flow',
+      sockets: [],
+      children: [
+        {
+          id: 10,
+          type: 'source',
+          sockets: [{ id: 100, type: 'out', format: 'number' }],
+        },
+        {
+          id: 20,
+          type: 'flow',
+          sockets: [
+            { id: 200, type: 'in', format: 'number' },
+            { id: 201, type: 'out', format: 'number' },
+          ],
+          children: [{
+            id: 30,
+            type: 'source',
+            sockets: [{ id: 300, type: 'in', format: 'number' }, { id: 301, type: 'out', format: 'number' }],
+          }],
+          connections: [
+            { id: 2000, from: 20, to: 30, out: 200, in: 300 },
+            { id: 2001, from: 30, to: 20, out: 301, in: 201 },
+          ],
+        },
+        {
+          id: 40,
+          type: 'source',
+          sockets: [{ id: 400, type: 'in', format: 'number' }],
+        },
+      ],
+      connections: [
+        { id: 1000, from: 10, to: 20, out: 100, in: 200 },
+        { id: 1001, from: 20, to: 40, out: 201, in: 400 },
+      ],
+    };
+
+    expect(new Flow(flowTypes() as any).initialize(root as any).findCycles()).toEqual([]);
+  });
+
   it('finds a three-node cycle', () => {
     const mk = (id: number) => ({
       id,
