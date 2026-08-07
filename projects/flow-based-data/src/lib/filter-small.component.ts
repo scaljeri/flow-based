@@ -17,15 +17,21 @@ import { FilterWorker } from './filter.worker';
     @if (worker?.error) {
       <span class="error">{{worker?.error}}</span>
     } @else {
-      <span class="of">kept {{worker?.kept ?? 0}} of {{worker?.total ?? 0}}</span>
+      <span class="of">{{worker?.kept ?? 0}} of {{worker?.total ?? 0}}</span>
 
       <!--
         And WHICH ones. "4 of 5" says a rule ran; it does not say what the rule
         decided, and the two mistakes a filter makes — keeping everything, and
-        keeping the wrong four — look identical from a count.
+        keeping the wrong four — look identical from a count. The name of what
+        was dropped is the first thing anyone asks for, so it is on the node
+        rather than only in a dialog.
       -->
       @if (labels.length) {
-        <span class="kept" [title]="labels.join(', ')">{{labels.join(', ')}}</span>
+        <span class="kept" [title]="explain">{{labels.join(', ')}}</span>
+      }
+
+      @if (dropped.length) {
+        <span class="gone" [title]="explain">without {{dropped.join(', ')}}</span>
       }
     }
   `,
@@ -52,6 +58,16 @@ import { FilterWorker } from './filter.worker';
       max-width: 100%;
       overflow: hidden;
       text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gone {
+      font-size: 11px;
+      max-width: 100%;
+      opacity: 0.45;
+      overflow: hidden;
+      text-decoration: line-through;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -83,8 +99,26 @@ export class FilterSmallComponent implements OnInit, OnDestroy {
 
   /** At most a handful; a filter that kept forty says so by its count. */
   get labels(): string[] {
-    const kept = this.worker?.labels ?? [];
+    return FilterSmallComponent.few(this.worker?.labels ?? []);
+  }
 
-    return kept.length > 6 ? [...kept.slice(0, 6), '…'] : kept;
+  /** Same for the other side, which is usually the shorter list. */
+  get dropped(): string[] {
+    return FilterSmallComponent.few(this.worker?.dropped ?? []);
+  }
+
+  /** Both lists in full, for a hover — the node itself shows what fits. */
+  get explain(): string {
+    const kept = this.worker?.labels ?? [];
+    const gone = this.worker?.dropped ?? [];
+
+    return [
+      `kept: ${kept.join(', ') || 'nothing'}`,
+      gone.length ? `dropped: ${gone.join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  private static few(names: string[]): string[] {
+    return names.length > 6 ? [...names.slice(0, 6), '…'] : names;
   }
 }

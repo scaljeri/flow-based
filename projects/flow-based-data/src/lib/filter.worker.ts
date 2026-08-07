@@ -92,15 +92,31 @@ export class FilterWorker implements FbNodeWorker {
    * both look like that. The names are the answer.
    */
   get labels(): string[] {
-    return this.latest
-      .filter(item => this.judge(item) !== !!this.config.negate)
-      .map((item, index) => {
-        const field = this.config.path ? readConfigValue(item, this.config.path) : item;
+    return this.name(this.latest.filter(item => this.judge(item) !== !!this.config.negate));
+  }
 
-        return field === null || field === undefined || typeof field === 'object'
-          ? `item ${index + 1}`
-          : String(field);
-      });
+  /**
+   * And what did not survive.
+   *
+   * The other half of "4 of 5", and the half a count cannot give you: the
+   * question a reader actually has is not how many were dropped but WHICH one
+   * — and whether dropping it was a decision or an oversight. TOPAS publishes
+   * five pollutants and this flow maps four; the name of the fifth is the
+   * difference between a rule and a mystery.
+   */
+  get dropped(): string[] {
+    return this.name(this.latest.filter(item => this.judge(item) === !!this.config.negate));
+  }
+
+  /** What to call an item: the field being judged, or its place in the list. */
+  private name(items: unknown[]): string[] {
+    return items.map((item, index) => {
+      const field = this.config.path ? readConfigValue(item, this.config.path) : item;
+
+      return field === null || field === undefined || typeof field === 'object'
+        ? `item ${index + 1}`
+        : String(field);
+    });
   }
 
   get test(): FilterTest {

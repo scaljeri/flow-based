@@ -1133,7 +1133,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 12 },
+  config: { seedVersion: 13 },
   sockets: [],
   children: [
     /*
@@ -1167,12 +1167,12 @@ export const tno = () => ({
     },
     {
       type: 'data-filter',
-      title: 'the ones we draw',
+      title: 'Pollutants we map',
       id: 620,
       /*
-       * Five are published; this map is about four of them. The rule is
-       * written down rather than the answer, so the day they add a sixth the
-       * flow has an opinion somebody actually chose.
+       * Five are published — PM2.5, PM10, NO2, O3 and SO2 — and this map is
+       * about the first four. The rule is written down rather than the answer,
+       * so the day they add a sixth the flow has an opinion somebody chose.
        */
       config: { list: 'regions.0.pollutants', path: '', test: 'oneOf', value: 'PM2.5, PM10, NO2, O3' },
       sockets: [

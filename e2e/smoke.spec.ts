@@ -2922,7 +2922,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
       return route.fulfill(answer({
         currentDate: '2026-07-01',
         regions: [
-          { id: 'NL', gridPath: 'data/{region}/grid/{date}/{pollutant}.json', pollutants: ['PM2.5', 'NO2'] },
+          { id: 'NL', gridPath: 'data/{region}/grid/{date}/{pollutant}.json', pollutants: ['PM2.5', 'NO2', 'SO2'] },
           { id: 'EU', gridPath: 'data/{region}/grid/{date}/{pollutant}.json', pollutants: ['PM2.5'] },
         ],
         networks: [
@@ -3003,7 +3003,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
    */
   const chooser = () => page.evaluate(() => {
     const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
-    const filter = flow.getWorker(620) as { kept: number; total: number };
+    const filter = flow.getWorker(620) as { kept: number; total: number; dropped: string[] };
     const choice = flow.getWorker(630) as { labels: string[]; chosenLabel: string };
     const sub = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
       .editor.root.children.find((child: any) => child.type === 'flow');
@@ -3011,6 +3011,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
     return {
       kept: `${filter.kept} of ${filter.total}`,
+      dropped: filter.dropped,
       offered: choice.labels,
       chosen: choice.chosenLabel,
       url: (flow.getWorker(grid.id) as { url: string }).url,
@@ -3020,16 +3021,23 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   /*
    * And both nodes say what they are doing. A request that only says "200"
    * cannot tell 200-in-40ms from 200-in-nine-seconds, and a filter that only
-   * says "4 of 5" makes its two failure modes — keeping everything, keeping
-   * the wrong four — look identical.
+   * says "2 of 3" makes its two failure modes — keeping everything, keeping
+   * the wrong ones — look identical. The name of what was DROPPED is the half
+   * a count cannot give you, and the first thing a reader asks for.
    */
   const boxes = () => page.evaluate(() => {
     const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')];
-    const text = (match: string) => nodes
-      .map(node => node.textContent!.replace(/\s+/g, ' ').trim())
-      .find(content => content.includes(match)) ?? '';
+    const content = (node: Element) => node.textContent!.replace(/\s+/g, ' ').trim();
+    const byId = (id: number) => {
+      const found = nodes.find(node => (node as unknown as { state?: { id?: number } }).state?.id === id);
 
-    return { request: text('GET'), filter: text('kept') };
+      return found ? content(found) : '';
+    };
+
+    return {
+      request: byId(600),
+      filter: byId(620),
+    };
   });
 
   // No spaces between the spans: textContent runs them together, and pinning
@@ -3039,10 +3047,12 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   await expect.poll(async () => (await boxes()).request, { timeout: 20_000 })
     .toMatch(/GET200.*ms.*config\.json/);
   await expect.poll(async () => (await boxes()).filter, { timeout: 20_000 })
-    .toMatch(/kept 2 of 2\s*PM2\.5, NO2/);
+    .toMatch(/2 of 3\s*PM2\.5, NO2\s*without SO2/);
 
-  // The published list is PM2.5 and NO2; both survive the rule.
-  await expect.poll(async () => (await chooser()).kept).toBe('2 of 2');
+  // Three are published; SO2 is not one this map draws, and the node says so
+  // rather than leaving a reader to work out which of the three went missing.
+  await expect.poll(async () => (await chooser()).kept).toBe('2 of 3');
+  expect((await chooser()).dropped).toEqual(['SO2']);
   expect((await chooser()).offered).toEqual(['PM2.5', 'NO2']);
   expect((await chooser()).url).toContain('PM2.5.json');
 
