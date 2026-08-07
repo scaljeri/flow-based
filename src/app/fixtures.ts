@@ -1230,7 +1230,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 15 },
+  config: { seedVersion: 16 },
   /*
    * The same flow, read as an article.
    *
@@ -1309,7 +1309,7 @@ export const tno = () => ({
       },
 
       { type: 'heading', text: 'The same model, two zoom levels', level: 2 },
-      { type: 'node', nodeId: 630, float: 'right', caption: 'The pollutants — read from the publisher, not typed here' },
+      { type: 'node', nodeId: 700, float: 'right', width: '340px', caption: 'The same day over Europe, at a sixteenth of the detail' },
       {
         type: 'text',
         text:
@@ -1324,14 +1324,25 @@ export const tno = () => ({
           'cell is an average, and an average over 1.4 km is still an average over ' +
           'everything in it: a motorway, a park, and the house you live in.\n' +
           '\n' +
-          'The list beside this text is not typed into this flow. It is read out of the ' +
-          'publisher’s config, so the day they add a sixth pollutant it appears here on ' +
-          'its own. Pick one and the whole chain follows it — the file name is built ' +
-          'from the choice, and the request goes out.',
+          'These are two maps in this flow, not two layers on one, and that is not a ' +
+          'presentation choice. A view fitted to both is a view fitted to Europe, in ' +
+          'which the Dutch raster is forty pixels across; how far out a reader may zoom ' +
+          'and where the map opens are answers to *which dataset is this about*, and ' +
+          'there are two datasets. Each map is bounded to its own: the widest view you ' +
+          'can reach is the data itself, and every gesture from there is a closer look.',
+      },
+      { type: 'node', nodeId: 630, float: 'left', caption: 'The pollutants — read from the publisher, not typed here' },
+      {
+        type: 'text',
+        text:
+          'The list beside this text is not typed into this flow either. It is read out ' +
+          'of the publisher’s config, so the day they add a sixth pollutant it appears ' +
+          'here on its own. Pick one and both maps follow it — the file names are built ' +
+          'from the choice, and the requests go out.',
       },
 
       { type: 'heading', text: 'Ninety-three instruments against three thousand', level: 2 },
-      { type: 'node', nodeId: 500, float: 'left', caption: 'One network at a time, on the map above' },
+      { type: 'node', nodeId: 500, float: 'left', caption: 'One network at a time, on the Dutch map' },
       {
         type: 'text',
         text:
@@ -1349,9 +1360,14 @@ export const tno = () => ({
           'and three thousand of them are better than 93 at the one thing a map needs: ' +
           'being somewhere. Precision and coverage are different virtues, and the ' +
           'interesting work is in the calibration between them. Switch between the two ' +
-          'on the map and the shape of that trade-off is immediate — the official ' +
-          'network is a sparse, even lattice; the citizen network is a portrait of where ' +
-          'people live and worry.',
+          'and the shape of that trade-off is immediate — the official network is a ' +
+          'sparse, even lattice; the citizen network is a portrait of where people live ' +
+          'and worry.\n' +
+          '\n' +
+          'The switch offers these two and no more. Europe’s network, the EEA’s, is on ' +
+          'the European map instead, because a network belongs to the map its data fits ' +
+          '— offered here it was a choice that could not be looked at, with every marker ' +
+          'somewhere off the side of a country-sized view.',
       },
 
       { type: 'heading', text: 'Why the colours are not decoration', level: 2 },
@@ -1381,9 +1397,9 @@ export const tno = () => ({
         type: 'text',
         text:
           'Everything above came out of files that a handful of nodes fetched while you ' +
-          'read: one config, a grid, two station lists. The map, the chooser and the ' +
-          'switch are those nodes, and this page and that graph are two readings of the ' +
-          'same JSON. {{!flow:Show me the flow}}',
+          'read: one config, two grids, three station lists. The maps, the chooser and ' +
+          'the switch are those nodes, and this page and that graph are two readings of ' +
+          'the same JSON. {{!flow:Show me the flow}}',
       },
     ],
   },
@@ -1438,27 +1454,42 @@ export const tno = () => ({
     },
     {
       type: 'data-switch',
-      title: 'Which network',
+      title: 'Which Dutch network',
       id: 500,
       /*
-       * One measuring network on the map, or none. Three now: two Dutch and
-       * one European. Named by what arrives — a request says what it IS, and
-       * a name typed on a socket would be a second copy of that.
+       * One Dutch measuring network, or none. The European one used to be a
+       * third input here, which put a choice on the map that could not be
+       * looked at: picking it left the reader on a map fitted to the
+       * Netherlands with its markers spread from Portugal to Finland, all of
+       * them off screen. A network belongs to the map its data fits.
        */
       config: { which: 1 },
       sockets: [
         { id: 510, type: 'in', formats: ['geo'] },
         { id: 511, type: 'in', formats: ['geo'] },
-        { id: 513, type: 'in', formats: ['geo'] },
         { id: 512, type: 'out', format: 'geo' },
       ],
       position: { x: 40, y: 26 },
     },
     {
       type: 'graph-map',
-      title: 'One network',
+      title: 'The Netherlands',
       id: 300,
-      config: { track: false, follow: true },
+      /*
+       * A window on one country, and it says so.
+       *
+       * `bounded` makes the fit the widest view there is: every gesture from
+       * there is a closer look, and a reader who scrolls twice is not looking
+       * at Kazakhstan with a country-sized raster somewhere off screen. The
+       * saved centre and zoom are what it opens on, so the two maps in this
+       * flow start where their own data is rather than wherever the last
+       * arriving layer dragged them.
+       */
+      config: {
+        track: false, follow: true, bounded: true,
+        lat: 52.15, lon: 5.3, zoom: 7,
+        slackX: 0.08, slackY: 0.08,
+      },
       /*
        * The air underneath, and whichever network the switch is letting
        * through. Generic inputs — a layer is a layer, and which kind it
@@ -1470,7 +1501,36 @@ export const tno = () => ({
         // Where a pressed marker comes out, waiting for something to ask.
         { id: 313, type: 'out', format: 'geo' },
       ],
-      position: { x: 62, y: 20 },
+      position: { x: 62, y: 12 },
+    },
+    {
+      type: 'graph-map',
+      title: 'Europe',
+      id: 700,
+      /*
+       * The same model over a continent, and a second node rather than a
+       * second layer on the first.
+       *
+       * One map cannot hold both. Fitting a view to the Netherlands and to
+       * Europe at once means fitting it to Europe, and the Dutch raster then
+       * occupies forty pixels; the zoom a reader is allowed, where the map
+       * opens and how much room it keeps around the data are all answers to
+       * "which dataset is this about", and there are two datasets.
+       *
+       * Zoomed out further than its neighbour and slacker around the edges,
+       * because a continent's raster reaches the corners of its own box.
+       */
+      config: {
+        track: false, follow: true, bounded: true,
+        lat: 50, lon: 10, zoom: 3,
+        slackX: 0.04, slackY: 0.04,
+      },
+      sockets: [
+        { id: 712, type: 'in', formats: ['geo', 'grid'] },
+        { id: 710, type: 'in', formats: ['geo', 'grid'] },
+        { id: 713, type: 'out', format: 'geo' },
+      ],
+      position: { x: 62, y: 40 },
     },
   ],
   connections: [
@@ -1479,13 +1539,15 @@ export const tno = () => ({
     { id: 1021, from: 600, to: 630, out: 610, in: 631 },
     { id: 1023, from: 630, to: 2000, out: 632, in: 2011 },
 
-    // Three networks into the switch, one of them onto the map.
+    // Two Dutch networks into the switch, one of them onto the Dutch map.
     { id: 1002, from: 2000, to: 500, out: 2003, in: 510 },
     { id: 1003, from: 2000, to: 500, out: 2004, in: 511 },
-    { id: 1007, from: 2000, to: 500, out: 2005, in: 513 },
     { id: 1006, from: 500, to: 300, out: 512, in: 310 },
-    // The Dutch raster underneath it. The European one is on the subflow's
-    // second socket, waiting for a second map.
     { id: 1005, from: 2000, to: 300, out: 2001, in: 312 },
+
+    // And the European pair on the map that fits them: raster underneath,
+    // the EEA's stations on top.
+    { id: 1008, from: 2000, to: 700, out: 2002, in: 712 },
+    { id: 1007, from: 2000, to: 700, out: 2005, in: 710 },
   ],
 });

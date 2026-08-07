@@ -2965,11 +2965,14 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     // Guarded: the flow is swapped in a tick after the dialog closes, and the
     // first poll can land before that.
     const map = flow.getWorker(300) as { layerFor(id: number): any } | undefined;
+    const europe = flow.getWorker(700) as { layerFor(id: number): any } | undefined;
     const gate = flow.getWorker(500) as { titleOf(i: number): string } | undefined;
 
     return {
       cells: map?.layerFor(312)?.grid?.values?.length ?? 0,
       places: map?.layerFor(310)?.places?.length ?? 0,
+      euCells: europe?.layerFor(712)?.grid?.values?.length ?? 0,
+      euPlaces: europe?.layerFor(710)?.places?.length ?? 0,
       choices: [0, 1, 2].map(i => gate?.titleOf(i) ?? ''),
     };
   });
@@ -2996,13 +2999,33 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   // by everything, rather than once per reader.
   expect(asked.filter(url => url === 'config.json')).toHaveLength(1);
 
-  // And the switch is fed by three of the subflow's seven sockets.
+  /*
+   * The European pair goes to the European map, not to a third input on the
+   * Dutch one. A network belongs to the map its data fits: picking the EEA on
+   * a view fitted to the Netherlands put every marker off screen, with no
+   * gesture that brought them back.
+   */
+  await expect.poll(async () => (await state()).euCells, { timeout: 20_000 }).toBe(4);
+  await expect.poll(async () => (await state()).euPlaces).toBe(7);
+
+  // And the two maps are bounded to their OWN data, which is the whole reason
+  // they are two nodes: the widest view of each is its own dataset.
+  expect(await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    return [300, 700].map(id => editor.nodeById(id).config as { bounded: boolean; zoom: number });
+  })).toEqual([
+    { track: false, follow: true, bounded: true, lat: 52.15, lon: 5.3, zoom: 7, slackX: 0.08, slackY: 0.08 },
+    { track: false, follow: true, bounded: true, lat: 50, lon: 10, zoom: 3, slackX: 0.04, slackY: 0.04 },
+  ]);
+
+  // The Dutch switch offers the two Dutch networks and nothing else.
   await page.evaluate(() => {
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-      .editor.flow.getWorker(500).set(3);
+      .editor.flow.getWorker(500).set(2);
   });
 
-  await expect.poll(async () => (await state()).places).toBe(7);
+  await expect.poll(async () => (await state()).places).toBe(5);
 
   /*
    * The pollutant is a decision, and it is made OUTSIDE the machinery: the
@@ -3048,7 +3071,9 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   // fetch, so it gets a fetch-sized budget rather than the five seconds a
   // re-render deserves.
   await expect.poll(async () => (await boxes()).request, { timeout: 20_000 })
-    .toMatch(/GET200.*ms.*config\.json/);
+    // Milliseconds OR seconds: the node switches units, and which one it picks
+    // is a fact about the machine the test runs on, not about the node.
+    .toMatch(/GET200.*[\d.]+\s*m?s.*config\.json/);
 
   // Everything the publisher lists, in the order it lists them.
   await expect.poll(async () => (await chooser()).offered, { timeout: 20_000 })
@@ -4117,7 +4142,7 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
    * resolve: an unresolved `{{id}}` renders as its own source text, which is
    * honest in a document and useless in a test that means to catch it.
    */
-  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(4);
+  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(5);
   await expect(doc).not.toContainText('{{');
 
   // Claims with sources: an article that quotes a number names where it is
@@ -4133,5 +4158,5 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
   expect(await page.evaluate(() =>
     [...document.querySelectorAll('fb-flow-document [slot^="fig-"]')]
       .map(node => node.getAttribute('slot'))
-      .sort())).toEqual(['fig-300', 'fig-500', 'fig-600', 'fig-630']);
+      .sort())).toEqual(['fig-300', 'fig-500', 'fig-600', 'fig-630', 'fig-700']);
 });
