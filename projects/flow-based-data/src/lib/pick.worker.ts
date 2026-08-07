@@ -253,12 +253,28 @@ export class PickWorker implements FbNodeWorker {
       return { places, ...this.meta };
     }
 
-    // A sweep of [x, y] points, which is what the plots drink.
+    /*
+     * A sweep of [x, y] points, which is what the plots drink.
+     *
+     * Two arrivals, not one. A list of objects has its x and y at paths, which
+     * is what `a` and `b` are for. But a published measurement series is
+     * almost never that: it is a bare array of numbers with its start date and
+     * its step stated once beside it, because repeating the timestamp on every
+     * reading would double the file for no information. Then the INDEX is the
+     * x — the nth reading — and the number is the y.
+     *
+     * The index is taken before the filter on purpose. A series with gaps in
+     * it (a station that was down, a forecast not yet made) publishes nulls,
+     * and dropping them must leave a hole rather than sliding everything after
+     * it a day earlier.
+     */
     const points = list
-      .map(item => [
-        Number(readConfigValue(item, this.config.a || 'x')),
-        Number(readConfigValue(item, this.config.b || 'y')),
-      ])
+      .map((item, index) => (typeof item === 'number'
+        ? [index, item]
+        : [
+          Number(readConfigValue(item, this.config.a || 'x')),
+          Number(readConfigValue(item, this.config.b || 'y')),
+        ]))
       .filter(point => Number.isFinite(point[0]) && Number.isFinite(point[1]))
       .slice(0, limit);
 

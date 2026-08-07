@@ -1093,6 +1093,18 @@ function topasSources() {
   const idNl = reads('NL', 'regions.0.id', { x: 14, y: 40 });
   const idEu = reads('EU', 'regions.1.id', { x: 14, y: 52 });
 
+  /*
+   * What one station's own file is called.
+   *
+   * These three come out of the NETWORK's file rather than the config: the
+   * path pattern for a series, the network's own id, and what this publisher
+   * calls a measurement — `metingen`, which is in the file precisely so that
+   * nobody has to know it is Dutch.
+   */
+  const seriesPath = reads('series path', 'series.path', { x: 78, y: 112 });
+  const networkId = reads('network id', 'network', { x: 78, y: 124 });
+  const seriesType = reads('measurements', 'series.types.measurements', { x: 78, y: 136 });
+
   const lmlPath = reads('LML file', 'networks.0.path', { x: 14, y: 76 });
   const samenPath = reads('Samen Meten file', 'networks.1.path', { x: 14, y: 88 });
   const eeaPath = reads('EEA file', 'networks.2.path', { x: 14, y: 100 });
@@ -1116,6 +1128,13 @@ function topasSources() {
   const getSamen = fetches('Samen Meten', { x: 62, y: 60 });
   const getEea = fetches('EEA', { x: 62, y: 88 });
 
+  const seriesFile = builds(
+    'series file',
+    ['pattern', 'region|lower', 'network', 'code', 'pollutant', 'type'],
+    { x: 94, y: 112 },
+  );
+  const urlSeries = builds('series URL', ['path'], { x: 110, y: 112 }, '../tno-topas/{path}');
+
   const rasterNl = shapes('NL raster', { shape: 'grid' }, 'grid', { x: 78, y: 4 });
   const rasterEu = shapes('EU raster', { shape: 'grid' }, 'grid', { x: 78, y: 20 });
   const placesLml = shapes('LML places', { ...stations, limit: 200 }, 'geo', { x: 78, y: 40 });
@@ -1125,6 +1144,7 @@ function topasSources() {
   const flowId = 2000;
   const out = {
     gridNl: 2001, gridEu: 2002, lml: 2003, samen: 2004, eea: 2005, config: 2006, date: 2007,
+    seriesUrl: 2008,
   };
 
   /*
@@ -1136,7 +1156,7 @@ function topasSources() {
    * subflow is the machinery, and what to point it at belongs where it can
    * be seen.
    */
-  const inn = { config: 2010, pollutant: 2011 };
+  const inn = { config: 2010, pollutant: 2011, station: 2012 };
 
   /** Reading the config, which now arrives on a socket rather than a fetch. */
   const fromConfig = (to: { id: number }, socket: number) =>
@@ -1158,6 +1178,8 @@ function topasSources() {
     sockets: [
       { id: inn.config, type: 'in', name: 'config', format: 'data' },
       { id: inn.pollutant, type: 'in', name: 'pollutant', format: 'string' },
+      // Which station was pressed. Nothing is built until one has been.
+      { id: inn.station, type: 'in', name: 'station', format: 'string' },
       { id: out.gridNl, type: 'out', name: 'NL grid', format: 'grid' },
       { id: out.gridEu, type: 'out', name: 'EU grid', format: 'grid' },
       { id: out.lml, type: 'out', name: 'NL · RIVM LML', format: 'geo' },
@@ -1165,6 +1187,12 @@ function topasSources() {
       { id: out.eea, type: 'out', name: 'EU · EEA', format: 'geo' },
       { id: out.config, type: 'out', name: 'config', format: 'data' },
       { id: out.date, type: 'out', name: 'date', format: 'string' },
+      /*
+       * The address of one station's readings — the address, not the readings.
+       * Who fetches it is a decision, and this flow makes it outside where it
+       * can be seen: the request node in the article is that decision.
+       */
+      { id: out.seriesUrl, type: 'out', name: 'station series URL', format: 'string' },
     ],
     children: [
       gridPathNl.node, gridPathEu.node, date.node, idNl.node, idEu.node,
@@ -1173,6 +1201,7 @@ function topasSources() {
       urlGridNl.node, urlGridEu.node, urlLml.node, urlSamen.node, urlEea.node,
       getGridNl.node, getGridEu.node, getLml.node, getSamen.node, getEea.node,
       rasterNl.node, rasterEu.node, placesLml.node, placesSamen.node, placesEea.node,
+      seriesPath.node, networkId.node, seriesType.node, seriesFile.node, urlSeries.node,
     ],
     connections: [
       // One file, read eight ways — and it arrives on a socket.
@@ -1214,6 +1243,25 @@ function topasSources() {
       wire(getSamen, getSamen.out, placesSamen, placesSamen.in),
       wire(getEea, getEea.out, placesEea, placesEea.in),
 
+      /*
+       * The station's own address, built the same way everything else here is
+       * built: out of what the publisher says, never out of what we guessed.
+       * Three of its six parts come from the LML file, two from the sockets
+       * outside — which pollutant, and which station was pressed — and the
+       * region is the same id the grid paths use.
+       */
+      wire(getLml, getLml.out, seriesPath, seriesPath.in),
+      wire(getLml, getLml.out, networkId, networkId.in),
+      wire(getLml, getLml.out, seriesType, seriesType.in),
+
+      wire(seriesPath, seriesPath.out, seriesFile, seriesFile.socket('pattern')),
+      wire(idNl, idNl.out, seriesFile, seriesFile.socket('region|lower')),
+      wire(networkId, networkId.out, seriesFile, seriesFile.socket('network')),
+      wire(seriesType, seriesType.out, seriesFile, seriesFile.socket('type')),
+      { id: nextId(), from: flowId, to: seriesFile.id, out: inn.pollutant, in: seriesFile.socket('pollutant') },
+      { id: nextId(), from: flowId, to: seriesFile.id, out: inn.station, in: seriesFile.socket('code') },
+      wire(seriesFile, seriesFile.out, urlSeries, urlSeries.socket('path')),
+
       // And out, where the rest of the flow can see them.
       emit(rasterNl, rasterNl.out, out.gridNl),
       emit(rasterEu, rasterEu.out, out.gridEu),
@@ -1222,6 +1270,7 @@ function topasSources() {
       emit(placesEea, placesEea.out, out.eea),
       { id: nextId(), from: flowId, to: flowId, out: inn.config, in: out.config },
       emit(date, date.out, out.date),
+      emit(urlSeries, urlSeries.out, out.seriesUrl),
     ],
   };
 }
@@ -1230,7 +1279,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 16 },
+  config: { seedVersion: 17 },
   /*
    * The same flow, read as an article.
    *
@@ -1370,6 +1419,49 @@ export const tno = () => ({
           'somewhere off the side of a country-sized view.',
       },
 
+      { type: 'heading', text: 'Press a station', level: 2 },
+      {
+        type: 'text',
+        text:
+          'The markers on the Dutch map are not decoration either. Each one is a ' +
+          'station with a file behind it, and until you press one that file is not ' +
+          'fetched — there are ninety-three of them and you wanted one.\n' +
+          '\n' +
+          'Press a marker and four things happen in order, all of them visible in this ' +
+          'flow. The map sends out the place that was pressed; its station code is ' +
+          'taken out of it; the code goes back into the machinery, which answers with an ' +
+          'address built from the publisher’s own pattern; and the request below goes ' +
+          'out and fetches it.',
+      },
+      { type: 'node', nodeId: 900, float: 'right', caption: 'The fetch your click made' },
+      {
+        type: 'text',
+        text:
+          'Nothing about that address is typed into this flow. `{region}`, `{network}`, ' +
+          '`{code}`, `{pollutant}` and `{type}` are filled from five different places — ' +
+          'the config, the network’s own file, the chooser above and the marker you ' +
+          'pressed — and the pattern they are filled into came down the wire with the ' +
+          'station list. Even the word for a measurement is fetched: this publisher ' +
+          'calls it `metingen`, and the file says so precisely so that nobody has to ' +
+          'know it is Dutch.\n' +
+          '\n' +
+          'What comes back is a bare array of numbers with its start date and its step ' +
+          'stated once beside it — no timestamp per reading, which would double the ' +
+          'file for no information. So the horizontal axis is the day number of the ' +
+          'published window, and the gaps are real: a null is a day the station did not ' +
+          'report, and it stays a hole rather than sliding everything after it a day ' +
+          'earlier.',
+      },
+      { type: 'node', nodeId: 1100, float: 'none', width: '420px', caption: 'One station, day by day' },
+      {
+        type: 'text',
+        text:
+          'Change the pollutant above and press again: the same station, a different ' +
+          'file, because the choice is one of the five parts the address is built from. ' +
+          'That is the whole trick of this flow, and it is not a trick — the publisher ' +
+          'wrote down where everything is, and the flow reads it rather than guessing.',
+      },
+
       { type: 'heading', text: 'Why the colours are not decoration', level: 2 },
       {
         type: 'text',
@@ -1397,9 +1489,10 @@ export const tno = () => ({
         type: 'text',
         text:
           'Everything above came out of files that a handful of nodes fetched while you ' +
-          'read: one config, two grids, three station lists. The maps, the chooser and ' +
-          'the switch are those nodes, and this page and that graph are two readings of ' +
-          'the same JSON. {{!flow:Show me the flow}}',
+          'read: one config, two grids, three station lists, and one file that exists ' +
+          'because you pressed something. Every figure is one of those nodes, and this ' +
+          'page and that graph are two readings of the same JSON. ' +
+          '{{!flow:Show me the flow}}',
       },
     ],
   },
@@ -1532,6 +1625,70 @@ export const tno = () => ({
       ],
       position: { x: 62, y: 40 },
     },
+    {
+      type: 'data-pick',
+      title: 'Which station',
+      id: 800,
+      /*
+       * A pressed marker arrives as a place, and a place carries the id it was
+       * made from — `ref`, which for these networks is the station code. That
+       * is the whole of what the rest of this chain needs: not where it is,
+       * which station it is.
+       */
+      config: { shape: 'text', a: 'places.0.ref' },
+      sockets: [
+        { id: 810, type: 'in', formats: ['geo'] },
+        { id: 811, type: 'out', format: 'string' },
+      ],
+      position: { x: 84, y: 12 },
+    },
+    {
+      type: 'net-request',
+      title: 'That station’s readings',
+      id: 900,
+      /*
+       * The one fetch that happens because somebody asked for it, rather than
+       * because the page opened — and it is out here, next to the map, rather
+       * than fifteen nodes inside the machinery. A reader should be able to
+       * see the request their own click made.
+       *
+       * No URL of its own: the address arrives on a socket, built from the
+       * publisher's own pattern. Before the first click nothing is built and
+       * nothing is asked.
+       */
+      config: {
+        url: '', method: 'GET', every: 0,
+        title: 'One station, day by day',
+        description: 'What this station actually measured, over the published window.',
+      },
+      sockets: [
+        { id: 910, type: 'in', name: 'when' },
+        { id: 911, type: 'in', name: 'url', format: 'string' },
+        { id: 912, type: 'out', format: 'data' },
+      ],
+      position: { x: 84, y: 26 },
+    },
+    {
+      type: 'data-pick',
+      title: 'Readings',
+      id: 1000,
+      // A bare array of numbers with its start and step stated beside it, so
+      // the index IS the x: the nth day of the published window.
+      config: { shape: 'point', list: 'values' },
+      sockets: [
+        { id: 1010, type: 'in', formats: ['data'] },
+        { id: 1011, type: 'out', format: 'point' },
+      ],
+      position: { x: 84, y: 42 },
+    },
+    {
+      type: 'graph-timeseries',
+      title: 'One station, day by day',
+      id: 1100,
+      config: { style: 'line' },
+      sockets: [{ id: 1110, type: 'in', formats: ['number', 'point'] }],
+      position: { x: 84, y: 56 },
+    },
   ],
   connections: [
     // The config, into the machinery and into the chooser beside it.
@@ -1549,5 +1706,16 @@ export const tno = () => ({
     // the EEA's stations on top.
     { id: 1008, from: 2000, to: 700, out: 2002, in: 712 },
     { id: 1007, from: 2000, to: 700, out: 2005, in: 710 },
+
+    /*
+     * The chain a click sets off: the pressed marker's code goes back into the
+     * machinery, which answers with an address, which this flow then fetches
+     * and draws. Four nodes, and the reader can watch all four react.
+     */
+    { id: 1009, from: 300, to: 800, out: 313, in: 810 },
+    { id: 1010, from: 800, to: 2000, out: 811, in: 2012 },
+    { id: 1011, from: 2000, to: 900, out: 2008, in: 911 },
+    { id: 1012, from: 900, to: 1000, out: 912, in: 1010 },
+    { id: 1013, from: 1000, to: 1100, out: 1011, in: 1110 },
   ],
 });

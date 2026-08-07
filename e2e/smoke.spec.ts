@@ -2911,7 +2911,18 @@ test('a config file supplies the pattern, and the template builds the URL from i
 test('the TOPAS subflow fetches everything from the publisher\'s own config', async ({ page }) => {
   const asked: string[] = [];
   const answer = (body: unknown) => ({ contentType: 'application/json', body: JSON.stringify(body) });
-  const places = (count: number) => ({
+  /*
+   * A network's own file: the stations, and how to reach one of them. The
+   * series block is not decoration in the stub either — the address of a
+   * station's readings is built out of it, and a network that did not publish
+   * one is a network whose stations cannot be pressed.
+   */
+  const places = (id: string, count: number) => ({
+    network: id,
+    series: {
+      path: 'data/{region}/series/{network}/{code}/{pollutant}-{type}.json',
+      types: { measurements: 'metingen', sectors: 'sectoren' },
+    },
     list: Array.from({ length: count }, (_, i) => ({ code: `S${i}`, lat: 52 + i / 100, lon: 5 + i / 100 })),
   });
   const grid = (label: string) => ({
@@ -2945,9 +2956,14 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
     if (/data\/nl\/grid\/2026-07-01\/(PM2\.5|NO2)\.json$/.test(url)) return route.fulfill(answer(grid('nl')));
     if (url.endsWith('data/eu/grid/2026-07-01/PM2.5.json')) return route.fulfill(answer(grid('eu')));
-    if (url.endsWith('lml.json')) return route.fulfill(answer(places(3)));
-    if (url.endsWith('samenmeten.json')) return route.fulfill(answer(places(5)));
-    if (url.endsWith('eu-eea.json')) return route.fulfill(answer(places(7)));
+    if (url.endsWith('lml.json')) return route.fulfill(answer(places('lml', 3)));
+    if (url.endsWith('samenmeten.json')) return route.fulfill(answer(places('samenmeten', 5)));
+    if (url.endsWith('eu-eea.json')) return route.fulfill(answer(places('eea', 7)));
+
+    // The one file that exists because somebody pressed something.
+    if (/series\/lml\/S1\/PM2\.5-metingen\.json$/.test(url)) {
+      return route.fulfill(answer({ code: 'S1', start: '2026-05-21', resolution: 'day', values: [3, null, 5, 4] }));
+    }
 
     // Anything else is a URL this flow should never have built.
     return route.fulfill({ status: 404, body: 'not published' });
@@ -3018,6 +3034,43 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     { track: false, follow: true, bounded: true, lat: 52.15, lon: 5.3, zoom: 7, slackX: 0.08, slackY: 0.08 },
     { track: false, follow: true, bounded: true, lat: 50, lon: 10, zoom: 3, slackX: 0.04, slackY: 0.04 },
   ]);
+
+  /*
+   * And the one fetch that happens because somebody asked for it.
+   *
+   * Pressing a marker sends the place out of the map, its code is taken from
+   * it, the machinery answers with an address built from the publisher's own
+   * pattern, and the request outside goes and gets it. Driven through the
+   * worker rather than through Leaflet: which pixel a marker sits on is not
+   * what this is about, and the map's own press is tested elsewhere.
+   */
+  await page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    // `pick` takes the place itself; the worker wraps it as a one-place layer.
+    flow.getWorker(300).pick({ lat: 52.01, lon: 5.01, ref: 'S1' });
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return (flow.getWorker(900) as { url: string }).url;
+  }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/lml/S1/PM2.5-metingen.json');
+
+  /*
+   * And it is drawn. Three points out of four values: the null is a day the
+   * station did not report, and it stays a hole rather than sliding the two
+   * readings after it a day earlier.
+   */
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return (flow.getWorker(1000) as { count: number }).count;
+  })).toBe(3);
+
+  // Every part of that address came from somewhere else: `nl` from the config's
+  // region id, `lml` and `metingen` from the network's own file, `PM2.5` from
+  // the chooser and the code from the marker. None of it is typed in the flow.
 
   // The Dutch switch offers the two Dutch networks and nothing else.
   await page.evaluate(() => {
@@ -3124,8 +3177,8 @@ test('a subflow draws a picture of itself, or the child it is told to wear', asy
    * point this machinery at is a decision, and it belongs where it can be
    * seen.
    */
-  await expect(box).toContainText('26 nodes', { timeout: 20_000 });
-  expect(await box.locator('svg rect.dot').count()).toBe(26);
+  await expect(box).toContainText('31 nodes', { timeout: 20_000 });
+  expect(await box.locator('svg rect.dot').count()).toBe(31);
   expect(await box.locator('svg line.edge').count()).toBeGreaterThan(20);
 
   // Open it, then its own settings.
@@ -4135,14 +4188,14 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
   // The flow arrives asynchronously — seeded, then its modules downloaded —
   // and this one speaks three of them, so it is slower than the demo.
   await expect(doc.locator('h1')).toHaveText('Where the air comes from', { timeout: 30_000 });
-  await expect(doc.locator('h2')).toHaveCount(5);
+  await expect(doc.locator('h2')).toHaveCount(6);
 
   /*
    * Every figure is mounted node content. Four of them, and each one has to
    * resolve: an unresolved `{{id}}` renders as its own source text, which is
    * honest in a document and useless in a test that means to catch it.
    */
-  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(5);
+  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(7);
   await expect(doc).not.toContainText('{{');
 
   // Claims with sources: an article that quotes a number names where it is
@@ -4158,5 +4211,7 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
   expect(await page.evaluate(() =>
     [...document.querySelectorAll('fb-flow-document [slot^="fig-"]')]
       .map(node => node.getAttribute('slot'))
-      .sort())).toEqual(['fig-300', 'fig-500', 'fig-600', 'fig-630', 'fig-700']);
+      .sort())).toEqual([
+        'fig-1100', 'fig-300', 'fig-500', 'fig-600', 'fig-630', 'fig-700', 'fig-900',
+      ]);
 });
