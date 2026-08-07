@@ -1,6 +1,7 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostBinding, HostListener, NgZone, OnInit, ViewChild, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
+import { SocketTypesDialogComponent } from './components/socket-types/socket-types-dialog.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
 import { ModulesService } from './modules.service';
 import { APP_VERSION } from './version';
@@ -130,6 +131,18 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   openTypeColors(): void {
     this.dialog.open(TypeColorsComponent, { width: '320px' });
+  }
+
+  /** The book of socket types, open at a page or at the beginning. */
+  openSocketTypes(format?: string): void {
+    this.dialog.open(SocketTypesDialogComponent, { width: '480px', data: { format } });
+  }
+
+  /** The `i` on a pressed socket, asking what that socket carries. */
+  onFormatInfo(event: Event): void {
+    const format = (event as CustomEvent<{ format?: string }>).detail?.format;
+
+    this.openSocketTypes(format);
   }
 
   ngOnInit(): void {

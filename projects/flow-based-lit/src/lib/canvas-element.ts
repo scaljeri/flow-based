@@ -229,7 +229,7 @@ export class FbFlowCanvasElement extends LitElement {
        * is the one thing this bar exists to say.
        */
       max-height: 60%;
-      max-width: min(94%, 560px);
+      max-width: min(96%, 720px);
       overflow-y: auto;
       padding: 10px 12px;
       position: absolute;
@@ -1014,17 +1014,13 @@ export class FbFlowCanvasElement extends LitElement {
       return;
     }
 
-    if (touched.socket === this.notedSocket && touched.explain === undefined) {
+    if (touched.socket === this.notedSocket) {
       return;
     }
 
     this.notedSocket = touched.socket;
     clearTimeout(this.noteTimer);
-    this.noteTimer = undefined;
-
-    if (!touched.explain) {
-      this.noteTimer = setTimeout(() => this.editor?.forgetTouchedSocket(), 6000);
-    }
+    this.noteTimer = setTimeout(() => this.editor?.forgetTouchedSocket(), 6000);
   }
 
   protected override render() {
@@ -1087,7 +1083,6 @@ export class FbFlowCanvasElement extends LitElement {
 
     const { socket } = touched;
     const format = socket.format ?? (socket.formats?.length ? socket.formats.join(' or ') : '');
-    const info = socket.format ? this.editor.formatInfo?.(socket.format) : undefined;
     const colour = socket.format ? this.editor.socketColors[socket.format] : undefined;
 
     return html`
@@ -1100,28 +1095,33 @@ export class FbFlowCanvasElement extends LitElement {
             <span class="format">${format || 'anything'}</span>
           </span>
 
-          ${info
-            ? html`<button type="button" class="why"
-                    aria-label=${touched.explain ? 'Hide what this type is' : 'What is this type?'}
-                    aria-expanded=${touched.explain ? 'true' : 'false'}
-                    @click=${() => this.editor.explainSocket(!touched.explain)}>i</button>`
+          ${socket.format
+            ? html`<button type="button" class="why" aria-label="What is this type?"
+                    @click=${() => this.explainFormat(socket.format!)}>i</button>`
             : nothing}
 
           <button type="button" class="close" aria-label="Dismiss"
                   @click=${() => this.editor.forgetTouchedSocket()}>&times;</button>
         </div>
 
-        ${touched.explain && info
-          ? html`<div class="detail">
-              ${info.type
-                ? html`<pre class="signature">type ${info.name} = ${info.type}</pre>`
-                : nothing}
-              <p>${info.description ?? 'No description was given for this type.'}</p>
-              ${info.refines ? html`<p class="refines">refines ${info.refines}</p>` : nothing}
-            </div>`
-          : nothing}
       </div>
     `;
+  }
+
+  /**
+   * Ask whoever is hosting this editor to explain a type.
+   *
+   * The shell has no dialogs and no idea what one looks like here — it knows a
+   * format as a name. The host holds the registry and the chrome, so the
+   * question goes up as an event and comes back as whatever that app thinks an
+   * answer looks like.
+   */
+  private explainFormat(format: string): void {
+    this.dispatchEvent(new CustomEvent('fb-format-info', {
+      detail: { format },
+      bubbles: true,
+      composed: true,
+    }));
   }
 
   /**

@@ -113,6 +113,11 @@ showing this app's cockpit.
       <span>Data types</span>
     </button>
 
+    <button type="button" mat-menu-item class="socket-types" (click)="openSocketTypes()">
+      <mat-icon>data_object</mat-icon>
+      <span>Socket types</span>
+    </button>
+
     <mat-divider></mat-divider>
 
     <!-- Which build this phone is ACTUALLY showing; cache disputes end here. -->
@@ -139,7 +144,13 @@ showing this app's cockpit.
   canvas was on screen — an embedded article flashed the editor first. After
   that the document's own button may send the reader here.
   -->
-  <fb-flow [flow]="flow" [class.view-hidden]="flowHidden"></fb-flow>
+  <!--
+    The `i` on a pressed socket asks what its type is. The shell has no dialogs
+    and knows a format only by name, so the question arrives here as an event
+    and is answered with the same page the menu opens.
+  -->
+  <fb-flow [flow]="flow" [class.view-hidden]="flowHidden"
+    (fb-format-info)="onFormatInfo($event)"></fb-flow>
 
   @if (showJson) {
     <article class="flow-as-json">

@@ -3165,31 +3165,33 @@ test('pressing a socket names it, and can be asked what its type means', async (
   await expect(note).toContainText('function');
 
   // The type's meaning is a second question.
-  await expect(note.locator('.detail')).toHaveCount(0);
-  await note.locator('button.why').click();
-  await expect(note.locator('.detail')).toContainText('A symbolic function of x');
-
   /*
-   * And where a module wrote down the shape, the type is shown the way a
-   * programmer reads types. `function` has only a description; `geo` has both,
-   * and the second lands faster than the first.
+   * The `i` is the second question, and it opens the book of types at this
+   * type's page. The shell has no dialogs and knows a format only by name, so
+   * it asks the host — and the host answers with the same page its menu opens.
    */
-  const geo = await page.evaluate(() => {
-    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
-    const node = editor.root.children.find((child: any) =>
-      (child.sockets ?? []).some((s: any) => s.format === 'point'));
+  const types = page.locator('fb-socket-types-dialog');
 
-    editor.socketClicked(node.sockets.find((s: any) => s.format === 'point'), node.id);
-
-    return !!node;
-  });
-
-  expect(geo).toBe(true);
   await note.locator('button.why').click();
-  await expect(note.locator('.signature')).toHaveText('type point = [number, number, ...number[]]');
+  await expect(types).toHaveCount(1);
+  await expect(types.locator('select')).toHaveValue('function');
+  await expect(types).toContainText('A symbolic function of x');
 
-  // Closing it is a deliberate act while its details are open — a longer read
-  // than a name and a type.
+  // Another type, chosen in the dialog, with its shape written as a type and
+  // its definition formatted rather than crammed onto one line.
+  await types.locator('select').selectOption('point');
+  await expect(types.locator('.signature')).toHaveText('type point = [number, number, ...number[]]');
+  expect((await types.locator('pre.json').innerText()).split('\n').length).toBeGreaterThan(3);
+
+  await types.locator('button[mat-dialog-close]').click();
+  await expect(types).toHaveCount(0);
+
+  // And the menu reaches the same page from a standing start.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.socket-types').click();
+  await expect(page.locator('fb-socket-types-dialog')).toHaveCount(1);
+  await page.locator('fb-socket-types-dialog button[mat-dialog-close]').click();
+
   await note.locator('button.close').click();
   await expect(note).toHaveCount(0);
 

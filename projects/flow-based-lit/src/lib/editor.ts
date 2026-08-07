@@ -136,17 +136,7 @@ export class FbEditor {
    * flow's JSON or by guessing from the colour of the line. This is the answer
    * to "what did I just press", shown until something else is pressed.
    */
-  touchedSocket: { socket: FbSocket; nodeId: number; explain?: boolean } | null = null;
-
-  /** Show or hide the details of the touched socket's type. */
-  explainSocket(explain: boolean): void {
-    if (!this.touchedSocket) {
-      return;
-    }
-
-    this.touchedSocket = { ...this.touchedSocket, explain };
-    this.changes.emit({ kind: 'interaction' });
-  }
+  touchedSocket: { socket: FbSocket; nodeId: number } | null = null;
 
   forgetTouchedSocket(): void {
     if (!this.touchedSocket) {
