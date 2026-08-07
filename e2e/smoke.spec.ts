@@ -2933,7 +2933,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
       }));
     }
 
-    if (url.endsWith('data/nl/grid/2026-07-01/PM2.5.json')) return route.fulfill(answer(grid('nl')));
+    if (/data\/nl\/grid\/2026-07-01\/(PM2\.5|NO2)\.json$/.test(url)) return route.fulfill(answer(grid('nl')));
     if (url.endsWith('data/eu/grid/2026-07-01/PM2.5.json')) return route.fulfill(answer(grid('eu')));
     if (url.endsWith('lml.json')) return route.fulfill(answer(places(3)));
     if (url.endsWith('samenmeten.json')) return route.fulfill(answer(places(5)));
@@ -2982,6 +2982,10 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     'samenmeten.json',
   ]);
 
+  // Nothing is asked for twice, either: the config is fetched once and read
+  // by everything, rather than once per reader.
+  expect(asked.filter(url => url === 'config.json')).toHaveLength(1);
+
   // And the switch is fed by three of the subflow's seven sockets.
   await page.evaluate(() => {
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
@@ -2989,6 +2993,44 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   });
 
   await expect.poll(async () => (await state()).places).toBe(7);
+
+  /*
+   * The pollutant is a decision, and it is made OUTSIDE the machinery: the
+   * config feeds a filter that states which pollutants this map is about, and
+   * a choice that picks one of them. Both used to be buried — the config was
+   * fetched fifteen nodes deep and the pollutant was whichever one the
+   * publisher happened to list first.
+   */
+  const chooser = () => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const filter = flow.getWorker(620) as { kept: number; total: number };
+    const choice = flow.getWorker(630) as { labels: string[]; chosenLabel: string };
+    const sub = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.root.children.find((child: any) => child.type === 'flow');
+    const grid = sub.children.find((child: any) => child.title === 'NL grid');
+
+    return {
+      kept: `${filter.kept} of ${filter.total}`,
+      offered: choice.labels,
+      chosen: choice.chosenLabel,
+      url: (flow.getWorker(grid.id) as { url: string }).url,
+    };
+  });
+
+  // The published list is PM2.5 and NO2; both survive the rule.
+  await expect.poll(async () => (await chooser()).kept).toBe('2 of 2');
+  expect((await chooser()).offered).toEqual(['PM2.5', 'NO2']);
+  expect((await chooser()).url).toContain('PM2.5.json');
+
+  // Choosing the other one moves the whole chain: the file name is built from
+  // it, and the request follows.
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(630).set(1);
+  });
+
+  await expect.poll(async () => (await chooser()).url).toContain('NO2.json');
+  expect(asked).toContain('data/nl/grid/2026-07-01/NO2.json');
 });
 
 
@@ -3018,9 +3060,14 @@ test('a subflow draws a picture of itself, or the child it is told to wear', asy
 
   const box = page.locator('fb-flow-canvas fb-node-box').filter({ hasText: 'TOPAS sources' }).first();
 
-  // Unchosen: one dot per node, one line per connection, and a count.
-  await expect(box).toContainText('28 nodes', { timeout: 20_000 });
-  expect(await box.locator('svg rect.dot').count()).toBe(28);
+  /*
+   * Unchosen: one dot per node, one line per connection, and a count. Twenty
+   * six since the config fetch and the pollutant moved OUT of here — what to
+   * point this machinery at is a decision, and it belongs where it can be
+   * seen.
+   */
+  await expect(box).toContainText('26 nodes', { timeout: 20_000 });
+  expect(await box.locator('svg rect.dot').count()).toBe(26);
   expect(await box.locator('svg line.edge').count()).toBeGreaterThan(20);
 
   // Open it, then its own settings.

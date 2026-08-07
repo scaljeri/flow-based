@@ -5,6 +5,9 @@ import { PickSmallComponent } from './pick-small.component';
 import { PickSettingsComponent } from './pick-settings.component';
 import { SwitchWorker } from './switch.worker';
 import { ChoiceWorker } from './choice.worker';
+import { FilterWorker } from './filter.worker';
+import { FilterSmallComponent } from './filter-small.component';
+import { FilterSettingsComponent } from './filter-settings.component';
 import { ChoiceSmallComponent } from './choice-small.component';
 import { ChoiceSettingsComponent } from './choice-settings.component';
 import { TemplateWorker } from './template.worker';
@@ -142,6 +145,28 @@ export const DATA_MODULE: FbModule = {
         addableSockets: 'none',
       },
       worker: ChoiceWorker,
+    },
+
+    /*
+     * A list, minus what you did not want. Not a Pick — that takes a part OUT
+     * of something; this keeps some of a list and drops the rest. It states
+     * the RULE rather than the answer, so the day a publisher adds a sixth
+     * pollutant the flow has an opinion somebody actually wrote down.
+     */
+    'data-filter': {
+      component: { small: FilterSmallComponent },
+      settingsComponent: FilterSettingsComponent,
+      settings: {
+        title: 'Filter',
+        group: 'Data',
+        config: { list: '', path: '', test: 'oneOf', value: '' },
+        sockets: [
+          { type: 'in', formats: ['data'] },
+          { type: 'out', format: 'data' },
+        ],
+        addableSockets: 'none',
+      },
+      worker: FilterWorker,
     },
 
     'data-switch': {

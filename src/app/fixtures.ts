@@ -989,15 +989,13 @@ function shapes(title: string, config: Record<string, unknown>, format: string, 
 function topasSources() {
   const stations = { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 };
 
-  const config = fetches('TOPAS config', { x: 2, y: 42 }, '../tno-topas/config.json');
-
   // What the publisher says about itself.
   const gridPathNl = reads('NL grid path', 'regions.0.gridPath', { x: 14, y: 4 });
   const gridPathEu = reads('EU grid path', 'regions.1.gridPath', { x: 14, y: 16 });
   const date = reads('date', 'currentDate', { x: 14, y: 28 });
   const idNl = reads('NL', 'regions.0.id', { x: 14, y: 40 });
   const idEu = reads('EU', 'regions.1.id', { x: 14, y: 52 });
-  const pollutant = reads('pollutant', 'regions.0.pollutants.0', { x: 14, y: 64 });
+
   const lmlPath = reads('LML file', 'networks.0.path', { x: 14, y: 76 });
   const samenPath = reads('Samen Meten file', 'networks.1.path', { x: 14, y: 88 });
   const eeaPath = reads('EEA file', 'networks.2.path', { x: 14, y: 100 });
@@ -1032,6 +1030,21 @@ function topasSources() {
     gridNl: 2001, gridEu: 2002, lml: 2003, samen: 2004, eea: 2005, config: 2006, date: 2007,
   };
 
+  /*
+   * The two things this place needs from outside.
+   *
+   * The config used to be fetched in here, and the pollutant was whichever
+   * one the config happened to list first — so the one decision a reader
+   * actually makes was buried fifteen nodes deep. Both are inputs now: the
+   * subflow is the machinery, and what to point it at belongs where it can
+   * be seen.
+   */
+  const inn = { config: 2010, pollutant: 2011 };
+
+  /** Reading the config, which now arrives on a socket rather than a fetch. */
+  const fromConfig = (to: { id: number }, socket: number) =>
+    ({ id: nextId(), from: flowId, to: to.id, out: inn.config, in: socket });
+
   const wire = (from: { id: number }, out_: number, to: { id: number }, in_: number) =>
     ({ id: nextId(), from: from.id, to: to.id, out: out_, in: in_ });
 
@@ -1046,6 +1059,8 @@ function topasSources() {
     config: {},
     position: { x: 4, y: 30 },
     sockets: [
+      { id: inn.config, type: 'in', name: 'config', format: 'data' },
+      { id: inn.pollutant, type: 'in', name: 'pollutant', format: 'string' },
       { id: out.gridNl, type: 'out', name: 'NL grid', format: 'grid' },
       { id: out.gridEu, type: 'out', name: 'EU grid', format: 'grid' },
       { id: out.lml, type: 'out', name: 'NL · RIVM LML', format: 'geo' },
@@ -1055,8 +1070,7 @@ function topasSources() {
       { id: out.date, type: 'out', name: 'date', format: 'string' },
     ],
     children: [
-      config.node,
-      gridPathNl.node, gridPathEu.node, date.node, idNl.node, idEu.node, pollutant.node,
+      gridPathNl.node, gridPathEu.node, date.node, idNl.node, idEu.node,
       lmlPath.node, samenPath.node, eeaPath.node,
       gridFileNl.node, gridFileEu.node, eeaFile.node,
       urlGridNl.node, urlGridEu.node, urlLml.node, urlSamen.node, urlEea.node,
@@ -1064,20 +1078,20 @@ function topasSources() {
       rasterNl.node, rasterEu.node, placesLml.node, placesSamen.node, placesEea.node,
     ],
     connections: [
-      // One file, read nine ways.
-      ...[gridPathNl, gridPathEu, date, idNl, idEu, pollutant, lmlPath, samenPath, eeaPath]
-        .map(pick => wire(config, config.out, pick, pick.in)),
+      // One file, read eight ways — and it arrives on a socket.
+      ...[gridPathNl, gridPathEu, date, idNl, idEu, lmlPath, samenPath, eeaPath]
+        .map(pick => fromConfig(pick, pick.in)),
 
       // The grid file names.
       wire(gridPathNl, gridPathNl.out, gridFileNl, gridFileNl.socket('pattern')),
       wire(idNl, idNl.out, gridFileNl, gridFileNl.socket('region|lower')),
       wire(date, date.out, gridFileNl, gridFileNl.socket('date')),
-      wire(pollutant, pollutant.out, gridFileNl, gridFileNl.socket('pollutant')),
+      { id: nextId(), from: flowId, to: gridFileNl.id, out: inn.pollutant, in: gridFileNl.socket('pollutant') },
 
       wire(gridPathEu, gridPathEu.out, gridFileEu, gridFileEu.socket('pattern')),
       wire(idEu, idEu.out, gridFileEu, gridFileEu.socket('region|lower')),
       wire(date, date.out, gridFileEu, gridFileEu.socket('date')),
-      wire(pollutant, pollutant.out, gridFileEu, gridFileEu.socket('pollutant')),
+      { id: nextId(), from: flowId, to: gridFileEu.id, out: inn.pollutant, in: gridFileEu.socket('pollutant') },
 
       // The EEA file name is itself a pattern: `{region}-eea.json`.
       wire(eeaPath, eeaPath.out, eeaFile, eeaFile.socket('pattern')),
@@ -1109,7 +1123,7 @@ function topasSources() {
       emit(placesLml, placesLml.out, out.lml),
       emit(placesSamen, placesSamen.out, out.samen),
       emit(placesEea, placesEea.out, out.eea),
-      emit(config, config.out, out.config),
+      { id: nextId(), from: flowId, to: flowId, out: inn.config, in: out.config },
       emit(date, date.out, out.date),
     ],
   };
@@ -1119,7 +1133,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 11 },
+  config: { seedVersion: 12 },
   sockets: [],
   children: [
     /*
@@ -1128,6 +1142,57 @@ export const tno = () => ({
      * air quality, which is what this flow is about.
      */
     topasSources(),
+    /*
+     * The one file everything else is worked out from, and it lives OUT here:
+     * what a flow points at is a decision, and a decision buried fifteen nodes
+     * inside a subflow is one nobody makes twice.
+     */
+    {
+      type: 'net-request',
+      title: 'TOPAS config',
+      id: 600,
+      config: {
+        url: '../tno-topas/config.json',
+        method: 'GET',
+        every: 0,
+        title: 'TOPAS configuration',
+        description: 'What the publisher says about its own data: paths, dates, regions, pollutants.',
+      },
+      sockets: [
+        { id: 609, type: 'in', name: 'when' },
+        { id: 608, type: 'in', name: 'url', format: 'string' },
+        { id: 610, type: 'out', format: 'data' },
+      ],
+      position: { x: 2, y: 6 },
+    },
+    {
+      type: 'data-filter',
+      title: 'the ones we draw',
+      id: 620,
+      /*
+       * Five are published; this map is about four of them. The rule is
+       * written down rather than the answer, so the day they add a sixth the
+       * flow has an opinion somebody actually chose.
+       */
+      config: { list: 'regions.0.pollutants', path: '', test: 'oneOf', value: 'PM2.5, PM10, NO2, O3' },
+      sockets: [
+        { id: 621, type: 'in', formats: ['data'] },
+        { id: 622, type: 'out', format: 'data' },
+      ],
+      position: { x: 18, y: 6 },
+    },
+    {
+      type: 'data-choice',
+      title: 'Which pollutant',
+      id: 630,
+      // The list itself arrives; each item IS the name, so no paths.
+      config: { list: '', label: '', value: '', as: 'text', which: 0 },
+      sockets: [
+        { id: 631, type: 'in', formats: ['data', 'geo', 'point', 'number', 'grid'] },
+        { id: 632, type: 'out', format: 'string' },
+      ],
+      position: { x: 33, y: 4 },
+    },
     {
       type: 'data-switch',
       title: 'Which network',
@@ -1166,6 +1231,12 @@ export const tno = () => ({
     },
   ],
   connections: [
+    // The config, into the machinery and into the chooser beside it.
+    { id: 1020, from: 600, to: 2000, out: 610, in: 2010 },
+    { id: 1021, from: 600, to: 620, out: 610, in: 621 },
+    { id: 1022, from: 620, to: 630, out: 622, in: 631 },
+    { id: 1023, from: 630, to: 2000, out: 632, in: 2011 },
+
     // Three networks into the switch, one of them onto the map.
     { id: 1002, from: 2000, to: 500, out: 2003, in: 510 },
     { id: 1003, from: 2000, to: 500, out: 2004, in: 511 },
