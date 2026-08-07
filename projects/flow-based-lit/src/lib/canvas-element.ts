@@ -217,6 +217,9 @@ export class FbFlowCanvasElement extends LitElement {
      */
     .socket-note {
       background: rgba(14, 14, 18, 0.96);
+      /* Padding and border inside the width, or "500px" is 526 and a phone's
+       * 100% overflows its own screen by the two pixels of border. */
+      box-sizing: border-box;
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -224,12 +227,14 @@ export class FbFlowCanvasElement extends LitElement {
       font: 12px system-ui, sans-serif;
       left: 50%;
       /*
-       * Wide, and free to grow downwards. On a phone the first version wrapped
-       * "NL grid" onto two lines and still cut the type down to "gr…", which
-       * is the one thing this bar exists to say.
+       * The width it is given, up to 500px — not the width its content
+       * happens to need. Sized to content it stayed narrow and wrapped
+       * "NL · Samen Meten" onto three lines while most of the phone beside it
+       * was empty; a bar that says what you just pressed should use the room
+       * it has and stop growing where a line stops being readable.
        */
       max-height: 60%;
-      max-width: min(96%, 720px);
+      width: min(calc(100% - 24px), 500px);
       overflow-y: auto;
       padding: 10px 12px;
       position: absolute;

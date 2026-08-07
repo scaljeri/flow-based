@@ -2150,11 +2150,15 @@ test('opening a flow that asks for an unknown module lists it, and does not run 
     return route.fulfill({ body: REMOTE_MODULE, contentType: 'text/javascript' });
   });
 
-  await page.goto('/');
-  await waitUntilReady(page);
-
-  // A flow from somebody else, arriving with a module URL written into it.
-  await page.evaluate(() => {
+  /*
+   * A flow from somebody else, put in place BEFORE the app boots.
+   *
+   * Writing it from a running page and reloading raced the autosave: that
+   * debounce also writes `fb-flow-current`, and a tick landing between the
+   * write and the reload put the demo back. The test then waited thirty
+   * seconds for a flow the app had been told to forget about.
+   */
+  await page.addInitScript(() => {
     const flow = {
       type: 'flow',
       title: 'from a stranger',
@@ -2169,7 +2173,7 @@ test('opening a flow that asks for an unknown module lists it, and does not run 
     localStorage.setItem('fb-flow-current', 'stranger');
   });
 
-  await page.reload();
+  await page.goto('/');
 
   /*
    * Not waitUntilReady: that waits for the demo, and this browser opens on the
