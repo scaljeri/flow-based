@@ -1264,9 +1264,36 @@ export class FbEditor {
       return null;
     }
 
-    // Checked here as well as in `accepts`, which is only the highlight: a
-    // connection can also be made by dropping the loose end on a socket.
+    /*
+     * Every rule is checked HERE, not only in `accepts`.
+     *
+     * `accepts` is the paint, and paint is not enforcement: a refused socket
+     * is drawn red and given `pointer-events: none`, which stops it being
+     * CLICKED and does nothing about a connection dropped on it. Dropping runs
+     * a geometric hit-test over the model — it has to, or a loose end would
+     * have to land within three pixels — and that hit-test cannot see CSS. So
+     * a socket the editor had just painted as impossible accepted the wire
+     * anyway: an input already fed was refused here (this check has been here
+     * all along), while a type mismatch and a connection from a node to itself
+     * were not refused anywhere.
+     */
     if (this.isTaken(inn.socket, inn.nodeId)) {
+      return null;
+    }
+
+    // A node feeding itself is a cycle of one, and every drawing of it lies:
+    // the line leaves and re-enters the same box.
+    if (a.nodeId === b.nodeId) {
+      return null;
+    }
+
+    /*
+     * And the types have to meet. Directional: what the out side offers must
+     * be assignable to what the in side demands, which is the same question
+     * `accepts` asks and the same one the engine will ask again when it
+     * narrows.
+     */
+    if (!formatsCompatible(out.socket, inn.socket, this.assignable)) {
       return null;
     }
 

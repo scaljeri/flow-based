@@ -861,9 +861,17 @@ test('data type colours are set from the menu, and can be switched off', async (
   const dialog = page.locator('fb-type-colors');
   await expect(dialog).toBeVisible();
 
-  // Only the types actually in use: functions, the labelled point set, plain
-  // numbers, and sampled points.
-  await expect(dialog.locator('li .name')).toHaveText(['function', 'marks', 'number', 'point']);
+  /*
+   * Only the types actually in use: functions, the labelled point set, and
+   * sampled points.
+   *
+   * `number` used to be listed and is not, which is the fix rather than a
+   * regression: the plots declare `number | point` and every one of them has
+   * settled on `point`. A socket that has settled carries what it settled on,
+   * so nothing in this flow carries a number — and a list called "the types in
+   * use" should not name one because a socket was once willing to take it.
+   */
+  await expect(dialog.locator('li .name')).toHaveText(['function', 'marks', 'point']);
 
   // Pick a new colour for `point`, and every line carrying it follows.
   await page.evaluate(() => {
@@ -2798,8 +2806,13 @@ test('a config file supplies the pattern, and the template builds the URL from i
     editor.flow.getWorker(config.id).set('url', '/topas-config.json');
 
     // Two values out of one file: the pattern itself, and the date it wants.
-    Object.assign(path.config, { shape: 'value', a: 'regions.0.gridPath' });
-    Object.assign(date.config, { shape: 'value', a: 'currentDate' });
+    /*
+     * `text`, not `value`. Both walk the same path; `value` promises a NUMBER
+     * and now produces one or reports why it cannot, so pointing it at a path
+     * pattern fails as it should. A path is text, and says so.
+     */
+    Object.assign(path.config, { shape: 'text', a: 'regions.0.gridPath' });
+    Object.assign(date.config, { shape: 'text', a: 'currentDate' });
 
     const out = (node: any) => node.sockets.find((s: any) => s.type === 'out');
     const ins = (node: any) => node.sockets.filter((s: any) => s.type === 'in');
@@ -3296,6 +3309,113 @@ test('a type can be invented, and a socket can be told to carry it', async ({ pa
   // Every known type, not only the two this demo's wires happen to carry.
   expect(socketEditor.options.length).toBeGreaterThan(5);
   expect(socketEditor.fields).toContain('Description');
+});
+
+
+/**
+ * The paint and the rule are the same rule.
+ *
+ * A socket the editor refuses is drawn red and given `pointer-events: none`,
+ * which stops it being CLICKED and does nothing about a connection dropped on
+ * it — dropping runs a geometric hit-test over the model, and a hit-test
+ * cannot see CSS. So a socket painted impossible accepted the wire anyway.
+ * Every rule is now checked where the connection is actually built.
+ */
+test('a connection refused by the paint is refused by the model too', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const built = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const places = editor.addNode('graph-places');   // out: geo
+    const formula = editor.addNode('math-formula');  // out: function
+    const sampler = editor.addNode('math-sampler');  // in: function
+
+    [places, formula, sampler].forEach((node: any, index: number) =>
+      (node.position = { x: 4 + index * 16, y: 88 }));
+
+    const before = editor.root.connections.length;
+    const out = (node: any) => node.sockets.find((s: any) => s.type === 'out');
+    const inn = (node: any) => node.sockets.find((s: any) => s.type === 'in');
+
+    // geo into a socket that demands a function: refused.
+    editor.socketClicked(out(places), places.id);
+    editor.socketClicked(inn(sampler), sampler.id);
+
+    const afterMismatch = editor.root.connections.length;
+
+    // A node feeding itself: refused.
+    editor.cancelPending();
+    editor.socketClicked(out(sampler), sampler.id);
+    editor.socketClicked(inn(sampler), sampler.id);
+
+    const afterSelf = editor.root.connections.length;
+
+    // And the pairing that IS legal still works, so this is a rule and not a wall.
+    editor.cancelPending();
+    editor.socketClicked(out(formula), formula.id);
+    editor.socketClicked(inn(sampler), sampler.id);
+
+    return { before, afterMismatch, afterSelf, afterLegal: editor.root.connections.length };
+  });
+
+  expect(built.afterMismatch).toBe(built.before);
+  expect(built.afterSelf).toBe(built.before);
+  expect(built.afterLegal).toBe(built.before + 1);
+});
+
+/**
+ * A socket that has settled offers what it settled on.
+ *
+ * Wiring a second, differently-typed source to an input that accepts either
+ * used to overwrite the first answer and re-queue the first connection, which
+ * overwrote it back — until propagation gave up and reported that it had not
+ * converged. And a deleted wire used to leave its type behind: the socket kept
+ * a format it only ever had because of that wire, and refused the next source
+ * on the strength of it.
+ */
+test('a settled socket keeps one type, and forgets it when the wire goes', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const seen = await page.evaluate(async () => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const plot = editor.addNode('graph-timeseries');   // in: number | point
+    const sampler = editor.addNode('math-sampler');    // out: point
+
+    [plot, sampler].forEach((node: any, index: number) =>
+      (node.position = { x: 4 + index * 18, y: 92 }));
+
+    const target = plot.sockets.find((s: any) => s.type === 'in');
+    const declared = [...(target.formats ?? [])];
+
+    editor.socketClicked(sampler.sockets.find((s: any) => s.type === 'out'), sampler.id);
+    editor.socketClicked(target, plot.id);
+
+    const settled = target.format;
+    const report = editor.flow.lastPropagation;
+
+    // Now take it away again.
+    const connection = editor.root.connections.find((c: any) => c.in === target.id);
+
+    editor.removeConnection(connection);
+
+    return {
+      declared,
+      settled,
+      converged: report?.converged,
+      afterRemoval: target.format,
+      stillDeclared: [...(target.formats ?? [])],
+    };
+  });
+
+  expect(seen.declared.length).toBeGreaterThan(1);
+  expect(seen.settled).toBe('point');
+  expect(seen.converged).toBe(true);
+
+  // Forgotten, and the declaration is intact — the socket may be typed again.
+  expect(seen.afterRemoval).toBeNull();
+  expect(seen.stillDeclared).toEqual(seen.declared);
 });
 
 /**

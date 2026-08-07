@@ -19,3 +19,17 @@ export function isEnvelope(value: unknown): value is FbEnvelope {
 export function unwrap(value: unknown): unknown {
   return isEnvelope(value) ? value.value : value;
 }
+
+/**
+ * A spot on the earth, as it travels.
+ *
+ * Declared here rather than imported from the Graphs module for the same
+ * reason as the envelope above: the two modules share a wire format, not a
+ * package, and a flow may well have one and not the other.
+ */
+export interface Place {
+  lat: number;
+  lon: number;
+  label?: string;
+  ref?: string;
+}

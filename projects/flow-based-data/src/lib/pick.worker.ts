@@ -210,7 +210,26 @@ export class PickWorker implements FbNodeWorker {
 
       this.preview = String(value);
 
-      return this.shape === 'text' ? this.preview : value;
+      if (this.shape === 'text') {
+        return this.preview;
+      }
+
+      /*
+       * A number, because that is what this shape declares.
+       *
+       * It used to hand the path's value on untouched, so a JSON field holding
+       * the string "3" travelled down a socket typed `number` — and the adding
+       * node, which trusts the type rather than checking, answered "34". A
+       * shape called "one value (a number)" either produces a number or says
+       * what went wrong.
+       */
+      const asNumber = Number(value);
+
+      if (Number.isNaN(asNumber) && typeof value !== 'number') {
+        throw new Error(`"${this.config.a}" is not a number: ${JSON.stringify(value)?.slice(0, 40)}`);
+      }
+
+      return asNumber;
     }
 
     const list = this.config.list ? readConfigValue(source, this.config.list) : source;

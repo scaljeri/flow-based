@@ -1,6 +1,15 @@
 /**
  * The shape language: what data on a wire IS, structurally.
  *
+ * READ THIS FIRST: shapes are DESCRIPTIVE, not enforced. Nothing in the
+ * engine calls `shapeFits` — a connection is judged by the NAMES of the
+ * types at its ends and the refinement chains between them (see
+ * `FbAssignable` and the format registry). Shapes are what a reader is shown
+ * when they ask what a socket carries, and what `typeScriptOf` renders. So a
+ * module may declare a shape that disagrees with what its worker emits and
+ * nothing will stop it; the shape is a promise to the reader, not a contract
+ * the engine checks.
+ *
  * A small closed set, deliberately. Shapes answer one question — can a value
  * of THIS form be offered where THAT form is demanded — and everything a
  * socket carries reduces to them:
@@ -8,8 +17,13 @@
  * - the primitives `number`, `boolean`, `string`;
  * - `array` (a point is an array of numbers, at least two of them);
  * - `object` (named fields, each with a shape of its own);
- * - `any` (fits everywhere, demands nothing; composition uses it for "an
- *   array of anything").
+ * - `any` — which DEMANDS nothing and OFFERS nothing. A demand for `any` is
+ *   satisfied by everything; an offer of `any` satisfies nothing but another
+ *   `any`, because a value about which nothing is promised cannot be handed
+ *   to something that needs a number. The header used to say it "fits
+ *   everywhere", which is true of one side and exactly backwards for the
+ *   other — a module author declaring an `any` output would find it refused
+ *   by every typed input.
  *
  * There is deliberately NO shape for the unserialisable: a wire carries data
  * and nothing else. A function travels as its expression string; whoever

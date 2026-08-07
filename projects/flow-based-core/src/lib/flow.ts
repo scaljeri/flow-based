@@ -113,16 +113,29 @@ export class Flow {
       const node = this.nodes[key].state;
 
       if (node.sockets) {
-        if (node.children) {
-          /*
-           * Reset to the DECLARED type, not to nothing. `format` is the
-           * negotiated value and re-deriving it is this rebuild's job — but a
-           * socket the user typed as exactly one thing HAS that thing whether
-           * or not anything is wired to it. Nulling it here erased declared
-           * types on subflow boundaries at every graph mutation.
-           */
-          node.sockets.forEach(s => s.format = s.formats?.length === 1 ? s.formats[0] : null);
-        } else if (this.helpers) {
+        /*
+         * Every node, not only subflows and whatever the host's helpers
+         * happen to cover.
+         *
+         * A negotiated format outlived the connection that produced it: the
+         * wire was deleted and the socket kept the type it had only ever had
+         * because of it, then refused the next source on the strength of a
+         * ghost. Only subflows were reset here, and the demo's helpers reset
+         * only taps, so every other node type held onto it forever.
+         *
+         * Reset means "forget what was negotiated", NOT "forget what was
+         * declared" — hence only sockets that declared a SET are cleared. A
+         * socket typed as exactly one thing has that type whether or not
+         * anything is wired to it, and nulling those erased the declared
+         * types of every flow written before `formats` existed.
+         */
+        node.sockets.forEach(socket => {
+          if (socket.formats?.length) {
+            socket.format = socket.formats.length === 1 ? socket.formats[0] : null;
+          }
+        });
+
+        if (!node.children && this.helpers) {
           this.helpers.resetSockets(node);
         }
       }
@@ -562,13 +575,21 @@ export class Flow {
       return false;
     }
 
+    /*
+     * A subflow's own socket takes its type from whatever it is wired to —
+     * but only a type it is allowed to carry.
+     *
+     * It used to copy the peer's format verbatim. A boundary socket declaring
+     * `formats: ['number','point']` wired to a `string` therefore ended up
+     * holding `string`: a type it had said it could not carry, painted in a
+     * colour it had never declared, and invisible to every check downstream
+     * because those all consult the declared set. The one place the engine
+     * did not enforce its own types was the one place two graphs meet.
+     */
     if (from.state.children && !outSocket.format) {
-      outSocket.format = inSocket.format;
-      return !!outSocket.format;
-
+      return this.adopt(outSocket, inSocket.format);
     } else if (to.state.children && !inSocket.format) {
-      inSocket.format = outSocket.format;
-      return !!outSocket.format;
+      return this.adopt(inSocket, outSocket.format);
     }
 
     /*
@@ -608,6 +629,29 @@ export class Flow {
     }
 
     return isChanged;
+  }
+
+  /**
+   * Give a boundary socket the type on the other side of it, if it may hold it.
+   *
+   * Declared nothing at all — the common case for a socket the user added —
+   * means it may hold anything, which is what an empty declaration has always
+   * meant here.
+   */
+  private adopt(socket: FbSocket, format: string | null | undefined): boolean {
+    if (!format) {
+      return false;
+    }
+
+    const declared = socket.formats?.length ? socket.formats : [];
+
+    if (declared.length && !declared.some(allowed => this.assignable(format, allowed))) {
+      return false;
+    }
+
+    socket.format = format;
+
+    return true;
   }
 
   /**

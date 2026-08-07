@@ -14,11 +14,25 @@ import { FbSocket } from './types';
  * yet, and every flow saved before this existed says exactly that.
  */
 export function formatsOf(socket: FbSocket): string[] {
-  if (socket.formats?.length) {
-    return socket.formats;
+  /*
+   * A settled socket offers ONE type: the one it settled on.
+   *
+   * This used to answer `formats` whenever it was non-empty, so settling
+   * narrowed nothing — the socket kept offering its whole declared set. Two
+   * consequences, both real: wiring a second, differently-typed source to an
+   * input that accepts either overwrote the first answer and re-queued the
+   * first connection, which overwrote it back, until the propagation step
+   * limit gave up and reported `converged: false`; and a socket that HAD
+   * settled still painted and behaved as though it had not.
+   *
+   * The declared set is not lost — `formats` is left alone, and a rebuild
+   * clears `format` so the socket may be re-negotiated from scratch.
+   */
+  if (socket.format) {
+    return [socket.format];
   }
 
-  return socket.format ? [socket.format] : [];
+  return socket.formats?.length ? socket.formats : [];
 }
 
 /**

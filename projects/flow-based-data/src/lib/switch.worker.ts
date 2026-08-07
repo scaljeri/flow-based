@@ -1,4 +1,5 @@
 import { FbConnection, FbNodeWorker, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
+import { Place } from './envelope';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export interface SwitchConfig {
@@ -43,10 +44,15 @@ export class SwitchWorker implements FbNodeWorker {
     return this.ticks.asObservable();
   }
 
+  /** The out socket, for knowing what "nothing" looks like in its type. */
+  private readonly out?: FbSocket;
+
   constructor(private readonly config: SwitchConfig = {}, sockets?: FbSocket[]) {
     this.order = (sockets ?? [])
       .filter(socket => socket.type === 'in' && socket.id !== undefined)
       .map(socket => socket.id!);
+
+    this.out = (sockets ?? []).find(socket => socket.type === 'out');
 
     this.emit();
   }
@@ -121,17 +127,38 @@ export class SwitchWorker implements FbNodeWorker {
     return this.which > 0 ? this.order[this.which - 1] : undefined;
   }
 
+  /**
+   * What "nothing" looks like in the type this switch carries.
+   *
+   * A consumer has to be TOLD there is nothing now — silence leaves the last
+   * thing it drew on the screen. But the message has to be in the type the
+   * socket promised: this used to send an empty set of PLACES whatever the
+   * switch carried, so a switch on numbers set to "none" handed an object to
+   * an adding node, which answered NaN.
+   *
+   * Places and rasters both have an empty form and a map understands both. A
+   * number does not: there is no number meaning "no number", and zero is a
+   * lie. So for those, nothing is sent — the node says which input is live,
+   * and "none" is visible there rather than in a value that cannot express it.
+   */
+  private empty(): { places: Place[] } | { grid: undefined } | undefined {
+    const format = this.out?.format;
+
+    if (!format || format === 'geo') {
+      return { places: [] };
+    }
+
+    return format === 'grid' ? { grid: undefined } : undefined;
+  }
+
   private emit(): void {
     const id = this.chosenId;
+    const value = id === undefined ? this.empty() : this.latest.get(id) ?? this.empty();
 
-    /*
-     * An empty SET of places, rather than null or nothing at all. A consumer
-     * has to be told that there is nothing now — silence would leave the last
-     * thing it drew on screen — and this is the shape every consumer of
-     * places already understands, including a map, which clears the whole
-     * layer for it.
-     */
-    this.subject.next(id === undefined ? { places: [] } : this.latest.get(id) ?? { places: [] });
+    if (value !== undefined) {
+      this.subject.next(value);
+    }
+
     this.ticks.next();
   }
 }

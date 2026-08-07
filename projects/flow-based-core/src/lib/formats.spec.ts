@@ -24,8 +24,20 @@ describe('formatsOf', () => {
     expect(formatsOf(socket({ formats: [] }))).toEqual([]);
   });
 
-  it('prefers the set over the single format, since it is the wider claim', () => {
+  it('offers only what a settled socket settled on', () => {
+    /*
+     * It used to answer the whole declared set, on the reasoning that the set
+     * is the wider claim. It is — but it is the claim about what the socket
+     * MAY carry, and once it carries one of them the others are no longer on
+     * offer. Answering the set meant settling narrowed nothing: a second
+     * source of a different type overwrote the first answer and re-queued the
+     * first connection, which overwrote it back, until propagation gave up.
+     */
     expect(formatsOf(socket({ format: 'number', formats: ['number', 'point'] })))
+      .toEqual(['number']);
+
+    // Unsettled, the declared set is exactly what is on offer.
+    expect(formatsOf(socket({ format: null, formats: ['number', 'point'] })))
       .toEqual(['number', 'point']);
   });
 });
