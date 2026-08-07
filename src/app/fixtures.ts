@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 22 },
+  config: { seedVersion: 23 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -514,6 +514,101 @@ export const demo = () => ({
           'How fast it shrinks is $a =$ {{400:params.a}}. Set it to $0$ and the ' +
           'shrinking stops — the spiral becomes the circle from the previous section. ' +
           'It was the same motion all along, with one extra effect switched on.',
+      },
+
+      { type: 'heading', text: 'Bonus: one rule, asked of every point', level: 2 },
+      {
+        type: 'text',
+        text:
+          'Everything above was one motion. This last part is one **rule**, repeated — ' +
+          'and it needs nothing that has not already been said.\n' +
+          '\n' +
+          'Take a number $c$ somewhere in the plane. Start at zero, and keep applying ' +
+          'the same step:\n' +
+          '\n' +
+          '$$z \\to z^2 + c$$\n' +
+          '\n' +
+          'Squaring is the part you already know: a quarter turn squared is a half ' +
+          'turn, so squaring **doubles the angle**, and it squares the distance from ' +
+          'zero. That second half matters more than it looks. Inside the circle of ' +
+          'radius one, squaring pulls a point towards zero; outside it, squaring throws ' +
+          'the point away, further every time. Adding $c$ then nudges it sideways.\n' +
+          '\n' +
+          'Between those two pulls, exactly one of two things happens. The walk settles ' +
+          'down — into a point, or a loop it repeats forever — or it gets far enough out ' +
+          'that squaring wins and it never comes back. There is no third case, and the ' +
+          'dividing line is sharp: once the distance passes $2$, it is gone.',
+      },
+      {
+        type: 'node',
+        nodeId: 2000,
+        float: 'left',
+        width: '320px',
+        caption: 'The walk for one c, step by step',
+      },
+      {
+        type: 'text',
+        text:
+          'The figure beside this text is that walk, drawn on the same plane as ' +
+          'everything else on this page. It starts at zero, and each dot is one ' +
+          'application of the rule. For this $c$ it spirals inwards and stops moving — ' +
+          'the walk has found a point that the rule sends back to itself.\n' +
+          '\n' +
+          'Now move $c$ and watch it break. It is at $c =$ {{1900:c.re}} $+$ ' +
+          '{{1900:c.im}}$\\,i$ — raise the first number to $0.4$ and the spiral stops ' +
+          'being a spiral: three or four dots, each further out than the last, and the ' +
+          'walk is gone. Put it back to $-0.5$ and it settles again.\n' +
+          '\n' +
+          'So each $c$ in the plane gets one of two answers, and there is nothing in ' +
+          'between. Colour the plane by that answer — black where the walk stays, ' +
+          'lighter the sooner it left — and you get this:',
+      },
+      {
+        type: 'node',
+        nodeId: 1800,
+        float: 'none',
+        width: '320px',
+        caption: 'Black: every c whose walk stays. Press one to follow it.',
+      },
+      {
+        type: 'text',
+        text:
+          'That is the Mandelbrot set, and it is worth being clear about what it is not. ' +
+          'It is not a drawing of a formula, and nobody chose its shape. Every point of ' +
+          'that black region is a $c$ whose walk stays put; every point outside is one ' +
+          'whose walk ran away. The shape is the answer, not the question.\n' +
+          '\n' +
+          'The two figures are wired together: press a point in the picture and the walk ' +
+          'beside it is that point\u2019s walk. Press deep inside the black and it ' +
+          'settles. Press well outside and it is gone in a few steps. Press *just* on ' +
+          'the edge and it does neither for a long time — which is what the edge is.\n' +
+          '\n' +
+          'And that edge is where it stops being ordinary. Look closer at it and it does ' +
+          'not smooth out, the way a circle does. There is always more of it, at every ' +
+          'scale, and it never repeats and never settles down.',
+      },
+      { type: 'node', nodeId: 1700, float: 'right', caption: 'Places people gave names to' },
+      {
+        type: 'text',
+        text:
+          'The list beside this text is a few places worth going, and the picture above ' +
+          'follows it — it is a node in the flow like everything else, and what it sends ' +
+          'is where to look. Start at *the whole set*, then pick one.\n' +
+          '\n' +
+          '**Seahorse Valley** sits in the notch between the big shape and the circle to ' +
+          'its left, magnified about five hundred times. **Elephant Valley** is the ' +
+          'notch on the other side. Neither was designed; both are what the rule does ' +
+          'there.\n' +
+          '\n' +
+          'The last entry is the one to end on. Eight hundred times smaller than the ' +
+          'first picture, in a place with no particular claim to fame, the whole shape is ' +
+          'there again — its own big body, its own circle beside it, its own valleys. ' +
+          'Nothing put it there and nothing copied it. It is the same rule, and the same ' +
+          'question, asked at a scale where the numbers differ in the fourth decimal.\n' +
+          '\n' +
+          'All of it from $z \\to z^2 + c$, which is one multiplication and one ' +
+          'addition — and the multiplication is the quarter turn from the first section, ' +
+          'done twice.',
       },
 
       {
@@ -728,6 +823,59 @@ export const demo = () => ({
       // box sitting on the unit circle's caption in the flow view.
       position: { x: 50, y: 64 },
     },
+
+    /*
+     * The bonus chain, in its own row beneath the rest: a list of places, the
+     * picture of the set, one point's orbit, and a plane to draw that orbit
+     * on. It shares no node with the chains above — the sections before it
+     * are about one motion, and this one is about repeating a rule — but it
+     * is drawn on the same plane, which is the whole reason it belongs here.
+     */
+    {
+      type: 'graph-viewpoints',
+      title: 'Where to look',
+      id: 1700,
+      config: { which: 0 },
+      sockets: [{ id: 1710, type: 'out', format: 'region' }],
+      position: { x: 2, y: 86 },
+    },
+    {
+      type: 'graph-mandelbrot',
+      title: 'The Mandelbrot set',
+      id: 1800,
+      /*
+       * The whole set to start with: the picture everyone has seen, before
+       * anybody goes looking inside it.
+       */
+      config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200 },
+      sockets: [
+        { id: 1810, type: 'in', formats: ['region'] },
+        { id: 1811, type: 'out', format: 'complex' },
+      ],
+      position: { x: 18, y: 84 },
+    },
+    {
+      type: 'math-iterate',
+      title: 'z² + c',
+      id: 1900,
+      /*
+       * A c inside the set, and visibly so — the orbit spirals into a fixed
+       * point rather than sitting on one. Pressing the picture replaces it.
+       */
+      config: { c: { re: -0.5, im: 0.5 }, steps: 40, escape: 2, interval: 220 },
+      sockets: [
+        { id: 1910, type: 'in', formats: ['complex'] },
+        { id: 1911, type: 'out', format: 'marks' },
+      ],
+      position: { x: 44, y: 86 },
+    },
+    {
+      type: 'graph-complex',
+      title: 'The orbit',
+      id: 2000,
+      sockets: [{ id: 2010, type: 'in', formats: ['number', 'point', 'marks'] }],
+      position: { x: 60, y: 84 },
+    },
   ],
   /*
    * Two sampled chains side by side — the wave and its slope — the same
@@ -752,6 +900,11 @@ export const demo = () => ({
     { id: 1013, from: 1400, to: 1200, out: 1410, in: 1211 },
     { id: 1014, from: 1000, to: 1600, out: 1010, in: 1610 },
     { id: 1015, from: 1600, to: 1200, out: 1611, in: 1212 },
+
+    // The bonus: where to look, what it looks like, and what one point does.
+    { id: 1016, from: 1700, to: 1800, out: 1710, in: 1810 },
+    { id: 1017, from: 1800, to: 1900, out: 1811, in: 1910 },
+    { id: 1018, from: 1900, to: 2000, out: 1911, in: 2010 },
   ],
 });
 

@@ -10,6 +10,9 @@ import { DerivativeSmallComponent } from './derivative-small.component';
 import { DerivativeSettingsComponent } from './derivative-settings.component';
 import { SamplerWorker } from './sampler.worker';
 import { PointsWorker } from './points.worker';
+import { IterateSettingsComponent } from './iterate-settings.component';
+import { IterateSmallComponent } from './iterate-small.component';
+import { IterateWorker } from './iterate.worker';
 import { PointsSmallComponent } from './points-small.component';
 import { PointsSettingsComponent } from './points-settings.component';
 import { SamplerSmallComponent } from './sampler-small.component';
@@ -157,6 +160,34 @@ export const MATH_MODULE: FbModule = {
         sockets: [{ type: 'out', format: 'marks' }],
       },
       worker: PointsWorker,
+    },
+
+    /*
+     * The one node here with a memory.
+     *
+     * `z → z² + c` cannot be a formula, because a formula has no previous
+     * value, and it cannot be a sampler, because a sampler sweeps a range
+     * rather than following where it was taken. Iteration is a third thing,
+     * and the Mandelbrot set is the only question it asks: for which `c` does
+     * this stay put?
+     */
+    'math-iterate': {
+      component: { small: IterateSmallComponent },
+      settingsComponent: IterateSettingsComponent,
+      settings: {
+        title: 'Iterate z² + c',
+        group: GROUP,
+        config: { c: { re: -0.5, im: 0.5 }, steps: 40, escape: 2, interval: 300 },
+        sockets: [
+          // A c from elsewhere overrides the config's — a picture of the set
+          // can then say which orbit to walk.
+          { type: 'in', formats: ['complex'] },
+          // The same shape a set of points travels as: the plane draws it
+          // without being taught anything new.
+          { type: 'out', format: 'marks' },
+        ],
+      },
+      worker: IterateWorker,
     },
   },
 };

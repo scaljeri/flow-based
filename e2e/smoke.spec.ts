@@ -862,8 +862,9 @@ test('data type colours are set from the menu, and can be switched off', async (
   await expect(dialog).toBeVisible();
 
   /*
-   * Only the types actually in use: functions, the labelled point set, and
-   * sampled points.
+   * Only the types actually in use: functions, the labelled point set, sampled
+   * points, and the two the bonus section added — a `region` saying where to
+   * look and the `complex` point that comes back out of the picture.
    *
    * `number` used to be listed and is not, which is the fix rather than a
    * regression: the plots declare `number | point` and every one of them has
@@ -871,7 +872,8 @@ test('data type colours are set from the menu, and can be switched off', async (
    * so nothing in this flow carries a number — and a list called "the types in
    * use" should not name one because a socket was once willing to take it.
    */
-  await expect(dialog.locator('li .name')).toHaveText(['function', 'marks', 'point']);
+  await expect(dialog.locator('li .name'))
+    .toHaveText(['complex', 'function', 'marks', 'point', 'region']);
 
   // Pick a new colour for `point`, and every line carrying it follows.
   await page.evaluate(() => {
@@ -1269,12 +1271,13 @@ test('the demo reads as a document with typeset math and live figures', async ({
   /*
    * The inline inputs: the prose carries the step interval of the walk over
    * the powers of i, then the circle's arc length and speed, then the damped
-   * formula's decay. A write goes through the worker (setConfigValue), so the
-   * running flow follows; nonsense is not a write at all and snaps back.
+   * formula's decay, and last the two halves of the bonus section's c. A write
+   * goes through the worker (setConfigValue), so the running flow follows;
+   * nonsense is not a write at all and snaps back.
    */
   const inputs = doc.locator('.config-input');
 
-  await expect(inputs).toHaveCount(4);
+  await expect(inputs).toHaveCount(6);
   await expect(inputs.first()).toHaveValue('900');
 
   const arc = inputs.nth(1);
@@ -1361,7 +1364,7 @@ test('embed mode shows the article alone, without the toolbar', async ({ page })
   // The demo arrives asynchronously; its authored title is what proves the
   // document — not the derived fallback of the placeholder flow.
   await expect(page.locator('fb-flow-document h1')).toHaveText('Imaginary numbers make a circle');
-  await expect.poll(() => page.locator('fb-flow-document .config-input').count()).toBe(4);
+  await expect.poll(() => page.locator('fb-flow-document .config-input').count()).toBe(6);
 
   await page.keyboard.press('Escape');
   await expect(page.locator('fb-flow-document')).toBeVisible();
@@ -3970,4 +3973,69 @@ test('a filter names what it dropped', async ({ page }) => {
 
     return box?.textContent!.replace(/\s+/g, ' ').trim() ?? '';
   }, shown.id)).toMatch(/2 of 3\s*PM2\.5, NO2\s*without SO2/);
+});
+
+
+/**
+ * The bonus section is not prose about a picture — it is wired to one.
+ *
+ * Three nodes and two wires carry the argument: a list of places says where to
+ * look, the set is computed for that place, and pressing a point in it sends
+ * that point to an orbit which either settles or runs away. A reader who only
+ * reads gets the claim; a reader who presses gets the evidence, and the two
+ * had better agree.
+ */
+test('the Mandelbrot section answers the reader, both ways', async ({ page }) => {
+  await page.goto('/?embed=doc');
+
+  await expect(page.locator('fb-flow-document h1')).toBeVisible();
+
+  const state = () => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return {
+      view: flow.getWorker(1800).view as { re: number; im: number; span: number },
+      c: flow.getWorker(1900).c as { re: number; im: number },
+      escapedAt: flow.getWorker(1900).escapedAt as number | null,
+    };
+  });
+
+  // It opens on the whole set, with a c that stays — the picture everyone has
+  // seen, and a walk that does the quiet thing.
+  await expect.poll(async () => (await state()).view.span, { timeout: 20_000 }).toBe(3.2);
+  expect((await state()).escapedAt).toBe(null);
+
+  // The list is a node, and choosing from it moves the picture.
+  await page.locator('fb-flow-document li', { hasText: 'Seahorse Valley' }).click();
+
+  await expect.poll(async () => (await state()).view.span).toBeCloseTo(0.0065, 5);
+
+  await page.locator('fb-flow-document li', { hasText: 'the whole set' }).click();
+
+  await expect.poll(async () => (await state()).view.span).toBe(3.2);
+
+  /*
+   * And the picture is a control. Two presses, and the whole claim of the
+   * section is in the difference between them: the same rule, one c inside the
+   * black and one well outside it.
+   */
+  const picture = page.locator('fb-flow-document .fb-node-content', { hasText: 'Press a point' })
+    .locator('canvas').first();
+
+  await picture.scrollIntoViewIfNeeded();
+  await expect(picture).toBeVisible();
+
+  const box = (await picture.boundingBox())!;
+
+  // Deep in the main body, which is black by definition.
+  await page.mouse.click(box.x + box.width * 0.42, box.y + box.height * 0.5);
+
+  await expect.poll(async () => (await state()).c.re).toBeLessThan(-0.5);
+  expect((await state()).escapedAt).toBe(null);
+
+  // And a corner, which is as far outside as this view goes.
+  await page.mouse.click(box.x + box.width * 0.92, box.y + box.height * 0.08);
+
+  await expect.poll(async () => (await state()).escapedAt).not.toBe(null);
+  expect((await state()).escapedAt).toBeLessThan(10);
 });

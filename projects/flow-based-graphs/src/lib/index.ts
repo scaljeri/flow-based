@@ -16,6 +16,13 @@ import { PlacesWorker } from './places.worker';
 import { PlacesSmallComponent } from './places-small.component';
 import { PlacesSettingsComponent } from './places-settings.component';
 import { MapSettingsComponent } from './map-settings.component';
+import { MandelbrotWorker } from './mandelbrot.worker';
+import { MandelbrotSmallComponent } from './mandelbrot-small.component';
+import { MandelbrotNormalComponent } from './mandelbrot-normal.component';
+import { MandelbrotFullComponent } from './mandelbrot-full.component';
+import { MandelbrotSettingsComponent } from './mandelbrot-settings.component';
+import { ViewpointsWorker } from './viewpoints.worker';
+import { ViewpointsSmallComponent } from './viewpoints-small.component';
 
 /**
  * The Graphs module: ways of LOOKING at streams.
@@ -62,6 +69,22 @@ export const GRAPHS_MODULE: FbModule = {
       description: 'A labelled place on the earth: {lat, lon}',
       color: '#4fa3d1',
       shape: fbObject({ places: fbArray(fbObject({ lat: fbNumber, lon: fbNumber })) }),
+    },
+    {
+      name: 'complex', description: 'A complex number: {re, im}', color: '#2aa7a0',
+      shape: fbObject({ re: fbNumber, im: fbNumber }),
+    },
+    /*
+     * Where to look, not what is there. A region is not a `complex` with a
+     * size bolted on: one is a point somebody means, the other is a window,
+     * and wiring a window into something expecting a point would draw the
+     * corner of the view as if it were a value.
+     */
+    {
+      name: 'region',
+      description: 'A square of the complex plane: {re, im, span}',
+      color: '#7f8fd8',
+      shape: fbObject({ re: fbNumber, im: fbNumber, span: fbNumber }),
     },
     {
       name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a',
@@ -176,6 +199,52 @@ export const GRAPHS_MODULE: FbModule = {
         addableSockets: 'in',
       },
       worker: MapWorker,
+    },
+
+    /*
+     * One rule asked of the whole plane at once.
+     *
+     * Not a plot: nothing is being drawn FROM data here, the picture IS the
+     * computation — every pixel iterates `z² + c` for its own `c` and is
+     * coloured by whether it ran away. The node holds where to look; the view
+     * recomputes at whatever size it has, a band of rows per frame.
+     */
+    'graph-mandelbrot': {
+      component: {
+        small: MandelbrotSmallComponent,
+        normal: MandelbrotNormalComponent,
+        full: MandelbrotFullComponent,
+      },
+      settingsComponent: MandelbrotSettingsComponent,
+      settings: {
+        title: 'Mandelbrot set',
+        group: 'Graphs',
+        resizable: true,
+        config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200 },
+        sockets: [
+          // Where to look, when something else decides that.
+          { type: 'in', formats: ['region'] },
+          // And out: the point that was last pressed, for an orbit to walk.
+          { type: 'out', format: 'complex' },
+        ],
+      },
+      worker: MandelbrotWorker,
+    },
+
+    /*
+     * Named places in the plane, the way Places names them on the earth — and
+     * a separate node for the same reason: where to look is data, and data on
+     * a wire is visible without opening a panel.
+     */
+    'graph-viewpoints': {
+      component: { small: ViewpointsSmallComponent },
+      settings: {
+        title: 'Viewpoints',
+        group: 'Graphs',
+        config: { which: 0 },
+        sockets: [{ type: 'out', format: 'region' }],
+      },
+      worker: ViewpointsWorker,
     },
   },
 };
