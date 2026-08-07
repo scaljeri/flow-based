@@ -3052,9 +3052,13 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   });
 
   await expect.poll(() => page.evaluate(() => {
-    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    // The request lives inside the station subflow, which wears it on the
+    // outside — found by title, because its id is handed out at build time.
+    const station = editor.root.children.find((child: any) => child.id === 3000);
+    const request = station?.children.find((child: any) => child.type === 'net-request');
 
-    return (flow.getWorker(900) as { url: string }).url;
+    return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
   }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/lml/S1/PM2.5-metingen.json');
 
   /*
@@ -3065,7 +3069,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   await expect.poll(() => page.evaluate(() => {
     const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
 
-    return (flow.getWorker(1000) as { count: number }).count;
+    return (flow.getWorker(1100) as { buffer: { points: unknown[] } }).buffer.points.length;
   })).toBe(3);
 
   // Every part of that address came from somewhere else: `nl` from the config's
@@ -3177,8 +3181,8 @@ test('a subflow draws a picture of itself, or the child it is told to wear', asy
    * point this machinery at is a decision, and it belongs where it can be
    * seen.
    */
-  await expect(box).toContainText('31 nodes', { timeout: 20_000 });
-  expect(await box.locator('svg rect.dot').count()).toBe(31);
+  await expect(box).toContainText('26 nodes', { timeout: 20_000 });
+  expect(await box.locator('svg rect.dot').count()).toBe(26);
   expect(await box.locator('svg line.edge').count()).toBeGreaterThan(20);
 
   // Open it, then its own settings.
@@ -4198,6 +4202,17 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
   await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(7);
   await expect(doc).not.toContainText('{{');
 
+  /*
+   * And a subflow figure wears the child it was told to wear, exactly as the
+   * same node does on the canvas. It used to draw its own picture here — a box
+   * saying "9 nodes", which tells a reader nothing about what those nine do —
+   * while the identical node in the editor showed its request.
+   */
+  const worn = page.locator('fb-flow-document [slot="fig-3000"]');
+
+  await expect(worn).toContainText('GET');
+  await expect(worn).not.toContainText('nodes');
+
   // Claims with sources: an article that quotes a number names where it is
   // from, and those names are links rather than prose.
   await expect.poll(() => doc.locator('a[href^="https://"]').count()).toBeGreaterThanOrEqual(4);
@@ -4212,6 +4227,6 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
     [...document.querySelectorAll('fb-flow-document [slot^="fig-"]')]
       .map(node => node.getAttribute('slot'))
       .sort())).toEqual([
-        'fig-1100', 'fig-300', 'fig-500', 'fig-600', 'fig-630', 'fig-700', 'fig-900',
+        'fig-1100', 'fig-300', 'fig-3000', 'fig-500', 'fig-600', 'fig-630', 'fig-700',
       ]);
 });

@@ -9,6 +9,7 @@ import {
   FbNodeMount,
   FbNodeState,
   componentFor,
+  previewChild,
   documentFor,
   isDisplayMath,
   deepClone,
@@ -840,17 +841,33 @@ export class FbFlowDocumentElement extends LitElement {
         this.dropFigure(nodeId);
       }
       /*
+       * What a figure actually draws.
+       *
+       * Its own content, except for a subflow, which draws the child it was
+       * told to wear — the same rule the canvas follows, and for the same
+       * reason: a subflow has no drawing of its own worth putting in an
+       * article, and a box saying "9 nodes" tells a reader nothing about what
+       * those nine do. Untold, it falls back to its own picture of itself.
+       *
+       * This used to mount the subflow's own type here, so a figure pointed at
+       * a subflow showed the node count while the identical node on the canvas
+       * showed its request. Two representations of one flow disagreeing about
+       * what a node looks like is exactly what this component exists not to do.
+       */
+      const drawn = node?.children ? previewChild(node) ?? node : node;
+
+      /*
        * The `normal` drawing for a type that has one per view. A figure is a node
        * shown at the size the page gives it, which is neither an icon on a canvas
        * nor the whole surface — and if a type has no normal drawing, the smallest
        * one it does have is a better figure than an empty box.
        */
-      const component = node && this.editor.types[node.type]?.component;
+      const component = drawn && this.editor.types[drawn.type]?.component;
       const mount = componentFor<FbNodeMount>(component, 'normal')
         ?? componentFor<FbNodeMount>(component, 'small')
         ?? componentFor<FbNodeMount>(component, 'full');
 
-      if (!node || typeof mount !== 'function') {
+      if (!node || !drawn || typeof mount !== 'function') {
         continue;
       }
 
@@ -867,7 +884,9 @@ export class FbFlowDocumentElement extends LitElement {
       this.appendChild(host);
       this.hosts.set(nodeId, host);
 
-      this.handles.set(nodeId, mount(host, { api: this.readingApi(node) }));
+      // The api belongs to what is DRAWN: a worn child's own state and its own
+      // live worker, which is what keeps the request in the figure ticking.
+      this.handles.set(nodeId, mount(host, { api: this.readingApi(drawn) }));
       this.figureStates.set(nodeId, node);
     }
 
