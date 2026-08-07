@@ -777,75 +777,17 @@ export const demo = () => ({
  *
  * A function, because ids must be fresh per creation.
  */
-export const pollution = () => ({
-  id: 1,
-  type: 'flow',
-  title: 'pollution',
-  config: { seedVersion: 4 },
-  sockets: [],
-  children: [
-    {
-      type: 'net-request',
-      title: 'TOPAS stations',
-      id: 100,
-      /*
-       * TOPAS publishes each measuring network as one file: a code, a name, a
-       * position and which pollutants the station measures. Asked once —
-       * a list of stations does not change while you look at it.
-       */
-      config: {
-        url: '../tno-topas/lml.json',
-        method: 'GET',
-        every: 0,
-        title: 'Officieel meetnet (RIVM LML)',
-        description: 'The national air-quality network: professional instruments at fixed sites.',
-      },
-      sockets: [
-        { id: 109, type: 'in', name: 'when' },
-        { id: 110, type: 'out', format: 'data' },
-      ],
-      position: { x: 4, y: 8 },
-    },
-    {
-      type: 'data-pick',
-      title: 'Their positions',
-      id: 150,
-      // The name is what a reader wants here — one network, 93 dots — and the
-      // code is what a click will need.
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: 'name', ref: 'code', limit: 200 },
-      sockets: [
-        { id: 160, type: 'in', format: 'data' },
-        { id: 161, type: 'out', formats: ['geo', 'point', 'number'] },
-      ],
-      position: { x: 26, y: 8 },
-    },
-    {
-      type: 'graph-map',
-      title: 'Where they measure',
-      id: 200,
-      /*
-       * No track: these are 93 separate stations, not a route, and a line
-       * through them in file order would be a claim that is not true.
-       */
-      config: { track: false, follow: true },
-      sockets: [{ id: 210, type: 'in', formats: ['geo'] }],
-      position: { x: 48, y: 8 },
-    },
-  ],
-  connections: [
-    { id: 1000, from: 100, to: 150, out: 110, in: 160 },
-    { id: 1001, from: 150, to: 200, out: 161, in: 210 },
-  ],
-});
-
 /**
  * The two measuring networks TOPAS publishes, on one map.
  *
- * A second flow rather than more nodes in the first: `pollution` answers
- * "where is it measured officially", this one asks what the picture looks
- * like when the citizen sensors are drawn beside it — 93 instruments against
- * three thousand, which is a fact about the data worth seeing rather than
- * reading.
+ * The official network and the citizen sensors drawn beside each other — 93
+ * instruments against three thousand, which is a fact about the data worth
+ * seeing rather than reading.
+ *
+ * This case used to be two flows, one asking "where is it measured
+ * officially" and this one asking what the two look like together. The first
+ * was the second minus a chain, which is a second copy to keep in step rather
+ * than a second question.
  *
  * Two chains into ONE map, on two input sockets, so the layer order is the
  * node's socket order: the sparse official network sits on top of the dense

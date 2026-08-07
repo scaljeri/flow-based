@@ -20,11 +20,11 @@ export interface FilterConfig {
 /**
  * A list, minus what you did not want.
  *
- * TOPAS publishes five pollutants for the Netherlands and this flow is about
- * four of them. The alternative to a node is to type the four into a config
- * somewhere — and then the day they publish a sixth, the flow has an opinion
- * about it that nobody wrote down deliberately. A filter states the rule
- * instead of the answer, and stays true when the data moves.
+ * A publisher lists what it has and a flow is usually about some of it. The
+ * alternative to a node is to type that subset into a config somewhere — and
+ * then the day the publisher adds one, the flow has an opinion about it that
+ * nobody wrote down deliberately. A filter states the rule instead of the
+ * answer, and stays true when the data moves.
  *
  * It is not a Pick: Pick takes a part OUT of something, this keeps some of a
  * list and drops the rest. Same reason Switch and Choice are two nodes.
@@ -100,9 +100,9 @@ export class FilterWorker implements FbNodeWorker {
    *
    * The other half of "4 of 5", and the half a count cannot give you: the
    * question a reader actually has is not how many were dropped but WHICH one
-   * — and whether dropping it was a decision or an oversight. TOPAS publishes
-   * five pollutants and this flow maps four; the name of the fifth is the
-   * difference between a rule and a mystery.
+   * — and whether dropping it was a decision or an oversight. Four kept out of
+   * five published: the name of the fifth is the difference between a rule and
+   * a mystery.
    */
   get dropped(): string[] {
     return this.name(this.latest.filter(item => this.judge(item) === !!this.config.negate));

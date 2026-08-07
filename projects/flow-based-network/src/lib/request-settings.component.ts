@@ -16,7 +16,7 @@ import { RequestConfig, RequestMethod, RequestWorker } from './request.worker';
     <label class="field">
       <span class="label">URL</span>
       <input type="text" autocomplete="off" spellcheck="false"
-             [value]="read('url')" placeholder="../tno-topas/lml.json"
+             [value]="read('url')" placeholder="https://example.org/data.json"
              (change)="write('url', $event)">
     </label>
 
@@ -28,7 +28,7 @@ import { RequestConfig, RequestMethod, RequestWorker } from './request.worker';
     <label class="field">
       <span class="label">Name</span>
       <input type="text" autocomplete="off"
-             [value]="read('title')" placeholder="Officieel meetnet (RIVM LML)"
+             [value]="read('title')" placeholder="Where this comes from"
              (change)="write('title', $event)">
     </label>
 

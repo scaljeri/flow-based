@@ -6,9 +6,9 @@ import { ChoiceConfig, ChoiceWorker } from './choice.worker';
  * Where the options are, and which part of each one to use.
  *
  * Three paths and a switch. A list of plain strings needs none of them; a list
- * of objects — TOPAS's networks are `{id, name, path}` — needs to be told
- * which field the reader sees and which one travels on, and those are rarely
- * the same field.
+ * of objects — `{id, name, path}` is the usual shape — needs to be told which
+ * field the reader sees and which one travels on, and those are rarely the
+ * same field.
  */
 @Component({
   standalone: true,
@@ -16,12 +16,12 @@ import { ChoiceConfig, ChoiceWorker } from './choice.worker';
   template: `
     <label class="field">
       <span>Options — a path to the array, empty if it IS the array</span>
-      <input type="text" [value]="read('list')" (change)="write('list', $event)" placeholder="regions.0.pollutants">
+      <input type="text" [value]="read('list')" (change)="write('list', $event)" placeholder="results.0.options">
     </label>
 
     <label class="field">
       <span>Shown — a path within one option, empty for the option itself</span>
-      <input type="text" [value]="read('label')" (change)="write('label', $event)" placeholder="name.nl">
+      <input type="text" [value]="read('label')" (change)="write('label', $event)" placeholder="name">
     </label>
 
     <label class="field">

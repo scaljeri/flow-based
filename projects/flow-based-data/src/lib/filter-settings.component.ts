@@ -16,7 +16,7 @@ import { FilterConfig, FilterWorker } from './filter.worker';
     <label class="field">
       <span>List — a path to the array, empty if it IS the array</span>
       <input type="text" [value]="read('list')" (change)="write('list', $event)"
-             placeholder="regions.0.pollutants">
+             placeholder="results.0.items">
     </label>
 
     <label class="field">
@@ -37,7 +37,7 @@ import { FilterConfig, FilterWorker } from './filter.worker';
     <label class="field">
       <span>Against</span>
       <input type="text" [value]="read('value')" (change)="write('value', $event)"
-             placeholder="PM2.5, PM10, NO2, O3">
+             placeholder="red, green, blue">
     </label>
 
     <label class="check">

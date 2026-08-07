@@ -30,15 +30,15 @@ function applyModifier(value: string, modifier?: string): string {
 /**
  * A string built from a pattern and the values arriving on named inputs.
  *
- * This exists because a URL is not data and should not be typed twice. TOPAS
- * publishes its own paths — `data/{region}/grid/{date}/{pollutant}.json` is a
- * field in its config file — and a flow that copies that pattern into a
- * request's URL box has quietly forked it: the day the publisher moves their
- * grids, the copy is wrong and nothing says so. Fetch the pattern, fill it,
- * follow it.
+ * This exists because a URL is not data and should not be typed twice. A
+ * publisher that states its own paths — `data/{region}/{date}/{kind}.json` as
+ * a field in a config file — has told you where things are, and a flow that
+ * copies that pattern into a request's URL box has quietly forked it: the day
+ * the publisher moves those files, the copy is wrong and nothing says so.
+ * Fetch the pattern, fill it, follow it.
  *
  * A placeholder is filled by the input socket with that NAME. Names rather
- * than positions, because `{date}` and `{pollutant}` are both strings and a
+ * than positions, because `{date}` and `{kind}` are both strings and a
  * flow whose meaning depends on which socket is uppermost is a flow nobody can
  * read.
  *
@@ -99,12 +99,12 @@ export class TemplateWorker implements FbNodeWorker {
          * The socket's own name may carry a modifier: `region|lower` fills
          * `{region}` with the lowercased value.
          *
-         * This matters because the pattern is usually somebody else's. TOPAS
-         * publishes `data/{region}/grid/{date}/{pollutant}.json` and spells
-         * its regions NL and EU everywhere — except in that path, where their
-         * own app lowercases them in code. The flow has to be able to say so
-         * WITHOUT editing the fetched pattern, or it is back to keeping a copy
-         * of somebody else's URL.
+         * This matters because the pattern is usually somebody else's, and
+         * somebody else's data is inconsistent with itself. A config that
+         * spells its regions `NL` and `EU` everywhere, and lowercases them in
+         * the one path where its own app happens to, is the ordinary case. The
+         * flow has to be able to say so WITHOUT editing the fetched pattern,
+         * or it is back to keeping a copy of somebody else's URL.
          */
         const [, modifier] = (this.names.get(id) ?? '').split('|');
         const text = plain === undefined || plain === null ? '' : String(plain);
@@ -164,10 +164,9 @@ export class TemplateWorker implements FbNodeWorker {
 
       /*
        * Modifiers, because the difference between a value and the form a URL
-       * wants it in is not worth a node. TOPAS is the case in point: its
-       * regions are `NL` and `EU` everywhere in the config, and lowercase in
-       * the grid path alone. Every hour lost to that was spent looking for a
-       * missing file.
+       * wants it in is not worth a node. A region spelled `NL` in every field
+       * of a config and lowercase in one path is the case in point, and every
+       * hour lost to that is spent looking for a missing file.
        */
       return applyModifier(value, modifier);
     });

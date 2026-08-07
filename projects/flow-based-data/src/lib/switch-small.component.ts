@@ -52,7 +52,7 @@ import { SwitchWorker } from './switch.worker';
       /*
        * Wide enough for a source's own name. A switch labelled by what
        * arrived is only better than numbered inputs if the name is legible,
-       * and "Officieel meetnet (RIVM LML)" is the length these names run to.
+       * and a source's own name runs to a good few words.
        */
       width: 228px;
     }

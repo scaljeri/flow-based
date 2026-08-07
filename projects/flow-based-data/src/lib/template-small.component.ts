@@ -55,7 +55,7 @@ import { TemplateWorker } from './template.worker';
     /*
      * The END of the string, not the start: every URL from one publisher opens
      * with the same forty characters, and the part that differs — the date,
-     * the pollutant — is the part at the far end.
+     * the file name — is the part at the far end.
      */
     .result {
       direction: rtl;

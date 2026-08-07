@@ -229,10 +229,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   /** The seeded demo's fixed id: one shared flow Luca and the tests both know. */
   private static readonly DEMO_ID = 'demo-seed';
 
-  /** The pollution flow, seeded the same way and for the same reasons. */
-  private static readonly POLLUTION_ID = 'pollution-seed';
-
-  /** The two TOPAS networks on one map. */
+  /** The measuring-network case: several sources on one map. */
   private static readonly TNO_ID = 'tno-seed';
 
   private async restoreFlow(): Promise<void> {
@@ -252,8 +249,15 @@ export class AppComponent implements OnInit, AfterViewInit {
      * fixture bump, which is the point of a shared reference.
      */
     this.seed(AppComponent.DEMO_ID, data.demo() as FbNodeState);
-    this.seed(AppComponent.POLLUTION_ID, data.pollution() as FbNodeState);
     this.seed(AppComponent.TNO_ID, data.tno() as FbNodeState);
+
+    /*
+     * A seed that is no longer shipped has to be taken back. `pollution` asked
+     * the same question as the flow above with one chain fewer, and a browser
+     * that has seen it would otherwise keep it on the shelf forever — a flow
+     * nothing maintains, next to the one that replaced it.
+     */
+    this.store.remove('pollution-seed');
 
     const id = this.store.currentId();
     const saved = id ? this.store.load(id) : null;

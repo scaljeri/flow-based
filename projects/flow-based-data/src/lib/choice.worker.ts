@@ -20,10 +20,10 @@ export interface ChoiceConfig {
  *
  * The Switch chooses between STREAMS: which of the things wired into it gets
  * through. This chooses a VALUE out of a list — and the difference matters
- * enough to be two nodes. TOPAS says which pollutants it has for a region and
- * which networks measure it; a flow that made the reader pick from a list
- * typed into a config would be a flow that goes stale the day the publisher
- * adds one.
+ * enough to be two nodes. A source that publishes what it has — which
+ * measurements, which regions, which files — is offering a list, and a flow
+ * that made the reader pick from a list typed into a config instead would go
+ * stale the day the publisher adds one.
  *
  * The list is data, so the options are data. Nothing here is typed by hand
  * except which field to read.
@@ -102,7 +102,7 @@ export class ChoiceWorker implements FbNodeWorker {
     this.emit();
   }
 
-  /** Tunable from a document: which of five pollutants is exactly that kind. */
+  /** Tunable from a document: which of a published list is exactly that kind. */
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
       this.declareOutput();
@@ -123,7 +123,7 @@ export class ChoiceWorker implements FbNodeWorker {
   /**
    * What this node promises to send.
    *
-   * `text` is the common case — a pollutant, a region id, a file name — and it
+   * `text` is the common case — a name, a region id, a file name — and it
    * is what a Template's placeholder wants. `data` hands the whole item on for
    * a Pick to take apart. Declared from the config rather than from what
    * arrives, because a socket's type is a promise made before any data has.

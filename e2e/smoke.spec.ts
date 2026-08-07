@@ -1043,7 +1043,7 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
 
   // Both shipped flows plus the new one: the shelf holds what was seeded and
   // what was made, which is the whole point of it.
-  await expect(page.locator('fb-flows-dialog li')).toHaveCount(4);
+  await expect(page.locator('fb-flows-dialog li')).toHaveCount(3);
 });
 
 /**
@@ -1655,15 +1655,19 @@ test('a map draws the places it is given', async ({ page }) => {
 });
 
 /**
- * The pollution flow, and a source that fails out loud.
+ * A case flow on the shelf, and a source that fails out loud.
  *
- * It is seeded beside the demo, so it is on the shelf in every browser. Its
- * station list is fetched by a relative URL — same-origin where this editor is
- * deployed next to the data, and simply absent from a dev server, which is
+ * The cases are seeded beside the demo, so they are in every browser's Flows
+ * dialog. Their data is fetched by a relative URL — same-origin where this
+ * editor is deployed next to it, and simply absent from a dev server, which is
  * exactly what the node has to survive: it reports the failure rather than
  * showing an empty map that looks like an answer.
+ *
+ * There used to be a second, smaller flow over the same data, and this test
+ * was written against it. It asked the same question with one chain fewer,
+ * which makes it a copy to keep in step rather than a second question.
  */
-test('the pollution flow is on the shelf, and its source reports a failed fetch', async ({ page }) => {
+test('a seeded case is on the shelf, and its source reports a failed fetch', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
 
@@ -1672,30 +1676,33 @@ test('the pollution flow is on the shelf, and its source reports a failed fetch'
 
   const shelf = page.locator('fb-flows-dialog li');
 
-  await expect(shelf.filter({ hasText: 'pollution' })).toHaveCount(1);
-  await shelf.filter({ hasText: 'pollution' }).locator('button').first().click();
+  // And the flow it replaced is gone from every browser that had it.
+  await expect(shelf.filter({ hasText: 'pollution' })).toHaveCount(0);
+
+  await expect(shelf.filter({ hasText: 'tno' })).toHaveCount(1);
+  await shelf.filter({ hasText: 'tno' }).locator('button').first().click();
 
   await expect
     .poll(() => page.evaluate(() =>
       (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
         ?.editor?.state?.title), { timeout: 15_000 })
-    .toBe('pollution');
+    .toBe('tno');
 
-  // No tno-topas beside a dev server, so the request fails — and says so.
+  // Nothing is served beside a dev server, so the config request fails — and
+  // says so, on the node.
   await expect.poll(() => page.evaluate(() => {
     const worker = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-      .editor.flow.getWorker(100);
+      .editor.flow.getWorker(600);
 
     return worker?.error;
   }), { timeout: 15_000 }).toBeTruthy();
 
-  // Nothing died with it: three nodes, each with a worker of its own, and the
-  // map still waiting for places.
-  await expect(page.locator('fb-node-box')).toHaveCount(3);
+  // Nothing died with it: every node still has a worker of its own, including
+  // the ones inside the subflow that never received anything.
   expect(await page.evaluate(() => {
-    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
 
-    return [100, 150, 200].every(id => !!flow.getWorker(id));
+    return editor.root.children.every((child: any) => !!editor.flow.getWorker(child.id));
   })).toBe(true);
 });
 

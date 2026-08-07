@@ -582,8 +582,8 @@ export class Flow {
    * A subflow is ONE node with data going in and coming out, and a cycle
    * detector that works on node ids sees that as a loop: every path from an
    * input socket through the machinery to an output socket came back to the
-   * same id. The tno flow reported seven cycles, all of them a subflow doing
-   * exactly what a subflow is for.
+   * same id. A flow with one subflow in it reported seven cycles, all of them
+   * that subflow doing exactly what a subflow is for.
    *
    * So the two sides are two vertices. Which side a connection touches is
    * decided by the SOCKET it touches, not by whether the node is the `from` or

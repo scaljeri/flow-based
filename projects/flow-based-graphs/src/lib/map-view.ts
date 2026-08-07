@@ -350,8 +350,8 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
    * Both the tiles and the data behind them require attribution, and a node
    * this size cannot spend a line of text on it — at the small view that line
    * was most of what you could see. So: a button that says i, and the names
-   * when it is pressed. The same shape the TOPAS map uses, for the same
-   * reason.
+   * when it is pressed. The same shape a source's own credit takes, for the
+   * same reason.
    */
   private addAttribution(leaflet: typeof L, map: L.Map): void {
     const control = new leaflet.Control({ position: 'bottomright' });

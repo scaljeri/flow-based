@@ -100,10 +100,11 @@ export const DATA_MODULE: FbModule = {
      * impossible rather than merely discouraged.
      */
     /*
-     * A URL is not data and should not be typed twice. TOPAS publishes its own
-     * paths — `data/{region}/grid/{date}/{pollutant}.json` is a field in its
-     * config — and a flow that copies that into a request has forked it: the
-     * day the publisher moves their grids, the copy is wrong and silent.
+     * A URL is not data and should not be typed twice. A publisher that
+     * states its own paths — `data/{region}/{date}/{kind}.json` as a field in
+     * a config — has said where things are, and a flow that copies that into a
+     * request has forked it: the day those files move, the copy is wrong and
+     * silent.
      */
     'data-template': {
       component: { small: TemplateSmallComponent },
@@ -151,7 +152,7 @@ export const DATA_MODULE: FbModule = {
      * A list, minus what you did not want. Not a Pick — that takes a part OUT
      * of something; this keeps some of a list and drops the rest. It states
      * the RULE rather than the answer, so the day a publisher adds a sixth
-     * pollutant the flow has an opinion somebody actually wrote down.
+     * item the flow has an opinion somebody actually wrote down.
      */
     'data-filter': {
       component: { small: FilterSmallComponent },
@@ -182,7 +183,7 @@ export const DATA_MODULE: FbModule = {
           /*
            * As broad as the inputs, because a switch cannot know what it
            * carries until something is wired into it. A flow that does know
-           * says so on its own socket — see the tno fixture.
+           * says so by narrowing the socket in its own saved state.
            */
           { type: 'out', formats: ['geo', 'grid', 'point', 'number', 'data'] },
         ],

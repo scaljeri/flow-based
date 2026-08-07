@@ -5,8 +5,8 @@ import { FbNodeState, NodeService } from '@scaljeri/flow-based';
  * Which of its own nodes a subflow wears on the outside.
  *
  * A subflow is a box with sockets, and every subflow looks like every other
- * one. Letting it show one of its children is how it gets a face: the TOPAS
- * sources can show the request that fetches the config, a filter can show its
+ * one. Letting it show one of its children is how it gets a face: a subflow
+ * that fetches can show its request, one that decides something can show its
  * own control. Unchosen, the node draws a small picture of its graph instead —
  * which is honest, and says nothing about what the flow is FOR.
  *

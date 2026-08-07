@@ -54,9 +54,9 @@ import { ChoiceWorker } from './choice.worker';
       list-style: none;
       margin: 0;
       /*
-       * A published list is as long as the publisher felt like. Five pollutants
-       * fit; a hundred networks would make the node taller than the graph, so
-       * past a certain height it scrolls instead of growing.
+       * A published list is as long as the publisher felt like. Half a dozen
+       * fit; a hundred would make the node taller than the graph, so past a
+       * certain height it scrolls instead of growing.
        */
       max-height: 148px;
       overflow-y: auto;

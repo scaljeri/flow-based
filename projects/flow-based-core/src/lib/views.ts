@@ -205,8 +205,8 @@ export function previewChild(node: FbNodeState): FbNodeState | undefined {
    * Only what the flow was told to show.
    *
    * It used to fall back to `children[0]`, which is whichever node happened to
-   * be written first — for the TOPAS sources that is a fetch of a config file,
-   * a reading nobody wants on the outside of the box. A subflow is a thing
+   * be written first, which for a subflow that fetches something is a config
+   * file's contents — a reading nobody wants on the outside of the box. A subflow is a thing
    * with a face, and which face is a decision; unmade, it draws a picture of
    * itself instead.
    */

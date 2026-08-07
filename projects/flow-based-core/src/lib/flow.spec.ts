@@ -571,9 +571,9 @@ describe('Flow.findCycles', () => {
     /*
      * A subflow is ONE node with data going in and coming out, and a detector
      * working on node ids saw that as a loop: every path from an input socket
-     * through the machinery to an output socket came back to the same id. The
-     * tno flow reported seven of them, all of them a subflow doing exactly
-     * what a subflow is for.
+     * through the machinery to an output socket came back to the same id. A
+     * flow with one subflow in it reported seven of them, all of them that
+     * subflow doing exactly what a subflow is for.
      */
     const root = {
       id: 1,
