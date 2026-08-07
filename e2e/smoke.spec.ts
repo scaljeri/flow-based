@@ -4085,3 +4085,53 @@ test('a wired value overrides the written one without replacing it', async ({ pa
   await expect.poll(async () => (await state()).used.re).toBe(0.1);
   expect((await state()).saved.re).toBe(0.1);
 });
+
+
+/**
+ * The measuring-network case reads as an article too.
+ *
+ * Same machinery as the demo's document, different job: the demo teaches a
+ * piece of mathematics, this one reports on somebody else's data. What makes
+ * it worth a test is the wiring — the figures are the flow's own nodes, so a
+ * fixture edit that renumbers a node turns a paragraph into a dangling
+ * reference, and prose about a figure that is not there is worse than no
+ * figure at all.
+ */
+test('the measuring-network flow reads as an article, with its own nodes as figures', async ({ page }) => {
+  // Nothing is served beside a dev server; the article's structure does not
+  // depend on the fetches landing, and this keeps the test off the network.
+  await page.route('**/tno-topas/**', route => route.fulfill({ status: 404, body: 'not published' }));
+  await page.addInitScript(() => localStorage.setItem('fb-flow-current', 'tno-seed'));
+
+  await page.goto('/?embed=doc');
+
+  const doc = page.locator('fb-flow-document');
+
+  // The flow arrives asynchronously — seeded, then its modules downloaded —
+  // and this one speaks three of them, so it is slower than the demo.
+  await expect(doc.locator('h1')).toHaveText('Where the air comes from', { timeout: 30_000 });
+  await expect(doc.locator('h2')).toHaveCount(5);
+
+  /*
+   * Every figure is mounted node content. Four of them, and each one has to
+   * resolve: an unresolved `{{id}}` renders as its own source text, which is
+   * honest in a document and useless in a test that means to catch it.
+   */
+  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(4);
+  await expect(doc).not.toContainText('{{');
+
+  // Claims with sources: an article that quotes a number names where it is
+  // from, and those names are links rather than prose.
+  await expect.poll(() => doc.locator('a[href^="https://"]').count()).toBeGreaterThanOrEqual(4);
+
+  /*
+   * And they are the nodes the prose means. Each figure is slotted by node id,
+   * so this is the assertion that catches a renumbered fixture: the config
+   * request, the map, the pollutant chooser and the network switch, which are
+   * the four things the article talks about.
+   */
+  expect(await page.evaluate(() =>
+    [...document.querySelectorAll('fb-flow-document [slot^="fig-"]')]
+      .map(node => node.getAttribute('slot'))
+      .sort())).toEqual(['fig-300', 'fig-500', 'fig-600', 'fig-630']);
+});
