@@ -1074,10 +1074,24 @@ export class FbNodeSettingsElement extends LitElement {
             }}>
         </label>
 
+        <label>
+          Description
+          <input
+            type="text"
+            .value=${socket.description ?? ''}
+            placeholder="what travels through here"
+            @input=${(e: Event) => {
+              this.captureOnce();
+              this.editor.updateSocket(socket, { description: (e.target as HTMLInputElement).value });
+            }}>
+        </label>
+
         <!--
-          Which data types this socket carries, from the ones this flow deals in.
-          Several is allowed: an input that takes a number or a point says both,
-          and settles on whichever it is wired to.
+          Which data types this socket carries. Several is allowed: an input
+          that takes a number or a point says both, and settles on whichever it
+          is wired to. A type that is not on the list yet is made in the app's
+          own Socket types dialog — this is where a type is CHOSEN, not where
+          it is invented.
         -->
         <label for=${`${this.formatsId}`}>Type</label>
         ${this.renderFormats(socket)}
@@ -1116,7 +1130,16 @@ export class FbNodeSettingsElement extends LitElement {
   private renderFormats(socket: FbSocket) {
     const mine = formatsOf(socket);
     const offered = this.state ? this.editor.formatsFor(this.state, socket) : [];
-    const available = [...new Set([...offered, ...mine])].sort();
+    /*
+     * Every type the app knows, not only the ones already in this graph.
+     * `formatsFor` answers what could reach this socket through the wires,
+     * which is the right answer while wiring and the wrong one here: a socket
+     * declares what it carries before anything is wired to it, and a type that
+     * exists but is unused was unreachable — you had to build a node that used
+     * it first.
+     */
+    const known = this.editor.formatNames?.() ?? [];
+    const available = [...new Set([...known, ...offered, ...mine])].sort();
 
     if (!available.length) {
       return html`

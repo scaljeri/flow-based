@@ -2,6 +2,7 @@ import { EnvironmentInjector, EventEmitter, Injectable, inject } from '@angular/
 import {
   FB_NODE_TYPES,
   FB_SOCKET_COLORS,
+  FbFormatDef,
   FbFormatRegistry,
   FbModule,
   FbNodeTypes,
@@ -51,6 +52,16 @@ export interface FbFlowModule {
 }
 
 const STORAGE_KEY = 'fb-modules';
+
+/**
+ * Types this browser was told about by hand.
+ *
+ * Modules bring types with them; a reader building a flow may need one that no
+ * module defines — a temperature, a station code — and inventing it should not
+ * require writing a module. Kept apart from the module list because they are a
+ * different kind of thing: a module is code, a type is a name and a promise.
+ */
+const TYPES_KEY = 'fb-types';
 
 /**
  * What the browser remembers.
@@ -188,6 +199,47 @@ export class ModulesService {
 
     for (const [name, color] of Object.entries(FB_SOCKET_PALETTE)) {
       this.formats.seed({ name, color });
+    }
+
+    // And whatever this browser invented, before any module can claim the name.
+    for (const def of this.storedTypes()) {
+      this.formats.seed(def);
+
+      if (def.color) {
+        this.colors[def.name] ??= def.color;
+      }
+    }
+  }
+
+  /**
+   * Define a type by hand, and remember it.
+   *
+   * Seeded rather than registered: a hand-made type is this browser's own and
+   * takes the name it was given, while a module arriving later with the same
+   * name is the one that has to disambiguate. It is also why the seeding above
+   * happens before any module loads.
+   */
+  defineType(def: FbFormatDef): void {
+    this.formats.seed(def);
+
+    if (def.color) {
+      this.colors[def.name] ??= def.color;
+    }
+
+    const kept = this.storedTypes().filter(stored => stored.name !== def.name);
+
+    localStorage.setItem(TYPES_KEY, JSON.stringify([...kept, def]));
+    this.changed.emit();
+  }
+
+  /** The types this browser invented, as last written. */
+  private storedTypes(): FbFormatDef[] {
+    try {
+      const raw: unknown = JSON.parse(localStorage.getItem(TYPES_KEY) ?? '[]');
+
+      return Array.isArray(raw) ? raw as FbFormatDef[] : [];
+    } catch {
+      return [];
     }
   }
 

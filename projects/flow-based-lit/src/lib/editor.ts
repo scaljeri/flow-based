@@ -100,6 +100,16 @@ export interface FbEditorOptions {
    * without one, a pressed socket can say what it carries but not what that is.
    */
   formatInfo?: FbFormatLookup;
+  /**
+   * Every type this app knows, for the socket editor's list.
+   *
+   * `formatsFor` answers what could reach a socket THROUGH THE GRAPH, which is
+   * the right answer while wiring and the wrong one while declaring: a socket
+   * says what it carries before anything is wired to it. A host with a
+   * registry lists all of them; without one the graph's own types are still
+   * offered.
+   */
+  formatNames?: () => string[];
 }
 
 /**
@@ -127,6 +137,9 @@ export class FbEditor {
 
   /** See FbEditorOptions.formatInfo. */
   readonly formatInfo?: FbFormatLookup;
+
+  /** See FbEditorOptions.formatNames. */
+  readonly formatNames?: () => string[];
 
   /**
    * The socket the reader last pressed, and whether they asked what it is.
@@ -200,6 +213,7 @@ export class FbEditor {
     this.assignable = options.assignable ?? sameName;
     this.socketColors = options.socketColors ?? {};
     this.formatInfo = options.formatInfo;
+    this.formatNames = options.formatNames;
     this.routing = options.routing ?? 'curved';
 
     this.coreUnsubscribes.push(
@@ -558,7 +572,7 @@ export class FbEditor {
     }
   }
 
-  updateSocket(socket: FbSocket, patch: { name?: string; color?: string }): void {
+  updateSocket(socket: FbSocket, patch: { name?: string; color?: string; description?: string }): void {
     Object.assign(socket, patch);
     this.changes.emit({ kind: 'sockets' });
   }

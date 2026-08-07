@@ -3178,12 +3178,16 @@ test('pressing a socket names it, and can be asked what its type means', async (
 
   await note.locator('button.why').click();
   await expect(types).toHaveCount(1);
-  await expect(types.locator('select')).toHaveValue('function');
+
+  // The FIRST select: the dialog also has one for what a new type refines.
+  const chooser = types.locator('.field select').first();
+
+  await expect(chooser).toHaveValue('function');
   await expect(types).toContainText('A symbolic function of x');
 
   // Another type, chosen in the dialog, with its shape written as a type and
   // its definition formatted rather than crammed onto one line.
-  await types.locator('select').selectOption('point');
+  await chooser.selectOption('point');
   await expect(types.locator('.signature')).toHaveText('type point = [number, number, ...number[]]');
   expect((await types.locator('pre.json').innerText()).split('\n').length).toBeGreaterThan(3);
 
@@ -3206,6 +3210,92 @@ test('pressing a socket names it, and can be asked what its type means', async (
   await dot.click();
   await expect(note).toHaveCount(1);
   await expect(note).toHaveCount(0, { timeout: 12_000 });
+});
+
+
+/**
+ * A socket says what it carries, and a reader can invent what that is.
+ *
+ * Two halves of one question. On a node, pressing a socket in its settings
+ * opens that socket: its name, what travels through it, and which types it
+ * carries — chosen from every type the app knows, not only the ones already
+ * wired into this graph. A socket declares its type before anything is wired
+ * to it, so offering only what the graph deals in meant a type had to be used
+ * somewhere before it could be used anywhere.
+ *
+ * And when the type does not exist yet, it is made in the Socket types dialog
+ * rather than by writing a module: a module is code, a type is a name and a
+ * promise.
+ */
+test('a type can be invented, and a socket can be told to carry it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.socket-types').click();
+
+  const types = page.locator('fb-socket-types-dialog');
+
+  await expect(types).toHaveCount(1);
+
+  await types.locator('input[placeholder="temperature"]').fill('station-code');
+  await types.locator('input[placeholder="Degrees Celsius"]')
+    .fill("The publisher's own id for a measuring station");
+  await types.locator('.new select').selectOption('string');
+  await types.locator('button.create').click();
+
+  // Made, and the page turns to it.
+  await expect(types.locator('.field select').first()).toHaveValue('station-code');
+  await expect(types.locator('pre.json')).toContainText('"refines": "string"');
+
+  await types.locator('button[mat-dialog-close]').click();
+
+  /*
+   * And it is on offer where a socket is declared. The dot is pressed rather
+   * than clicked: the rim is a picture of the node, and its dots are dragged
+   * around it as well as tapped.
+   */
+  const opened = await page.evaluate(() => {
+    const box = document.querySelector('fb-flow-canvas fb-node-box')!;
+
+    box.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')?.click();
+
+    return !!box;
+  });
+
+  expect(opened).toBe(true);
+
+  const socketEditor = await page.evaluate(() => new Promise<{ options: string[]; fields: string }>(resolve => {
+    const box = document.querySelector('fb-flow-canvas fb-node-box')!;
+    const settings = box.shadowRoot!.querySelector('fb-node-settings')!;
+
+    setTimeout(() => {
+      const dot = settings.shadowRoot!.querySelector('.rim .dot')!;
+      const at = dot.getBoundingClientRect();
+      const options = {
+        bubbles: true, composed: true, pointerId: 1,
+        clientX: at.x + 5, clientY: at.y + 5,
+      };
+
+      dot.dispatchEvent(new PointerEvent('pointerdown', options));
+      window.dispatchEvent(new PointerEvent('pointerup', options));
+
+      setTimeout(() => {
+        const dialog = settings.shadowRoot!.querySelector('.socket-editor')!;
+
+        resolve({
+          options: [...dialog.querySelectorAll<HTMLOptionElement>('select.formats option')]
+            .map(option => option.value),
+          fields: dialog.textContent!.replace(/\s+/g, ' ').trim(),
+        });
+      }, 300);
+    }, 300);
+  }));
+
+  expect(socketEditor.options).toContain('station-code');
+  // Every known type, not only the two this demo's wires happen to carry.
+  expect(socketEditor.options.length).toBeGreaterThan(5);
+  expect(socketEditor.fields).toContain('Description');
 });
 
 /**

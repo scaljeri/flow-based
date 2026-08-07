@@ -76,6 +76,14 @@ export const FB_TYPE_ASSIGNABILITY =
 export const FB_FORMAT_INFO =
   new InjectionToken<import('@scaljeri/flow-based-core').FbFormatLookup>('fb-format-info');
 
+/**
+ * Every type this app knows, for the socket editor's list.
+ *
+ * Separate from FB_FORMAT_INFO because they answer different questions: one
+ * explains a name, the other says which names exist.
+ */
+export const FB_FORMAT_NAMES = new InjectionToken<() => string[]>('fb-format-names');
+
 /** Optional hooks letting an app customise socket-format negotiation. */
 export const FB_NODE_HELPERS = new InjectionToken<FbNodeHelpers>('fb-node-helpers');
 

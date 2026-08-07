@@ -55,6 +55,48 @@ import { ModulesService } from '../../modules.service';
       } @else {
         <p class="what">No types are registered yet. Enable a module.</p>
       }
+      <!--
+        A type nobody wrote a module for. A flow may need one — a station code,
+        a temperature — and inventing it should not require writing code. It is
+        seeded rather than registered: a hand-made type takes the name it was
+        given, and a module arriving later with that name is the one that has
+        to disambiguate.
+      -->
+      <section class="new">
+        <h3>New type</h3>
+
+        <label class="field">
+          <span>Name</span>
+          <input type="text" [(ngModel)]="draftName" placeholder="temperature">
+        </label>
+
+        <label class="field">
+          <span>What it is — this is its identity across modules</span>
+          <input type="text" [(ngModel)]="draftDescription" placeholder="Degrees Celsius">
+        </label>
+
+        <label class="field">
+          <span>Refines — it may stand in for this one</span>
+          <select [(ngModel)]="draftRefines">
+            <option value="">nothing</option>
+            @for (name of names; track name) {
+              <option [value]="name">{{name}}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Colour of its connections</span>
+          <input type="color" [(ngModel)]="draftColor">
+        </label>
+
+        @if (problem) {
+          <p class="problem">{{problem}}</p>
+        }
+
+        <button type="button" mat-button class="create" [disabled]="!draftName.trim()"
+                (click)="create()">Create</button>
+      </section>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
@@ -102,6 +144,23 @@ import { ModulesService } from '../../modules.service';
      * nesting, and a line broken at an arbitrary column is harder to follow
      * than one you have to push.
      */
+    .new {
+      border-top: 1px solid rgba(128, 128, 128, 0.3);
+      margin-top: 16px;
+      padding-top: 12px;
+    }
+
+    .problem {
+      color: #c62828;
+      margin: 0 0 8px;
+    }
+
+    input[type=color] {
+      height: 32px;
+      padding: 2px;
+      width: 100%;
+    }
+
     .signature, .json {
       background: rgba(128, 128, 128, 0.12);
       border-radius: 6px;
@@ -148,6 +207,46 @@ export class SocketTypesDialogComponent {
 
   onSelect(event: Event): void {
     this.selected = (event.target as HTMLSelectElement).value;
+    this.cdr.detectChanges();
+  }
+
+  draftName = '';
+  draftDescription = '';
+  draftRefines = '';
+  draftColor = '#7f9cf5';
+  problem: string | null = null;
+
+  /**
+   * Make the type, and open the page at it.
+   *
+   * The name is checked because a name already taken would silently do
+   * nothing: `seed` leaves an existing definition alone, which is right for
+   * startup and would be a lie here.
+   */
+  create(): void {
+    const name = this.draftName.trim();
+
+    if (!name) {
+      return;
+    }
+
+    if (this.names.includes(name)) {
+      this.problem = `There is already a type called ${name}.`;
+
+      return;
+    }
+
+    this.modules.defineType({
+      name,
+      description: this.draftDescription.trim() || undefined,
+      refines: this.draftRefines || undefined,
+      color: this.draftColor,
+    });
+
+    this.problem = null;
+    this.draftName = '';
+    this.draftDescription = '';
+    this.selected = name;
     this.cdr.detectChanges();
   }
 }

@@ -14,7 +14,7 @@ import { ModulesDialogComponent } from './components/modules/modules-dialog.comp
 import { FlowsDialogComponent } from './components/flows/flows-dialog.component';
 import { ModulesService } from './modules.service';
 import { FlowComponent } from './flow/flow.component';
-import { FB_FORMAT_INFO, FB_NODE_HELPERS, FB_SOCKET_COLORS, FB_TYPE_ASSIGNABILITY, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
+import { FB_FORMAT_INFO, FB_FORMAT_NAMES, FB_NODE_HELPERS, FB_SOCKET_COLORS, FB_TYPE_ASSIGNABILITY, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
 
 /*
  * The `@angular/material` barrel was removed in v9 — every symbol now comes from
@@ -164,6 +164,10 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
        * And the same registry answers what a pressed socket carries. A factory
        * again, because a module loaded later brings types with it.
        */
+      provide: FB_FORMAT_NAMES,
+      useFactory: (modules: ModulesService) => () => modules.formats.list().map(def => def.name),
+      deps: [ModulesService]
+    }, {
       provide: FB_FORMAT_INFO,
       useFactory: (modules: ModulesService) => (name: string) => {
         const def = modules.formats.get(name);
