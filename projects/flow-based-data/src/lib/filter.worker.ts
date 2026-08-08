@@ -47,6 +47,16 @@ export class FilterWorker implements FbNodeWorker {
   /** The last list, so changing the rule needs no new fetch. */
   private latest: unknown[] = [];
 
+  /**
+   * A rule that arrived rather than one that was typed.
+   *
+   * The value to judge against is usually a decision, and a decision in a flow
+   * is data: it comes from a chooser, or a config, or the thing the reader
+   * just pressed. Typed into this node it is a second copy of that decision,
+   * and the two go out of step the moment anybody moves the first one.
+   */
+  private wired?: string;
+
   constructor(private readonly config: FilterConfig = {}) {
   }
 
@@ -61,6 +71,17 @@ export class FilterWorker implements FbNodeWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
+    // The socket says which question it answers: what to filter, or what to
+    // filter FOR.
+    if (socket.name === 'value') {
+      this.subscriptions[connection.id] = stream.subscribe(value => {
+        this.wired = value === null || value === undefined ? undefined : String(unwrap(value));
+        this.emit();
+      });
+
+      return;
+    }
+
     this.subscriptions[connection.id] = stream.subscribe(value => {
       const source = unwrap(value);
       const list = this.config.list ? readConfigValue(source, this.config.list) : source;
@@ -78,6 +99,11 @@ export class FilterWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+  }
+
+  /** What the rule is being tested against, wired or typed. */
+  get against(): string {
+    return this.wired ?? this.config.value ?? '';
   }
 
   get total(): number {
@@ -152,7 +178,7 @@ export class FilterWorker implements FbNodeWorker {
   private judge(item: unknown): boolean {
     const field = this.config.path ? readConfigValue(item, this.config.path) : item;
     const text = field === undefined || field === null ? '' : String(field);
-    const against = this.config.value ?? '';
+    const against = this.wired ?? this.config.value ?? '';
 
     switch (this.test) {
       case 'is':

@@ -2923,7 +2923,21 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
       path: 'data/{region}/series/{network}/{code}/{pollutant}-{type}.json',
       types: { measurements: 'metingen', sectors: 'sectoren' },
     },
-    list: Array.from({ length: count }, (_, i) => ({ code: `S${i}`, lat: 52 + i / 100, lon: 5 + i / 100 })),
+    /*
+     * A station says which pollutants it has an instrument for, and which of
+     * those the model has nothing to say about. Both are read by the flow to
+     * decide whether the station is worth putting on the map at all, so a stub
+     * without them proves the wrong thing — every marker would be a button
+     * that 404s.
+     */
+    list: Array.from({ length: count }, (_, i) => ({
+      code: `S${i}`,
+      lat: 52 + i / 100,
+      lon: 5 + i / 100,
+      pollutants: ['PM2.5', 'NO2'],
+      // The last one measures it and is not modelled: it must not be offered.
+      ...(i === count - 1 ? { geenModel: ['PM2.5'] } : {}),
+    })),
   });
   const grid = (label: string) => ({
     pollutant: label,
@@ -3011,7 +3025,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
   // The Dutch raster underneath, and the first network on top of it.
   await expect.poll(async () => (await state()).cells, { timeout: 20_000 }).toBe(4);
-  await expect.poll(async () => (await state()).places).toBe(3);
+  await expect.poll(async () => (await state()).places).toBe(2);
 
   /*
    * Every file the publisher's config points at, and not one URL besides.
@@ -3038,18 +3052,41 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
    * gesture that brought them back.
    */
   await expect.poll(async () => (await state()).euCells, { timeout: 20_000 }).toBe(4);
-  await expect.poll(async () => (await state()).euPlaces).toBe(7);
+  await expect.poll(async () => (await state()).euPlaces).toBe(6);
 
-  // And the two maps are bounded to their OWN data, which is the whole reason
-  // they are two nodes: the widest view of each is its own dataset.
+  /*
+   * And the two maps are bounded to their OWN data, which is the whole reason
+   * they are two nodes: the widest view of each is its own dataset.
+   *
+   * With no saved `zoom`, deliberately. A zoom in the config means "open here"
+   * and switches the fit off — right for a view somebody framed by hand, wrong
+   * for a map whose job is to show a dataset. Pinned to 7, the Dutch one
+   * cropped its own raster: the grid runs to 53.69°N and the top of it was off
+   * the frame.
+   */
   expect(await page.evaluate(() => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
 
-    return [300, 700].map(id => editor.nodeById(id).config as { bounded: boolean; zoom: number });
+    return [300, 700].map(id => editor.nodeById(id).config as Record<string, unknown>);
   })).toEqual([
-    { track: false, follow: true, bounded: true, lat: 52.15, lon: 5.3, zoom: 7, slackX: 0.08, slackY: 0.08 },
-    { track: false, follow: true, bounded: true, lat: 50, lon: 10, zoom: 3, slackX: 0.04, slackY: 0.04 },
+    { track: false, follow: true, bounded: true, slackX: 0.08, slackY: 0.08 },
+    { track: false, follow: true, bounded: true, slackX: 0.04, slackY: 0.04 },
   ]);
+
+  /*
+   * The map offers only what can answer.
+   *
+   * Two conditions, both read from the file: the station has an instrument for
+   * the pollutant, and the model has a breakdown for it. The stub's last
+   * station measures PM2.5 and is marked as unmodelled, and it must not be on
+   * the map — pressing it would build a correct address, fetch it honestly and
+   * get a 404, which is a button that cannot work.
+   */
+  expect(await page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return (flow.getWorker(300).layerFor(310)?.places ?? []).map((place: { ref: string }) => place.ref);
+  })).toEqual(['S0', 'S1']);
 
   /*
    * And the one fetch that happens because somebody asked for it.
@@ -3167,7 +3204,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
       .editor.flow.getWorker(500).set(2);
   });
 
-  await expect.poll(async () => (await state()).places).toBe(5);
+  await expect.poll(async () => (await state()).places).toBe(4);
 
   /*
    * The pollutant is a decision, and it is made OUTSIDE the machinery: the

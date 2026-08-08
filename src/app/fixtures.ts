@@ -1333,7 +1333,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 20 },
+  config: { seedVersion: 23 },
   /*
    * The same flow, read as an article.
    *
@@ -1528,13 +1528,20 @@ export const tno = () => ({
           'section stops being a claim about the Netherlands and becomes a claim about ' +
           'this street.\n' +
           '\n' +
-          'Not every station answers. Twenty-three of the ninety-three official ones do ' +
-          'not measure PM2.5 at all, so the model publishes nothing for them under that ' +
-          'name and asking gets a plain 404 — which the request says, in red, and the ' +
-          'graph answers by emptying. That last part had to be built: a failed fetch ' +
-          'used to travel nowhere, so the picture went on showing the previous ' +
-          'station’s bars with this station’s name in your head. An empty graph is the ' +
-          'honest answer to a question the data cannot take.\n' +
+          'Not every station can answer, and the map now only offers the ones that can. ' +
+          'Two things have to be true: the station measures the pollutant — twenty-three ' +
+          'of the ninety-three official ones have no PM2.5 instrument — and the model ' +
+          'has a breakdown for it, which the file marks per station and is a stronger ' +
+          'condition than it sounds. Ozone is missing at 49 of the 93 Dutch stations and ' +
+          'at 1,365 of the 2,845 European ones, because ozone is modelled by a different ' +
+          'model that does not label its sources. Choose it above and most of the map ' +
+          'empties, which is the honest picture of what can be asked.\n' +
+          '\n' +
+          'Both rules are read from the same chooser the rest of the flow uses, so they ' +
+          'cannot go out of step with it. And when a fetch does fail, the graph empties ' +
+          'rather than keeping the last one that worked — that had to be built, because ' +
+          'a failed fetch used to travel nowhere and the picture went on showing the ' +
+          'previous station’s bars with this station’s name in your head.\n' +
           '\n' +
           'Change the pollutant above and press again: the same station, a different ' +
           'file, because the choice is one of the five parts the address is built from. ' +
@@ -1659,11 +1666,17 @@ export const tno = () => ({
        * flow start where their own data is rather than wherever the last
        * arriving layer dragged them.
        */
-      config: {
-        track: false, follow: true, bounded: true,
-        lat: 52.15, lon: 5.3, zoom: 7,
-        slackX: 0.08, slackY: 0.08,
-      },
+      /*
+       * No saved view, and that is the point.
+       *
+       * A `zoom` in the config means "open here" and switches the fit OFF —
+       * which is right for a map somebody framed by hand and wrong for one
+       * whose whole job is to show a dataset. Pinned to zoom 7 this cropped
+       * its own raster: the grid runs from 50.66°N to 53.69°N and the top of
+       * it was off the frame. Fitted, the widest view IS the data, and
+       * `bounded` makes that the widest view there is.
+       */
+      config: { track: false, follow: true, bounded: true, slackX: 0.08, slackY: 0.08 },
       /*
        * The air underneath, and whichever network the switch is letting
        * through. Generic inputs — a layer is a layer, and which kind it
@@ -1694,11 +1707,7 @@ export const tno = () => ({
        * Zoomed out further than its neighbour and slacker around the edges,
        * because a continent's raster reaches the corners of its own box.
        */
-      config: {
-        track: false, follow: true, bounded: true,
-        lat: 50, lon: 10, zoom: 3,
-        slackX: 0.04, slackY: 0.04,
-      },
+      config: { track: false, follow: true, bounded: true, slackX: 0.04, slackY: 0.04 },
       sockets: [
         { id: 712, type: 'in', formats: ['geo', 'grid'] },
         { id: 710, type: 'in', formats: ['geo', 'grid'] },
@@ -1715,11 +1724,81 @@ export const tno = () => ({
      * different files — and the European list is capped harder, since 2,845
      * markers on a continent is a smear, not a picture.
      */
+    /*
+     * Only the stations that measure the thing being asked about.
+     *
+     * A station publishes the pollutants it has an instrument for, and
+     * twenty-three of the ninety-three official ones have none for PM2.5. On
+     * the map they were markers like any other: press one and the address is
+     * built correctly, fetched honestly, and answered 404, because the file
+     * genuinely is not there. A quarter of the map was buttons that could not
+     * work. The rule is not typed here — it arrives from the same chooser the
+     * rest of the flow uses, so the two cannot go out of step.
+     */
+    {
+      type: 'data-filter',
+      title: 'Dutch stations that measure it',
+      id: 440,
+      config: { list: 'list', path: 'pollutants', test: 'has', value: '' },
+      sockets: [
+        { id: 441, type: 'in', formats: ['data'] },
+        { id: 442, type: 'in', name: 'value', format: 'string' },
+        { id: 443, type: 'out', format: 'data' },
+      ],
+      position: { x: 44, y: 12 },
+    },
+    {
+      type: 'data-filter',
+      title: 'European stations that measure it',
+      id: 450,
+      config: { list: 'list', path: 'pollutants', test: 'has', value: '' },
+      sockets: [
+        { id: 451, type: 'in', formats: ['data'] },
+        { id: 452, type: 'in', name: 'value', format: 'string' },
+        { id: 453, type: 'out', format: 'data' },
+      ],
+      position: { x: 44, y: 40 },
+    },
+    /*
+     * And that the model has something to say about it.
+     *
+     * A station can measure a pollutant and still have no breakdown for it:
+     * the file marks those in `geenModel`, and it is not a rounding error —
+     * ozone is missing at 49 of the 93 official stations and at 1,365 of the
+     * 2,845 European ones, because TOPAS models ozone with a different model
+     * and does not label its sources. Same rule as the filter above, read the
+     * other way round: keep what is NOT in that list.
+     */
+    {
+      type: 'data-filter',
+      title: 'and the model says something',
+      id: 460,
+      config: { list: '', path: 'geenModel', test: 'has', value: '', negate: true },
+      sockets: [
+        { id: 461, type: 'in', formats: ['data'] },
+        { id: 462, type: 'in', name: 'value', format: 'string' },
+        { id: 463, type: 'out', format: 'data' },
+      ],
+      position: { x: 48, y: 20 },
+    },
+    {
+      type: 'data-filter',
+      title: 'and the model says something',
+      id: 470,
+      config: { list: '', path: 'geenModel', test: 'has', value: '', negate: true },
+      sockets: [
+        { id: 471, type: 'in', formats: ['data'] },
+        { id: 472, type: 'in', name: 'value', format: 'string' },
+        { id: 473, type: 'out', format: 'data' },
+      ],
+      position: { x: 48, y: 48 },
+    },
     {
       type: 'data-pick',
       title: 'Dutch stations',
       id: 400,
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
+      // The list itself arrives, already filtered, so there is no path to it.
+      config: { shape: 'geo', list: '', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
       sockets: [
         { id: 410, type: 'in', formats: ['data'] },
         { id: 411, type: 'out', format: 'geo' },
@@ -1730,7 +1809,7 @@ export const tno = () => ({
       type: 'data-pick',
       title: 'European stations',
       id: 420,
-      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
+      config: { shape: 'geo', list: '', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
       sockets: [
         { id: 430, type: 'in', formats: ['data'] },
         { id: 431, type: 'out', format: 'geo' },
@@ -1772,14 +1851,22 @@ export const tno = () => ({
     // is both what the map draws and what a press may ask.
     { id: 1002, from: 2000, to: 500, out: 2003, in: 510 },
     { id: 1003, from: 2000, to: 500, out: 2004, in: 511 },
-    { id: 1004, from: 500, to: 400, out: 512, in: 410 },
+    { id: 1004, from: 500, to: 440, out: 512, in: 441 },
+    { id: 1030, from: 630, to: 440, out: 632, in: 442 },
+    { id: 1031, from: 440, to: 460, out: 443, in: 461 },
+    { id: 1034, from: 630, to: 460, out: 632, in: 462 },
+    { id: 1035, from: 460, to: 400, out: 463, in: 410 },
     { id: 1006, from: 400, to: 300, out: 411, in: 310 },
     { id: 1005, from: 2000, to: 300, out: 2001, in: 312 },
 
     // And the European pair on the map that fits them: raster underneath,
     // the EEA's stations on top.
     { id: 1008, from: 2000, to: 700, out: 2002, in: 712 },
-    { id: 1014, from: 2000, to: 420, out: 2005, in: 430 },
+    { id: 1014, from: 2000, to: 450, out: 2005, in: 451 },
+    { id: 1032, from: 630, to: 450, out: 632, in: 452 },
+    { id: 1033, from: 450, to: 470, out: 453, in: 471 },
+    { id: 1036, from: 630, to: 470, out: 632, in: 472 },
+    { id: 1037, from: 470, to: 420, out: 473, in: 430 },
     { id: 1007, from: 420, to: 700, out: 431, in: 710 },
 
     /*

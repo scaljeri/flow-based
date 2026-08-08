@@ -67,7 +67,26 @@ export class Flow {
     const connections = flow.connections!,
       children = flow.children!;
 
-    connections.forEach(c => this.connections[c.id] = {state: flow, connection: c});
+    connections.forEach(c => {
+      /*
+       * Two wires with one id is one wire, and the flow is not the one the
+       * author wrote.
+       *
+       * They are indexed by id, so the second silently replaces the first and
+       * a connection that is plainly there in the JSON simply never runs.
+       * Nothing downstream can tell that apart from a node that decided not to
+       * emit, which is why this is worth a word: a hand-written fixture cost
+       * an hour of looking at the wrong node for exactly this.
+       */
+      if (this.connections[c.id]) {
+        console.warn(
+          `[flow-based] Two connections share id ${c.id}; only the last is kept. `
+          + 'Ids must be unique across the whole flow, subflows included.',
+        );
+      }
+
+      this.connections[c.id] = {state: flow, connection: c};
+    });
     this.createVirtualFlow(children, flow.id!);
 
     this.propagateFormats();
@@ -359,7 +378,18 @@ export class Flow {
 
       this.createWorker(node);
       if (node.connections) {
-        node.connections.forEach(c => this.connections[c.id] = {connection: c, state: node});
+        node.connections.forEach(c => {
+          // Same trap as at the root, and easier to fall into: a subflow's
+          // ids share one space with everything around it.
+          if (this.connections[c.id]) {
+            console.warn(
+              `[flow-based] Two connections share id ${c.id}; only the last is kept. `
+              + 'Ids must be unique across the whole flow, subflows included.',
+            );
+          }
+
+          this.connections[c.id] = {connection: c, state: node};
+        });
 
         // A flow with connections but no children yet is odd, not fatal.
         this.createVirtualFlow(node.children ?? [], node.id!);

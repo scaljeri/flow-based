@@ -163,6 +163,12 @@ export const DATA_MODULE: FbModule = {
         config: { list: '', path: '', test: 'oneOf', value: '' },
         sockets: [
           { type: 'in', formats: ['data'] },
+          /*
+           * What to filter FOR, when that is a decision made somewhere else.
+           * Named, because a socket's name is how this node tells the two
+           * apart — the list arrives on the one without a name.
+           */
+          { type: 'in', name: 'value', format: 'string' },
           { type: 'out', format: 'data' },
         ],
         addableSockets: 'none',

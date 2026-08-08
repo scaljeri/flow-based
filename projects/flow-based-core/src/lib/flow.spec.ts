@@ -794,3 +794,38 @@ describe('format propagation through an app helper', () => {
     expect(sink.sockets[0].format).toBe('number');
   });
 });
+
+describe('duplicate connection ids', () => {
+  /*
+   * They are indexed by id, so the second silently replaces the first: a wire
+   * that is plainly there in the JSON never runs, and nothing downstream can
+   * tell that apart from a node that decided not to emit. A hand-written
+   * fixture cost an hour of looking at the wrong node for exactly this, so it
+   * says so out loud.
+   */
+  it('says so rather than quietly keeping one of them', () => {
+    const warnings: string[] = [];
+    const warn = console.warn;
+
+    console.warn = (message: string) => warnings.push(message);
+
+    try {
+      new Flow(flowTypes() as any).initialize({
+        id: 1,
+        children: [
+          { id: 2, sockets: [{ id: 20, type: 'out' }] },
+          { id: 3, sockets: [{ id: 30, type: 'in' }, { id: 31, type: 'out' }] },
+          { id: 4, sockets: [{ id: 40, type: 'in' }] },
+        ],
+        connections: [
+          { id: 900, from: 2, to: 3, out: 20, in: 30 },
+          { id: 900, from: 3, to: 4, out: 31, in: 40 },
+        ],
+      } as any);
+    } finally {
+      console.warn = warn;
+    }
+
+    expect(warnings.some(message => message.includes('share id 900'))).toBe(true);
+  });
+});
