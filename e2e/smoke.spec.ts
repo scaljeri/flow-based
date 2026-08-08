@@ -2981,7 +2981,8 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
      * station that does not publish what was asked for is the ordinary case,
      * not an edge one.
      */
-    if (/series\/(lml|samenmeten)\/S[12]\/PM2\.5-sectoren\.json$/.test(url)) {
+    // S0 too, because each map now picks its first station without being asked.
+    if (/series\/(lml|samenmeten)\/S[012]\/PM2\.5-sectoren\.json$/.test(url)) {
       return route.fulfill(answer({
         code: 'S1',
         name: 'Somewhere',
@@ -2999,7 +3000,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
      * country itself — eighteen sources arriving as thirty-six labels. The
      * flow sums the pairs back together, so this stub says it the same way.
      */
-    if (/series\/eea\/S3\/PM2\.5-sectoren\.json$/.test(url)) {
+    if (/series\/eea\/S[03]\/PM2\.5-sectoren\.json$/.test(url)) {
       return route.fulfill(answer({
         code: 'S3',
         name: 'Elsewhere',
@@ -3050,7 +3051,12 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   expect([...new Set(asked)].sort()).toEqual([
     'config.json',
     'data/eu/grid/2026-07-01/PM2.5.json',
+    // The two the default selection asks for: each map picks its first
+    // station, so a reader arrives at a page with something in every figure
+    // rather than at two blank frames.
+    'data/eu/series/eea/S0/PM2.5-sectoren.json',
     'data/nl/grid/2026-07-01/PM2.5.json',
+    'data/nl/series/lml/S0/PM2.5-sectoren.json',
     'eu-eea.json',
     'lml.json',
     'samenmeten.json',
@@ -3084,8 +3090,8 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
     return [300, 700].map(id => editor.nodeById(id).config as Record<string, unknown>);
   })).toEqual([
-    { track: false, follow: true, bounded: true, slackX: 0.08, slackY: 0.08 },
-    { track: false, follow: true, bounded: true, slackX: 0.04, slackY: 0.04 },
+    { track: false, follow: true, bounded: true, pickFirst: true, slackX: 0.08, slackY: 0.08 },
+    { track: false, follow: true, bounded: true, pickFirst: true, slackX: 0.04, slackY: 0.04 },
   ]);
 
   /*
@@ -3102,6 +3108,20 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
     return (flow.getWorker(300).layerFor(310)?.places ?? []).map((place: { ref: string }) => place.ref);
   })).toEqual(['S0', 'S1']);
+
+  /*
+   * The map answers its own question before it is asked.
+   *
+   * The graph beside it is empty until something is pressed, and an empty
+   * picture next to a full map reads as broken rather than as waiting — so the
+   * map picks the first place it is given. The reader's own choice wins after
+   * that, for as long as the place they chose is still on the map.
+   */
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return (flow.getWorker(1100) as { buffer: { labels?: { title?: string } } }).buffer.labels?.title;
+  }), { timeout: 20_000 }).toBe('Somewhere');
 
   /*
    * And the one fetch that happens because somebody asked for it.
@@ -3217,8 +3237,10 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
    * went on showing another station's readings under this station's name.
    */
   await page.evaluate(() => {
+    // A code the publisher has no file for. Driven through the worker because
+    // the map, correctly, does not offer such a station to press.
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-      .editor.flow.getWorker(300).pick({ lat: 52.00, lon: 5.00, ref: 'S0' });
+      .editor.flow.getWorker(300).pick({ lat: 52.00, lon: 5.00, ref: 'S9' });
   });
 
   await expect.poll(() => page.evaluate(() => {
@@ -3244,6 +3266,18 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
   await expect.poll(async () => (await state()).places, { timeout: 20_000 }).toBe(0);
   expect((await state()).cells).toBe(4);
+
+  /*
+   * With nothing on the map there is nothing to have chosen, so the graph
+   * clears — caption included. A title left over a blank plot names the
+   * station before last, which is the same lie as leaving its bars up.
+   */
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const buffer = (flow.getWorker(1100) as { buffer: { stack?: unknown; labels?: { title?: string } } }).buffer;
+
+    return `${buffer.stack === undefined}|${buffer.labels?.title}`;
+  }), { timeout: 20_000 }).toBe('true|undefined');
 
   // The Dutch switch offers the two Dutch networks and nothing else.
   await page.evaluate(() => {

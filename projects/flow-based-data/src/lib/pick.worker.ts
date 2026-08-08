@@ -231,7 +231,12 @@ export class PickWorker implements FbNodeWorker {
         return [];
 
       case 'stack':
-        return { stack: { labels: [], rows: [] }, ...this.meta };
+        /*
+         * No meta on an empty one. The source's title names what the
+         * composition IS, and there is no composition — carrying it would put
+         * a caption over a blank plot naming something not shown.
+         */
+        return { stack: { labels: [], rows: [] } };
 
       case 'text':
         return '';

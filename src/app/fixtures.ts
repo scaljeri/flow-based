@@ -1421,7 +1421,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 27 },
+  config: { seedVersion: 28 },
   /*
    * The same flow, read as an article.
    *
@@ -1631,7 +1631,12 @@ export const tno = () => ({
        * it was off the frame. Fitted, the widest view IS the data, and
        * `bounded` makes that the widest view there is.
        */
-      config: { track: false, follow: true, bounded: true, slackX: 0.08, slackY: 0.08 },
+      config: {
+        track: false, follow: true, bounded: true, slackX: 0.08, slackY: 0.08,
+        // The graph beside this map is empty until something is pressed, and an
+        // empty picture next to a full map reads as broken rather than waiting.
+        pickFirst: true,
+      },
       /*
        * The air underneath, and whichever network the switch is letting
        * through. Generic inputs — a layer is a layer, and which kind it
@@ -1662,7 +1667,10 @@ export const tno = () => ({
        * Zoomed out further than its neighbour and slacker around the edges,
        * because a continent's raster reaches the corners of its own box.
        */
-      config: { track: false, follow: true, bounded: true, slackX: 0.04, slackY: 0.04 },
+      config: {
+        track: false, follow: true, bounded: true, slackX: 0.04, slackY: 0.04,
+        pickFirst: true,
+      },
       sockets: [
         { id: 712, type: 'in', formats: ['geo', 'grid'] },
         { id: 710, type: 'in', formats: ['geo', 'grid'] },

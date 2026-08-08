@@ -133,6 +133,15 @@ export class TimeseriesWorker implements FbNodeWorker {
       buffer.stack = message.stack?.labels?.length ? message.stack : undefined;
 
       /*
+       * And it takes the caption with it. A title names what is drawn, so one
+       * left over a cleared plot names the station before last — which is the
+       * same lie as leaving its bars up, in one line of text.
+       */
+      if (!buffer.stack && buffer.labels?.title !== undefined) {
+        buffer.labels = { ...buffer.labels, title: undefined };
+      }
+
+      /*
        * And what it is a breakdown OF, when the source said. Carried on the
        * same message rather than a separate one, because the name and the
        * composition are one answer to one question — sending them apart is

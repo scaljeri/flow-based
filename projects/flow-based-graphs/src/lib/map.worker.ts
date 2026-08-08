@@ -50,6 +50,20 @@ export interface MapConfig {
   /** How solid a raster is drawn. */
   opacity?: number;
   /**
+   * Answer the map's own question before it is asked.
+   *
+   * A map whose pressed place drives something else opens with that something
+   * empty, and an empty picture beside a full map reads as broken rather than
+   * as waiting. Told to, the map picks the first place it is given — and
+   * picks again when the one the reader chose is no longer on it, which is
+   * what happens when they change what is being asked about.
+   *
+   * Off by default: a selection nobody made can set off a fetch, and a map
+   * that quietly asks for things is a surprise in a flow that did not ask for
+   * it.
+   */
+  pickFirst?: boolean;
+  /**
    * The ends of the colour scale. Left empty, they follow the data — which is
    * right for looking around and wrong for comparing two maps, so they can be
    * pinned.
@@ -164,6 +178,7 @@ export class MapWorker implements FbNodeWorker {
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
       if (this.ingest(layer!, value)) {
+        this.reconsider();
         this.subject.next();
       }
     });
@@ -172,6 +187,30 @@ export class MapWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+  }
+
+  /**
+   * Keep a selection that still means something; make one when it does not.
+   *
+   * The reader's choice wins for as long as the place they chose is on the
+   * map. It stops being on the map for an ordinary reason — they changed the
+   * pollutant, or the network — and then holding onto it would leave whatever
+   * it feeds showing a station that is no longer drawn anywhere.
+   */
+  private reconsider(): void {
+    if (!this.config.pickFirst) {
+      return;
+    }
+
+    const places = [...this.bySocket.values()].flatMap(layer => layer.places ?? []);
+
+    if (!places.length) {
+      return;
+    }
+
+    if (this.pickedKey === undefined || !places.some(place => this.isPicked(place))) {
+      this.pick(places[0]);
+    }
   }
 
   layerFor(socketId: number): MapLayer | undefined {
