@@ -619,7 +619,7 @@ test('a slider inside a node moves its thumb and nothing else', async ({ page })
     const plane = document.querySelector('fb-flow-canvas')!.shadowRoot!
       .querySelector('.plane') as HTMLElement;
     const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
-      .map(n => JSON.stringify((n as unknown as { state?: { position?: unknown } }).state?.position));
+      .map(n => JSON.stringify((n as unknown as { state?: { ui?: { position?: unknown } } }).state?.ui?.position));
 
     return { transform: plane.style.transform, nodes };
   });
@@ -637,7 +637,7 @@ test('a slider inside a node moves its thumb and nothing else', async ({ page })
     const plane = document.querySelector('fb-flow-canvas')!.shadowRoot!
       .querySelector('.plane') as HTMLElement;
     const nodes = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
-      .map(n => JSON.stringify((n as unknown as { state?: { position?: unknown } }).state?.position));
+      .map(n => JSON.stringify((n as unknown as { state?: { ui?: { position?: unknown } } }).state?.ui?.position));
 
     return { transform: plane.style.transform, nodes };
   });
@@ -1013,7 +1013,7 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
   await page.evaluate(() => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
 
-    editor.children[0].position = { x: 21, y: 21 };
+    editor.children[0].ui = { position: { x: 21, y: 21 } };
     editor.geometry.changes.emit(undefined);
   });
   await page.waitForTimeout(1200);
@@ -1022,7 +1022,7 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
   await expect
     .poll(() => page.evaluate(() =>
       (document.querySelector('fb-flow-canvas') as unknown as { editor?: { children?: { position?: { x: number } }[] } })
-        ?.editor?.children?.[0]?.position?.x), { timeout: 15_000 })
+        ?.editor?.children?.[0]?.ui?.position?.x), { timeout: 15_000 })
     .toBe(21);
 
   // A new flow from the dialog: empty canvas, and both flows on the shelf.
@@ -1614,8 +1614,8 @@ test('a map draws the places it is given', async ({ page }) => {
     const places = editor.addNode('graph-places');
     const map = editor.addNode('graph-map');
 
-    places.position = { x: 6, y: 70 };
-    map.position = { x: 26, y: 70 };
+    places.ui = { position: { x: 6, y: 70 } };
+    map.ui = { position: { x: 26, y: 70 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -1726,8 +1726,8 @@ test('a request feeds a pick, which feeds a map', async ({ page }) => {
     const request = editor.addNode('net-request');
     const pick = editor.addNode('data-pick');
 
-    request.position = { x: 4, y: 70 };
-    pick.position = { x: 26, y: 70 };
+    request.ui = { position: { x: 4, y: 70 } };
+    pick.ui = { position: { x: 26, y: 70 } };
 
     editor.flow.getWorker(pick.id).set('list', 'stations');
     editor.flow.getWorker(pick.id).set('a', 'lat');
@@ -1806,8 +1806,8 @@ test('clicking a marker sends that place out of the map', async ({ page }) => {
     const map = editor.addNode('graph-map');
     const places = editor.addNode('graph-places');
 
-    map.position = { x: 30, y: 70 };
-    places.position = { x: 6, y: 70 };
+    map.ui = { position: { x: 30, y: 70 } };
+    places.ui = { position: { x: 6, y: 70 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -1849,8 +1849,8 @@ test('a clicked place stays marked on the map, including across a redraw', async
     const places = editor.addNode('graph-places');
     const map = editor.addNode('graph-map');
 
-    places.position = { x: 6, y: 70 };
-    map.position = { x: 30, y: 70 };
+    places.ui = { position: { x: 6, y: 70 } };
+    map.ui = { position: { x: 30, y: 70 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -1945,8 +1945,8 @@ test('a map draws smaller dots the further out it is zoomed', async ({ page }) =
     const places = editor.addNode('graph-places');
     const map = editor.addNode('graph-map');
 
-    places.position = { x: 6, y: 70 };
-    map.position = { x: 30, y: 70 };
+    places.ui = { position: { x: 6, y: 70 } };
+    map.ui = { position: { x: 30, y: 70 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -2090,7 +2090,7 @@ test('a module can be fetched from a URL, and is remembered', async ({ page }) =
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
     const node = editor.addNode('greet-hello');
 
-    node.position = { x: 8, y: 78 };
+    node.ui = { position: { x: 8, y: 78 } };
 
     return node.id as number;
   });
@@ -2270,7 +2270,7 @@ test('a module published beside the app is offered, added, and works', async ({ 
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
     const node = editor.addNode('trig-button');
 
-    node.position = { x: 8, y: 76 };
+    node.ui = { position: { x: 8, y: 76 } };
 
     return node.id as number;
   });
@@ -2285,13 +2285,13 @@ test('a module published beside the app is offered, added, and works', async ({ 
    * it had to write out by hand because nothing of the editor reaches it.
    */
   const before = await page.evaluate(id => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-    .editor.nodeById(id).position), button);
+    .editor.nodeById(id).ui?.position), button);
 
   await node.locator('button.trig-button').click();
 
   await expect(node).toContainText('sent 1');
   expect(await page.evaluate(id => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-    .editor.nodeById(id).position), button)).toBe(before);
+    .editor.nodeById(id).ui?.position), button)).toBe(before);
 
   // And what it sent is on its output, which is the whole point of a trigger.
   expect(await page.evaluate(id => new Promise(resolve => {
@@ -2324,8 +2324,8 @@ test('a map is dragged at rest and panned when open, and the header still moves 
     const places = editor.addNode('graph-places');
     const map = editor.addNode('graph-map');
 
-    places.position = { x: 6, y: 66 };
-    map.position = { x: 26, y: 66 };
+    places.ui = { position: { x: 6, y: 66 } };
+    map.ui = { position: { x: 26, y: 66 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -2334,7 +2334,7 @@ test('a map is dragged at rest and panned when open, and the header still moves 
   });
 
   const at = () => page.evaluate(nodeId => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-    .editor.nodeById(nodeId).position), id);
+    .editor.nodeById(nodeId).ui?.position), id);
   const centre = () => page.evaluate(nodeId => {
     const view = (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
       .editor.flow.getWorker(nodeId).view;
@@ -2429,8 +2429,8 @@ test('a map cannot be zoomed out past its own data, or panned away from it', asy
     const places = editor.addNode('graph-places');
     const map = editor.addNode('graph-map');
 
-    places.position = { x: 6, y: 66 };
-    map.position = { x: 26, y: 66 };
+    places.ui = { position: { x: 6, y: 66 } };
+    map.ui = { position: { x: 26, y: 66 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -2589,8 +2589,8 @@ test('the wheel over an open map zooms the map and leaves the graph alone', asyn
     const places = editor.addNode('graph-places');
     const map = editor.addNode('graph-map');
 
-    places.position = { x: 6, y: 66 };
-    map.position = { x: 26, y: 66 };
+    places.ui = { position: { x: 6, y: 66 } };
+    map.ui = { position: { x: 26, y: 66 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -2648,8 +2648,8 @@ test('the wheel over an open map zooms the map and leaves the graph alone', asyn
     const places = editor.addNode('graph-places');
     const logger = editor.addNode('tap');
 
-    places.position = { x: 6, y: 26 };
-    logger.position = { x: 26, y: 26 };
+    places.ui = { position: { x: 6, y: 26 } };
+    logger.ui = { position: { x: 26, y: 26 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(logger.sockets.find((s: any) => s.type === 'in'), logger.id);
@@ -2702,8 +2702,8 @@ test('a pinch on a map zooms the map, and on the canvas still zooms the graph', 
     const places = editor.addNode('graph-places');
     const map = editor.addNode('graph-map');
 
-    places.position = { x: 4, y: 20 };
-    map.position = { x: 20, y: 40 };
+    places.ui = { position: { x: 4, y: 20 } };
+    map.ui = { position: { x: 20, y: 40 } };
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(map.sockets.find((s: any) => s.type === 'in'), map.id);
@@ -2809,7 +2809,7 @@ test('a config file supplies the pattern, and the template builds the URL from i
     const date = editor.addNode('data-pick');
     const template = editor.addNode('data-template');
 
-    [config, path, date, template].forEach((node, index) => (node.position = { x: 4 + index * 16, y: 84 }));
+    [config, path, date, template].forEach((node, index) => (node.ui = { position: { x: 4 + index * 16, y: 84 } }));
 
     // Through the worker, not by writing the state: setting the field is what
     // makes it fetch, exactly as typing it in the panel does.
@@ -3369,7 +3369,7 @@ test('a choice offers what arrived, and sends on the field it was told to', asyn
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
     const choice = editor.addNode('data-choice');
 
-    choice.position = { x: 8, y: 74 };
+    choice.ui = { position: { x: 8, y: 74 } };
     Object.assign(choice.config, { list: 'networks', label: 'name.nl', value: 'id', as: 'text' });
 
     return choice.id as number;
@@ -3427,12 +3427,12 @@ test('a choice offers what arrived, and sends on the field it was told to', asyn
    * bargain the Switch strikes, because the two gestures start identically.
    */
   const before = await page.evaluate(nodeId => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-    .editor.nodeById(nodeId).position), id);
+    .editor.nodeById(nodeId).ui?.position), id);
 
   await node.locator('button', { hasText: 'Burgersensoren' }).click();
 
   expect(await page.evaluate(nodeId => JSON.stringify((document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-    .editor.nodeById(nodeId).position), id)).toBe(before);
+    .editor.nodeById(nodeId).ui?.position), id)).toBe(before);
 });
 
 
@@ -3628,7 +3628,7 @@ test('a connection refused by the paint is refused by the model too', async ({ p
     const sampler = editor.addNode('math-sampler');  // in: function
 
     [places, formula, sampler].forEach((node: any, index: number) =>
-      (node.position = { x: 4 + index * 16, y: 88 }));
+      (node.ui = { position: { x: 4 + index * 16, y: 88 } }));
 
     const before = editor.root.connections.length;
     const out = (node: any) => node.sockets.find((s: any) => s.type === 'out');
@@ -3680,7 +3680,7 @@ test('a settled socket keeps one type, and forgets it when the wire goes', async
     const sampler = editor.addNode('math-sampler');    // out: point
 
     [plot, sampler].forEach((node: any, index: number) =>
-      (node.position = { x: 4 + index * 18, y: 92 }));
+      (node.ui = { position: { x: 4 + index * 18, y: 92 } }));
 
     const target = plot.sockets.find((s: any) => s.type === 'in');
     const declared = [...(target.formats ?? [])];
@@ -3734,7 +3734,7 @@ test('re-typing a node cuts the wires that no longer fit', async ({ page }) => {
     const map = editor.addNode('graph-map');
 
     [pick, map].forEach((node: any, index: number) =>
-      (node.position = { x: 4 + index * 18, y: 90 }));
+      (node.ui = { position: { x: 4 + index * 18, y: 90 } }));
 
     /*
      * Pick(geo) → Map. Its INPUT takes `data` — whatever a source returned —
@@ -3787,7 +3787,7 @@ test('a switch lets one input through, or none', async ({ page }) => {
     const b = editor.addNode('graph-places');
     const gate = editor.addNode('data-switch');
 
-    [a, b, gate].forEach((node, index) => (node.position = { x: 4 + index * 18, y: 72 }));
+    [a, b, gate].forEach((node, index) => (node.ui = { position: { x: 4 + index * 18, y: 72 } }));
 
     // Two different sets, so which one arrived is visible in the count.
     editor.flow.getWorker(b.id).removePlace(0);
@@ -3835,7 +3835,7 @@ test('a switch lets one input through, or none', async ({ page }) => {
   const position = () => page.evaluate(id => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
 
-    return JSON.stringify(editor.nodeById(id).position);
+    return JSON.stringify(editor.nodeById(id).ui?.position);
   }, wired.gate);
 
   const before = await position();
@@ -3876,7 +3876,7 @@ test('a tap says what a structured value is, and the open views show it whole', 
     const places = editor.addNode('graph-places');
     const tap = editor.addNode('tap');
 
-    [places, tap].forEach((node, index) => (node.position = { x: 4 + index * 20, y: 84 }));
+    [places, tap].forEach((node, index) => (node.ui = { position: { x: 4 + index * 20, y: 84 } }));
 
     editor.socketClicked(places.sockets.find((s: any) => s.type === 'out'), places.id);
     editor.socketClicked(tap.sockets.find((s: any) => s.type === 'in'), tap.id);
@@ -3934,7 +3934,7 @@ test('what a source is travels with what it returned', async ({ page }) => {
     const pick = editor.addNode('data-pick');
     const gate = editor.addNode('data-switch');
 
-    [request, pick, gate].forEach((node, index) => (node.position = { x: 4 + index * 18, y: 74 }));
+    [request, pick, gate].forEach((node, index) => (node.ui = { position: { x: 4 + index * 18, y: 74 } }));
 
     editor.socketClicked(request.sockets.find((s: any) => s.type === 'out'), request.id);
     editor.socketClicked(pick.sockets.find((s: any) => s.type === 'in'), pick.id);
@@ -3984,8 +3984,8 @@ test('a script node runs what is typed in it', async ({ page }) => {
     const source = editor.addNode('random-numbers');
     const script = editor.addNode('script');
 
-    source.position = { x: 4, y: 62 };
-    script.position = { x: 24, y: 62 };
+    source.ui = { position: { x: 4, y: 62 } };
+    script.ui = { position: { x: 24, y: 62 } };
 
     editor.socketClicked(source.sockets.find((s: any) => s.type === 'out'), source.id);
     editor.socketClicked(script.sockets.find((s: any) => s.type === 'in'), script.id);
@@ -4049,8 +4049,8 @@ test('a half-typed script says so, and the last working one keeps running', asyn
     const source = editor.addNode('random-numbers');
     const script = editor.addNode('script');
 
-    source.position = { x: 4, y: 62 };
-    script.position = { x: 24, y: 62 };
+    source.ui = { position: { x: 4, y: 62 } };
+    script.ui = { position: { x: 24, y: 62 } };
 
     editor.socketClicked(source.sockets.find((s: any) => s.type === 'out'), source.id);
     editor.socketClicked(script.sockets.find((s: any) => s.type === 'in'), script.id);
@@ -4145,7 +4145,7 @@ test('a filter names what it dropped', async ({ page }) => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
     const filter = editor.addNode('data-filter');
 
-    filter.position = { x: 6, y: 62 };
+    filter.ui = { position: { x: 6, y: 62 } };
 
     const worker = editor.flow.getWorker(filter.id);
 
@@ -4379,7 +4379,7 @@ test('the viewport controls step aside for a node that has the surface', async (
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
     const plot = editor.addNode('graph-timeseries');
 
-    plot.position = { x: 10, y: 60 };
+    plot.ui = { position: { x: 10, y: 60 } };
     editor.setView(plot.id, 'full');
 
     return plot.id as number;

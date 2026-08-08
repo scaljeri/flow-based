@@ -108,7 +108,7 @@ export class FbGeometry {
 
   /** Top-left of a node in plane pixels. */
   nodeOrigin(node: FbNodeState, planeSize: FbSize): FbPosition {
-    const position = node.position ?? { x: 0, y: 0 };
+    const position = node.ui?.position ?? { x: 0, y: 0 };
 
     return {
       x: (position.x / 100) * planeSize.width,

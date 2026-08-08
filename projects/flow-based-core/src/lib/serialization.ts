@@ -7,8 +7,12 @@ import { FbNodeState } from './types';
  *     `position` as percentages of the graph plane. Files saved before versioning
  *     existed carry no `version` field and are read as 1, because the shape did
  *     not change when the viewport was introduced (see FbViewportService).
+ * 2 — `position`, `view` and `size` move into a `ui` object. They answer a
+ *     different question from everything beside them: `config` is what a node
+ *     DOES and these are what it looks like, and a diff of two saved flows used
+ *     to be mostly coordinates with the one line that mattered lost among them.
  */
-export const FB_FLOW_FORMAT_VERSION = 1;
+export const FB_FLOW_FORMAT_VERSION = 2;
 
 export interface FbSerializedFlow {
   version: number;
@@ -32,7 +36,43 @@ export class FbFlowFormatError extends Error {
  * migration is a version whose shape did not change: the file is read as it
  * is and simply adopts the current number on its next save.
  */
-const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {};
+const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
+  /*
+   * 1 → 2: the three fields that describe the picture rather than the flow
+   * move into `ui`. Every node, all the way down, and the flow itself — a
+   * subflow is a node and carries a position like any other.
+   *
+   * Anything already in `ui` wins: a file written by a newer build and then
+   * hand-edited back to version 1 would otherwise have its old coordinates
+   * put back over its new ones.
+   */
+  1: flow => {
+    const move = (node: FbNodeState): FbNodeState => {
+      const legacy = node as FbNodeState & {
+        position?: unknown; view?: unknown; size?: unknown;
+      };
+      const ui = { ...(node.ui ?? {}) } as Record<string, unknown>;
+
+      for (const key of ['position', 'view', 'size'] as const) {
+        if (legacy[key] !== undefined && ui[key] === undefined) {
+          ui[key] = legacy[key];
+        }
+
+        delete legacy[key];
+      }
+
+      if (Object.keys(ui).length) {
+        node.ui = ui as FbNodeState['ui'];
+      }
+
+      (node.children ?? []).forEach(move);
+
+      return node;
+    };
+
+    return move(flow);
+  },
+};
 
 export function serializeFlow(flow: FbNodeState): FbSerializedFlow {
   return { version: FB_FLOW_FORMAT_VERSION, flow: structuredClone(flow) };

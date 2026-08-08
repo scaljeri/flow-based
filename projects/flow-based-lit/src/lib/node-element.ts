@@ -10,8 +10,12 @@ import {
   FbSocket,
   componentFor,
   isVerticalSide,
+  positionOf,
   previewChild,
+  setPosition,
+  setSize,
   sideOf,
+  sizeOf,
   stepView,
   supportedViews,
   viewOf,
@@ -1080,7 +1084,7 @@ export class FbNodeElement extends LitElement {
   }
 
   private applyPosition(): void {
-    const position = this.state?.position ?? { x: 0, y: 0 };
+    const position = this.state ? positionOf(this.state) : { x: 0, y: 0 };
 
     this.style.left = `${position.x}%`;
     this.style.top = `${position.y}%`;
@@ -1224,8 +1228,8 @@ export class FbNodeElement extends LitElement {
       return;
     }
 
-    const current = this.state.position ?? { x: 0, y: 0 };
-    this.state.position = { x: current.x + dx, y: current.y + dy };
+    const current = this.state.ui?.position ?? { x: 0, y: 0 };
+    setPosition(this.state, { x: current.x + dx, y: current.y + dy });
 
     this.applyPosition();
     /*
@@ -1282,7 +1286,7 @@ export class FbNodeElement extends LitElement {
 
   /** Reflect the user-given size; everywhere else the content decides. */
   private applySize(): void {
-    const size = this.view === 'normal' ? this.state?.size : undefined;
+    const size = this.view === 'normal' && this.state ? sizeOf(this.state) : undefined;
 
     if (size) {
       this.style.width = `${size.width}px`;
@@ -1346,7 +1350,7 @@ export class FbNodeElement extends LitElement {
     const width = Math.max(160, this.resizeFrom.width + (event.clientX - this.resizeFrom.x) / zoom);
     const height = Math.max(100, this.resizeFrom.height + (event.clientY - this.resizeFrom.y) / zoom);
 
-    this.state.size = { width: Math.round(width), height: Math.round(height) };
+    setSize(this.state, { width: Math.round(width), height: Math.round(height) });
     this.applySize();
   };
 

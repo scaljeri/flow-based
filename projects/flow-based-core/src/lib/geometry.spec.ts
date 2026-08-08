@@ -7,7 +7,7 @@ const PLANE = { width: 1000, height: 800 };
 const node = (): FbNodeState => ({
   id: 10,
   type: 'source',
-  position: { x: 25, y: 50 },
+  ui: { position: { x: 25, y: 50 } },
   sockets: [
     { id: 100, type: 'in' },
     { id: 101, type: 'in' },
@@ -79,7 +79,7 @@ describe('FbGeometry.socketPosition', () => {
   });
 
   it('centres a lone socket in the column', () => {
-    const n: FbNodeState = { id: 1, type: 'x', position: { x: 0, y: 0 }, sockets: [{ id: 1, type: 'out' }] };
+    const n: FbNodeState = { id: 1, type: 'x', ui: { position: { x: 0, y: 0 } }, sockets: [{ id: 1, type: 'out' }] };
     geometry.setNodeSize(1, { width: 100, height: 100 });
 
     expect(geometry.socketPosition(n, n.sockets![0], PLANE)!.y).toBeCloseTo(50, 6);
@@ -94,7 +94,7 @@ describe('FbGeometry.socketPosition', () => {
   });
 
   it('does not fall over on a node shorter than its own insets', () => {
-    const n: FbNodeState = { id: 1, type: 'x', position: { x: 0, y: 0 }, sockets: [{ id: 1, type: 'in' }] };
+    const n: FbNodeState = { id: 1, type: 'x', ui: { position: { x: 0, y: 0 } }, sockets: [{ id: 1, type: 'in' }] };
     geometry.setNodeSize(1, { width: 20, height: 4 });
 
     const p = geometry.socketPosition(n, n.sockets![0], PLANE)!;
@@ -114,7 +114,7 @@ describe('FbGeometry.socketPosition', () => {
     geometry.setNodeSize(10, { width: 200, height: 120 });
 
     const before = geometry.socketPosition(n, n.sockets![2], PLANE)!;
-    n.position = { x: 30, y: 50 };
+    n.ui = { position: { x: 30, y: 50 } };
     const after = geometry.socketPosition(n, n.sockets![2], PLANE)!;
 
     expect(after.x - before.x).toBeCloseTo(0.05 * PLANE.width, 6);
@@ -180,7 +180,7 @@ describe('sockets on the other two edges', () => {
   const sided = (): FbNodeState => ({
     id: 10,
     type: 'source',
-    position: { x: 25, y: 50 },
+    ui: { position: { x: 25, y: 50 } },
     sockets: [
       { id: 100, type: 'in', side: 'top' },
       { id: 101, type: 'in', side: 'top' },
@@ -244,7 +244,7 @@ describe('sockets and the header above the content', () => {
   const two = (): FbNodeState => ({
     id: 10,
     type: 'source',
-    position: { x: 25, y: 50 },
+    ui: { position: { x: 25, y: 50 } },
     sockets: [{ id: 100, type: 'in' }, { id: 101, type: 'in' }],
   });
 

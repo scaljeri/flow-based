@@ -10,15 +10,15 @@ function flow(): FbNodeState {
     sockets: [],
     children: [
       {
-        id: 10, type: 'a', position: { x: 10, y: 10 },
+        id: 10, type: 'a', ui: { position: { x: 10, y: 10 } },
         sockets: [{ id: 100, type: 'out', format: 'number' }],
       },
       {
-        id: 20, type: 'b', position: { x: 30, y: 20 },
+        id: 20, type: 'b', ui: { position: { x: 30, y: 20 } },
         sockets: [{ id: 200, type: 'in', format: 'number' }, { id: 201, type: 'out' }],
       },
       {
-        id: 30, type: 'c', position: { x: 50, y: 40 },
+        id: 30, type: 'c', ui: { position: { x: 50, y: 40 } },
         sockets: [{ id: 300, type: 'in' }],
       },
     ],
@@ -42,9 +42,9 @@ describe('copyNodes', () => {
     const source = flow();
     const clip = copyNodes(source, [10]);
 
-    source.children![0].position!.x = 999;
+    source.children![0].ui!.position!.x = 999;
 
-    expect(clip.nodes[0].position!.x).toBe(10);
+    expect(clip.nodes[0].ui!.position!.x).toBe(10);
   });
 });
 
@@ -82,7 +82,7 @@ describe('pasteNodes', () => {
 
     const [pasted] = pasteNodes(source, clip, ids, { x: 5, y: 3 });
 
-    expect(pasted.position).toEqual({ x: 15, y: 13 });
+    expect(pasted.ui?.position).toEqual({ x: 15, y: 13 });
   });
 
   it('pastes twice without the copies sharing anything', () => {
@@ -105,7 +105,7 @@ describe('pasteNodes', () => {
       type: 'flow',
       sockets: [],
       children: [{
-        id: 10, type: 'subflow', position: { x: 10, y: 10 },
+        id: 10, type: 'subflow', ui: { position: { x: 10, y: 10 } },
         sockets: [{ id: 100, type: 'in' }],
         children: [
           { id: 11, type: 'a', sockets: [{ id: 110, type: 'in' }, { id: 111, type: 'out' }] },
@@ -152,9 +152,9 @@ describe('alignNodes', () => {
 
     alignNodes(nodes, 'left');
 
-    expect(nodes.map(n => n.position!.x)).toEqual([10, 10, 10]);
+    expect(nodes.map(n => n.ui?.position!.x)).toEqual([10, 10, 10]);
     // Only one axis moves.
-    expect(nodes.map(n => n.position!.y)).toEqual([10, 20, 40]);
+    expect(nodes.map(n => n.ui?.position!.y)).toEqual([10, 20, 40]);
   });
 
   it('centres on the mean, not the midpoint of the extremes', () => {
@@ -162,7 +162,7 @@ describe('alignNodes', () => {
 
     alignNodes(nodes, 'centre-x');
 
-    expect(nodes.every(n => n.position!.x === 30)).toBe(true);
+    expect(nodes.every(n => n.ui?.position!.x === 30)).toBe(true);
   });
 
   it('does nothing to a single node, which has nothing to align to', () => {
@@ -170,18 +170,18 @@ describe('alignNodes', () => {
 
     alignNodes(nodes, 'left');
 
-    expect(nodes[0].position).toEqual({ x: 50, y: 40 });
+    expect(nodes[0].ui?.position).toEqual({ x: 50, y: 40 });
   });
 });
 
 describe('distributeNodes', () => {
   it('spaces the middle evenly and leaves the ends where they are', () => {
     const nodes = flow().children!;
-    nodes[1].position = { x: 12, y: 20 };
+    nodes[1].ui!.position = { x: 12, y: 20 };
 
     distributeNodes(nodes, 'x');
 
-    expect(nodes.map(n => n.position!.x)).toEqual([10, 30, 50]);
+    expect(nodes.map(n => n.ui?.position!.x)).toEqual([10, 30, 50]);
   });
 
   it('needs three nodes before there is a gap to even out', () => {
@@ -189,6 +189,6 @@ describe('distributeNodes', () => {
 
     distributeNodes(nodes, 'x');
 
-    expect(nodes.map(n => n.position!.x)).toEqual([10, 30]);
+    expect(nodes.map(n => n.ui?.position!.x)).toEqual([10, 30]);
   });
 });

@@ -1,5 +1,6 @@
 import { IdGenerator } from './id-generator';
 import { FbConnection, FbNodeState, FbPosition } from './types';
+import { positionOf, setPosition } from './ui';
 
 /**
  * A copied piece of a flow: some nodes, and the connections between them.
@@ -113,10 +114,10 @@ export function pasteNodes(
   const nodes = structuredClone(clipboard.nodes).map(node => {
     reissueIds(node);
 
-    node.position = {
-      x: (node.position?.x ?? 0) + offset.x,
-      y: (node.position?.y ?? 0) + offset.y,
-    };
+    setPosition(node, {
+      x: positionOf(node).x + offset.x,
+      y: positionOf(node).y + offset.y,
+    });
 
     return node;
   });
@@ -156,8 +157,8 @@ export function alignNodes(nodes: FbNodeState[], alignment: FbAlignment): void {
     return;
   }
 
-  const xs = nodes.map(node => node.position?.x ?? 0);
-  const ys = nodes.map(node => node.position?.y ?? 0);
+  const xs = nodes.map(node => positionOf(node).x);
+  const ys = nodes.map(node => positionOf(node).y);
 
   const target = {
     left: Math.min(...xs),
@@ -171,7 +172,7 @@ export function alignNodes(nodes: FbNodeState[], alignment: FbAlignment): void {
   const axis = alignment === 'top' || alignment === 'bottom' || alignment === 'centre-y' ? 'y' : 'x';
 
   for (const node of nodes) {
-    node.position = { x: node.position?.x ?? 0, y: node.position?.y ?? 0, [axis]: target } as FbPosition;
+    setPosition(node, { ...positionOf(node), [axis]: target } as FbPosition);
   }
 }
 
@@ -186,16 +187,12 @@ export function distributeNodes(nodes: FbNodeState[], axis: 'x' | 'y'): void {
     return;
   }
 
-  const sorted = [...nodes].sort((a, b) => (a.position?.[axis] ?? 0) - (b.position?.[axis] ?? 0));
-  const first = sorted[0].position?.[axis] ?? 0;
-  const last = sorted[sorted.length - 1].position?.[axis] ?? 0;
+  const sorted = [...nodes].sort((a, b) => positionOf(a)[axis] - positionOf(b)[axis]);
+  const first = positionOf(sorted[0])[axis];
+  const last = positionOf(sorted[sorted.length - 1])[axis];
   const step = (last - first) / (sorted.length - 1);
 
   sorted.forEach((node, index) => {
-    node.position = {
-      x: node.position?.x ?? 0,
-      y: node.position?.y ?? 0,
-      [axis]: first + step * index,
-    } as FbPosition;
+    setPosition(node, { ...positionOf(node), [axis]: first + step * index } as FbPosition);
   });
 }

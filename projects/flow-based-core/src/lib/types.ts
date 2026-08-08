@@ -94,15 +94,22 @@ export function isElementConnection(connection: FbAnyConnection): connection is 
  * The recursive node shape, and the whole persisted format: a flow is just a node
  * that has `children` and `connections`. This is what gets exported as JSON.
  */
-export interface FbNodeState {
-  type: string;
-  id?: number;
-  config?: any;
-  title?: string;
+/**
+ * Where a node is and how big it is drawn — everything about a flow that is
+ * about LOOKING at it rather than about what it does.
+ *
+ * Kept apart from `config` because the two answer different questions and are
+ * owned by different people. `config` is the flow: what a node fetches, which
+ * field it reads, what it filters for — change it and the answers change. This
+ * is the picture of the flow: move a node and nothing computes differently.
+ *
+ * The split shows most when a flow is read rather than run. A diff of two
+ * saved flows used to be mostly coordinates, and the one line that mattered
+ * was somewhere in the middle of them.
+ */
+export interface FbNodeUi {
+  /** Where the node sits, as percentages of the graph plane. */
   position?: FbPosition;
-  sockets?: FbSocket[];
-  connections?: FbConnection[];
-  children?: FbNodeState[];
   /**
    * How much room this node is currently given. Serialised, so a flow reopens
    * looking the way it was left.
@@ -114,6 +121,19 @@ export interface FbNodeState {
    * sizes itself, which is the rule everywhere else.
    */
   size?: { width: number; height: number };
+}
+
+export interface FbNodeState {
+  type: string;
+  id?: number;
+  /** What this node DOES: its own settings, owned by its type. */
+  config?: any;
+  title?: string;
+  /** What this node LOOKS like: position, view, size. Never behaviour. */
+  ui?: FbNodeUi;
+  sockets?: FbSocket[];
+  connections?: FbConnection[];
+  children?: FbNodeState[];
   /** Prose and figure settings for this node in the document representation. */
   doc?: FbNodeDoc;
   /**

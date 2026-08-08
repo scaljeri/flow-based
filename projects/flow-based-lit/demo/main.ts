@@ -155,15 +155,15 @@ editor.load({
   sockets: [],
   children: [
     {
-      id: 10, type: 'source', title: 'Source', position: { x: 8, y: 20 },
+      id: 10, type: 'source', title: 'Source', ui: { position: { x: 8, y: 20 } },
       sockets: [{ id: 100, type: 'out', format: 'number' }],
     },
     {
-      id: 20, type: 'sink', title: 'Sink', position: { x: 45, y: 12 },
+      id: 20, type: 'sink', title: 'Sink', ui: { position: { x: 45, y: 12 } },
       sockets: [{ id: 200, type: 'in', format: 'number' }],
     },
     {
-      id: 30, type: 'scope', title: 'Scope', position: { x: 45, y: 45 },
+      id: 30, type: 'scope', title: 'Scope', ui: { position: { x: 45, y: 45 } },
       sockets: [{ id: 300, type: 'in', format: 'number' }],
       doc: {
         body: 'The scope renders whatever reaches its **input socket**. In the '
@@ -193,12 +193,12 @@ editor.load({
  */
 if (new URLSearchParams(location.search).has('subflow')) {
   editor.state.children!.splice(2, 0, {
-    id: 50, type: 'group', title: 'Group', position: { x: 8, y: 60 },
+    id: 50, type: 'group', title: 'Group', ui: { position: { x: 8, y: 60 } },
     sockets: [{ id: 500, type: 'in' }],
     config: { preview: 52 },
     children: [
-    { id: 51, type: 'source', title: 'Inner source', position: { x: 10, y: 20 }, sockets: [{ id: 510, type: 'out', format: 'number' }] },
-    { id: 52, type: 'scope', title: 'Inner scope', position: { x: 45, y: 40 }, sockets: [{ id: 520, type: 'in', format: 'number' }] },
+    { id: 51, type: 'source', title: 'Inner source', ui: { position: { x: 10, y: 20 } }, sockets: [{ id: 510, type: 'out', format: 'number' }] },
+    { id: 52, type: 'scope', title: 'Inner scope', ui: { position: { x: 45, y: 40 } }, sockets: [{ id: 520, type: 'in', format: 'number' }] },
     ],
     connections: [{ id: 1500, from: 51, to: 52, out: 510, in: 520 }],
   });
@@ -221,7 +221,7 @@ if (bulk > 0) {
       id: 1000 + i,
       type: i % 3 === 2 ? 'scope' : (i % 2 ? 'sink' : 'source'),
       title: `Node ${i}`,
-      position: { x: (i % 12) * 7 + 2, y: Math.floor(i / 12) * 9 + 2 },
+      ui: { position: { x: (i % 12) * 7 + 2, y: Math.floor(i / 12) * 9 + 2 } },
       sockets: [
         { id: 100000 + i * 2, type: 'in' as const, format: 'number' },
         { id: 100001 + i * 2, type: 'out' as const, format: 'number' },

@@ -31,7 +31,9 @@ import {
   moveSocket,
   pasteNodes,
   sameName,
+  setPosition,
   supportedViews,
+  uiOf,
   viewOf,
   writeConfigValue,
 } from '@scaljeri/flow-based-core';
@@ -403,11 +405,11 @@ export class FbEditor {
     const type = this.types[node.type];
     const supported = supportedViews(type?.settings, type?.component);
 
-    if (!supported.includes(view) || node.view === view) {
+    if (!supported.includes(view) || node.ui?.view === view) {
       return;
     }
 
-    node.view = view;
+    uiOf(node).view = view;
     this.changes.emit({ kind: 'structure', nodeId });
   }
 
@@ -883,9 +885,9 @@ export class FbEditor {
   /** Move every selected node, in plane percentages. Used by a multi-node drag. */
   moveSelectionBy(dx: number, dy: number): void {
     for (const node of this.selectedNodes()) {
-      const position = node.position ?? { x: 0, y: 0 };
+      const position = node.ui?.position ?? { x: 0, y: 0 };
 
-      node.position = { x: position.x + dx, y: position.y + dy };
+      setPosition(node, { x: position.x + dx, y: position.y + dy });
     }
 
     // A position change, not a size change: nodes ignore it, lines redraw.
@@ -1015,7 +1017,7 @@ export class FbEditor {
       type,
       title: settings.title,
       id: this.ids.create(),
-      position: this.placeForNewNode(),
+      ui: { position: this.placeForNewNode() },
       config: settings.config === undefined ? undefined : structuredClone(settings.config),
       sockets: (settings.sockets ?? []).map(s => ({ ...s, id: this.ids.create() })),
       ...(settings.isFlow ? { children: [], connections: [] } : {}),

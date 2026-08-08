@@ -130,7 +130,7 @@ test('drags a node and the connections follow', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
-  const before = await page.evaluate(() => window.fbEditor.children[0].position!.x);
+  const before = await page.evaluate(() => window.fbEditor.children[0].ui!.position!.x);
 
   // Grab the source node's mounted content, which is safely inside the node box.
   const box = await page.evaluate(() => {
@@ -145,7 +145,7 @@ test('drags a node and the connections follow', async ({ page }) => {
   await page.mouse.move(box.x + 160, box.y + 90, { steps: 10 });
   await page.mouse.up();
 
-  const after = await page.evaluate(() => window.fbEditor.children[0].position!.x);
+  const after = await page.evaluate(() => window.fbEditor.children[0].ui!.position!.x);
   expect(after).toBeGreaterThan(before);
 
   // Geometry is derived from the position, so the curves must have kept up.
@@ -330,7 +330,7 @@ async function dragCost(page: Page, nodes: number): Promise<{
     // the browser's first layout of the graph, which is not what is being
     // measured and is a large share of a 20-frame sample.
     for (let i = 0; i < 10; i++) {
-      editor.children[0].position!.x += 0.02;
+      editor.children[0].ui!.position!.x += 0.02;
       editor.geometry.changes.emit(undefined);
       await conn.updateComplete;
     }
@@ -350,7 +350,7 @@ async function dragCost(page: Page, nodes: number): Promise<{
       const start = performance.now();
 
       for (let i = 0; i < FRAMES; i++) {
-        editor.children[0].position!.x += 0.02;
+        editor.children[0].ui!.position!.x += 0.02;
         editor.geometry.changes.emit(undefined);
         await conn.updateComplete;
       }
@@ -472,7 +472,7 @@ test('dragging one of several selected nodes moves them all, and the lines follo
   await page.keyboard.up('Shift');
 
   const before = await page.evaluate(() =>
-    window.fbEditor.children.slice(0, 2).map(n => ({ x: n.position!.x, y: n.position!.y })));
+    window.fbEditor.children.slice(0, 2).map(n => ({ x: n.ui!.position!.x, y: n.ui!.position!.y })));
 
   await page.mouse.move(first.x, first.y);
   await page.mouse.down();
@@ -480,7 +480,7 @@ test('dragging one of several selected nodes moves them all, and the lines follo
   await page.mouse.up();
 
   const after = await page.evaluate(() =>
-    window.fbEditor.children.slice(0, 2).map(n => ({ x: n.position!.x, y: n.position!.y })));
+    window.fbEditor.children.slice(0, 2).map(n => ({ x: n.ui!.position!.x, y: n.ui!.position!.y })));
 
   // Both moved, by the same amount: this is a group drag, not two separate ones.
   const deltas = after.map((p, i) => ({ x: p.x - before[i].x, y: p.y - before[i].y }));
@@ -1737,7 +1737,12 @@ test('adding a socket shows up in the panel, not only in the model', async ({ pa
 
     return {
       model: (node as unknown as { state: { sockets?: unknown[] } }).state.sockets!.length,
-      dots: dialog.querySelectorAll('.rim .dot').length,
+      /*
+       * Two counts, two names. They were both called `dots`, so the second
+       * quietly replaced the first and the panel — the thing this test exists
+       * to watch — was never asserted on at all.
+       */
+      rim: dialog.querySelectorAll('.rim .dot').length,
       dots: node.shadowRoot!.querySelectorAll('.socket').length,
     };
   });
@@ -1758,6 +1763,8 @@ test('adding a socket shows up in the panel, not only in the model', async ({ pa
   expect(after.model).toBe(before.model + 1);
   // And on the node itself, which is the point of adding one.
   expect(after.dots).toBe(before.dots + 1);
+  // And in the panel that added it, which is what this test is named for.
+  expect(after.rim).toBe(before.rim + 1);
 });
 
 /* ==========================================================================

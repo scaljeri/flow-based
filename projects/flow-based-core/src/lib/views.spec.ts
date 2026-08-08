@@ -87,7 +87,7 @@ describe('a drawing per view', () => {
   it('opens in the smallest view it can actually draw', () => {
     expect(viewOf({ type: 'a' }, plain, { normal: draw('n'), full: draw('f') })).toBe('normal');
     // And a stored view the type cannot draw falls back to that same default.
-    expect(viewOf({ type: 'a', view: 'small' }, plain, { normal: draw('n') })).toBe('normal');
+    expect(viewOf({ type: 'a', ui: { view: 'small' } }, plain, { normal: draw('n') })).toBe('normal');
   });
 
   it('does not step to a view that has no drawing', () => {
@@ -106,8 +106,8 @@ describe('the rename from medium/large', () => {
    * what arrives at runtime from a JSON file or an unrebuilt package.
    */
   it('reads a saved flow that still says medium or large', () => {
-    expect(viewOf({ type: 'a', view: 'medium' as FbNodeView }, plain)).toBe('normal');
-    expect(viewOf({ type: 'a', view: 'large' as FbNodeView }, flow)).toBe('full');
+    expect(viewOf({ type: 'a', ui: { view: 'medium' as FbNodeView } }, plain)).toBe('normal');
+    expect(viewOf({ type: 'a', ui: { view: 'large' as FbNodeView } }, flow)).toBe('full');
   });
 
   it('accepts a node type that still declares the old names', () => {
@@ -128,8 +128,8 @@ describe('viewOf', () => {
 
   it('ignores a stored view the type does not support', () => {
     // A saved flow can name a view a type has since dropped.
-    expect(viewOf({ type: 'a', view: 'full' }, narrow)).toBe('small');
-    expect(viewOf({ type: 'a', view: 'normal' }, narrow)).toBe('normal');
+    expect(viewOf({ type: 'a', ui: { view: 'full' } }, narrow)).toBe('small');
+    expect(viewOf({ type: 'a', ui: { view: 'normal' } }, narrow)).toBe('normal');
   });
 });
 

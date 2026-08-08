@@ -23,6 +23,7 @@ export * from './lib/clipboard';
 export * from './lib/routing';
 export * from './lib/inline';
 export * from './lib/views';
+export * from './lib/ui';
 export * from './lib/formats';
 export * from './lib/node-events';
 export * from './lib/node-renderer';

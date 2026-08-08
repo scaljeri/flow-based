@@ -9,11 +9,12 @@ import {
   boundarySocketPosition,
   derivative,
   gradient,
+  isVerticalSide,
   normal,
   orthogonalRoute,
+  positionOf,
   roundedPath,
   routeMidpoint,
-  isVerticalSide,
   sideOf,
 } from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
@@ -253,8 +254,8 @@ export class FbConnectionsElement extends LitElement {
       return 'x';
     }
 
-    const fp = from.position ?? { x: 0, y: 0 };
-    const tp = to.position ?? { x: 0, y: 0 };
+    const fp = positionOf(from);
+    const tp = positionOf(to);
     const fs = from.id === undefined ? undefined : geometry.getNodeSize(from.id);
     const ts = to.id === undefined ? undefined : geometry.getNodeSize(to.id);
     const plane = this.editor.viewport.planeSize;

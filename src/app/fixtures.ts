@@ -29,7 +29,7 @@ export const basic = {
       title: 'Complex plane',
       id: 900,
       sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 27, y: 48 },
+      ui: { position: { x: 27, y: 48 } },
     },
     {
       type: 'random-numbers',
@@ -46,7 +46,7 @@ export const basic = {
         integer: true,
       },
       sockets: [{ id: 110, type: 'out', format: 'number' }],
-      position: { x: 6, y: 34 },
+      ui: { position: { x: 6, y: 34 } },
     },
     {
       type: 'tap',
@@ -57,7 +57,7 @@ export const basic = {
         { id: 210, type: 'in' },
         { id: 211, type: 'out' },
       ],
-      position: { x: 34, y: 18 },
+      ui: { position: { x: 34, y: 18 } },
     },
   ],
   connections: [{ id: 1000, from: 100, to: 200, out: 110, in: 210 }],
@@ -85,10 +85,10 @@ export const showcase =
             "type": "out"
           }
         ],
-        "position": {
+        "ui": { "position": {
           "x": 31.165161132812486,
           "y": 55.20859297108673
-        }
+        } }
       },
       {
         "type": "custom",
@@ -108,10 +108,10 @@ export const showcase =
             "type": "out"
           }
         ],
-        "position": {
+        "ui": { "position": {
           "x": 39.22932942708332,
           "y": 65.5733804083295
-        }
+        } }
       },
       {
         "type": "zoomcanvas",
@@ -132,10 +132,10 @@ export const showcase =
             "format": "dimension"
           }
         ],
-        "position": {
+        "ui": { "position": {
           "x": 7.003987630208346,
           "y": 35.93072286247781
-        }
+        } }
       },
       {
         "type": "fractals",
@@ -156,10 +156,10 @@ export const showcase =
             "format": "imageData"
           }
         ],
-        "position": {
+        "ui": { "position": {
           "x": 6.805419921875002,
           "y": 5.184057203389836
-        }
+        } }
       },
       {
         "type": "fractals",
@@ -180,10 +180,10 @@ export const showcase =
             "format": "imageData"
           }
         ],
-        "position": {
+        "ui": { "position": {
           "x": 26.00809733072917,
           "y": 5.168089481555324
-        }
+        } }
       },
       {
         "type": "zoomcanvas",
@@ -204,10 +204,10 @@ export const showcase =
             "format": "dimension"
           }
         ],
-        "position": {
+        "ui": { "position": {
           "x": 40.900472005208336,
           "y": 4.948435942173486
-        }
+        } }
       },
       {
         "type": "canvas",
@@ -227,10 +227,10 @@ export const showcase =
             "format": "point"
           }
         ],
-        "position": {
+        "ui": { "position": {
           "x": 54.081217447916664,
           "y": 42.758443419740765
-        }
+        } }
       }
     ],
     "connections": [
@@ -643,7 +643,7 @@ export const demo = () => ({
         x: { from: 0, to: 8, step: 0.02 },
       },
       sockets: [{ id: 410, type: 'out', format: 'function' }],
-      position: { x: 2, y: 4 },
+      ui: { position: { x: 2, y: 4 } },
     },
     {
       type: 'math-derivative',
@@ -653,7 +653,7 @@ export const demo = () => ({
         { id: 510, type: 'in', format: 'function' },
         { id: 511, type: 'out', format: 'function' },
       ],
-      position: { x: 26, y: 4 },
+      ui: { position: { x: 26, y: 4 } },
     },
     {
       type: 'math-sampler',
@@ -664,7 +664,7 @@ export const demo = () => ({
         { id: 610, type: 'in', format: 'function' },
         { id: 611, type: 'out', format: 'point' },
       ],
-      position: { x: 2, y: 22 },
+      ui: { position: { x: 2, y: 22 } },
     },
     {
       type: 'math-sampler',
@@ -675,7 +675,7 @@ export const demo = () => ({
         { id: 710, type: 'in', format: 'function' },
         { id: 711, type: 'out', format: 'point' },
       ],
-      position: { x: 26, y: 22 },
+      ui: { position: { x: 26, y: 22 } },
     },
     {
       type: 'graph-timeseries',
@@ -683,7 +683,7 @@ export const demo = () => ({
       id: 200,
       config: { style: 'line' },
       sockets: [{ id: 210, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 2, y: 42 },
+      ui: { position: { x: 2, y: 42 } },
     },
     {
       type: 'graph-timeseries',
@@ -691,14 +691,14 @@ export const demo = () => ({
       id: 800,
       config: { style: 'line' },
       sockets: [{ id: 810, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 26, y: 42 },
+      ui: { position: { x: 26, y: 42 } },
     },
     {
       type: 'graph-complex',
       title: 'Complex plane',
       id: 900,
       sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 2, y: 64 },
+      ui: { position: { x: 2, y: 64 } },
     },
     {
       type: 'math-formula',
@@ -720,7 +720,7 @@ export const demo = () => ({
         x: { from: 0, to: 6.3, step: 0.02 },
       },
       sockets: [{ id: 1010, type: 'out', format: 'function' }],
-      position: { x: 50, y: 4 },
+      ui: { position: { x: 50, y: 4 } },
     },
     {
       type: 'math-sampler',
@@ -731,7 +731,7 @@ export const demo = () => ({
         { id: 1110, type: 'in', format: 'function' },
         { id: 1111, type: 'out', format: 'point' },
       ],
-      position: { x: 50, y: 22 },
+      ui: { position: { x: 50, y: 22 } },
     },
     {
       type: 'graph-complex',
@@ -749,7 +749,7 @@ export const demo = () => ({
         { id: 1211, type: 'in', formats: ['number', 'point', 'marks'] },
         { id: 1212, type: 'in', formats: ['number', 'point', 'marks'] },
       ],
-      position: { x: 50, y: 42 },
+      ui: { position: { x: 50, y: 42 } },
     },
     {
       type: 'math-points',
@@ -774,14 +774,14 @@ export const demo = () => ({
       // Near the plane it feeds, not across the canvas from it: this node's
       // marks go to two plots, and from the far corner one of those wires
       // crossed every other node on the way.
-      position: { x: 76, y: 4 },
+      ui: { position: { x: 76, y: 4 } },
     },
     {
       type: 'graph-complex',
       title: 'Four powers of i',
       id: 1500,
       sockets: [{ id: 1510, type: 'in', formats: ['number', 'point', 'marks'] }],
-      position: { x: 76, y: 22 },
+      ui: { position: { x: 76, y: 22 } },
     },
     {
       type: 'math-sampler',
@@ -805,7 +805,7 @@ export const demo = () => ({
         { id: 1610, type: 'in', format: 'function' },
         { id: 1611, type: 'out', format: 'point' },
       ],
-      position: { x: 64, y: 22 },
+      ui: { position: { x: 64, y: 22 } },
     },
     {
       type: 'graph-timeseries',
@@ -823,7 +823,7 @@ export const demo = () => ({
       sockets: [{ id: 1310, type: 'in', formats: ['number', 'point'] }],
       // Clear of the plot above it, LABEL included: 14% of the canvas left this
       // box sitting on the unit circle's caption in the flow view.
-      position: { x: 50, y: 64 },
+      ui: { position: { x: 50, y: 64 } },
     },
 
     /*
@@ -839,7 +839,7 @@ export const demo = () => ({
       id: 1700,
       config: { which: 0 },
       sockets: [{ id: 1710, type: 'out', format: 'region' }],
-      position: { x: 2, y: 86 },
+      ui: { position: { x: 2, y: 86 } },
     },
     {
       type: 'graph-mandelbrot',
@@ -854,7 +854,7 @@ export const demo = () => ({
         { id: 1810, type: 'in', formats: ['region'] },
         { id: 1811, type: 'out', format: 'complex' },
       ],
-      position: { x: 18, y: 84 },
+      ui: { position: { x: 18, y: 84 } },
     },
     {
       type: 'math-iterate',
@@ -869,14 +869,14 @@ export const demo = () => ({
         { id: 1910, type: 'in', formats: ['complex'] },
         { id: 1911, type: 'out', format: 'marks' },
       ],
-      position: { x: 44, y: 86 },
+      ui: { position: { x: 44, y: 86 } },
     },
     {
       type: 'graph-complex',
       title: 'The orbit',
       id: 2000,
       sockets: [{ id: 2010, type: 'in', formats: ['number', 'point', 'marks'] }],
-      position: { x: 60, y: 84 },
+      ui: { position: { x: 60, y: 84 } },
     },
   ],
   /*
@@ -994,7 +994,7 @@ function fetches(title: string, position: { x: number; y: number }, url = '') {
         { id: nextId(), type: 'in', name: 'url', format: 'string' },
         { id: nextId(), type: 'out', format: 'data' },
       ],
-      position,
+      ui: { position },
     },
     id,
     get in() { return this.node.sockets[1].id!; },
@@ -1016,7 +1016,7 @@ function reads(title: string, path: string, position: { x: number; y: number }) 
         { id: nextId(), type: 'in', format: 'data' },
         { id: nextId(), type: 'out', format: 'string' },
       ],
-      position,
+      ui: { position },
     },
     id,
     get in() { return this.node.sockets[0].id!; },
@@ -1038,7 +1038,7 @@ function builds(title: string, names: string[], position: { x: number; y: number
       ...names.map(name => ({ id: nextId(), type: 'in', name, format: undefined as string | undefined })),
       { id: nextId(), type: 'out', name: 'built', format: 'string' as string | undefined },
     ],
-    position,
+    ui: { position },
   };
 
   return {
@@ -1063,7 +1063,7 @@ function shapes(title: string, config: Record<string, unknown>, format: string, 
         { id: nextId(), type: 'in', format: 'data' },
         { id: nextId(), type: 'out', format },
       ],
-      position,
+      ui: { position },
     },
     id,
     get in() { return this.node.sockets[0].id!; },
@@ -1149,7 +1149,7 @@ function topasSources() {
     title: 'TOPAS sources',
     id: flowId,
     config: {},
-    position: { x: 4, y: 30 },
+    ui: { position: { x: 4, y: 30 } },
     sockets: [
       { id: inn.config, type: 'in', name: 'config', format: 'data' },
       { id: inn.pollutant, type: 'in', name: 'pollutant', format: 'string' },
@@ -1294,7 +1294,7 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
     id: flowId,
     // The face it wears: the request, which is the part worth watching.
     config: { preview: get.id },
-    position,
+    ui: { position },
     sockets: [
       { id: inn.place, type: 'in', name: 'pressed place', format: 'geo' },
       { id: inn.network, type: 'in', name: 'network file', format: 'data' },
@@ -1357,7 +1357,7 @@ function stationsToDraw(flowId: number, position: { x: number; y: number }) {
       { id: nextId(), type: 'in', name: 'value', format: 'string' },
       { id: nextId(), type: 'out', format: 'data' },
     ],
-    position: { x: 10, y: 22 },
+    ui: { position: { x: 10, y: 22 } },
   };
 
   const modelled = {
@@ -1370,7 +1370,7 @@ function stationsToDraw(flowId: number, position: { x: number; y: number }) {
       { id: nextId(), type: 'in', name: 'value', format: 'string' },
       { id: nextId(), type: 'out', format: 'data' },
     ],
-    position: { x: 38, y: 38 },
+    ui: { position: { x: 38, y: 38 } },
   };
 
   const places = {
@@ -1382,7 +1382,7 @@ function stationsToDraw(flowId: number, position: { x: number; y: number }) {
       { id: nextId(), type: 'in', formats: ['data'] },
       { id: nextId(), type: 'out', format: 'geo' },
     ],
-    position: { x: 68, y: 46 },
+    ui: { position: { x: 68, y: 46 } },
   };
 
   return {
@@ -1390,7 +1390,7 @@ function stationsToDraw(flowId: number, position: { x: number; y: number }) {
     title: 'Stations worth drawing',
     id: flowId,
     config: { preview: places.id },
-    position,
+    ui: { position },
     sockets: [
       { id: inn.file, type: 'in', name: 'network file', format: 'data' },
       { id: inn.pollutant, type: 'in', name: 'pollutant', format: 'string' },
@@ -1692,7 +1692,7 @@ export const tno = () => ({
         { id: 608, type: 'in', name: 'url', format: 'string' },
         { id: 610, type: 'out', format: 'data' },
       ],
-      position: { x: 2, y: 6 },
+      ui: { position: { x: 2, y: 6 } },
     },
     {
       type: 'data-choice',
@@ -1710,7 +1710,7 @@ export const tno = () => ({
         { id: 632, type: 'out', format: 'string' },
       ],
       // Where the filter stood: the config feeds it directly now.
-      position: { x: 20, y: 5 },
+      ui: { position: { x: 20, y: 5 } },
     },
     {
       type: 'data-switch',
@@ -1737,7 +1737,7 @@ export const tno = () => ({
         { id: 511, type: 'in', formats: ['data'] },
         { id: 512, type: 'out', format: 'data' },
       ],
-      position: { x: 40, y: 26 },
+      ui: { position: { x: 40, y: 26 } },
     },
     {
       type: 'graph-map',
@@ -1775,7 +1775,7 @@ export const tno = () => ({
         // Where a pressed marker comes out, waiting for something to ask.
         { id: 313, type: 'out', format: 'geo' },
       ],
-      position: { x: 62, y: 12 },
+      ui: { position: { x: 62, y: 12 } },
     },
     {
       type: 'graph-map',
@@ -1800,7 +1800,7 @@ export const tno = () => ({
         { id: 710, type: 'in', formats: ['geo', 'grid'] },
         { id: 713, type: 'out', format: 'geo' },
       ],
-      position: { x: 62, y: 40 },
+      ui: { position: { x: 62, y: 40 } },
     },
     /*
      * The stations, shaped OUT here rather than inside the machinery.
@@ -1827,7 +1827,7 @@ export const tno = () => ({
        */
       config: { style: 'bars' },
       sockets: [{ id: 1110, type: 'in', formats: ['number', 'point', 'stack'] }],
-      position: { x: 84, y: 32 },
+      ui: { position: { x: 84, y: 32 } },
     },
     {
       type: 'graph-timeseries',
@@ -1835,7 +1835,7 @@ export const tno = () => ({
       id: 1200,
       config: { style: 'bars' },
       sockets: [{ id: 1210, type: 'in', formats: ['number', 'point', 'stack'] }],
-      position: { x: 84, y: 66 },
+      ui: { position: { x: 84, y: 66 } },
     },
   ],
   connections: [

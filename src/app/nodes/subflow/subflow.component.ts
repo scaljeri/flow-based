@@ -133,8 +133,8 @@ export class SubflowComponent {
       return { dots: [], edges: [] };
     }
 
-    const xs = children.map(child => child.position?.x ?? 0);
-    const ys = children.map(child => child.position?.y ?? 0);
+    const xs = children.map(child => child.ui?.position?.x ?? 0);
+    const ys = children.map(child => child.ui?.position?.y ?? 0);
     const spread = (values: number[]) => {
       const min = Math.min(...values);
       const max = Math.max(...values);
@@ -148,8 +148,8 @@ export class SubflowComponent {
     const y = spread(ys);
     const place = (child: FbNodeState) => ({
       // 8% of margin each side, so the boxes are not clipped by the viewBox.
-      x: 8 + (((child.position?.x ?? 0) - x.min) / x.size) * 84,
-      y: 8 + (((child.position?.y ?? 0) - y.min) / y.size) * 84,
+      x: 8 + (((child.ui?.position?.x ?? 0) - x.min) / x.size) * 84,
+      y: 8 + (((child.ui?.position?.y ?? 0) - y.min) / y.size) * 84,
     });
 
     const dots = children.map(child => {

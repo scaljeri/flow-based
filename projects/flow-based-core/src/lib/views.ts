@@ -162,7 +162,7 @@ export function viewOf(
   component?: unknown,
 ): FbNodeView {
   const supported = supportedViews(settings, component);
-  const stored = normaliseView(node.view);
+  const stored = normaliseView(node.ui?.view);
 
   return stored && supported.includes(stored) ? stored : defaultView(settings, component);
 }
