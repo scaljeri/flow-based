@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { ComplexPlaneView } from './complex-plane-view';
+import { PlaneView } from './plane-view';
 
 /** At rest: the trajectory itself, tiny — a spiral is its own best icon. */
 @Component({
   standalone: true,
-  selector: 'fb-complex-plane-small',
+  selector: 'fb-plane-small',
   template: `<canvas #plot></canvas>`,
   styles: [`
     :host {
@@ -19,5 +19,5 @@ import { ComplexPlaneView } from './complex-plane-view';
     }
   `]
 })
-export class ComplexPlaneSmallComponent extends ComplexPlaneView {
+export class PlaneSmallComponent extends PlaneView {
 }

@@ -1,13 +1,13 @@
 import { FbModule } from '@scaljeri/flow-based';
 import { fbArray, fbNumber, fbObject, fbString } from '@scaljeri/flow-based-core';
-import { TimeseriesWorker } from './timeseries.worker';
-import { TimeseriesSmallComponent } from './timeseries-small.component';
-import { TimeseriesNormalComponent } from './timeseries-normal.component';
-import { TimeseriesFullComponent } from './timeseries-full.component';
-import { TimeseriesSettingsComponent } from './timeseries-settings.component';
-import { ComplexPlaneSmallComponent } from './complex-plane-small.component';
-import { ComplexPlaneNormalComponent } from './complex-plane-normal.component';
-import { ComplexPlaneFullComponent } from './complex-plane-full.component';
+import { PlotWorker } from './plot.worker';
+import { PlotSmallComponent } from './plot-small.component';
+import { PlotNormalComponent } from './plot-normal.component';
+import { PlotFullComponent } from './plot-full.component';
+import { PlotSettingsComponent } from './plot-settings.component';
+import { PlaneSmallComponent } from './plane-small.component';
+import { PlaneNormalComponent } from './plane-normal.component';
+import { PlaneFullComponent } from './plane-full.component';
 import { MapWorker } from './map.worker';
 import { MapSmallComponent } from './map-small.component';
 import { MapNormalComponent } from './map-normal.component';
@@ -117,15 +117,24 @@ export const GRAPHS_MODULE: FbModule = {
   ],
 
   types: {
-    'graph-timeseries': {
+    /*
+     * A cartesian plot: values against one horizontal parameter.
+     *
+     * Called "Time series" until the survey of what it actually draws: time
+     * is one thing an x-axis can carry, and this one has always also drawn
+     * f(x) sampled over a range and a composition per step. A name that
+     * describes the data it happened to be built for is a name that makes a
+     * reader look elsewhere for the plot they want.
+     */
+    'graph-plot': {
       component: {
-        small: TimeseriesSmallComponent,
-        normal: TimeseriesNormalComponent,
-        full: TimeseriesFullComponent,
+        small: PlotSmallComponent,
+        normal: PlotNormalComponent,
+        full: PlotFullComponent,
       },
-      settingsComponent: TimeseriesSettingsComponent,
+      settingsComponent: PlotSettingsComponent,
       settings: {
-        title: 'Time series',
+        title: 'Plot',
         group: 'Graphs',
         // The normal view grows with a corner grip; the plot fills what it gets.
         resizable: true,
@@ -139,22 +148,29 @@ export const GRAPHS_MODULE: FbModule = {
          */
         addableSockets: 'in',
       },
-      worker: TimeseriesWorker,
+      worker: PlotWorker,
     },
 
     /*
-     * The complex plane: im against re, time as the parameter. Fed by the
-     * same point stream the time series drinks — a real series lies flat on
-     * the real axis, a complex one walks circles and spirals.
+     * The same data, drawn as a place rather than as a history: the second
+     * and third numbers of a point against each other, with the first — time,
+     * or whatever the sweep was over — forgotten on purpose.
+     *
+     * Called "Complex plane", which named the ONE thing it was first used
+     * for. Nothing in here knows what a complex number is; it draws pairs.
+     * What makes it a different node from the plot beside it is the
+     * coordinate system: equal scale on both axes always, because a circle
+     * that renders as an ellipse is a lie about the data, and axes through
+     * zero rather than along the edge.
      */
-    'graph-complex': {
+    'graph-plane': {
       component: {
-        small: ComplexPlaneSmallComponent,
-        normal: ComplexPlaneNormalComponent,
-        full: ComplexPlaneFullComponent,
+        small: PlaneSmallComponent,
+        normal: PlaneNormalComponent,
+        full: PlaneFullComponent,
       },
       settings: {
-        title: 'Complex plane',
+        title: 'Plane',
         group: 'Graphs',
         resizable: true,
         // Trajectories, and named positions: the same plane draws both.
@@ -162,7 +178,7 @@ export const GRAPHS_MODULE: FbModule = {
         // One layer per input, drawn in the order the sockets are declared.
         addableSockets: 'in',
       },
-      worker: TimeseriesWorker,
+      worker: PlotWorker,
     },
 
     /*

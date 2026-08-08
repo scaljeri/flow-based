@@ -105,6 +105,27 @@ describe('deserializeFlow', () => {
     expect((source as unknown as { position?: unknown }).position).toBeUndefined();
   });
 
+  /*
+   * A type nobody can resolve renders as an empty box and says nothing, so a
+   * rename without a migration is a silent one. Both names, all the way down.
+   */
+  it('renames the two plot types when reading a version 2 file', () => {
+    const older = {
+      id: 1,
+      type: 'flow',
+      children: [
+        { id: 10, type: 'graph-timeseries' },
+        { id: 20, type: 'flow', children: [{ id: 30, type: 'graph-complex' }] },
+        { id: 40, type: 'graph-map' },
+      ],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 2, flow: older });
+
+    expect(read.children!.map(child => child.type)).toEqual(['graph-plot', 'flow', 'graph-map']);
+    expect(read.children![1].children![0].type).toBe('graph-plane');
+  });
+
   it('leaves a value already in ui alone', () => {
     // A file hand-edited back to version 1 must not have its old coordinates
     // put back over its new ones.

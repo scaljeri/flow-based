@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { TimeseriesView } from './timeseries-view';
+import { PlotView } from './plot-view';
 
 /** Opened in place: the plot at panel size. */
 @Component({
   standalone: true,
-  selector: 'fb-timeseries-normal',
+  selector: 'fb-plot-normal',
   template: `
     @if (title) {
       <p class="plot-title">{{title}}</p>
@@ -48,7 +48,7 @@ import { TimeseriesView } from './timeseries-view';
     }
   `]
 })
-export class TimeseriesNormalComponent extends TimeseriesView {
+export class PlotNormalComponent extends PlotView {
   protected override readonly legend = true;
   protected override readonly axes = true;
 

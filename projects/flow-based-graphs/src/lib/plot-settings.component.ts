@@ -1,6 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { NodeService } from '@scaljeri/flow-based';
-import { TimeseriesStyle } from './timeseries-view';
+import { PlotWorker } from './plot.worker';
+import { PlotMark } from './plot-view';
 
 /**
  * How the series is drawn. The choice is presentation, so it lives in config —
@@ -8,10 +9,10 @@ import { TimeseriesStyle } from './timeseries-view';
  */
 @Component({
   standalone: true,
-  selector: 'fb-timeseries-settings',
+  selector: 'fb-plot-settings',
   template: `
     <label class="field">
-      <span>Representation</span>
+      <span>Draw each reading as</span>
       <select [value]="style" (change)="onStyle($event)">
         @for (option of options; track option.id) {
           <option [value]="option.id">{{option.label}}</option>
@@ -47,22 +48,33 @@ import { TimeseriesStyle } from './timeseries-view';
     }
   `]
 })
-export class TimeseriesSettingsComponent {
+export class PlotSettingsComponent {
   private readonly service = inject(NodeService);
 
-  readonly options: { id: TimeseriesStyle; label: string }[] = [
+  readonly options: { id: PlotMark; label: string }[] = [
     { id: 'line', label: 'Line' },
+    { id: 'dots', label: 'Dots' },
     { id: 'area', label: 'Area' },
     { id: 'bars', label: 'Bars' },
   ];
 
-  get style(): TimeseriesStyle {
-    return this.service.state.config?.style ?? 'line';
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  private get worker(): PlotWorker | undefined {
+    return this.service.worker as PlotWorker | undefined;
   }
 
-  onStyle(event: Event): void {
-    const style = (event.target as HTMLSelectElement).value as TimeseriesStyle;
+  get style(): PlotMark {
+    return (this.worker?.mark ?? this.service.state.config?.style ?? 'line') as PlotMark;
+  }
 
-    this.service.state.config = { ...(this.service.state.config ?? {}), style };
+  /*
+   * Through the worker, which owns the config and tells the views. Written
+   * straight onto the state it changed nothing on screen until the next value
+   * arrived — and a swept series has no next value.
+   */
+  onStyle(event: Event): void {
+    this.worker?.setMark((event.target as HTMLSelectElement).value);
+    this.cdr.detectChanges();
   }
 }

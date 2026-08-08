@@ -3757,7 +3757,7 @@ test('a settled socket keeps one type, and forgets it when the wire goes', async
 
   const seen = await page.evaluate(async () => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
-    const plot = editor.addNode('graph-timeseries');   // in: number | point
+    const plot = editor.addNode('graph-plot');   // in: number | point
     const sampler = editor.addNode('math-sampler');    // out: point
 
     [plot, sampler].forEach((node: any, index: number) =>
@@ -4447,7 +4447,7 @@ test('the viewport controls step aside for a node that has the surface', async (
 
   const id = await page.evaluate(() => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
-    const plot = editor.addNode('graph-timeseries');
+    const plot = editor.addNode('graph-plot');
 
     plot.ui = { position: { x: 10, y: 60 } };
     editor.setView(plot.id, 'full');

@@ -11,8 +11,13 @@ import { FbNodeState } from './types';
  *     different question from everything beside them: `config` is what a node
  *     DOES and these are what it looks like, and a diff of two saved flows used
  *     to be mostly coordinates with the one line that mattered lost among them.
+ * 3 — two plot types are renamed to say what they draw rather than what they
+ *     were first used for: `graph-timeseries` → `graph-plot`, `graph-complex`
+ *     → `graph-plane`. Nothing about either node changed; a type name is
+ *     simply how a saved flow asks for a drawing, and these two asked by
+ *     anecdote.
  */
-export const FB_FLOW_FORMAT_VERSION = 2;
+export const FB_FLOW_FORMAT_VERSION = 3;
 
 export interface FbSerializedFlow {
   version: number;
@@ -71,6 +76,34 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
     };
 
     return move(flow);
+  },
+
+  /*
+   * 2 → 3: rename two node types.
+   *
+   * A type name that no saved flow can find is a node that renders as an
+   * empty box with no error at all — the app has no way to say "this type is
+   * gone" (see the app's own fallback), so a rename without a migration is a
+   * silent one. Every node, all the way down, including the flow itself: a
+   * subflow is a node with a type of its own.
+   */
+  2: flow => {
+    const renamed: Record<string, string> = {
+      'graph-timeseries': 'graph-plot',
+      'graph-complex': 'graph-plane',
+    };
+
+    const rename = (node: FbNodeState): FbNodeState => {
+      if (renamed[node.type]) {
+        node.type = renamed[node.type];
+      }
+
+      (node.children ?? []).forEach(rename);
+
+      return node;
+    };
+
+    return rename(flow);
   },
 };
 

@@ -2,7 +2,7 @@ import { Directive } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CanvasView } from './canvas-view';
 import { LAYER_COLOURS } from './plot-core';
-import { SeriesBuffer, TimeseriesWorker } from './timeseries.worker';
+import { SeriesBuffer, PlotWorker } from './plot.worker';
 
 /**
  * The complex plane: im against re, the sample's x forgotten on purpose.
@@ -16,9 +16,9 @@ import { SeriesBuffer, TimeseriesWorker } from './timeseries.worker';
  * lie about the data.
  */
 @Directive()
-export abstract class ComplexPlaneView extends CanvasView {
-  get worker(): TimeseriesWorker {
-    return this.service.worker as TimeseriesWorker;
+export abstract class PlaneView extends CanvasView {
+  get worker(): PlotWorker {
+    return this.service.worker as PlotWorker;
   }
 
   protected changes(): Observable<unknown> | undefined {

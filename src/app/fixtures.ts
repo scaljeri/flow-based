@@ -25,7 +25,7 @@ export const basic = {
   sockets: [],
   children: [
     {
-      type: 'graph-complex',
+      type: 'graph-plane',
       title: 'Complex plane',
       id: 900,
       sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 23 },
+  config: { seedVersion: 24 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -678,7 +678,7 @@ export const demo = () => ({
       ui: { position: { x: 26, y: 22 } },
     },
     {
-      type: 'graph-timeseries',
+      type: 'graph-plot',
       title: 'Wave',
       id: 200,
       config: { style: 'line' },
@@ -686,7 +686,7 @@ export const demo = () => ({
       ui: { position: { x: 2, y: 42 } },
     },
     {
-      type: 'graph-timeseries',
+      type: 'graph-plot',
       title: 'Slope',
       id: 800,
       config: { style: 'line' },
@@ -694,7 +694,7 @@ export const demo = () => ({
       ui: { position: { x: 26, y: 42 } },
     },
     {
-      type: 'graph-complex',
+      type: 'graph-plane',
       title: 'Complex plane',
       id: 900,
       sockets: [{ id: 910, type: 'in', formats: ['number', 'point'] }],
@@ -734,7 +734,7 @@ export const demo = () => ({
       ui: { position: { x: 50, y: 22 } },
     },
     {
-      type: 'graph-complex',
+      type: 'graph-plane',
       title: 'Unit circle',
       id: 1200,
       /*
@@ -777,7 +777,7 @@ export const demo = () => ({
       ui: { position: { x: 76, y: 4 } },
     },
     {
-      type: 'graph-complex',
+      type: 'graph-plane',
       title: 'Four powers of i',
       id: 1500,
       sockets: [{ id: 1510, type: 'in', formats: ['number', 'point', 'marks'] }],
@@ -808,7 +808,7 @@ export const demo = () => ({
       ui: { position: { x: 64, y: 22 } },
     },
     {
-      type: 'graph-timeseries',
+      type: 'graph-plot',
       title: 'Shadows',
       id: 1300,
       /*
@@ -872,7 +872,7 @@ export const demo = () => ({
       ui: { position: { x: 44, y: 86 } },
     },
     {
-      type: 'graph-complex',
+      type: 'graph-plane',
       title: 'The orbit',
       id: 2000,
       sockets: [{ id: 2010, type: 'in', formats: ['number', 'point', 'marks'] }],
@@ -1421,7 +1421,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 28 },
+  config: { seedVersion: 29 },
   /*
    * The same flow, read as an article.
    *
@@ -1692,7 +1692,7 @@ export const tno = () => ({
     stationReadings(3000, 'regions.0.id', { x: 84, y: 12 }),
     stationReadings(3100, 'regions.1.id', { x: 84, y: 46 }),
     {
-      type: 'graph-timeseries',
+      type: 'graph-plot',
       title: 'One station, day by day',
       id: 1100,
       /*
@@ -1706,7 +1706,7 @@ export const tno = () => ({
       ui: { position: { x: 84, y: 32 } },
     },
     {
-      type: 'graph-timeseries',
+      type: 'graph-plot',
       title: 'One European station',
       id: 1200,
       config: { style: 'bars' },

@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { ComplexPlaneView } from './complex-plane-view';
+import { PlaneView } from './plane-view';
 
 /** Opened in place: the plane with its zero cross, at panel size. */
 @Component({
   standalone: true,
-  selector: 'fb-complex-plane-normal',
+  selector: 'fb-plane-normal',
   template: `
     @if (title) {
       <p class="plot-title">{{title}}</p>
@@ -43,6 +43,6 @@ import { ComplexPlaneView } from './complex-plane-view';
     }
   `]
 })
-export class ComplexPlaneNormalComponent extends ComplexPlaneView {
+export class PlaneNormalComponent extends PlaneView {
   protected override readonly axes = true;
 }

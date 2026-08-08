@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { ComplexPlaneView } from './complex-plane-view';
+import { PlotView } from './plot-view';
 
-/** The whole surface; the plane keeps its square truth in the middle. */
+/** The whole surface; the bitmap follows the element per draw, so it fills. */
 @Component({
   standalone: true,
-  selector: 'fb-complex-plane-full',
+  selector: 'fb-plot-full',
   template: `
     <div class="wrap">
       @if (title) {
@@ -46,6 +46,8 @@ import { ComplexPlaneView } from './complex-plane-view';
     }
   `]
 })
-export class ComplexPlaneFullComponent extends ComplexPlaneView {
+export class PlotFullComponent extends PlotView {
+  protected override readonly legend = true;
   protected override readonly axes = true;
+
 }

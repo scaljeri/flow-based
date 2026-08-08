@@ -52,9 +52,39 @@ export interface SeriesBuffer {
  * sawtooth that bare y-values used to produce. A whole array replaces the
  * buffer at once.
  */
-export class TimeseriesWorker implements FbNodeWorker {
+export class PlotWorker implements FbNodeWorker {
   private readonly subject = new Subject<void>();
   private readonly subscriptions: { [id: number]: Subscription } = {};
+
+  /*
+   * The node's own config, so that changing how it draws is a change the
+   * views hear about.
+   *
+   * The settings panel used to write `state.config` straight, and nothing
+   * told the canvas: pick Bars and the plot went on drawing a line until the
+   * next value happened to arrive — which, for a sweep that came once, was
+   * never. A worker owns its config everywhere else in this project, and
+   * this one had simply never needed to.
+   */
+  constructor(private readonly config: { style?: string } = {}) {
+  }
+
+  /** How each reading is drawn; `line` for a node that never said. */
+  get mark(): string {
+    return this.config.style ?? 'line';
+  }
+
+  setMark(mark: string): void {
+    this.config.style = mark;
+    this.subject.next();
+  }
+
+  /** Tunable from a document, like every other config in this project. */
+  setConfigValue(path: string, value: unknown): void {
+    if (path === 'style') {
+      this.setMark(String(value));
+    }
+  }
 
   /*
    * One buffer per INPUT SOCKET, because a socket is a layer.

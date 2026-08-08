@@ -2,9 +2,19 @@ import { Directive } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CanvasView } from './canvas-view';
 import { BANDS, LAYER_COLOURS, LEGEND_COLUMN, LEGEND_ROW, legendHeight, niceTicks } from './plot-core';
-import { SeriesBuffer, TimeseriesWorker } from './timeseries.worker';
+import { SeriesBuffer, PlotWorker } from './plot.worker';
 
-export type TimeseriesStyle = 'line' | 'area' | 'bars';
+/**
+ * What one reading is drawn AS.
+ *
+ * The four that recur in every plotting system worth copying — a point, a
+ * line through them, the area under it, a bar standing on the axis. Everything
+ * else those systems offer is one of these with a different encoding or a
+ * transform applied before the plot: a histogram is bars after binning, a
+ * heatmap is rectangles coloured by value, a stacked bar is bars over a
+ * composition. Transforms belong in nodes upstream; this draws what arrives.
+ */
+export type PlotMark = 'line' | 'dots' | 'area' | 'bars';
 
 /**
  * The plot itself, drawn straight onto a canvas.
@@ -22,9 +32,9 @@ export type TimeseriesStyle = 'line' | 'area' | 'bars';
  * self-contained.
  */
 @Directive()
-export abstract class TimeseriesView extends CanvasView {
-  get worker(): TimeseriesWorker {
-    return this.service.worker as TimeseriesWorker;
+export abstract class PlotView extends CanvasView {
+  get worker(): PlotWorker {
+    return this.service.worker as PlotWorker;
   }
 
   protected changes(): Observable<unknown> | undefined {
@@ -52,8 +62,8 @@ export abstract class TimeseriesView extends CanvasView {
     return !buffer || (!buffer.points.length && !buffer.stack && !buffer.marks?.length);
   }
 
-  protected get style(): TimeseriesStyle {
-    return this.service.state.config?.style ?? 'line';
+  protected get style(): PlotMark {
+    return (this.worker?.mark ?? 'line') as PlotMark;
   }
 
   /** The open views draw axes; the sparkline stays bare. */
@@ -153,13 +163,30 @@ export abstract class TimeseriesView extends CanvasView {
       const colours = LAYER_COLOURS[index % LAYER_COLOURS.length];
 
       ctx.strokeStyle = colours.mark;
-      ctx.fillStyle = `rgba(${colours.path}, 0.35)`;
+      ctx.fillStyle = this.style === 'dots' ? colours.mark : `rgba(${colours.path}, 0.35)`;
 
       if (this.style === 'bars') {
         const barWidth = Math.max(1, (width - left - pad) / points.length - 1);
 
         for (const point of points) {
           ctx.fillRect(x(point[0]) - barWidth / 2, y(point[1]), barWidth, height - bottom - y(point[1]));
+        }
+
+        return;
+      }
+
+      if (this.style === 'dots') {
+        /*
+         * A mark per reading and nothing between them. For a scatter this is
+         * the honest drawing: a line between two points claims the values in
+         * between, and a set of samples never made that claim.
+         */
+        const radius = Math.max(1.5, Math.min(3, (width - left - pad) / points.length / 2));
+
+        for (const point of points) {
+          ctx.beginPath();
+          ctx.arc(x(point[0]), y(point[1]), radius, 0, Math.PI * 2);
+          ctx.fill();
         }
 
         return;

@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { TimeseriesView } from './timeseries-view';
+import { PlaneView } from './plane-view';
 
-/** The whole surface; the bitmap follows the element per draw, so it fills. */
+/** The whole surface; the plane keeps its square truth in the middle. */
 @Component({
   standalone: true,
-  selector: 'fb-timeseries-full',
+  selector: 'fb-plane-full',
   template: `
     <div class="wrap">
       @if (title) {
@@ -46,8 +46,6 @@ import { TimeseriesView } from './timeseries-view';
     }
   `]
 })
-export class TimeseriesFullComponent extends TimeseriesView {
-  protected override readonly legend = true;
+export class PlaneFullComponent extends PlaneView {
   protected override readonly axes = true;
-
 }

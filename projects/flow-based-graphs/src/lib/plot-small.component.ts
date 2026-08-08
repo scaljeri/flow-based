@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { TimeseriesView } from './timeseries-view';
+import { PlotView } from './plot-view';
 
 /**
  * At rest: the shape of the recent past, no axes, no chrome.
@@ -15,7 +15,7 @@ import { TimeseriesView } from './timeseries-view';
  */
 @Component({
   standalone: true,
-  selector: 'fb-timeseries-small',
+  selector: 'fb-plot-small',
   template: `
     <canvas #plot></canvas>
     @if (waiting) {
@@ -51,5 +51,5 @@ import { TimeseriesView } from './timeseries-view';
     }
   `]
 })
-export class TimeseriesSmallComponent extends TimeseriesView {
+export class PlotSmallComponent extends PlotView {
 }
