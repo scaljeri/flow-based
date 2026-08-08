@@ -69,6 +69,20 @@ export const DATA_MODULE: FbModule = {
         }),
       }),
     },
+      /*
+     * Declared here because Pick BUILDS one, and a module that produces a type
+     * without declaring it leaves the name to whoever happens to declare it
+     * first. Graphs declares the same name with the same description, so the
+     * two share it rather than one of them getting a prefix.
+     */
+    {
+      name: 'stack',
+      description: 'A composition per step: named parts and a row of amounts each',
+      color: '#d18f4a',
+      shape: fbObject({
+        stack: fbObject({ labels: fbArray(fbString), rows: fbArray(fbArray(fbNumber)) }),
+      }),
+    },
   ],
 
   types: {
@@ -86,7 +100,13 @@ export const DATA_MODULE: FbModule = {
            * SHAPE that was chosen — and the engine's job is to say whether
            * the far end can take it, not to guess which one it will be.
            */
-          { type: 'out', formats: ['geo', 'point', 'number', 'grid'] },
+          /*
+           * Every shape this node can build, including the two it could
+           * always build and never admitted: a composition and a piece of
+           * text. A socket that lists fewer types than its worker emits is a
+           * socket that refuses a connection its own node would have honoured.
+           */
+          { type: 'out', formats: ['geo', 'point', 'number', 'grid', 'stack', 'string'] },
         ],
       },
       worker: PickWorker,

@@ -1,8 +1,8 @@
-import {
-  AfterViewInit, ChangeDetectorRef, Directive, ElementRef, OnDestroy, OnInit, ViewChild, inject,
-} from '@angular/core';
-import { FB_DRAG_IGNORE, NodeService } from '@scaljeri/flow-based';
-import { Subscription } from 'rxjs';
+import { Directive } from '@angular/core';
+import { FB_DRAG_IGNORE } from '@scaljeri/flow-based';
+import { Observable } from 'rxjs';
+import { CanvasView } from './canvas-view';
+import { Ramp, rampAt } from './plot-core';
 import { MandelbrotWorker, Region } from './mandelbrot.worker';
 
 /** Rows computed per animation frame. */
@@ -24,53 +24,41 @@ const BAND = 24;
  * configuration in every app that installs it.
  */
 @Directive()
-export abstract class MandelbrotView implements OnInit, AfterViewInit, OnDestroy {
-  protected readonly service = inject(NodeService);
-  protected readonly cdr = inject(ChangeDetectorRef);
-
-  @ViewChild('plot') plot?: ElementRef<HTMLCanvasElement>;
-
-  worker!: MandelbrotWorker;
+export abstract class MandelbrotView extends CanvasView {
+  get worker(): MandelbrotWorker {
+    return this.service.worker as MandelbrotWorker;
+  }
 
   /** The open views take presses; the thumbnail is a picture, not a control. */
   protected readonly interactive: boolean = false;
 
   protected readonly dragIgnore = FB_DRAG_IGNORE;
 
-  private subscription?: Subscription;
-  private resizeObserver?: ResizeObserver;
   private frame?: number;
 
   /** The finished picture, so a marker can be drawn without recomputing it. */
   private painted?: ImageData;
 
-  ngOnInit(): void {
-    this.worker = this.service.worker as MandelbrotWorker;
-    this.subscription = this.worker?.changes.subscribe(what => {
-      if (what === 'mark') {
-        this.remark();
-      } else {
-        this.draw();
-      }
-
-      this.cdr.detectChanges();
-    });
+  protected changes(): Observable<unknown> | undefined {
+    return this.worker?.changes;
   }
 
-  ngAfterViewInit(): void {
-    this.draw();
-
-    const canvas = this.plot?.nativeElement;
-
-    if (canvas && typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => this.draw());
-      this.resizeObserver.observe(canvas);
+  /**
+   * A marker moved, or the whole region did.
+   *
+   * The distinction is the point: a press must not rebuild ninety thousand
+   * pixels to draw a five-pixel ring.
+   */
+  protected override changed(change: unknown): void {
+    if (change === 'mark') {
+      this.remark();
+    } else {
+      this.draw();
     }
   }
 
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-    this.resizeObserver?.disconnect();
+  override ngOnDestroy(): void {
+    super.ngOnDestroy();
     this.stop();
   }
 
@@ -109,26 +97,13 @@ export abstract class MandelbrotView implements OnInit, AfterViewInit, OnDestroy
   }
 
   protected draw(): void {
-    const canvas = this.plot?.nativeElement;
-    const context = canvas?.getContext('2d');
+    const surface = this.surface();
 
-    if (!canvas || !context) {
+    if (!surface) {
       return;
     }
 
-    // Layout size, never the zoom-scaled bounding rect: the graph's own zoom
-    // must not multiply the pixels this computes.
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-
-    if (!width || !height) {
-      return;
-    }
-
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
+    const { ctx: context, width, height } = surface;
 
     this.stop();
     this.painted = undefined;
@@ -285,7 +260,7 @@ function escape(cRe: number, cIm: number, limit: number): number | null {
  * time, and the way they crowd together approaching the edge is the picture's
  * real subject: the boundary is where the answer changes infinitely fast.
  */
-const RAMP: [number, [number, number, number]][] = [
+const RAMP: Ramp = [
   [0, [10, 16, 44]],
   [0.3, [32, 96, 130]],
   [0.55, [60, 170, 165]],
@@ -323,21 +298,10 @@ function shade(
 
     // A frame where everything escaped at the same step has no range to
     // stretch; one end of the ramp is as good an answer as the other.
-    const t = width > 0 ? (Math.log(1 + steps) - low) / width : 1;
+    const [r, g, b] = rampAt(RAMP, width > 0 ? (Math.log(1 + steps) - low) / width : 1);
 
-    for (let stop = 1; stop < RAMP.length; stop += 1) {
-      const [end, top] = RAMP[stop];
-
-      if (t <= end || stop === RAMP.length - 1) {
-        const [start, bottom] = RAMP[stop - 1];
-        const k = end === start ? 0 : (Math.min(t, end) - start) / (end - start);
-
-        data[at] = Math.round(bottom[0] + (top[0] - bottom[0]) * k);
-        data[at + 1] = Math.round(bottom[1] + (top[1] - bottom[1]) * k);
-        data[at + 2] = Math.round(bottom[2] + (top[2] - bottom[2]) * k);
-
-        break;
-      }
-    }
+    data[at] = r;
+    data[at + 1] = g;
+    data[at + 2] = b;
   }
 }

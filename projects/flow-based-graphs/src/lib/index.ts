@@ -95,8 +95,13 @@ export const GRAPHS_MODULE: FbModule = {
       name: 'stack',
       description: 'A composition per step: named parts and a row of amounts each',
       color: '#d18f4a',
+      /*
+       * `rows`, which is what travels and what the plot reads. It said
+       * `values` — so a reader pressing the socket to ask what it carries was
+       * shown a field that does not exist on the wire.
+       */
       shape: fbObject({
-        stack: fbObject({ labels: fbArray(fbString), values: fbArray(fbArray(fbNumber)) }),
+        stack: fbObject({ labels: fbArray(fbString), rows: fbArray(fbArray(fbNumber)) }),
       }),
     },
     {

@@ -1,20 +1,8 @@
-import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
-import { NodeService } from '@scaljeri/flow-based';
-import { Subscription } from 'rxjs';
+import { Directive } from '@angular/core';
+import { Observable } from 'rxjs';
+import { CanvasView } from './canvas-view';
+import { LAYER_COLOURS } from './plot-core';
 import { SeriesBuffer, TimeseriesWorker } from './timeseries.worker';
-
-/**
- * One pair of colours per layer: the path, and the marks drawn on it.
- *
- * The first layer keeps the colours this plot has always used, so a plot with
- * one input looks exactly as it did; further layers have to be told apart from
- * it at a glance, which is what a second and third pair are for.
- */
-const LAYER_COLOURS = [
-  { path: '186, 218, 85', mark: '#bada55' },
-  { path: '255, 64, 129', mark: '#ff4081' },
-  { path: '42, 167, 160', mark: '#2aa7a0' },
-];
 
 /**
  * The complex plane: im against re, the sample's x forgotten on purpose.
@@ -28,41 +16,13 @@ const LAYER_COLOURS = [
  * lie about the data.
  */
 @Directive()
-export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestroy {
-  protected readonly service = inject(NodeService);
-  protected readonly cdr = inject(ChangeDetectorRef);
-
-  @ViewChild('plot') plot?: ElementRef<HTMLCanvasElement>;
-
-  worker!: TimeseriesWorker;
-
-  private subscription?: Subscription;
-  private resizeObserver?: ResizeObserver;
-
-  ngOnInit(): void {
-    this.worker = this.service.worker as TimeseriesWorker;
-
-    this.subscription = this.worker?.getStream().subscribe(() => {
-      this.draw();
-      this.cdr.detectChanges();
-    });
+export abstract class ComplexPlaneView extends CanvasView {
+  get worker(): TimeseriesWorker {
+    return this.service.worker as TimeseriesWorker;
   }
 
-  ngAfterViewInit(): void {
-    this.draw();
-    this.cdr.detectChanges();
-
-    const canvas = this.plot?.nativeElement;
-
-    if (canvas && typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => this.draw());
-      this.resizeObserver.observe(canvas);
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-    this.resizeObserver?.disconnect();
+  protected changes(): Observable<unknown> | undefined {
+    return this.worker?.getStream();
   }
 
   get title(): string {
@@ -73,27 +33,17 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
   protected readonly axes: boolean = false;
 
   protected draw(): void {
-    const canvas = this.plot?.nativeElement;
+    const surface = this.surface();
 
-    if (!canvas) {
+    if (!surface) {
       return;
     }
 
-    // Layout size, never the zoom-scaled bounding rect; see the wave view.
-    const layoutW = canvas.clientWidth;
-    const layoutH = canvas.clientHeight;
-
-    if (layoutW && (canvas.width !== layoutW || canvas.height !== layoutH)) {
-      canvas.width = layoutW;
-      canvas.height = layoutH;
-    }
-
-    const ctx = canvas.getContext('2d')!;
-    const { width, height } = canvas;
+    const { ctx, width, height } = surface;
 
     ctx.clearRect(0, 0, width, height);
 
-    const layers = this.layers();
+    const layers = this.layersOf<SeriesBuffer>(this.worker, this.worker.buffer);
 
     if (!layers.length) {
       return;
@@ -168,17 +118,6 @@ export abstract class ComplexPlaneView implements OnInit, AfterViewInit, OnDestr
       this.drawPath(ctx, layer, colours, x, y);
       this.drawMarks(ctx, layer, colours, x, y);
     });
-  }
-
-  /** The input sockets' buffers, in the order the node declares them. */
-  private layers(): SeriesBuffer[] {
-    const sockets = (this.service.state.sockets ?? []).filter(socket => socket.type === 'in');
-    const layers = sockets
-      .map(socket => this.worker.layerFor(socket.id!))
-      .filter((layer): layer is SeriesBuffer => !!layer);
-
-    // A node whose sockets are not declared yet still has whatever arrived.
-    return layers.length ? layers : [this.worker.buffer];
   }
 
   private drawPath(

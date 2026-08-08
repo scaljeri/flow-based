@@ -1,7 +1,8 @@
-import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
-import { NodeService } from '@scaljeri/flow-based';
-import { Subscription } from 'rxjs';
-import { TimeseriesWorker } from './timeseries.worker';
+import { Directive } from '@angular/core';
+import { Observable } from 'rxjs';
+import { CanvasView } from './canvas-view';
+import { BANDS, LAYER_COLOURS, LEGEND_COLUMN, LEGEND_ROW, legendHeight, niceTicks } from './plot-core';
+import { SeriesBuffer, TimeseriesWorker } from './timeseries.worker';
 
 export type TimeseriesStyle = 'line' | 'area' | 'bars';
 
@@ -14,104 +15,20 @@ export type TimeseriesStyle = 'line' | 'area' | 'bars';
  * panel writes it.
  */
 /**
- * Round tick values strictly INSIDE [min, max], on a 1/2/5×10^k step.
+ * A cartesian plot: one horizontal parameter, values against it.
  *
- * Strictly inside, because the ends are drawn separately as the exact bounds —
- * a tick on top of an end label would print the same place twice. Returns few
- * or none when the range is too tight for a single nice step, which is the
- * honest answer for a tiny plot.
+ * Plain 2D drawing rather than a chart library: a rolling line at up to a few
+ * ticks a second redraws far below any budget, and the module stays
+ * self-contained.
  */
-function niceTicks(min: number, max: number, maxCount: number): number[] {
-  const span = max - min;
-
-  if (!(span > 0) || maxCount < 1) {
-    return [];
-  }
-
-  const rough = span / (maxCount + 1);
-  const power = Math.pow(10, Math.floor(Math.log10(rough)));
-  const step = [1, 2, 5, 10].map(m => m * power).find(s => span / s <= maxCount + 1) ?? 10 * power;
-
-  const ticks: number[] = [];
-  const margin = span * 0.06;
-
-  for (let v = Math.ceil(min / step) * step; v < max; v += step) {
-    // Skip ticks hugging the ends; the exact bounds already stand there.
-    if (v - min > margin && max - v > margin) {
-      ticks.push(Number(v.toPrecision(12)));
-    }
-  }
-
-  return ticks;
-}
-
-
-/**
- * One colour per band, by position.
- *
- * Eighteen that stay apart at six pixels wide, which is a harder problem than
- * eighteen that look nice: neighbours in the list end up as neighbours in the
- * bar, so the order alternates hue rather than walking the wheel. Repeats
- * after the list runs out, which is honest — a stack of forty parts has no
- * readable colouring and should not pretend to.
- */
-const BANDS = [
-  '#bada55', '#ff4081', '#2aa7a0', '#f6c87d', '#9988cf', '#4fa3d1',
-  '#e34948', '#19d57f', '#d081b8', '#e0a55a', '#6a5acd', '#4ff1f3',
-  '#c77d0a', '#8ac944', '#b0e0e6', '#c71585', '#00807f', '#ffd700',
-];
-
-/** Roughly the width of a legend entry, and the height of one row. */
-const LEGEND_COLUMN = 96;
-const LEGEND_ROW = 11;
-
 @Directive()
-export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy {
-  protected readonly service = inject(NodeService);
-  protected readonly cdr = inject(ChangeDetectorRef);
-
-  @ViewChild('plot') plot?: ElementRef<HTMLCanvasElement>;
-
-  worker!: TimeseriesWorker;
-
-  private subscription?: Subscription;
-
-  ngOnInit(): void {
-    this.worker = this.service.worker as TimeseriesWorker;
-
-    this.subscription = this.worker?.getStream().subscribe(() => {
-      this.draw();
-      this.cdr.detectChanges();
-    });
+export abstract class TimeseriesView extends CanvasView {
+  get worker(): TimeseriesWorker {
+    return this.service.worker as TimeseriesWorker;
   }
 
-  /**
-   * Draw what the buffer already holds, immediately.
-   *
-   * The stream only says "something arrived", so a view mounted BETWEEN
-   * arrivals — opening the node from small to normal — showed an empty plot
-   * until the next tick. In sweep mode there is no next tick: the whole
-   * array came once, and the reopened plot stayed empty for good.
-   */
-  private resizeObserver?: ResizeObserver;
-
-  ngAfterViewInit(): void {
-    this.draw();
-    this.cdr.detectChanges();
-
-    // A user-resized node changes the canvas without a new sample arriving;
-    // the plot must follow the room it is given, not wait for data.
-    const canvas = this.plot?.nativeElement;
-
-    if (canvas && typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(() => this.draw());
-      this.resizeObserver.observe(canvas);
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-    this.resizeObserver?.disconnect();
+  protected changes(): Observable<unknown> | undefined {
+    return this.worker?.getStream();
   }
 
   get latest(): string {
@@ -159,58 +76,56 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
   }
 
   protected draw(): void {
-    const canvas = this.plot?.nativeElement;
+    const surface = this.surface();
 
-    if (!canvas) {
+    if (!surface) {
       return;
     }
 
-    /*
-     * Match the bitmap to the LAYOUT size, so the line is crisp at every
-     * size. clientWidth, not getBoundingClientRect: the node lives on a
-     * zoomed plane, and the bounding rect is scaled by that zoom — measured
-     * through it, a zoomed-out plot got a miniature bitmap that the layout
-     * then stretched back up into a blur of overlapping labels.
-     */
-    const layoutW = canvas.clientWidth;
-    const layoutH = canvas.clientHeight;
-
-    if (layoutW && (canvas.width !== layoutW || canvas.height !== layoutH)) {
-      canvas.width = layoutW;
-      canvas.height = layoutH;
-    }
-
-    const ctx = canvas.getContext('2d')!;
-    const { points, stack } = this.worker.buffer;
-    const { width, height } = canvas;
+    const { ctx, width, height } = surface;
+    const layers = this.layersOf<SeriesBuffer>(this.worker, this.worker.buffer)
+      .filter(layer => layer.stack || layer.points.length);
 
     ctx.clearRect(0, 0, width, height);
 
-    // A composition is drawn differently from a quantity, and it arrives on
-    // its own field, so it decides the drawing before anything else does.
-    if (stack) {
-      this.drawStack(ctx, stack, width, height);
+    /*
+     * A composition is drawn differently from a quantity, and it arrives on
+     * its own field, so it decides the drawing before anything else does.
+     * One at a time: stacked bars from two sources on one pair of axes are
+     * two totals drawn as one, which is a picture of nothing.
+     */
+    const stacked = layers.find(layer => layer.stack);
+
+    if (stacked?.stack) {
+      this.drawStack(ctx, stacked.stack, width, height);
 
       return;
     }
 
-    if (points.length < 2) {
+    const drawn = layers.filter(layer => layer.points.length > 1);
+
+    if (!drawn.length) {
       return;
     }
 
     /*
-     * Both axes scale to the DATA. For time readings the x's are arrival
-     * indices and this is what it always did; for function samples the x's
-     * are real coordinates, so f(x) = x^2 draws as the parabola it is rather
-     * than as y-values marching along in arrival order.
+     * Both axes scale to the DATA, across EVERY layer. For time readings the
+     * x's are arrival indices and this is what it always did; for function
+     * samples the x's are real coordinates, so f(x) = x^2 draws as the
+     * parabola it is rather than as y-values marching along in arrival order.
+     *
+     * Over every layer, because layers only mean anything if they agree about
+     * where a point is — two series measured differently are two pictures on
+     * one canvas.
      */
-    const xs = points.map(p => p[0]);
+    const all = drawn.flatMap(layer => layer.points);
+    const xs = all.map(p => p[0]);
     // Complex samples carry [x, re, im]; BOTH series set the y-range, or the
     // imaginary line walks off the top of the plot.
-    const complex = points.some(p => p.length > 2);
+    const complex = all.some(p => p.length > 2);
     const ys = complex
-      ? points.flatMap(p => [p[1], p[2] ?? p[1]])
-      : points.map(p => p[1]);
+      ? all.flatMap(p => [p[1], p[2] ?? p[1]])
+      : all.map(p => p[1]);
     const minX = Math.min(...xs);
     const maxX = Math.max(...xs);
     const spanX = maxX - minX || 1;
@@ -231,30 +146,36 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
       this.drawAxes(ctx, { width, height, left, bottom, top, pad, minX, maxX, minY, maxY });
     }
 
-    ctx.strokeStyle = '#bada55';
-    ctx.fillStyle = 'rgba(186, 218, 85, 0.35)';
     ctx.lineWidth = 2;
 
-    if (this.style === 'bars') {
-      const barWidth = Math.max(1, (width - left - pad) / points.length - 1);
+    drawn.forEach((layer, index) => {
+      const points = layer.points;
+      const colours = LAYER_COLOURS[index % LAYER_COLOURS.length];
 
-      for (const point of points) {
-        ctx.fillRect(x(point[0]) - barWidth / 2, y(point[1]), barWidth, height - bottom - y(point[1]));
+      ctx.strokeStyle = colours.mark;
+      ctx.fillStyle = `rgba(${colours.path}, 0.35)`;
+
+      if (this.style === 'bars') {
+        const barWidth = Math.max(1, (width - left - pad) / points.length - 1);
+
+        for (const point of points) {
+          ctx.fillRect(x(point[0]) - barWidth / 2, y(point[1]), barWidth, height - bottom - y(point[1]));
+        }
+
+        return;
       }
 
-      return;
-    }
+      ctx.beginPath();
+      points.forEach(point => ctx.lineTo(x(point[0]), y(point[1])));
+      ctx.stroke();
 
-    ctx.beginPath();
-    points.forEach(point => ctx.lineTo(x(point[0]), y(point[1])));
-    ctx.stroke();
-
-    if (this.style === 'area') {
-      ctx.lineTo(x(points[points.length - 1][0]), height - bottom);
-      ctx.lineTo(x(points[0][0]), height - bottom);
-      ctx.closePath();
-      ctx.fill();
-    }
+      if (this.style === 'area') {
+        ctx.lineTo(x(points[points.length - 1][0]), height - bottom);
+        ctx.lineTo(x(points[0][0]), height - bottom);
+        ctx.closePath();
+        ctx.fill();
+      }
+    });
 
     /*
      * The imaginary part, as its own line in the point colour. Two labelled
@@ -264,7 +185,7 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     if (complex) {
       ctx.strokeStyle = '#9988cf';
       ctx.beginPath();
-      points.forEach(point => ctx.lineTo(x(point[0]), y(point[2] ?? 0)));
+      all.forEach(point => ctx.lineTo(x(point[0]), y(point[2] ?? 0)));
       ctx.stroke();
 
       if (this.axes) {
@@ -326,8 +247,8 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     const pad = 6;
     const left = this.axes ? 44 : pad;
     const top = this.axes ? 10 : pad;
-    const legendHeight = this.legend ? this.legendHeight(stack.labels.length, width) : 0;
-    const bottom = (this.axes ? 34 : pad) + legendHeight;
+    const legend = this.legend ? legendHeight(stack.labels.length, width) : 0;
+    const bottom = (this.axes ? 34 : pad) + legend;
 
     if (this.axes) {
       this.drawAxes(ctx, {
@@ -364,15 +285,8 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     });
 
     if (this.legend) {
-      this.drawLegend(ctx, stack, totals, width, height, legendHeight);
+      this.drawLegend(ctx, stack, totals, width, height, legend);
     }
-  }
-
-  /** How much room the names need, which decides where the bars stop. */
-  private legendHeight(count: number, width: number): number {
-    const columns = Math.max(1, Math.floor(width / LEGEND_COLUMN));
-
-    return Math.ceil(count / columns) * LEGEND_ROW + 6;
   }
 
   /**

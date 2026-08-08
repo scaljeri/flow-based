@@ -3,6 +3,7 @@ import { NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 import type * as L from 'leaflet';
 import { MapGrid, MapLayer, MapWorker } from './map.worker';
+import { LAYER_COLOURS, Ramp, rampAt } from './plot-core';
 
 /**
  * How the map fits its data — used BOTH to do the fitting and to work out the
@@ -15,8 +16,6 @@ import { MapGrid, MapLayer, MapWorker } from './map.worker';
  */
 const FIT = { padding: [24, 24] as [number, number], maxZoom: 12 };
 
-/** One colour per layer, matching the plots so a flow reads the same throughout. */
-const LAYER_COLOURS = ['#bada55', '#ff4081', '#2aa7a0'];
 
 /**
  * The colour ramp a raster is drawn with: cool and dim for little, hot and
@@ -26,13 +25,13 @@ const LAYER_COLOURS = ['#bada55', '#ff4081', '#2aa7a0'];
  * were chosen to be told apart on a dark basemap — which is a judgement about
  * this map, not a property of a formula.
  */
-const RAMP: [number, number, number][] = [
-  [ 40,  70, 130],
-  [ 40, 150, 160],
-  [120, 190, 100],
-  [235, 205,  80],
-  [230, 130,  50],
-  [200,  50,  60],
+const RAMP: Ramp = [
+  [0.0, [ 40,  70, 130]],
+  [0.2, [ 40, 150, 160]],
+  [0.4, [120, 190, 100]],
+  [0.6, [235, 205,  80]],
+  [0.8, [230, 130,  50]],
+  [1.0, [200,  50,  60]],
 ];
 
 /** Web Mercator's y for a latitude, and back — see drawGrid. */
@@ -307,7 +306,7 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
           continue;
         }
 
-        const [r, g, b] = this.rampAt((value - low) / span);
+        const [r, g, b] = rampAt(RAMP, (value - low) / span);
 
         image.data[target] = r;
         image.data[target + 1] = g;
@@ -327,21 +326,6 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
 
     this.drawn.push(overlay);
     bounds.push([south, west], [north, east]);
-  }
-
-  /** A colour from the ramp, mixed between its two nearest stops. */
-  private rampAt(fraction: number): [number, number, number] {
-    const at = Math.min(1, Math.max(0, fraction)) * (RAMP.length - 1);
-    const index = Math.min(RAMP.length - 2, Math.floor(at));
-    const mix = at - index;
-    const from = RAMP[index];
-    const to = RAMP[index + 1];
-
-    return [
-      Math.round(from[0] + (to[0] - from[0]) * mix),
-      Math.round(from[1] + (to[1] - from[1]) * mix),
-      Math.round(from[2] + (to[2] - from[2]) * mix),
-    ];
   }
 
   /**
@@ -582,7 +566,7 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
     const bounds: [number, number][] = [];
 
     this.layers().forEach((layer, index) => {
-      const colour = LAYER_COLOURS[index % LAYER_COLOURS.length];
+      const colour = LAYER_COLOURS[index % LAYER_COLOURS.length].mark;
       const line: [number, number][] = [];
 
       if (layer.grid) {
