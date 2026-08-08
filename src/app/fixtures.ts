@@ -1278,7 +1278,16 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
   const get = fetches('That station’s readings', { x: 70, y: 42 });
   const points = shapes(
     'breakdown',
-    { shape: 'stack', labels: 'labels', values: 'values', title: 'name' },
+    /*
+     * The European files split every sector again by whether it came from the
+     * country itself, which is thirty-six labels for eighteen sources and a
+     * legend nobody can read. The pattern is here rather than in the module:
+     * `native` is this publisher's word.
+     */
+    {
+      shape: 'stack', labels: 'labels', values: 'values', title: 'name',
+      merge: '^(.*?) (?:non-)?native$',
+    },
     'stack',
     { x: 86, y: 48 },
   );
@@ -1412,7 +1421,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 26 },
+  config: { seedVersion: 27 },
   /*
    * The same flow, read as an article.
    *
@@ -1428,237 +1437,96 @@ export const tno = () => ({
    * is, it says whose air it is.
    */
   document: {
-    title: 'Where the air comes from',
+    title: 'Whose air is it?',
     blocks: [
       {
         type: 'text',
         text:
-          'The map below is not a measurement. It is the output of a chemistry ' +
-          'transport model in which every molecule carries a label saying where it came ' +
-          'from — which country, which kind of activity — and it is redrawn every day.\n' +
+          'A measuring station tells you how much of something is in the air. It cannot ' +
+          'tell you whose it is — no instrument can separate a microgram from a ship ' +
+          'from a microgram from a farm, because by the time it arrives they are the ' +
+          'same dust.\n' +
           '\n' +
-          'Every figure on this page is a live node of this flow, fetching from the ' +
-          'publisher while you read. The question they answer together is not how dirty ' +
-          'the air is. It is whose it is.',
+          'That second question is answered by a model instead. TNO runs one daily in ' +
+          'which every emission is TAGGED at its source and the tag is carried through ' +
+          'transport, chemistry and deposition — so at any point it can say what ' +
+          'fraction of what is there came from where, in a single run, without switching ' +
+          'anything off and changing the chemistry along with it ' +
+          '([Kranenburg et al., 2013](https://gmd.copernicus.org/articles/6/721/2013/); ' +
+          '[TOPAS](https://airqualitymodeling.tno.nl/topas/topas-documentation/)).\n' +
+          '\n' +
+          'Every figure below is a live node of this flow. Start by choosing what to ' +
+          'ask about: these are the pollutants the publisher offers, read from its own ' +
+          'config rather than typed here.',
       },
+      { type: 'node', nodeId: 630, float: 'none', caption: 'What there is to ask about' },
 
-      { type: 'heading', text: 'Labelling, not switching off', level: 2 },
-      { type: 'node', nodeId: 600, float: 'right', caption: 'The publisher’s own config, fetched live' },
+      { type: 'heading', text: 'The Netherlands', level: 2 },
       {
         type: 'text',
         text:
-          'The obvious way to find out how much of the air over Rotterdam comes from ' +
-          'shipping is to run the model twice: once as it is, once with shipping ' +
-          'switched off, and subtract. That is called the brute force method, and it has ' +
-          'a flaw that is easy to miss. Air chemistry is not additive. Removing a source ' +
-          'changes the chemical regime itself — the nitrate that forms in one run does ' +
-          'not form in the other for reasons that have nothing to do with shipping — so ' +
-          'the difference between the two runs is the contribution *plus* an artefact of ' +
-          'having changed the chemistry.\n' +
+          'Two networks measure it here, and they could not be more different. The ' +
+          'official one, RIVM’s Luchtmeetnet, contributes 93 reference stations — known ' +
+          'instruments on known sites, as close to the truth as measuring gets. The ' +
+          'citizen network, [Samen Meten](https://www.rivm.nl/lucht/meten-modelleren-berekenen/samen-meten), ' +
+          'contributes 3,166 small sensors on balconies and fences.\n' +
           '\n' +
-          'LOTOS-EUROS does it the other way round. A labelling module tags emissions at ' +
-          'the source and carries the tags through transport, chemistry and deposition, ' +
-          'so at every grid cell the model can say what fraction of what is there came ' +
-          'from where — in a single run, with the chemistry left alone ' +
-          '([Kranenburg et al., 2013](https://gmd.copernicus.org/articles/6/721/2013/)).\n' +
-          '\n' +
-          'TNO runs this daily as TOPAS — the TNO Operational Pollution Apportionment ' +
-          'Service — and publishes the last six weeks ' +
-          '([TOPAS documentation](https://airqualitymodeling.tno.nl/topas/topas-documentation/)). ' +
-          'The node beside this text fetches its config: the dates, the regions, the ' +
-          'pollutants and where the rest of the files are. Everything else this flow ' +
-          'does is worked out from that one file.',
+          'One sensor is worse than one station at almost everything; three thousand are ' +
+          'better than 93 at the one thing a map needs, which is being somewhere. ' +
+          'Precision and coverage are different virtues.',
       },
-
-      { type: 'heading', text: 'Two thirds of Dutch air is not Dutch', level: 2 },
-      { type: 'node', nodeId: 300, float: 'none', width: '420px', caption: 'PM2.5 over the Netherlands, and the stations measuring it' },
+      { type: 'node', nodeId: 500, float: 'right', caption: 'One network at a time' },
       {
         type: 'text',
         text:
-          'When the labels are added up over the Netherlands, the result is ' +
-          'uncomfortable for anyone who thinks of air quality as a national policy ' +
-          'problem. Of the particulate matter here that people put there, roughly a ' +
-          'third is Dutch and two thirds crossed a border to get here ' +
-          '([Hendriks et al., 2013](https://www.sciencedirect.com/science/article/abs/pii/S1352231012011673)).\n' +
-          '\n' +
-          'And not all of it is anyone’s to reduce. Ask this dataset for one station’s ' +
-          'breakdown and eighteen labels come back. Fourteen are activities — energy, ' +
-          'industry, residential combustion, road transport split into exhaust and ' +
-          'non-exhaust, shipping, aviation, livestock, manure, waste. The other four are ' +
-          '`Saharan Dust`, `Seasalt`, `Biogenic` and `Boundary`, and that last one is the ' +
-          'most honest field in the file: it means *this blew in across the edge of the ' +
-          'model and we are not going to pretend to know more*.',
+          'The map underneath the stations is the model: a value per cell, about 1.4 by ' +
+          '1.7 km, for the day the publisher last computed. The markers are the network ' +
+          'you chose — and only the stations that can answer, because a station without ' +
+          'an instrument for this pollutant, or one the model does not label, is a dot ' +
+          'you could press for nothing.',
       },
-
-      { type: 'heading', text: 'The same model, two zoom levels', level: 2 },
-      { type: 'node', nodeId: 700, float: 'right', width: '340px', caption: 'The same day over Europe, at a sixteenth of the detail' },
+      { type: 'node', nodeId: 300, float: 'none', width: '440px', caption: 'The model underneath, the measurements on top' },
       {
         type: 'text',
         text:
-          'The grid file this flow fetches for the Netherlands is 244 by 174 cells of ' +
-          '0.0125° by 0.025°, which near this latitude is about 1.4 by 1.7 km: forty-two ' +
-          'thousand numbers, for one pollutant, for one day. The European file covers ' +
-          'everything from 30°N to 71°N and 25°W to 45°E in 208 by 175 cells of 0.2° by ' +
-          '0.4° — roughly 22 by 28 km.\n' +
-          '\n' +
-          'Same model, same labelling, two resolutions, and the difference between them ' +
-          'is the difference between a street and a country. Neither is more true. A ' +
-          'cell is an average, and an average over 1.4 km is still an average over ' +
-          'everything in it: a motorway, a park, and the house you live in.\n' +
-          '\n' +
-          'These are two maps in this flow, not two layers on one, and that is not a ' +
-          'presentation choice. A view fitted to both is a view fitted to Europe, in ' +
-          'which the Dutch raster is forty pixels across; how far out a reader may zoom ' +
-          'and where the map opens are answers to *which dataset is this about*, and ' +
-          'there are two datasets. Each map is bounded to its own: the widest view you ' +
-          'can reach is the data itself, and every gesture from there is a closer look.',
-      },
-      { type: 'node', nodeId: 630, float: 'left', caption: 'The pollutants — read from the publisher, not typed here' },
-      {
-        type: 'text',
-        text:
-          'The list beside this text is not typed into this flow either. It is read out ' +
-          'of the publisher’s config, so the day they add a sixth pollutant it appears ' +
-          'here on its own. Pick one and both maps follow it — the file names are built ' +
-          'from the choice, and the requests go out.',
-      },
-
-      { type: 'heading', text: 'Ninety-three instruments against three thousand', level: 2 },
-      { type: 'node', nodeId: 500, float: 'left', caption: 'One network at a time, on the Dutch map' },
-      {
-        type: 'text',
-        text:
-          'A model has to be checked against something, and this dataset carries two ' +
-          'somethings that could not be more different.\n' +
-          '\n' +
-          'The official Dutch network, RIVM’s Luchtmeetnet, contributes 93 stations to ' +
-          'this file. They are reference instruments in known enclosures on known sites, ' +
-          'and what they report is as close to the truth as measuring gets. The citizen ' +
-          'network, [Samen Meten](https://www.rivm.nl/lucht/meten-modelleren-berekenen/samen-meten), ' +
-          'contributes 3,166 sensors — small, cheap, hung on balconies and fences by ' +
-          'people who wanted to know.\n' +
-          '\n' +
-          'A single citizen sensor is worse than a single station at almost everything, ' +
-          'and three thousand of them are better than 93 at the one thing a map needs: ' +
-          'being somewhere. Precision and coverage are different virtues, and the ' +
-          'interesting work is in the calibration between them. Switch between the two ' +
-          'and the shape of that trade-off is immediate — the official network is a ' +
-          'sparse, even lattice; the citizen network is a portrait of where people live ' +
-          'and worry.\n' +
-          '\n' +
-          'The switch offers these two and no more. Europe’s network, the EEA’s, is on ' +
-          'the European map instead, because a network belongs to the map its data fits ' +
-          '— offered here it was a choice that could not be looked at, with every marker ' +
-          'somewhere off the side of a country-sized view.',
-      },
-
-      { type: 'heading', text: 'Press a station', level: 2 },
-      {
-        type: 'text',
-        text:
-          'The markers on the Dutch map are not decoration either. Each one is a ' +
-          'station with a file behind it, and until you press one that file is not ' +
-          'fetched — there are ninety-three of them and you wanted one.\n' +
-          '\n' +
-          'Press a marker and four things happen in order. The map sends out the place ' +
-          'that was pressed; its station code is taken out of it; that code and three ' +
-          'other things are made into an address; and the address is fetched. Those four ' +
-          'are one node in this flow — the box beside this text — and the box wears the ' +
-          'fetch on the outside because the fetch is the part worth watching. Open it ' +
-          'and the four steps are there.',
-      },
-      { type: 'node', nodeId: 3000, float: 'right', caption: 'The fetch your click made' },
-      {
-        type: 'text',
-        text:
-          'Nothing about that address is typed into this flow. `{region}`, `{network}`, ' +
-          '`{code}`, `{pollutant}` and `{type}` are filled from five different places — ' +
-          'the config, the network’s own file, the chooser above and the marker you ' +
-          'pressed — and the pattern they are filled into came down the wire with the ' +
-          'station list. Even the word for a measurement is fetched: this publisher ' +
-          'calls it `metingen`, and the file says so precisely so that nobody has to ' +
-          'know it is Dutch.\n' +
-          '\n' +
-          'Which is why the switch above carries whole files rather than lists of ' +
-          'stations: one knob then decides both what the map draws and what a press may ' +
-          'ask for. It did not, once, and every citizen sensor was asked for under the ' +
-          'official network’s name — three thousand markers you could press and get ' +
-          'nothing.\n' +
-          '\n' +
-          'What comes back is not a measurement. It is the model’s answer for that ' +
-          'spot, broken into the eighteen labels from the second section — and this is ' +
-          'where the labelling stops being a method and becomes a picture. Eighteen ' +
-          'names once, then one row of eighteen numbers per day, because repeating the ' +
-          'names on every one of forty-five days would be forty-five times the file for ' +
-          'no information.\n' +
-          '\n' +
-          'Stacked bars, one per day: the height is the total and each band is one ' +
-          'source’s share of it. Bars rather than a line because these are daily values ' +
-          'standing on their own — a line between two of them draws a claim nobody ' +
-          'made, that the air moved smoothly from Tuesday’s number to Wednesday’s.',
+          'Press one. What comes back is that station taken apart: one bar per day, the ' +
+          'height its total, each band one source’s share of it. `Boundary` is what blew ' +
+          'in across the edge of the model; `Seasalt` and `Saharan Dust` are nobody’s to ' +
+          'reduce; the rest is a list of decisions somebody could make.',
       },
       { type: 'node', nodeId: 1100, float: 'none', width: '440px', caption: 'One station, taken apart' },
-      {
-        type: 'text',
-        text:
-          'The legend is the reading. `Boundary` is what blew in across the edge of the ' +
-          'model; `Seasalt` and `Saharan Dust` are nobody’s to reduce; the rest is a ' +
-          'list of decisions somebody could make. Read the percentages and the second ' +
-          'section stops being a claim about the Netherlands and becomes a claim about ' +
-          'this street.\n' +
-          '\n' +
-          'Not every station can answer, and the map now only offers the ones that can. ' +
-          'Two things have to be true: the station measures the pollutant — twenty-three ' +
-          'of the ninety-three official ones have no PM2.5 instrument — and the model ' +
-          'has a breakdown for it, which the file marks per station and is a stronger ' +
-          'condition than it sounds. Ozone is missing at 49 of the 93 Dutch stations and ' +
-          'at 1,365 of the 2,845 European ones, because ozone is modelled by a different ' +
-          'model that does not label its sources. Choose it above and most of the map ' +
-          'empties, which is the honest picture of what can be asked.\n' +
-          '\n' +
-          'Both rules are read from the same chooser the rest of the flow uses, so they ' +
-          'cannot go out of step with it. And when a fetch does fail, the graph empties ' +
-          'rather than keeping the last one that worked — that had to be built, because ' +
-          'a failed fetch used to travel nowhere and the picture went on showing the ' +
-          'previous station’s bars with this station’s name in your head.\n' +
-          '\n' +
-          'Change the pollutant above and press again: the same station, a different ' +
-          'file, because the choice is one of the five parts the address is built from. ' +
-          'The European map has a pair of its own, off to the side of this page — press ' +
-          'a station there and the address says `eu` and `eea` instead, worked out the ' +
-          'same way from the same three files.',
-      },
 
-      { type: 'heading', text: 'Why the colours are not decoration', level: 2 },
+      { type: 'heading', text: 'Europe', level: 2 },
       {
         type: 'text',
         text:
-          'The WHO’s 2021 guideline for long-term PM2.5 exposure is 5 µg/m³ as an annual ' +
-          'mean. The European Union’s current limit is 25; from 2030 the revised Ambient ' +
-          'Air Quality Directive brings it to 10 — half of what it was, and still twice ' +
-          'the guideline ' +
-          '([Directive (EU) 2024/2881](https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ%3AL_202402881)).\n' +
+          'The same model, the same labels, one zoom level out: cells of roughly 22 by ' +
+          '28 km from 30°N to 71°N, and the EEA’s network on top of them. Neither ' +
+          'picture is more true than the other — a cell is an average, and an average ' +
+          'over 1.4 km is still an average over a motorway, a park and the house you ' +
+          'live in.\n' +
           '\n' +
-          'What sits between those numbers is people. The European Environment Agency ' +
-          'attributes about 172,000 deaths in the EU-27 in 2023 to PM2.5 exposure across ' +
-          'six diseases, and about 182,000 when the exposure above the WHO guideline is ' +
-          'set against all-cause mortality ' +
-          '([EEA, 2025](https://www.eea.europa.eu/en/analysis/publications/harm-to-human-health-from-air-pollution-burden-of-disease-status-2025)).\n' +
-          '\n' +
-          'The trend is the good news and it is substantial: those deaths are down 57% ' +
-          'on 2005, and average exposure across the EU fell from 11.4 to 10.2 µg/m³ ' +
-          'between 2022 and 2023 alone. Which is a reminder of what the labels in this ' +
-          'model are actually for. Knowing that two thirds of it came from abroad is not ' +
-          'an excuse. It is a list of the conversations that have to happen.',
+          'It is a second map rather than a second layer because a view fitted to both ' +
+          'is a view fitted to Europe, in which the Netherlands is forty pixels across.',
       },
+      { type: 'node', nodeId: 700, float: 'none', width: '440px', caption: 'The same day over Europe' },
+      { type: 'node', nodeId: 1200, float: 'none', width: '440px', caption: 'A European station, taken apart' },
 
       {
         type: 'text',
         text:
-          'Everything above came out of files that a handful of nodes fetched while you ' +
-          'read: one config, two grids, three station lists, and one file that exists ' +
-          'because you pressed something. Every figure is one of those nodes, and this ' +
-          'page and that graph are two readings of the same JSON. ' +
+          'Add the labels up over the Netherlands and roughly a third of the particulate ' +
+          'matter people put there is Dutch; two thirds crossed a border ' +
+          '([Hendriks et al., 2013](https://www.sciencedirect.com/science/article/abs/pii/S1352231012011673)). ' +
+          'Which is what makes the question worth asking at all: the WHO’s guideline for ' +
+          'long-term PM2.5 is 5 µg/m³, the EU’s limit falls to 10 in 2030, and the ' +
+          'European Environment Agency attributes about 172,000 deaths in 2023 to what ' +
+          'is left above it ' +
+          '([EEA, 2025](https://www.eea.europa.eu/en/analysis/publications/harm-to-human-health-from-air-pollution-burden-of-disease-status-2025)). ' +
+          'Knowing that two thirds came from abroad is not an excuse. It is a list of ' +
+          'the conversations that have to happen.\n' +
+          '\n' +
+          'This page and that graph are two readings of the same JSON. ' +
           '{{!flow:Show me the flow}}',
       },
     ],

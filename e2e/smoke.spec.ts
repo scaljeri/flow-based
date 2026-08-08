@@ -2981,8 +2981,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
      * station that does not publish what was asked for is the ordinary case,
      * not an edge one.
      */
-    if (/series\/(lml|samenmeten)\/S[12]\/PM2\.5-sectoren\.json$/.test(url)
-      || /series\/eea\/S3\/PM2\.5-sectoren\.json$/.test(url)) {
+    if (/series\/(lml|samenmeten)\/S[12]\/PM2\.5-sectoren\.json$/.test(url)) {
       return route.fulfill(answer({
         code: 'S1',
         name: 'Somewhere',
@@ -2992,6 +2991,22 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
         // A null row is a day nobody computed, which is not a day that came to
         // nothing — the plot has to keep those apart.
         values: [[1, 2, 3], null, [2, 2, 2], [0, 1, 5]],
+      }));
+    }
+
+    /*
+     * The European files split every sector again by whether it came from the
+     * country itself — eighteen sources arriving as thirty-six labels. The
+     * flow sums the pairs back together, so this stub says it the same way.
+     */
+    if (/series\/eea\/S3\/PM2\.5-sectoren\.json$/.test(url)) {
+      return route.fulfill(answer({
+        code: 'S3',
+        name: 'Elsewhere',
+        start: '2026-05-21',
+        resolution: 'day',
+        labels: ['Shipping native', 'Shipping non-native', 'Boundary'],
+        values: [[1, 2, 3], [2, 2, 2]],
       }));
     }
 
@@ -3181,6 +3196,20 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
     return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
   }), { timeout: 20_000 }).toBe('../tno-topas/data/eu/series/eea/S3/PM2.5-sectoren.json');
+
+  /*
+   * And its two halves are added back together: `Shipping native` and
+   * `Shipping non-native` are one source seen twice, and thirty-six labels
+   * make a legend nobody can read. The pattern lives in the flow — `native` is
+   * this publisher's word, not something the plot should know.
+   */
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const stack = (flow.getWorker(1200) as { buffer: { stack?: { labels: string[]; rows: number[][] } } })
+      .buffer.stack;
+
+    return stack ? `${stack.labels.join()}|${stack.rows[0].join()}` : '';
+  }), { timeout: 20_000 }).toBe('Shipping,Boundary|3,3');
 
   /*
    * And a station that cannot answer empties the picture rather than leaving
@@ -4313,27 +4342,16 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
 
   // The flow arrives asynchronously — seeded, then its modules downloaded —
   // and this one speaks three of them, so it is slower than the demo.
-  await expect(doc.locator('h1')).toHaveText('Where the air comes from', { timeout: 30_000 });
-  await expect(doc.locator('h2')).toHaveCount(6);
+  await expect(doc.locator('h1')).toHaveText('Whose air is it?', { timeout: 30_000 });
+  await expect(doc.locator('h2')).toHaveCount(2);
 
   /*
    * Every figure is mounted node content. Four of them, and each one has to
    * resolve: an unresolved `{{id}}` renders as its own source text, which is
    * honest in a document and useless in a test that means to catch it.
    */
-  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(7);
+  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(6);
   await expect(doc).not.toContainText('{{');
-
-  /*
-   * And a subflow figure wears the child it was told to wear, exactly as the
-   * same node does on the canvas. It used to draw its own picture here — a box
-   * saying "9 nodes", which tells a reader nothing about what those nine do —
-   * while the identical node in the editor showed its request.
-   */
-  const worn = page.locator('fb-flow-document [slot="fig-3000"]');
-
-  await expect(worn).toContainText('GET');
-  await expect(worn).not.toContainText('nodes');
 
   // Claims with sources: an article that quotes a number names where it is
   // from, and those names are links rather than prose.
@@ -4349,7 +4367,7 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
     [...document.querySelectorAll('fb-flow-document [slot^="fig-"]')]
       .map(node => node.getAttribute('slot'))
       .sort())).toEqual([
-        'fig-1100', 'fig-300', 'fig-3000', 'fig-500', 'fig-600', 'fig-630', 'fig-700',
+        'fig-1100', 'fig-1200', 'fig-300', 'fig-500', 'fig-630', 'fig-700',
       ]);
 });
 

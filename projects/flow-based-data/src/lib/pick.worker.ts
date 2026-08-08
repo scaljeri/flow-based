@@ -23,6 +23,11 @@ export interface PickConfig {
   labels?: string;
   /** Path to what the whole composition is called, for a plot to put above it. */
   title?: string;
+  /**
+   * A pattern whose first group is the name several parts should be added up
+   * under. Empty leaves every part on its own.
+   */
+  merge?: string;
   lat?: string;
   lon?: string;
   /** Named `dims` rather than `shape`, which this config already spends on
@@ -357,6 +362,63 @@ export class PickWorker implements FbNodeWorker {
    * zeros: a day nobody computed and a day that came to nothing are different
    * answers, and a bar of height zero would claim the second.
    */
+  /**
+   * Add up the parts that are really one part.
+   *
+   * A publisher often splits a breakdown twice over — by sector AND by whether
+   * it came from here — so eighteen sources arrive as thirty-six labels, most
+   * of them zero, and a legend nobody can read. The second split is a real
+   * fact and sometimes the one you want; when it is not, this sums the pairs
+   * back together.
+   *
+   * The pattern comes from the flow, never from here. `native` and
+   * `non-native` are one publisher's words, and a module that knew them would
+   * be a module that only fits one dataset — the same reason nothing in here
+   * knows what `Shipping` means either.
+   */
+  private mergeLabels(
+    labels: string[],
+    rows: (number[] | null)[],
+  ): { labels: string[]; rows: (number[] | null)[] } {
+    let pattern: RegExp;
+
+    try {
+      pattern = new RegExp(this.config.merge!);
+    } catch (error) {
+      // A half-typed pattern is not a reason to lose the data.
+      this.error = `That pattern does not compile: ${(error as Error).message}`;
+
+      return { labels, rows };
+    }
+
+    const merged: string[] = [];
+    const into = labels.map(label => {
+      const name = pattern.exec(label)?.[1] ?? label;
+      const at = merged.indexOf(name);
+
+      return at >= 0 ? at : merged.push(name) - 1;
+    });
+
+    if (merged.length === labels.length) {
+      return { labels, rows };
+    }
+
+    return {
+      labels: merged,
+      rows: rows.map(row => {
+        if (!row) {
+          return null;
+        }
+
+        const summed = new Array(merged.length).fill(0);
+
+        row.forEach((value, index) => (summed[into[index]] += value));
+
+        return summed;
+      }),
+    };
+  }
+
   private toStack(source: unknown): { labels: string[]; rows: (number[] | null)[] } {
     const labels = readConfigValue(source, this.config.labels || 'labels');
     const rows = readConfigValue(source, this.config.values || 'values');
@@ -371,12 +433,14 @@ export class PickWorker implements FbNodeWorker {
 
     this.count = rows.length;
 
-    return {
+    const stack = {
       labels: named,
       rows: rows.map(row => (Array.isArray(row)
         ? named.map((_, index) => Number(row[index]) || 0)
         : null)),
     };
+
+    return this.config.merge ? this.mergeLabels(stack.labels, stack.rows) : stack;
   }
 
   /**
