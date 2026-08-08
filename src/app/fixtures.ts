@@ -1084,8 +1084,6 @@ function shapes(title: string, config: Record<string, unknown>, format: string, 
  * of config.json. Nothing is typed but the address of that one file.
  */
 function topasSources() {
-  const stations = { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 };
-
   // What the publisher says about itself.
   const gridPathNl = reads('NL grid path', 'regions.0.gridPath', { x: 14, y: 4 });
   const gridPathEu = reads('EU grid path', 'regions.1.gridPath', { x: 14, y: 16 });
@@ -1118,14 +1116,10 @@ function topasSources() {
 
   const rasterNl = shapes('NL raster', { shape: 'grid' }, 'grid', { x: 78, y: 4 });
   const rasterEu = shapes('EU raster', { shape: 'grid' }, 'grid', { x: 78, y: 20 });
-  const placesLml = shapes('LML places', { ...stations, limit: 200 }, 'geo', { x: 78, y: 40 });
-  const placesSamen = shapes('Samen Meten places', stations, 'geo', { x: 78, y: 60 });
-  const placesEea = shapes('EEA places', stations, 'geo', { x: 78, y: 88 });
 
   const flowId = 2000;
   const out = {
     gridNl: 2001, gridEu: 2002, lml: 2003, samen: 2004, eea: 2005, config: 2006, date: 2007,
-    lmlFile: 2008,
   };
 
   /*
@@ -1161,22 +1155,22 @@ function topasSources() {
       { id: inn.pollutant, type: 'in', name: 'pollutant', format: 'string' },
       { id: out.gridNl, type: 'out', name: 'NL grid', format: 'grid' },
       { id: out.gridEu, type: 'out', name: 'EU grid', format: 'grid' },
-      { id: out.lml, type: 'out', name: 'NL · RIVM LML', format: 'geo' },
-      { id: out.samen, type: 'out', name: 'NL · Samen Meten', format: 'geo' },
-      { id: out.eea, type: 'out', name: 'EU · EEA', format: 'geo' },
+      /*
+       * The networks' own files, unread.
+       *
+       * They used to leave here shaped into places, which was one step too
+       * eager: a file says where its stations ARE and also where a station's
+       * own readings live, what the network calls itself, and what this
+       * publisher calls a measurement. Shaping it here threw four of those
+       * away and left the flow outside guessing — which is how every citizen
+       * sensor ended up being asked for under the official network's name.
+       */
+      { id: out.lml, type: 'out', name: 'NL · RIVM LML', format: 'data' },
+      { id: out.samen, type: 'out', name: 'NL · Samen Meten', format: 'data' },
+      { id: out.eea, type: 'out', name: 'EU · EEA', format: 'data' },
       { id: out.config, type: 'out', name: 'config', format: 'data' },
       { id: out.date, type: 'out', name: 'date', format: 'string' },
-      /*
-       * The network's own file, unread.
-       *
-       * Everything else here leaves shaped — a raster, a set of places — but
-       * this one leaves whole, because what asks for it wants the parts this
-       * place has no use for: where a station's own readings live, what the
-       * network calls itself, and what this publisher calls a measurement.
-       * Shaping it here would mean guessing which of its fields somebody else
-       * is going to need.
-       */
-      { id: out.lmlFile, type: 'out', name: 'NL · network file', format: 'data' },
+
     ],
     children: [
       gridPathNl.node, gridPathEu.node, date.node, idNl.node, idEu.node,
@@ -1184,7 +1178,7 @@ function topasSources() {
       gridFileNl.node, gridFileEu.node, eeaFile.node,
       urlGridNl.node, urlGridEu.node, urlLml.node, urlSamen.node, urlEea.node,
       getGridNl.node, getGridEu.node, getLml.node, getSamen.node, getEea.node,
-      rasterNl.node, rasterEu.node, placesLml.node, placesSamen.node, placesEea.node,
+      rasterNl.node, rasterEu.node,
     ],
     connections: [
       // One file, read eight ways — and it arrives on a socket.
@@ -1222,19 +1216,15 @@ function topasSources() {
 
       wire(getGridNl, getGridNl.out, rasterNl, rasterNl.in),
       wire(getGridEu, getGridEu.out, rasterEu, rasterEu.in),
-      wire(getLml, getLml.out, placesLml, placesLml.in),
-      wire(getSamen, getSamen.out, placesSamen, placesSamen.in),
-      wire(getEea, getEea.out, placesEea, placesEea.in),
 
       // And out, where the rest of the flow can see them.
       emit(rasterNl, rasterNl.out, out.gridNl),
       emit(rasterEu, rasterEu.out, out.gridEu),
-      emit(placesLml, placesLml.out, out.lml),
-      emit(placesSamen, placesSamen.out, out.samen),
-      emit(placesEea, placesEea.out, out.eea),
+      emit(getLml, getLml.out, out.lml),
+      emit(getSamen, getSamen.out, out.samen),
+      emit(getEea, getEea.out, out.eea),
       { id: nextId(), from: flowId, to: flowId, out: inn.config, in: out.config },
       emit(date, date.out, out.date),
-      emit(getLml, getLml.out, out.lmlFile),
     ],
   };
 }
@@ -1257,21 +1247,26 @@ function topasSources() {
  * config), and which pollutant to ask for. Nothing is typed in here but the
  * shape of the answer.
  */
-function stationReadings() {
-  const flowId = 3000;
-  const inn = { place: 3010, network: 3011, config: 3012, pollutant: 3013 };
-  const out = { readings: 3001 };
+function stationReadings(flowId: number, regionPath: string, position: { x: number; y: number }) {
+  const inn = { place: flowId + 10, network: flowId + 11, config: flowId + 12, pollutant: flowId + 13 };
+  const out = { readings: flowId + 1 };
 
   const code = shapes('station code', { shape: 'text', a: 'places.0.ref' }, 'string', { x: 4, y: 4 });
 
   /*
-   * Three fields out of the network's own file. `metingen` is in there
-   * precisely so that nobody has to know this publisher is Dutch.
+   * Three fields out of the network's own file, and one out of the config.
+   *
+   * The network id is read from the FILE rather than typed, which is the
+   * whole reason the file travels whole: press a citizen sensor and the
+   * address says `samenmeten`, press an official station and it says `lml`,
+   * and neither the map nor this subflow had to be told which is showing.
+   * `metingen` is in there for the same kind of reason — so that nobody has
+   * to know this publisher is Dutch.
    */
   const seriesPath = reads('series path', 'series.path', { x: 4, y: 20 });
   const networkId = reads('network id', 'network', { x: 4, y: 34 });
   const seriesType = reads('measurements', 'series.types.measurements', { x: 4, y: 48 });
-  const regionId = reads('region', 'regions.0.id', { x: 4, y: 62 });
+  const regionId = reads('region', regionPath, { x: 4, y: 62 });
 
   const file = builds(
     'series file',
@@ -1294,7 +1289,7 @@ function stationReadings() {
     id: flowId,
     // The face it wears: the request, which is the part worth watching.
     config: { preview: get.id },
-    position: { x: 84, y: 14 },
+    position,
     sockets: [
       { id: inn.place, type: 'in', name: 'pressed place', format: 'geo' },
       { id: inn.network, type: 'in', name: 'network file', format: 'data' },
@@ -1333,7 +1328,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 18 },
+  config: { seedVersion: 19 },
   /*
    * The same flow, read as an article.
    *
@@ -1500,6 +1495,12 @@ export const tno = () => ({
           'calls it `metingen`, and the file says so precisely so that nobody has to ' +
           'know it is Dutch.\n' +
           '\n' +
+          'Which is why the switch above carries whole files rather than lists of ' +
+          'stations: one knob then decides both what the map draws and what a press may ' +
+          'ask for. It did not, once, and every citizen sensor was asked for under the ' +
+          'official network’s name — three thousand markers you could press and get ' +
+          'nothing.\n' +
+          '\n' +
           'What comes back is a bare array of numbers with its start date and its step ' +
           'stated once beside it — no timestamp per reading, which would double the ' +
           'file for no information. So the horizontal axis is the day number of the ' +
@@ -1510,7 +1511,19 @@ export const tno = () => ({
           'Bars rather than a line, and that is not decoration. Each of these is a day’s ' +
           'value, standing on its own; a line between two of them draws a claim nobody ' +
           'made — that the air moved smoothly from Tuesday’s number to Wednesday’s. A ' +
-          'bar says *this day, this much*, which is all the file says.',
+          'bar says *this day, this much*, which is all the file says.\n' +
+          '\n' +
+          'Not every station answers. Twenty-three of the ninety-three official ones do ' +
+          'not measure PM2.5 at all, and asking them for it gets a plain 404 — which the ' +
+          'request says, in red, and the graph answers by emptying. That last part had ' +
+          'to be built: a failed fetch used to travel nowhere, so the picture went on ' +
+          'showing the previous station’s readings with this station’s name in your ' +
+          'head. An empty graph is the honest answer to a question the data cannot ' +
+          'take.\n' +
+          '\n' +
+          'The European map has a pair of its own, off to the side of this page. Press a ' +
+          'station there and the address says `eu` and `eea` instead, worked out the ' +
+          'same way from the same three files.',
       },
       { type: 'node', nodeId: 1100, float: 'none', width: '420px', caption: 'One station, day by day' },
       {
@@ -1685,7 +1698,39 @@ export const tno = () => ({
       ],
       position: { x: 62, y: 40 },
     },
-    stationReadings(),
+    /*
+     * The stations, shaped OUT here rather than inside the machinery.
+     *
+     * Because the switch now carries whole files, and a file is what a click
+     * needs: one knob decides both what the map draws and what a press can
+     * ask for. Shaped in two places rather than one because the two maps take
+     * different files — and the European list is capped harder, since 2,845
+     * markers on a continent is a smear, not a picture.
+     */
+    {
+      type: 'data-pick',
+      title: 'Dutch stations',
+      id: 400,
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
+      sockets: [
+        { id: 410, type: 'in', formats: ['data'] },
+        { id: 411, type: 'out', format: 'geo' },
+      ],
+      position: { x: 52, y: 12 },
+    },
+    {
+      type: 'data-pick',
+      title: 'European stations',
+      id: 420,
+      config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: '', ref: 'code', limit: 400 },
+      sockets: [
+        { id: 430, type: 'in', formats: ['data'] },
+        { id: 431, type: 'out', format: 'geo' },
+      ],
+      position: { x: 52, y: 40 },
+    },
+    stationReadings(3000, 'regions.0.id', { x: 84, y: 12 }),
+    stationReadings(3100, 'regions.1.id', { x: 84, y: 46 }),
     {
       type: 'graph-timeseries',
       title: 'One station, day by day',
@@ -1698,7 +1743,15 @@ export const tno = () => ({
        */
       config: { style: 'bars' },
       sockets: [{ id: 1110, type: 'in', formats: ['number', 'point'] }],
-      position: { x: 84, y: 34 },
+      position: { x: 84, y: 32 },
+    },
+    {
+      type: 'graph-timeseries',
+      title: 'One European station',
+      id: 1200,
+      config: { style: 'bars' },
+      sockets: [{ id: 1210, type: 'in', formats: ['number', 'point'] }],
+      position: { x: 84, y: 66 },
     },
   ],
   connections: [
@@ -1707,26 +1760,36 @@ export const tno = () => ({
     { id: 1021, from: 600, to: 630, out: 610, in: 631 },
     { id: 1023, from: 630, to: 2000, out: 632, in: 2011 },
 
-    // Two Dutch networks into the switch, one of them onto the Dutch map.
+    // Two Dutch networks into the switch — as files, so that what is chosen
+    // is both what the map draws and what a press may ask.
     { id: 1002, from: 2000, to: 500, out: 2003, in: 510 },
     { id: 1003, from: 2000, to: 500, out: 2004, in: 511 },
-    { id: 1006, from: 500, to: 300, out: 512, in: 310 },
+    { id: 1004, from: 500, to: 400, out: 512, in: 410 },
+    { id: 1006, from: 400, to: 300, out: 411, in: 310 },
     { id: 1005, from: 2000, to: 300, out: 2001, in: 312 },
 
     // And the European pair on the map that fits them: raster underneath,
     // the EEA's stations on top.
     { id: 1008, from: 2000, to: 700, out: 2002, in: 712 },
-    { id: 1007, from: 2000, to: 700, out: 2005, in: 710 },
+    { id: 1014, from: 2000, to: 420, out: 2005, in: 430 },
+    { id: 1007, from: 420, to: 700, out: 431, in: 710 },
 
     /*
-     * The chain a click sets off, in one node and one wire out of it: the
-     * pressed place goes in, along with the three things the address is built
-     * from, and readings come out.
+     * The chain a click sets off, once per map: the pressed place goes in
+     * along with the file it came from, and readings come out. The network
+     * file is the same one the map is drawing, so pressing a citizen sensor
+     * asks under the citizen network's name rather than the official one's.
      */
     { id: 1009, from: 300, to: 3000, out: 313, in: 3010 },
-    { id: 1010, from: 2000, to: 3000, out: 2008, in: 3011 },
+    { id: 1010, from: 500, to: 3000, out: 512, in: 3011 },
     { id: 1011, from: 600, to: 3000, out: 610, in: 3012 },
     { id: 1012, from: 630, to: 3000, out: 632, in: 3013 },
     { id: 1013, from: 3000, to: 1100, out: 3001, in: 1110 },
+
+    { id: 1015, from: 700, to: 3100, out: 713, in: 3110 },
+    { id: 1016, from: 2000, to: 3100, out: 2005, in: 3111 },
+    { id: 1017, from: 600, to: 3100, out: 610, in: 3112 },
+    { id: 1018, from: 630, to: 3100, out: 632, in: 3113 },
+    { id: 1019, from: 3100, to: 1200, out: 3101, in: 1210 },
   ],
 });

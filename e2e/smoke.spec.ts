@@ -2960,8 +2960,15 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     if (url.endsWith('samenmeten.json')) return route.fulfill(answer(places('samenmeten', 5)));
     if (url.endsWith('eu-eea.json')) return route.fulfill(answer(places('eea', 7)));
 
-    // The one file that exists because somebody pressed something.
-    if (/series\/lml\/S1\/PM2\.5-metingen\.json$/.test(url)) {
+    /*
+     * The files that exist because somebody pressed something — one per
+     * network, because which network a press asks under is the thing most
+     * likely to be wrong. `S0` is deliberately absent from all of them: a
+     * station that does not publish what was asked for is the ordinary case,
+     * not an edge one.
+     */
+    if (/series\/(lml|samenmeten)\/S[12]\/PM2\.5-metingen\.json$/.test(url)
+      || /series\/eea\/S3\/PM2\.5-metingen\.json$/.test(url)) {
       return route.fulfill(answer({ code: 'S1', start: '2026-05-21', resolution: 'day', values: [3, null, 5, 4] }));
     }
 
@@ -3076,6 +3083,63 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   // region id, `lml` and `metingen` from the network's own file, `PM2.5` from
   // the chooser and the code from the marker. None of it is typed in the flow.
 
+  /*
+   * And the network follows the switch, which is why it carries whole files.
+   *
+   * It used to carry lists of stations, so the address was always built from
+   * the official network's file: pressing a citizen sensor asked for it under
+   * the wrong network's name and got a 404. Three thousand markers you could
+   * press and get nothing.
+   */
+  await page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    flow.getWorker(500).set(2);
+    flow.getWorker(300).pick({ lat: 52.02, lon: 5.02, ref: 'S2' });
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const station = editor.root.children.find((child: any) => child.id === 3000);
+    const request = station?.children.find((child: any) => child.type === 'net-request');
+
+    return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
+  }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/samenmeten/S2/PM2.5-metingen.json');
+
+  /*
+   * A press on the European map asks the European way — `eu` and `eea` — from
+   * the same three files. It used to be wired to nothing at all: every marker
+   * on that map was a button that did not exist.
+   */
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(700).pick({ lat: 48, lon: 11, ref: 'S3' });
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const station = editor.root.children.find((child: any) => child.id === 3100);
+    const request = station?.children.find((child: any) => child.type === 'net-request');
+
+    return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
+  }), { timeout: 20_000 }).toBe('../tno-topas/data/eu/series/eea/S3/PM2.5-metingen.json');
+
+  /*
+   * And a station that cannot answer empties the picture rather than leaving
+   * the previous one up. A failed fetch used to travel nowhere, so the graph
+   * went on showing another station's readings under this station's name.
+   */
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(300).pick({ lat: 52.00, lon: 5.00, ref: 'S0' });
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return (flow.getWorker(1100) as { buffer: { points: unknown[] } }).buffer.points.length;
+  }), { timeout: 20_000 }).toBe(0);
+
   // The Dutch switch offers the two Dutch networks and nothing else.
   await page.evaluate(() => {
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
@@ -3181,9 +3245,9 @@ test('a subflow draws a picture of itself, or the child it is told to wear', asy
    * point this machinery at is a decision, and it belongs where it can be
    * seen.
    */
-  await expect(box).toContainText('26 nodes', { timeout: 20_000 });
-  expect(await box.locator('svg rect.dot').count()).toBe(26);
-  expect(await box.locator('svg line.edge').count()).toBeGreaterThan(20);
+  await expect(box).toContainText('23 nodes', { timeout: 20_000 });
+  expect(await box.locator('svg rect.dot').count()).toBe(23);
+  expect(await box.locator('svg line.edge').count()).toBeGreaterThan(15);
 
   // Open it, then its own settings.
   await page.evaluate(() => {

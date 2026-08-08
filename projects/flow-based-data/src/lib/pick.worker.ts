@@ -187,10 +187,48 @@ export class PickWorker implements FbNodeWorker {
       const value = this.pick(this.unwrap(this.latest));
 
       this.error = null;
-      this.subject.next(value);
+
+      // `undefined` is what the empty of an unemptiable shape looks like; it
+      // is not a value and must not travel as one.
+      if (value !== undefined) {
+        this.subject.next(value);
+      }
     } catch (error) {
       this.error = (error as Error).message ?? String(error);
       this.count = 0;
+
+      /*
+       * Nothing, said out loud.
+       *
+       * It used to keep quiet, which left everything downstream drawing the
+       * last value that worked — a plot showing one station's readings under
+       * another station's name. Emitting the EMPTY version of the shape this
+       * node promises is both honest and in type: an empty sweep, a map with
+       * no places, a raster with no cells. The node itself still goes red and
+       * says what went wrong, which is where the reason belongs.
+       */
+      this.subject.next(this.empty());
+    }
+  }
+
+  /** What this node's shape looks like when there is nothing to say. */
+  private empty(): unknown {
+    switch (this.shape) {
+      case 'geo':
+        return { places: [], ...this.meta };
+
+      case 'point':
+        return [];
+
+      case 'text':
+        return '';
+
+      /*
+       * A number and a raster have no empty. Zero is a reading and an
+       * empty grid is not a grid, so these keep quiet rather than invent one.
+       */
+      default:
+        return undefined;
     }
   }
 

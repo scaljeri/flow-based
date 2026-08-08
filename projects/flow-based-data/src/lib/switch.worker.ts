@@ -107,9 +107,17 @@ export class SwitchWorker implements FbNodeWorker {
    * second copy to keep in step with the first.
    */
   titleOf(index: number): string | undefined {
-    const value = this.latest.get(this.order[index]) as { title?: string } | undefined;
+    /*
+     * Two places to look, because a source says what it is in two shapes. A
+     * request hands on an envelope — `{meta, value}` — and a node that has
+     * already read that envelope spreads the meta over what it made. A switch
+     * carrying whole files saw only the first shape and went back to numbering
+     * its inputs, which is the one thing it exists not to do.
+     */
+    const value = this.latest.get(this.order[index]) as
+      { title?: string; meta?: { title?: string } } | undefined;
 
-    return value?.title;
+    return value?.title ?? value?.meta?.title;
   }
 
   set(which: number): void {

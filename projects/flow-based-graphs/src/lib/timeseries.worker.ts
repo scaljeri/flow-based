@@ -142,6 +142,20 @@ export class TimeseriesWorker implements FbNodeWorker {
       return true;
     }
 
+    /*
+     * An empty sweep is a sweep. A source saying "no points" has said
+     * something, and leaving the previous ones up answers a question nobody
+     * asked — the plot would show one station's readings under another
+     * station's name. Only for a buffer already holding a sweep: a rolling
+     * series that happens to receive an empty array has not been told to
+     * forget its history.
+     */
+    if (Array.isArray(value) && value.length === 0 && buffer.xy) {
+      buffer.points = [];
+
+      return true;
+    }
+
     return false;
   }
 

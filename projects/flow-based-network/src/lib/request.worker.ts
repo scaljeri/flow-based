@@ -257,6 +257,26 @@ export class RequestWorker implements FbNodeWorker {
       this.error = message === 'Failed to fetch'
         ? 'Could not fetch — blocked, offline, or another origin'
         : message;
+
+      /*
+       * A failure travels too, and it has to.
+       *
+       * This used to fail quietly downstream: the node went red, and every
+       * plot and map after it went on showing the last answer that worked as
+       * though it were the answer to the question just asked. Press a station
+       * that publishes no PM2.5 and you were looking at the previous
+       * station's readings with this station's name in your head — which is
+       * worse than an empty picture, because an empty picture is honest.
+       *
+       * `null` rather than nothing: whoever is downstream asked a new question
+       * and is owed an answer, even when the answer is that there is none.
+       * Only a fetch that was actually attempted says this — a node with no
+       * URL yet has not been asked anything.
+       */
+      this.subject.next({
+        meta: { title: this.config.title, description: this.config.description },
+        value: null,
+      } satisfies FetchedValue);
     } finally {
       // Measured around the whole thing, failures included: a request that
       // took eight seconds to fail is the most useful eight seconds to know
