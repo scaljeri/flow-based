@@ -1091,28 +1091,28 @@ function topasSources() {
   const idNl = reads('NL', 'regions.0.id', { x: 14, y: 40 });
   const idEu = reads('EU', 'regions.1.id', { x: 14, y: 52 });
 
-  const lmlPath = reads('LML file', 'networks.0.path', { x: 14, y: 76 });
-  const samenPath = reads('Samen Meten file', 'networks.1.path', { x: 14, y: 88 });
-  const eeaPath = reads('EEA file', 'networks.2.path', { x: 14, y: 100 });
+  const lmlPath = reads('LML file', 'networks.0.path', { x: 14, y: 62 });
+  const samenPath = reads('Samen Meten file', 'networks.1.path', { x: 14, y: 72 });
+  const eeaPath = reads('EEA file', 'networks.2.path', { x: 14, y: 82 });
 
   // What that makes: a file name, then a whole URL.
   const gridFileNl = builds('NL grid file', ['pattern', 'region|lower', 'date', 'pollutant'], { x: 30, y: 4 });
   const gridFileEu = builds('EU grid file', ['pattern', 'region|lower', 'date', 'pollutant'], { x: 30, y: 20 });
-  const eeaFile = builds('EEA file name', ['pattern', 'region|lower'], { x: 30, y: 88 });
+  const eeaFile = builds('EEA file name', ['pattern', 'region|lower'], { x: 30, y: 72 });
 
   const base = '../tno-topas/{path}';
   const urlGridNl = builds('NL grid URL', ['path'], { x: 46, y: 4 }, base);
   const urlGridEu = builds('EU grid URL', ['path'], { x: 46, y: 20 }, base);
   const urlLml = builds('LML URL', ['path'], { x: 46, y: 40 }, base);
   const urlSamen = builds('Samen Meten URL', ['path'], { x: 46, y: 60 }, base);
-  const urlEea = builds('EEA URL', ['path'], { x: 46, y: 88 }, base);
+  const urlEea = builds('EEA URL', ['path'], { x: 46, y: 78 }, base);
 
   // What is fetched, and what it turns into.
   const getGridNl = fetches('NL grid', { x: 62, y: 4 });
   const getGridEu = fetches('EU grid', { x: 62, y: 20 });
   const getLml = fetches('RIVM LML', { x: 62, y: 40 });
   const getSamen = fetches('Samen Meten', { x: 62, y: 60 });
-  const getEea = fetches('EEA', { x: 62, y: 88 });
+  const getEea = fetches('EEA', { x: 62, y: 78 });
 
   const rasterNl = shapes('NL raster', { shape: 'grid' }, 'grid', { x: 78, y: 4 });
   const rasterEu = shapes('EU raster', { shape: 'grid' }, 'grid', { x: 78, y: 20 });
@@ -1251,7 +1251,7 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
   const inn = { place: flowId + 10, network: flowId + 11, config: flowId + 12, pollutant: flowId + 13 };
   const out = { readings: flowId + 1 };
 
-  const code = shapes('station code', { shape: 'text', a: 'places.0.ref' }, 'string', { x: 4, y: 4 });
+  const code = shapes('station code', { shape: 'text', a: 'places.0.ref' }, 'string', { x: 10, y: 8 });
 
   /*
    * Three fields out of the network's own file, and one out of the config.
@@ -1263,24 +1263,24 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
    * `metingen` is in there for the same kind of reason — so that nobody has
    * to know this publisher is Dutch.
    */
-  const seriesPath = reads('series path', 'series.path', { x: 4, y: 20 });
-  const networkId = reads('network id', 'network', { x: 4, y: 34 });
-  const seriesType = reads('breakdown', 'series.types.sectors', { x: 4, y: 48 });
-  const regionId = reads('region', regionPath, { x: 4, y: 62 });
+  const seriesPath = reads('series path', 'series.path', { x: 10, y: 28 });
+  const networkId = reads('network id', 'network', { x: 10, y: 40 });
+  const seriesType = reads('breakdown', 'series.types.sectors', { x: 10, y: 52 });
+  const regionId = reads('region', regionPath, { x: 10, y: 66 });
 
   const file = builds(
     'series file',
     ['pattern', 'region|lower', 'network', 'code', 'pollutant', 'type'],
-    { x: 26, y: 20 },
+    { x: 38, y: 40 },
   );
-  const url = builds('series URL', ['path'], { x: 48, y: 20 }, '../tno-topas/{path}');
+  const url = builds('series URL', ['path'], { x: 56, y: 40 }, '../tno-topas/{path}');
 
-  const get = fetches('That station’s readings', { x: 68, y: 20 });
+  const get = fetches('That station’s readings', { x: 70, y: 42 });
   const points = shapes(
     'breakdown',
     { shape: 'stack', labels: 'labels', values: 'values', title: 'name' },
     'stack',
-    { x: 88, y: 20 },
+    { x: 86, y: 48 },
   );
 
   const wire = (from: { id: number }, out_: number, to: { id: number }, in_: number) =>
@@ -1357,7 +1357,7 @@ function stationsToDraw(flowId: number, position: { x: number; y: number }) {
       { id: nextId(), type: 'in', name: 'value', format: 'string' },
       { id: nextId(), type: 'out', format: 'data' },
     ],
-    position: { x: 4, y: 4 },
+    position: { x: 10, y: 22 },
   };
 
   const modelled = {
@@ -1370,7 +1370,7 @@ function stationsToDraw(flowId: number, position: { x: number; y: number }) {
       { id: nextId(), type: 'in', name: 'value', format: 'string' },
       { id: nextId(), type: 'out', format: 'data' },
     ],
-    position: { x: 30, y: 4 },
+    position: { x: 38, y: 38 },
   };
 
   const places = {
@@ -1382,7 +1382,7 @@ function stationsToDraw(flowId: number, position: { x: number; y: number }) {
       { id: nextId(), type: 'in', formats: ['data'] },
       { id: nextId(), type: 'out', format: 'geo' },
     ],
-    position: { x: 56, y: 4 },
+    position: { x: 68, y: 46 },
   };
 
   return {
@@ -1412,7 +1412,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 25 },
+  config: { seedVersion: 26 },
   /*
    * The same flow, read as an article.
    *
