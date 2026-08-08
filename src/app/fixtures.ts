@@ -1273,8 +1273,19 @@ function topasSources() {
  * config, the NETWORK's own file (which is where a series path lives, not the
  * config), and which pollutant to ask for. Nothing is typed in here but the
  * shape of the answer.
+ *
+ * `typePath` is which breakdown to ask for, and it is a PATH into the network
+ * file rather than a word: every network publishes `series.types`, and what
+ * that maps to — `sectoren`, `countries` — is the publisher's spelling, not
+ * ours. Two instances pointed at two of those keys are two questions about
+ * the same click, which is the only difference between them.
  */
-function stationReadings(flowId: number, regionPath: string, position: { x: number; y: number }) {
+function stationReadings(
+  flowId: number,
+  regionPath: string,
+  position: { x: number; y: number },
+  typePath = 'series.types.sectors',
+) {
   const inn = { place: flowId + 10, network: flowId + 11, config: flowId + 12, pollutant: flowId + 13 };
   const out = { readings: flowId + 1 };
 
@@ -1292,7 +1303,7 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
    */
   const seriesPath = reads('series path', 'series.path', { x: 10, y: 28 });
   const networkId = reads('network id', 'network', { x: 10, y: 40 });
-  const seriesType = reads('breakdown', 'series.types.sectors', { x: 10, y: 52 });
+  const seriesType = reads('breakdown', typePath, { x: 10, y: 52 });
   const regionId = reads('region', regionPath, { x: 10, y: 66 });
 
   const file = builds(
@@ -1448,7 +1459,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 32 },
+  config: { seedVersion: 33 },
   /*
    * The same flow, read as an article.
    *
@@ -1529,12 +1540,23 @@ export const tno = () => ({
       {
         type: 'text',
         text:
-          'Press one. What comes back is that station taken apart: one bar per day, the ' +
-          'height its total, each band one source’s share of it. `Boundary` is what blew ' +
-          'in across the edge of the model; `Seasalt` and `Saharan Dust` are nobody’s to ' +
-          'reduce; the rest is a list of decisions somebody could make.',
+          'Press one. What comes back is that station taken apart by sector: one bar per ' +
+          'day, the height its total, each band one source’s share of it. `Boundary` is ' +
+          'what blew in across the edge of the model; `Seasalt` and `Saharan Dust` are ' +
+          'nobody’s to reduce; the rest is a list of decisions somebody could make.',
       },
-      { type: 'node', nodeId: 1100, float: 'none', width: '440px', caption: 'One station, taken apart' },
+      { type: 'node', nodeId: 1100, float: 'none', width: '440px', caption: 'One station, by sector' },
+      {
+        type: 'text',
+        text:
+          'The same press also answers the other half of the question. Sectors say what ' +
+          'was done; countries say where it was done — the same bar, the same day, cut ' +
+          'the other way, because the label a molecule carries records both. Set the ' +
+          'Dutch band against the German and Belgian ones underneath it, and then find ' +
+          '`Boundary` again: that is the share this model inherited rather than worked ' +
+          'out.',
+      },
+      { type: 'node', nodeId: 1300, float: 'none', width: '440px', caption: 'The same station, by country' },
 
       { type: 'heading', text: 'Europe', level: 2 },
       {
@@ -1729,11 +1751,20 @@ export const tno = () => ({
      */
     stationsToDraw(3200, { x: 44, y: 12 }),
     stationsToDraw(3300, { x: 44, y: 44 }),
-    stationReadings(3000, 'regions.0.id', { x: 84, y: 12 }),
-    stationReadings(3100, 'regions.1.id', { x: 84, y: 46 }),
+    stationReadings(3000, 'regions.0.id', { x: 84, y: 4 }),
+    /*
+     * The same click, asked a second question.
+     *
+     * A separate instance rather than a switch inside one, because both
+     * answers are wanted at once: the sectors and the countries of the same
+     * bar, side by side. It costs one more fetch per press and buys the
+     * comparison the whole page is about.
+     */
+    stationReadings(3400, 'regions.0.id', { x: 84, y: 36 }, 'series.types.countries'),
+    stationReadings(3100, 'regions.1.id', { x: 84, y: 68 }),
     {
       type: 'graph-plot',
-      title: 'One station, day by day',
+      title: 'One station, by sector',
       id: 1100,
       /*
        * Bars, not a line. These are daily values — one number per day, each
@@ -1743,7 +1774,15 @@ export const tno = () => ({
        */
       config: { style: 'bars' },
       sockets: [{ id: 1110, type: 'in', formats: ['number', 'point', 'stack'] }],
-      ui: { position: { x: 84, y: 32 } },
+      ui: { position: { x: 84, y: 20 } },
+    },
+    {
+      type: 'graph-plot',
+      title: 'The same station, by country',
+      id: 1300,
+      config: { style: 'bars' },
+      sockets: [{ id: 1310, type: 'in', formats: ['number', 'point', 'stack'] }],
+      ui: { position: { x: 84, y: 52 } },
     },
     {
       type: 'graph-plot',
@@ -1751,7 +1790,7 @@ export const tno = () => ({
       id: 1200,
       config: { style: 'bars' },
       sockets: [{ id: 1210, type: 'in', formats: ['number', 'point', 'stack'] }],
-      ui: { position: { x: 84, y: 66 } },
+      ui: { position: { x: 84, y: 84 } },
     },
   ],
   connections: [
@@ -1787,6 +1826,14 @@ export const tno = () => ({
     { id: 1011, from: 600, to: 3000, out: 610, in: 3012 },
     { id: 1012, from: 630, to: 3000, out: 632, in: 3013 },
     { id: 1013, from: 3000, to: 1100, out: 3001, in: 1110 },
+
+    // The second question about the same press: four identical inputs, one
+    // different key inside, and a chart of its own.
+    { id: 1033, from: 300, to: 3400, out: 313, in: 3410 },
+    { id: 1034, from: 500, to: 3400, out: 512, in: 3411 },
+    { id: 1035, from: 600, to: 3400, out: 610, in: 3412 },
+    { id: 1036, from: 630, to: 3400, out: 632, in: 3413 },
+    { id: 1037, from: 3400, to: 1300, out: 3401, in: 1310 },
 
     { id: 1015, from: 700, to: 3100, out: 713, in: 3110 },
     { id: 1016, from: 2000, to: 3100, out: 2005, in: 3111 },

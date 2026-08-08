@@ -137,6 +137,26 @@ export class RequestWorker implements FbNodeWorker {
         if (next && next !== this.wiredUrl) {
           this.wiredUrl = next;
           void this.send();
+        } else if (!next && this.wiredUrl) {
+          /*
+           * The address stopped being buildable, and that is an answer.
+           *
+           * Whoever supplies it has just said it cannot be made — a publisher
+           * with no such file, a part of the pattern that went away. Keeping
+           * the last URL and the last body would leave every picture
+           * downstream showing the answer to the previous question with the
+           * new question in the reader's head. `null` for the same reason a
+           * failed fetch sends one: something was asked, and the answer is
+           * that there is none.
+           */
+          this.wiredUrl = '';
+          this.last = undefined;
+          this.error = 'No URL yet';
+          this.subject.next({
+            meta: { title: this.config.title, description: this.config.description },
+            value: null,
+          } satisfies FetchedValue);
+          this.ticks.next();
         }
 
         return;

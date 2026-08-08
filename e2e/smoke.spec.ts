@@ -2917,11 +2917,14 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
    * station's readings is built out of it, and a network that did not publish
    * one is a network whose stations cannot be pressed.
    */
-  const places = (id: string, count: number) => ({
+  const places = (id: string, count: number, countries = true) => ({
     network: id,
     series: {
       path: 'data/{region}/series/{network}/{code}/{pollutant}-{type}.json',
-      types: { measurements: 'metingen', sectors: 'sectoren' },
+      // A network that does not publish a country breakdown is the case that
+      // matters here: the flow must then build no address at all, rather than
+      // one with a hole where the word would be.
+      types: { measurements: 'metingen', sectors: 'sectoren', ...(countries ? { countries: 'countries' } : {}) },
     },
     /*
      * A station says which pollutants it has an instrument for, and which of
@@ -2971,7 +2974,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     if (/data\/nl\/grid\/2026-07-01\/(PM2\.5|NO2)\.json$/.test(url)) return route.fulfill(answer(grid('nl')));
     if (url.endsWith('data/eu/grid/2026-07-01/PM2.5.json')) return route.fulfill(answer(grid('eu')));
     if (url.endsWith('lml.json')) return route.fulfill(answer(places('lml', 3)));
-    if (url.endsWith('samenmeten.json')) return route.fulfill(answer(places('samenmeten', 5)));
+    if (url.endsWith('samenmeten.json')) return route.fulfill(answer(places('samenmeten', 5, false)));
     if (url.endsWith('eu-eea.json')) return route.fulfill(answer(places('eea', 7)));
 
     /*
@@ -2992,6 +2995,19 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
         // A null row is a day nobody computed, which is not a day that came to
         // nothing — the plot has to keep those apart.
         values: [[1, 2, 3], null, [2, 2, 2], [0, 1, 5]],
+      }));
+    }
+
+    // The same press, asked the other question. Countries, not sectors — and
+    // the same days, so the two charts stand beside each other.
+    if (/series\/lml\/S[012]\/PM2\.5-countries\.json$/.test(url)) {
+      return route.fulfill(answer({
+        code: 'S1',
+        name: 'Somewhere',
+        start: '2026-05-21',
+        resolution: 'day',
+        labels: ['Netherlands', 'Germany', 'Boundary'],
+        values: [[4, 1, 1], null, [3, 1, 2], [2, 2, 2]],
       }));
     }
 
@@ -3056,6 +3072,8 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     // rather than at two blank frames.
     'data/eu/series/eea/S0/PM2.5-sectoren.json',
     'data/nl/grid/2026-07-01/PM2.5.json',
+    // Two questions about the same first station: what was done, and where.
+    'data/nl/series/lml/S0/PM2.5-countries.json',
     'data/nl/series/lml/S0/PM2.5-sectoren.json',
     'eu-eea.json',
     'lml.json',
@@ -3163,6 +3181,20 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     return stack ? `${stack.labels.join()}|${stack.rows.length}|${stack.rows[1]}` : '';
   })).toBe('Shipping,Livestock,Boundary|4|null');
 
+  /*
+   * And the SAME press fills the second chart, which asks the other half of
+   * the question: not which sector, but which country. One click, two
+   * addresses, two pictures — the whole reason the subflow takes the key to
+   * ask for rather than hard-coding one.
+   */
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const stack = (flow.getWorker(1300) as { buffer: { stack?: { labels: string[]; rows: unknown[] } } })
+      .buffer.stack;
+
+    return stack ? `${stack.labels.join()}|${stack.rows.length}` : '';
+  }), { timeout: 20_000 }).toBe('Netherlands,Germany,Boundary|4');
+
   // And the plot is captioned with what the FILE calls the thing, not with
   // what the request asked for: the question knows it wanted a station, the
   // answer knows which one.
@@ -3198,6 +3230,27 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
     return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
   }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/samenmeten/S2/PM2.5-sectoren.json');
+
+  /*
+   * And that network publishes no country breakdown, so nothing is asked for.
+   *
+   * Not "asked for and 404s" — never built. A missing part used to count as an
+   * empty one, which finished the pattern and fetched `PM2.5-.json`: a request
+   * that could only fail, made on every press, for a file that was never
+   * claimed to exist.
+   */
+  expect(asked.filter(url => /-\.json$/.test(url))).toEqual([]);
+
+  // And the chart that has no answer says so, rather than keeping the last
+  // station's countries under this station's name.
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const stack = (flow.getWorker(1300) as { buffer: { stack?: { labels: string[] } } }).buffer.stack;
+
+    // No stack at all and an empty one both mean cleared; three labels would
+    // mean the previous station's answer is still on screen.
+    return stack ? stack.labels.length : 0;
+  }), { timeout: 20_000 }).toBe(0);
 
   /*
    * A press on the European map asks the European way — `eu` and `eea` — from
@@ -4405,11 +4458,11 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
   await expect(doc.locator('h2')).toHaveCount(2);
 
   /*
-   * Every figure is mounted node content. Four of them, and each one has to
+   * Every figure is mounted node content. Seven of them, and each one has to
    * resolve: an unresolved `{{id}}` renders as its own source text, which is
    * honest in a document and useless in a test that means to catch it.
    */
-  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(6);
+  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(7);
   await expect(doc).not.toContainText('{{');
 
   // Claims with sources: an article that quotes a number names where it is
@@ -4419,14 +4472,16 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
   /*
    * And they are the nodes the prose means. Each figure is slotted by node id,
    * so this is the assertion that catches a renumbered fixture: the config
-   * request, the map, the pollutant chooser and the network switch, which are
-   * the four things the article talks about.
+   * request, the maps, the pollutant chooser, the network switch and BOTH
+   * Dutch breakdowns — the station by sector and the same station by country,
+   * which are two questions about one press rather than one figure shown twice.
    */
   expect(await page.evaluate(() =>
     [...document.querySelectorAll('fb-flow-document [slot^="fig-"]')]
       .map(node => node.getAttribute('slot'))
       .sort())).toEqual([
-        'fig-1100', 'fig-1200', 'fig-300', 'fig-500', 'fig-630', 'fig-700',
+        'fig-1100', 'fig-1200', 'fig-1300', 'fig-300', 'fig-500', 'fig-630',
+        'fig-700',
       ]);
 });
 

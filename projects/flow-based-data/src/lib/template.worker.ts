@@ -107,9 +107,27 @@ export class TemplateWorker implements FbNodeWorker {
          * or it is back to keeping a copy of somebody else's URL.
          */
         const [, modifier] = (this.names.get(id) ?? '').split('|');
+
+        /*
+         * Nothing arriving is NOT an empty value — and an empty string is how
+         * "nothing" is usually said on a wire that promised text.
+         *
+         * It used to be stored as a value like any other, which made the
+         * placeholder count as filled and the whole pattern as finished: a
+         * network that publishes no country breakdown had an address built
+         * for it with a hole where the word should be, and that address was
+         * fetched, once per press, for a file nobody ever claimed existed.
+         *
+         * No part of an address is meaningfully empty. A missing one leaves
+         * the string unfinished, which is the single thing this node promises.
+         */
         const text = plain === undefined || plain === null ? '' : String(plain);
 
-        this.values.set(name, applyModifier(text, modifier));
+        if (text === '') {
+          this.values.delete(name);
+        } else {
+          this.values.set(name, applyModifier(text, modifier));
+        }
       }
 
       this.emit();
@@ -172,11 +190,29 @@ export class TemplateWorker implements FbNodeWorker {
     });
   }
 
+  /**
+   * Whether a finished string has ever left here.
+   *
+   * It decides whether "cannot be built" is worth saying out loud. A node that
+   * has never built anything is simply waiting, and telling everyone
+   * downstream about that on every keystroke would clear pictures nobody had
+   * yet. A node that HAS built one and now cannot is different: the question
+   * changed, and the honest answer to the new one is that there is no address
+   * for it.
+   */
+  private emitted = false;
+
   private emit(): void {
     this.ticks.next();
 
-    if (this.pattern && !this.missing.length) {
-      this.subject.next(this.fill());
+    const next = this.pattern && !this.missing.length ? this.fill() : '';
+
+    if (next) {
+      this.emitted = true;
+      this.subject.next(next);
+    } else if (this.emitted) {
+      this.emitted = false;
+      this.subject.next('');
     }
   }
 }
