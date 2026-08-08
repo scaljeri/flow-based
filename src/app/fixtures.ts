@@ -1448,7 +1448,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 31 },
+  config: { seedVersion: 32 },
   /*
    * The same flow, read as an article.
    *
@@ -1474,13 +1474,26 @@ export const tno = () => ({
           'can separate a microgram from a ship from a microgram from a farm, because by ' +
           'the time it arrives they are the same dust.\n' +
           '\n' +
-          'That second question is answered by a model instead. TNO runs one daily in ' +
-          'which every emission is TAGGED at its source and the tag is carried through ' +
-          'transport, chemistry and deposition — so at any point it can say what ' +
-          'fraction of what is there came from where, in a single run, without switching ' +
-          'anything off and changing the chemistry along with it ' +
+          'A model can, and that is the whole addition made here. TNO runs ' +
+          '[LOTOS-EUROS](https://airqualitymodeling.tno.nl/lotos-euros/) daily over ' +
+          'Europe, and in this version every emission is *labelled* where it leaves the ' +
+          'ground — this country, that sector — and the label is carried with the mass ' +
+          'through transport, chemistry and deposition. The labels are fractions of the ' +
+          'concentration and they are made to add up to one, so every microgram in a ' +
+          'cell belongs to somebody. One run answers it for all sources at once; the ' +
+          'older way — switch a sector off, run again, take the difference — changes the ' +
+          'chemistry while it is at it, and so answers a slightly different question ' +
           '([Kranenburg et al., 2013](https://gmd.copernicus.org/articles/6/721/2013/); ' +
           '[TOPAS](https://airqualitymodeling.tno.nl/topas/topas-documentation/)).\n' +
+          '\n' +
+          'The model is a box, and air crosses its edges. What blows in over the ' +
+          'boundary — and what was already in the air when the run began — is not worked ' +
+          'out here: it is taken from a global model and given a label of its own ' +
+          '([CAMS](https://atmosphere.copernicus.eu/sites/default/files/2023-06/LOTOS-EUROS%20Fact%20sheet.pdf)). ' +
+          'So one of the shares you can read off is *from outside*, and that one is ' +
+          'assumed rather than computed. It has to be: without it the fractions would ' +
+          'not add up, and the pollution that genuinely came from elsewhere would be ' +
+          'handed to whoever is nearest.\n' +
           '\n' +
           'Every figure below is a live node of this flow. Start by choosing what to ' +
           'ask about: these are the pollutants the publisher offers, read from its own ' +
