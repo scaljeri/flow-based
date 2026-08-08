@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 24 },
+  config: { seedVersion: 23 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -1333,7 +1333,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 23 },
+  config: { seedVersion: 24 },
   /*
    * The same flow, read as an article.
    *
