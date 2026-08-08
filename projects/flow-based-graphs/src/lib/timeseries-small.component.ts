@@ -1,7 +1,18 @@
 import { Component } from '@angular/core';
 import { TimeseriesView } from './timeseries-view';
 
-/** At rest: a sparkline — the shape of the recent past, no axes, no chrome. */
+/**
+ * At rest: the shape of the recent past, no axes, no chrome.
+ *
+ * Big enough to read, which for a plot means bigger than a sparkline. 110 by
+ * 36 was fine for one wandering line and useless for the thing this plot now
+ * also draws — a stack of eighteen bands over forty-five days is a smear at
+ * that size, and a node you have to open to learn anything from is a node
+ * that says nothing on the canvas.
+ *
+ * Still small: the complex plane's own resting view is 96 square, so this
+ * stays in the same family rather than becoming a second normal view.
+ */
 @Component({
   standalone: true,
   selector: 'fb-timeseries-small',
@@ -25,8 +36,8 @@ import { TimeseriesView } from './timeseries-view';
     }
 
     canvas {
-      height: 36px;
-      width: 110px;
+      height: 68px;
+      width: 152px;
     }
 
     .latest {
