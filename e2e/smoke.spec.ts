@@ -3227,6 +3227,24 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     return (flow.getWorker(1100) as { buffer: { stack?: unknown } }).buffer.stack === undefined;
   }), { timeout: 20_000 }).toBe(true);
 
+  /*
+   * And "none" is an answer the map has to hear.
+   *
+   * A gate that simply stops sending leaves the last network still drawn, so
+   * the reader switches away from something and it stays on the screen. The
+   * switch says what nothing looks like in the type it carries — `null` for a
+   * whole file — and this used to be missing for exactly that type, so
+   * choosing none did nothing at all. The raster stays: it arrives on its own
+   * socket and has nothing to do with the choice.
+   */
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.flow.getWorker(500).set(0);
+  });
+
+  await expect.poll(async () => (await state()).places, { timeout: 20_000 }).toBe(0);
+  expect((await state()).cells).toBe(4);
+
   // The Dutch switch offers the two Dutch networks and nothing else.
   await page.evaluate(() => {
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })

@@ -144,25 +144,37 @@ export class SwitchWorker implements FbNodeWorker {
    * switch carried, so a switch on numbers set to "none" handed an object to
    * an adding node, which answered NaN.
    *
-   * Places and rasters both have an empty form and a map understands both. A
-   * number does not: there is no number meaning "no number", and zero is a
-   * lie. So for those, nothing is sent — the node says which input is live,
-   * and "none" is visible there rather than in a value that cannot express it.
+   * Places and rasters both have an empty form and a map understands both, and
+   * so does a whole fetched file: `null` is what "no value" looks like in
+   * anything that can hold one. That case was missing, so a switch carrying
+   * files went quiet on "none" and everything after it went on drawing the
+   * network the reader had just switched away from.
+   *
+   * A number is the case that has no answer: there is no number meaning "no
+   * number", and zero is a lie. So for those, nothing is sent — the node says
+   * which input is live, and "none" is visible there rather than in a value
+   * that cannot express it.
    */
-  private empty(): { places: Place[] } | { grid: undefined } | undefined {
+  private empty(): { places: Place[] } | { grid: undefined } | null | undefined {
     const format = this.out?.format;
 
     if (!format || format === 'geo') {
       return { places: [] };
     }
 
-    return format === 'grid' ? { grid: undefined } : undefined;
+    if (format === 'grid') {
+      return { grid: undefined };
+    }
+
+    return format === 'data' ? null : undefined;
   }
 
   private emit(): void {
     const id = this.chosenId;
     const value = id === undefined ? this.empty() : this.latest.get(id) ?? this.empty();
 
+    // `undefined` means this type has no way to say "nothing"; `null` means it
+    // does and that is the message.
     if (value !== undefined) {
       this.subject.next(value);
     }
