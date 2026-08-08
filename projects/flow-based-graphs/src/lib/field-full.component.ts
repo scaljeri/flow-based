@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { MandelbrotView } from './mandelbrot-view';
+import { FieldView } from './field-view';
 
 /** The whole surface: the detail is the point, so give it every pixel. */
 @Component({
   standalone: true,
-  selector: 'fb-mandelbrot-full',
+  selector: 'fb-field-full',
   template: `<canvas #plot [class]="dragIgnore" (pointerdown)="onPress($event)"></canvas>`,
   styles: [`
     :host {
@@ -26,6 +26,6 @@ import { MandelbrotView } from './mandelbrot-view';
     }
   `]
 })
-export class MandelbrotFullComponent extends MandelbrotView {
+export class FieldFullComponent extends FieldView {
   protected override readonly interactive = true;
 }

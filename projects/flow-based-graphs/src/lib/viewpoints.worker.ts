@@ -1,6 +1,6 @@
 import { FbNodeWorker, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject } from 'rxjs';
-import { Region, WHOLE_SET } from './mandelbrot.worker';
+import { Region } from './region';
 
 /** A place worth looking at, and what it is called. */
 export interface Viewpoint extends Region {
@@ -29,7 +29,7 @@ export interface ViewpointsConfig {
  * else, and it is visible without opening a panel.
  */
 export const DEFAULT_PLACES: Viewpoint[] = [
-  { name: '— the whole set', ...WHOLE_SET },
+  { name: '— the whole set', re: -0.6, im: 0, span: 3.2 },
   { name: 'Seahorse Valley', re: -0.7453, im: 0.1127, span: 0.0065 },
   { name: 'Elephant Valley', re: 0.275, im: 0.0075, span: 0.01 },
   /*

@@ -16,8 +16,12 @@ import { FbNodeState } from './types';
  *     → `graph-plane`. Nothing about either node changed; a type name is
  *     simply how a saved flow asks for a drawing, and these two asked by
  *     anecdote.
+ * 4 — `graph-mandelbrot` was one node doing two jobs: working out a value for
+ *     every point of a square, and colouring the answers. It becomes two —
+ *     `math-mandelbrot` computing a field, `graph-field` drawing one — so that
+ *     anything can draw a field and anything can produce one.
  */
-export const FB_FLOW_FORMAT_VERSION = 3;
+export const FB_FLOW_FORMAT_VERSION = 4;
 
 export interface FbSerializedFlow {
   version: number;
@@ -105,7 +109,92 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
 
     return rename(flow);
   },
+
+  /*
+   * 3 → 4: one node becomes two, wired to each other.
+   *
+   * The drawing keeps the old node's id and its output, so a document that
+   * points a figure at it still finds it and anything downstream of the
+   * pressed point stays connected. The computation takes the old INPUT
+   * socket, id and all, so whatever fed the region goes on feeding it without
+   * the connection being touched. What is new is one node, one socket on each
+   * side of the join, and the wire between them.
+   *
+   * Ids come from above the highest one in the flow. A migration cannot ask
+   * the editor for fresh ones — it runs on a file, before anything is built —
+   * so it counts what is there and carries on from the top.
+   */
+  3: flow => {
+    let next = highestId(flow) + 1;
+    const id = (): number => next++;
+
+    const split = (node: FbNodeState): FbNodeState => {
+      const children = node.children ?? [];
+      const found = children.filter(child => child.type === 'graph-mandelbrot');
+
+      for (const drawing of found) {
+        const config = (drawing.config ?? {}) as { view?: unknown; iterations?: unknown };
+        const region = (drawing.sockets ?? []).find(socket => socket.type === 'in');
+        const fieldIn = id();
+        const fieldOut = id();
+
+        const compute: FbNodeState = {
+          type: 'math-mandelbrot',
+          id: id(),
+          title: 'Asking every point',
+          config: { view: config.view, iterations: config.iterations, resolution: 400 },
+          sockets: [
+            ...(region ? [{ ...region, formats: ['region'], format: undefined }] : []),
+            { id: fieldOut, type: 'out', format: 'field' },
+          ],
+          // Beside the drawing it feeds, a little to its left.
+          ui: {
+            position: {
+              x: Math.max(0, (drawing.ui?.position?.x ?? 0) - 14),
+              y: drawing.ui?.position?.y ?? 0,
+            },
+          },
+        };
+
+        drawing.type = 'graph-field';
+        drawing.config = { scale: 'log' };
+        drawing.sockets = [
+          { id: fieldIn, type: 'in', formats: ['field'] },
+          ...(drawing.sockets ?? []).filter(socket => socket.type === 'out'),
+        ];
+
+        children.push(compute);
+        node.connections = [
+          ...(node.connections ?? []),
+          { id: id(), from: compute.id!, to: drawing.id!, out: fieldOut, in: fieldIn },
+        ];
+      }
+
+      node.children = children;
+      children.forEach(split);
+
+      return node;
+    };
+
+    return split(flow);
+  },
 };
+
+/** The highest id anywhere in a flow — nodes, sockets and connections alike. */
+function highestId(flow: FbNodeState): number {
+  let highest = 0;
+
+  const walk = (node: FbNodeState): void => {
+    highest = Math.max(highest, node.id ?? 0);
+    (node.sockets ?? []).forEach(socket => (highest = Math.max(highest, socket.id ?? 0)));
+    (node.connections ?? []).forEach(c => (highest = Math.max(highest, c.id ?? 0)));
+    (node.children ?? []).forEach(walk);
+  };
+
+  walk(flow);
+
+  return highest;
+}
 
 export function serializeFlow(flow: FbNodeState): FbSerializedFlow {
   return { version: FB_FLOW_FORMAT_VERSION, flow: structuredClone(flow) };

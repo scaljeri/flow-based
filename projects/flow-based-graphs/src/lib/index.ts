@@ -16,11 +16,11 @@ import { PlacesWorker } from './places.worker';
 import { PlacesSmallComponent } from './places-small.component';
 import { PlacesSettingsComponent } from './places-settings.component';
 import { MapSettingsComponent } from './map-settings.component';
-import { MandelbrotWorker } from './mandelbrot.worker';
-import { MandelbrotSmallComponent } from './mandelbrot-small.component';
-import { MandelbrotNormalComponent } from './mandelbrot-normal.component';
-import { MandelbrotFullComponent } from './mandelbrot-full.component';
-import { MandelbrotSettingsComponent } from './mandelbrot-settings.component';
+import { FieldPlotWorker } from './field.worker';
+import { FieldSmallComponent } from './field-small.component';
+import { FieldNormalComponent } from './field-normal.component';
+import { FieldFullComponent } from './field-full.component';
+import { FieldSettingsComponent } from './field-settings.component';
 import { ViewpointsWorker } from './viewpoints.worker';
 import { ViewpointsSmallComponent } from './viewpoints-small.component';
 
@@ -102,6 +102,24 @@ export const GRAPHS_MODULE: FbModule = {
        */
       shape: fbObject({
         stack: fbObject({ labels: fbArray(fbString), rows: fbArray(fbArray(fbNumber)) }),
+      }),
+    },
+    /*
+     * A value per cell over a rectangle of the PLANE. Structurally the same as
+     * `grid` and semantically not: a rectangle of latitudes is not a rectangle
+     * of the plane, and a flow that could wire one into the other would
+     * happily draw a fractal off the coast of Norway.
+     */
+    {
+      name: 'field',
+      description: 'A value per cell over a rectangle: {field: {rows, cols, values, x, y}}',
+      color: '#b07fd8',
+      shape: fbObject({
+        field: fbObject({
+          rows: fbNumber, cols: fbNumber, values: fbArray(fbNumber),
+          x: fbObject({ min: fbNumber, max: fbNumber }),
+          y: fbObject({ min: fbNumber, max: fbNumber }),
+        }),
       }),
     },
     {
@@ -236,33 +254,33 @@ export const GRAPHS_MODULE: FbModule = {
     },
 
     /*
-     * One rule asked of the whole plane at once.
+     * A value per cell over a rectangle, coloured.
      *
-     * Not a plot: nothing is being drawn FROM data here, the picture IS the
-     * computation — every pixel iterates `z² + c` for its own `c` and is
-     * coloured by whether it ran away. The node holds where to look; the view
-     * recomputes at whatever size it has, a band of rows per frame.
+     * This was half of the Mandelbrot node, which computed a field and drew it
+     * in one breath — so nothing else could draw a field and nothing else
+     * could feed the drawing. The computing half is a node in Mathematics now;
+     * this draws whatever field arrives, from wherever.
      */
-    'graph-mandelbrot': {
+    'graph-field': {
       component: {
-        small: MandelbrotSmallComponent,
-        normal: MandelbrotNormalComponent,
-        full: MandelbrotFullComponent,
+        small: FieldSmallComponent,
+        normal: FieldNormalComponent,
+        full: FieldFullComponent,
       },
-      settingsComponent: MandelbrotSettingsComponent,
+      settingsComponent: FieldSettingsComponent,
       settings: {
-        title: 'Mandelbrot set',
+        title: 'Field',
         group: 'Graphs',
         resizable: true,
-        config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200 },
+        config: { scale: 'linear' },
         sockets: [
-          // Where to look, when something else decides that.
-          { type: 'in', formats: ['region'] },
-          // And out: the point that was last pressed, for an orbit to walk.
+          { type: 'in', formats: ['field'] },
+          // And out: the point that was last pressed, in the field's own
+          // coordinates rather than in pixels.
           { type: 'out', format: 'complex' },
         ],
       },
-      worker: MandelbrotWorker,
+      worker: FieldPlotWorker,
     },
 
     /*

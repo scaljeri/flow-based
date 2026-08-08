@@ -13,6 +13,9 @@ import { PointsWorker } from './points.worker';
 import { IterateSettingsComponent } from './iterate-settings.component';
 import { IterateSmallComponent } from './iterate-small.component';
 import { IterateWorker } from './iterate.worker';
+import { MandelbrotSettingsComponent } from './mandelbrot-settings.component';
+import { MandelbrotSmallComponent } from './mandelbrot-small.component';
+import { MandelbrotWorker } from './mandelbrot.worker';
 import { PointsSmallComponent } from './points-small.component';
 import { PointsSettingsComponent } from './points-settings.component';
 import { SamplerSmallComponent } from './sampler-small.component';
@@ -74,6 +77,21 @@ export const MATH_MODULE: FbModule = {
       name: 'marks',
       description: 'A labelled set of complex points, with one of them current',
       color: '#d081b8',
+    },
+    /*
+     * Both declared by Graphs too, with the same descriptions, so the two
+     * modules SHARE them — which is what lets a region chosen on one side
+     * reach a computation on the other, and the field come back.
+     */
+    {
+      name: 'region',
+      description: 'A square of the complex plane: {re, im, span}',
+      color: '#7f8fd8',
+    },
+    {
+      name: 'field',
+      description: 'A value per cell over a rectangle: {field: {rows, cols, values, x, y}}',
+      color: '#b07fd8',
     },
   ],
 
@@ -188,6 +206,31 @@ export const MATH_MODULE: FbModule = {
         ],
       },
       worker: IterateWorker,
+    },
+
+    /*
+     * The same rule as Iterate, asked of a whole square at once.
+     *
+     * Iterate follows one `c` and shows the walk; this asks every point of a
+     * rectangle how long its walk takes to escape and hands back the answers
+     * as a field. It draws nothing — a field plot does that — which is the
+     * split that took this out of the Graphs module: computing where the
+     * numbers are is mathematics, and colouring them is a picture.
+     */
+    'math-mandelbrot': {
+      component: { small: MandelbrotSmallComponent },
+      settingsComponent: MandelbrotSettingsComponent,
+      settings: {
+        title: 'Mandelbrot',
+        group: GROUP,
+        config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200, resolution: 400 },
+        sockets: [
+          // Where to look, when something else decides that.
+          { type: 'in', formats: ['region'] },
+          { type: 'out', format: 'field' },
+        ],
+      },
+      worker: MandelbrotWorker,
     },
   },
 };

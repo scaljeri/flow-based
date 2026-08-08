@@ -5,4 +5,5 @@ export * from './lib/derivative.worker';
 export * from './lib/sampler.worker';
 export * from './lib/operator.worker';
 export * from './lib/iterate.worker';
+export * from './lib/mandelbrot.worker';
 export * from './lib/stepper.component';

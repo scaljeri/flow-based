@@ -3,21 +3,20 @@ import { NodeService } from '@scaljeri/flow-based';
 import { MandelbrotWorker, WHOLE_SET } from './mandelbrot.worker';
 
 /**
- * Where to look, and how hard.
+ * Where to look, how hard, and how finely.
  *
- * `span` is one number for both axes, because the plane is never drawn
- * squashed — a set whose bulbs are ellipses is a lie about the arithmetic.
- * Iterations is the interesting one: it is not image quality, it is how long
- * you are prepared to wait before calling a point "stays". Too low and the
- * boundary looks thick and smooth; the detail that appears when you raise it
- * was always there.
+ * `span` is one number for both directions, because the plane is never worked
+ * out squashed. Iterations is how long to keep going before calling a point
+ * bounded — not image quality, patience. Resolution is the one knob the old
+ * fused node never had: it computed one value per screen pixel, and a field
+ * has to choose its own size before it knows who will draw it.
  */
 @Component({
   standalone: true,
   selector: 'fb-mandelbrot-settings',
   template: `
     <div class="field">
-      <span class="label">Middle of the view</span>
+      <span class="label">Middle of the square</span>
 
       <div class="pair">
         <input type="text" inputmode="decimal" autocomplete="off" aria-label="Real part"
@@ -38,7 +37,13 @@ import { MandelbrotWorker, WHOLE_SET } from './mandelbrot.worker';
     <label class="field">
       <span class="label">Steps before a point counts as staying</span>
       <input type="text" inputmode="numeric" autocomplete="off"
-             [value]="worker?.iterations ?? 200" (change)="writeIterations($event)">
+             [value]="worker?.iterations ?? 200" (change)="write('iterations', $event)">
+    </label>
+
+    <label class="field">
+      <span class="label">Cells across — finer is slower</span>
+      <input type="text" inputmode="numeric" autocomplete="off"
+             [value]="worker?.resolution ?? 400" (change)="write('resolution', $event)">
     </label>
 
     <button type="button" class="reset" (click)="whole()">Back to the whole set</button>
@@ -115,17 +120,18 @@ export class MandelbrotSettingsComponent {
     }
   }
 
-  writeIterations(event: Event): void {
-    const value = Number((event.target as HTMLInputElement).value);
-
-    if (Number.isFinite(value)) {
-      this.worker?.set('iterations', value);
-      this.cdr.detectChanges();
-    }
-  }
-
+  /** Back to the picture everyone has seen, from wherever you wandered. */
   whole(): void {
     this.worker?.setView({ ...WHOLE_SET });
     this.cdr.detectChanges();
+  }
+
+  write(key: 'iterations' | 'resolution', event: Event): void {
+    const value = Number((event.target as HTMLInputElement).value);
+
+    if (Number.isFinite(value)) {
+      this.worker?.set(key, value);
+      this.cdr.detectChanges();
+    }
   }
 }

@@ -873,7 +873,7 @@ test('data type colours are set from the menu, and can be switched off', async (
    * use" should not name one because a socket was once willing to take it.
    */
   await expect(dialog.locator('li .name'))
-    .toHaveText(['complex', 'function', 'marks', 'point', 'region']);
+    .toHaveText(['complex', 'field', 'function', 'marks', 'point', 'region']);
 
   // Pick a new colour for `point`, and every line carrying it follows.
   await page.evaluate(() => {
@@ -4279,7 +4279,10 @@ test('the Mandelbrot section answers the reader, both ways', async ({ page }) =>
     const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
 
     return {
-      view: flow.getWorker(1800).view as { re: number; im: number; span: number },
+      // The region belongs to the node that COMPUTES over it now; the plot
+      // beside it only ever knew which pixels it was handed.
+      view: flow.getWorker(1750).view as { re: number; im: number; span: number },
+      field: flow.getWorker(1800).field as { rows: number } | undefined,
       c: flow.getWorker(1900).c as { re: number; im: number },
       escapedAt: flow.getWorker(1900).escapedAt as number | null,
     };
@@ -4289,6 +4292,10 @@ test('the Mandelbrot section answers the reader, both ways', async ({ page }) =>
   // seen, and a walk that does the quiet thing.
   await expect.poll(async () => (await state()).view.span, { timeout: 20_000 }).toBe(3.2);
   expect((await state()).escapedAt).toBe(null);
+
+  // And the field really crosses the wire — the picture is drawn from values
+  // somebody else worked out, not computed inside the drawing.
+  await expect.poll(async () => (await state()).field?.rows, { timeout: 20_000 }).toBe(400);
 
   // The list is a node, and choosing from it moves the picture.
   await page.locator('fb-flow-document li', { hasText: 'Seahorse Valley' }).click();

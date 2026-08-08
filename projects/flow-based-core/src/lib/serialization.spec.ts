@@ -126,6 +126,63 @@ describe('deserializeFlow', () => {
     expect(read.children![1].children![0].type).toBe('graph-plane');
   });
 
+  /*
+   * One node becomes two, and everything already wired to it stays wired: the
+   * drawing keeps the id a document's figure points at and the output the
+   * orbit hangs off, the computation takes the input socket whole so the
+   * region that fed it is untouched.
+   */
+  it('splits the fused Mandelbrot into a computation and a drawing', () => {
+    const older = {
+      id: 1,
+      type: 'flow',
+      children: [
+        { id: 10, type: 'graph-viewpoints', sockets: [{ id: 100, type: 'out', format: 'region' }] },
+        {
+          id: 20,
+          type: 'graph-mandelbrot',
+          config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200 },
+          sockets: [
+            { id: 200, type: 'in', formats: ['region'] },
+            { id: 201, type: 'out', format: 'complex' },
+          ],
+          ui: { position: { x: 40, y: 50 } },
+        },
+        { id: 30, type: 'math-iterate', sockets: [{ id: 300, type: 'in', formats: ['complex'] }] },
+      ],
+      connections: [
+        { id: 900, from: 10, to: 20, out: 100, in: 200 },
+        { id: 901, from: 20, to: 30, out: 201, in: 300 },
+      ],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 3, flow: older });
+    const drawing = read.children!.find(child => child.id === 20)!;
+    const compute = read.children!.find(child => child.type === 'math-mandelbrot')!;
+
+    expect(drawing.type).toBe('graph-field');
+    expect(compute.config.view).toEqual({ re: -0.6, im: 0, span: 3.2 });
+
+    // The region socket moved across whole, so the wire into it never knew.
+    expect(compute.sockets!.some(socket => socket.id === 200)).toBe(true);
+    expect(read.connections!.find(c => c.id === 900)!.to).toBe(20);
+
+    // The pressed point still leaves from the drawing, on the same socket.
+    expect(drawing.sockets!.find(socket => socket.type === 'out')!.id).toBe(201);
+
+    // And one new wire joins the two, with an id nothing else uses.
+    const joins = read.connections!.filter(c => c.from === compute.id);
+    const ids = [
+      ...read.children!.map(child => child.id),
+      ...read.children!.flatMap(child => (child.sockets ?? []).map(socket => socket.id)),
+      ...read.connections!.map(c => c.id),
+    ];
+
+    expect(joins).toHaveLength(1);
+    expect(joins[0].to).toBe(20);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it('leaves a value already in ui alone', () => {
     // A file hand-edited back to version 1 must not have its old coordinates
     // put back over its new ones.

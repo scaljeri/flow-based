@@ -1,13 +1,16 @@
 import { Component } from '@angular/core';
-import { MandelbrotView } from './mandelbrot-view';
+import { FieldView } from './field-view';
 
 /** Opened in place: big enough to press a point in, and to see what you hit. */
 @Component({
   standalone: true,
-  selector: 'fb-mandelbrot-normal',
+  selector: 'fb-field-normal',
   template: `
+    @if (title) {
+      <p class="plot-title">{{title}}</p>
+    }
     <canvas #plot [class]="dragIgnore" (pointerdown)="onPress($event)"></canvas>
-    <p class="hint">Press a point to follow its orbit</p>
+    <p class="hint">Press a point to follow it</p>
   `,
   styles: [`
     :host {
@@ -17,6 +20,15 @@ import { MandelbrotView } from './mandelbrot-view';
       line-height: 0;
       padding: 6px;
       width: 300px;
+    }
+
+    .plot-title {
+      color: rgba(255, 255, 255, 0.9);
+      flex: 0 0 auto;
+      font: 12px system-ui, sans-serif;
+      line-height: normal;
+      margin: 0 0 4px;
+      text-align: center;
     }
 
     canvas {
@@ -43,6 +55,6 @@ import { MandelbrotView } from './mandelbrot-view';
     }
   `]
 })
-export class MandelbrotNormalComponent extends MandelbrotView {
+export class FieldNormalComponent extends FieldView {
   protected override readonly interactive = true;
 }

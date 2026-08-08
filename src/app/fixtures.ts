@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 24 },
+  config: { seedVersion: 25 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -842,19 +842,36 @@ export const demo = () => ({
       ui: { position: { x: 2, y: 86 } },
     },
     {
-      type: 'graph-mandelbrot',
-      title: 'The Mandelbrot set',
-      id: 1800,
+      type: 'math-mandelbrot',
+      title: 'Asking every point',
+      id: 1750,
       /*
        * The whole set to start with: the picture everyone has seen, before
        * anybody goes looking inside it.
        */
-      config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200 },
+      config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200, resolution: 400 },
       sockets: [
         { id: 1810, type: 'in', formats: ['region'] },
+        { id: 1751, type: 'out', format: 'field' },
+      ],
+      ui: { position: { x: 12, y: 84 } },
+    },
+    {
+      type: 'graph-field',
+      title: 'The Mandelbrot set',
+      id: 1800,
+      /*
+       * Log, and it matters: almost every point outside the set leaves in
+       * under ten steps, so spreading the colours evenly paints nine tenths
+       * of the picture one shade and hides the boundary — which is the only
+       * part worth looking at.
+       */
+      config: { scale: 'log' },
+      sockets: [
+        { id: 1812, type: 'in', formats: ['field'] },
         { id: 1811, type: 'out', format: 'complex' },
       ],
-      ui: { position: { x: 18, y: 84 } },
+      ui: { position: { x: 26, y: 84 } },
     },
     {
       type: 'math-iterate',
@@ -904,7 +921,8 @@ export const demo = () => ({
     { id: 1015, from: 1600, to: 1200, out: 1611, in: 1212 },
 
     // The bonus: where to look, what it looks like, and what one point does.
-    { id: 1016, from: 1700, to: 1800, out: 1710, in: 1810 },
+    { id: 1016, from: 1700, to: 1750, out: 1710, in: 1810 },
+    { id: 1020, from: 1750, to: 1800, out: 1751, in: 1812 },
     { id: 1017, from: 1800, to: 1900, out: 1811, in: 1910 },
     { id: 1018, from: 1900, to: 2000, out: 1911, in: 2010 },
   ],

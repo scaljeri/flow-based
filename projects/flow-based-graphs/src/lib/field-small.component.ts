@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { MandelbrotView } from './mandelbrot-view';
+import { FieldView } from './field-view';
 
-/** At rest: the shape, small. It is recognisable at any size, which is rare. */
+/** At rest: the picture, small. A field is recognisable long before it is legible. */
 @Component({
   standalone: true,
-  selector: 'fb-mandelbrot-small',
+  selector: 'fb-field-small',
   template: `<canvas #plot></canvas>`,
   styles: [`
     :host {
@@ -22,5 +22,5 @@ import { MandelbrotView } from './mandelbrot-view';
     }
   `]
 })
-export class MandelbrotSmallComponent extends MandelbrotView {
+export class FieldSmallComponent extends FieldView {
 }
