@@ -4509,3 +4509,28 @@ test('a phone pins one figure per stretch of the page', async ({ page }) => {
   expect(Math.max(...counts)).toBeLessThanOrEqual(1);
   expect(counts.filter(count => count === 1).length).toBeGreaterThan(3);
 });
+
+test('a figure can decline the top of the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.goto('/?embed=doc');
+
+  await expect(page.locator('fb-flow-document h1')).toBeVisible();
+
+  // How each figure is laid out, in the order they appear on the page.
+  const stick = () => page.evaluate(() => {
+    const doc = document.querySelector('fb-flow-document')!;
+
+    return [...doc.shadowRoot!.querySelectorAll('figure')]
+      .map(figure => getComputedStyle(figure).position);
+  });
+
+  await expect.poll(stick, { timeout: 20_000 }).not.toHaveLength(0);
+
+  const positions = await stick();
+
+  // The viewpoints list asked not to be pinned; every other figure still is.
+  // Both halves matter: a rule that unpinned everything would satisfy the
+  // first count on its own.
+  expect(positions.filter(position => position === 'sticky').length).toBeGreaterThan(3);
+  expect(positions.filter(position => position === 'relative')).toHaveLength(1);
+});

@@ -479,6 +479,21 @@ export class FbFlowDocumentElement extends LitElement {
       min-width: 0;
     }
 
+    /* A tick box is not a field: it takes what it needs and leaves the rest of
+       the row to the things that can use the width. */
+    .edit-check {
+      align-items: center;
+      display: flex;
+      flex: 0 0 auto;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .edit-check input {
+      flex: 0 0 auto;
+      width: auto;
+    }
+
     /*
      * The insert bar is quiet until you go near it: one between every pair of
      * blocks is a lot of furniture for something you need occasionally.
@@ -547,6 +562,32 @@ export class FbFlowDocumentElement extends LitElement {
         top: 0;
         width: auto !important;
         z-index: 1;
+      }
+
+      /*
+       * A figure that asked not to be pinned.
+       *
+       * It scrolls like any other block, and on its way up it takes the last
+       * pinned figure with it — a stretch begins here either way, and this one
+       * simply does not claim the top. That is the point of the flag: a short
+       * list or a single knob held open across a screen of prose is a box the
+       * reader is looking at instead of the page.
+       *
+       * Relative rather than static: the fades below are positioned against the
+       * figure, and a static one would hand them to whatever ancestor happens
+       * to be positioned.
+       */
+      figure.loose {
+        position: relative;
+        top: auto;
+        z-index: auto;
+      }
+
+      /* Nothing passes behind it, so there is nothing to fade — and a fade
+         here would dim the line above for no reason at all. */
+      figure.loose::before,
+      figure.loose::after {
+        content: none;
       }
 
       /*
@@ -1116,6 +1157,19 @@ export class FbFlowDocumentElement extends LitElement {
             block.width = (event.target as HTMLInputElement).value || undefined;
             this.touchDraft();
           }}>
+
+        <label class="edit-check" title="Hold the top of a narrow screen while this part is read">
+          <input
+            type="checkbox"
+            .checked=${live(block.pin !== false)}
+            @change=${(event: Event) => {
+              // Written only when it is off: pinned is the default, and a
+              // document should not carry a field saying so on every figure.
+              block.pin = (event.target as HTMLInputElement).checked ? undefined : false;
+              this.touchDraft();
+            }}>
+          <span>Pin</span>
+        </label>
       </div>
 
       <input
@@ -1761,9 +1815,10 @@ export class FbFlowDocumentElement extends LitElement {
   private renderFigure(block: FbDocNodeBlock) {
     const float = block.float ?? 'none';
     const width = block.width ? `width:${block.width};` : '';
+    const loose = block.pin === false ? ' loose' : '';
 
     return html`
-      <figure class="float-${float}" style=${width}>
+      <figure class="float-${float}${loose}" style=${width}>
         <div class="figure-body"><slot name="fig-${block.nodeId}"></slot></div>
         ${block.caption ? html`<figcaption>${block.caption}</figcaption>` : nothing}
       </figure>

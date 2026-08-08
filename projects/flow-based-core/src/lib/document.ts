@@ -35,6 +35,17 @@ export interface FbDocNodeBlock {
   /** Any CSS length, e.g. '320px' or '40%'. */
   width?: string;
   caption?: string;
+  /**
+   * Whether this figure holds the top of a narrow screen while its own part
+   * of the page is read. Defaults to true, which is what a figure usually
+   * wants: the picture and the sentence that changes it, together.
+   *
+   * `false` is the way out for a figure that is not worth a screen of its own
+   * — a short list, a single knob. It arrives as ordinary content and shoves
+   * whatever was pinned off the top on its way past, so the reader gets the
+   * page back rather than a held-open box with nothing in it.
+   */
+  pin?: boolean;
 }
 
 /**

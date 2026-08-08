@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 25 },
+  config: { seedVersion: 26 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -589,7 +589,16 @@ export const demo = () => ({
           'not smooth out, the way a circle does. There is always more of it, at every ' +
           'scale, and it never repeats and never settles down.',
       },
-      { type: 'node', nodeId: 1700, float: 'right', caption: 'Places people gave names to' },
+      {
+        type: 'node',
+        nodeId: 1700,
+        float: 'right',
+        caption: 'Places people gave names to',
+        // A list of five names is not worth a screen of its own. Pinned, it
+        // took the top from the picture it steers and then had nothing to
+        // show there.
+        pin: false,
+      },
       {
         type: 'text',
         text:
