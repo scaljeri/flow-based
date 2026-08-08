@@ -91,6 +91,18 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
   /** How connections are drawn, for a toolbar to reflect. */
   readonly routing = signal<FbRouting>('curved');
 
+  /**
+   * Whether a node has taken the whole surface.
+   *
+   * The editor already suspends zoom and pan while one has — panning behind
+   * something that covers the surface moves a graph nobody can see — so the
+   * chrome that offers those gestures has nothing left to do, and it is
+   * sitting on top of whatever the node is drawing. Measured: a full node
+   * fills the viewport whatever the zoom is, so the buttons are not only idle
+   * but lying about what they would affect.
+   */
+  readonly hasFullNode = signal(false);
+
   private readonly unsubscribe: () => void;
 
   constructor() {
@@ -129,6 +141,12 @@ export class FlowBasedComponent implements OnChanges, OnDestroy {
 
       if (change.kind === 'connections') {
         this.routing.set(this.editor.routing);
+      }
+
+      // A view change is a 'structure' change; so is entering or leaving a
+      // subflow, which can also swap which node is full.
+      if (change.kind === 'structure' || change.kind === 'selection') {
+        this.hasFullNode.set(!!this.editor.fullNode);
       }
     });
 

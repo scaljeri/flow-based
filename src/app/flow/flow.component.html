@@ -43,6 +43,12 @@ they mean anything.
   </div>
 }
 
+<!--
+  Hidden while a node has the surface: zoom and pan are suspended then, so
+  these buttons act on a graph nobody can see — and they sit on top of what
+  the node is drawing. A full plot's legend was disappearing behind them.
+-->
+@if (!editor.hasFullNode()) {
 <div class="viewport-controls fb-drag-ignore">
   <button type="button" mat-mini-fab color="primary" (click)="editor.zoomOut()" aria-label="Zoom out">
     <mat-icon>remove</mat-icon>
@@ -63,3 +69,4 @@ they mean anything.
     <mat-icon>{{editor.routing() === 'curved' ? 'turn_sharp_right' : 'gesture'}}</mat-icon>
   </button>
 </div>
+}

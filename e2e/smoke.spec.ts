@@ -4352,3 +4352,46 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
         'fig-1100', 'fig-300', 'fig-3000', 'fig-500', 'fig-600', 'fig-630', 'fig-700',
       ]);
 });
+
+
+/**
+ * A node with the surface has it to itself.
+ *
+ * Zoom and pan are already suspended while one is full — panning behind
+ * something that covers the surface moves a graph nobody can see — so the
+ * chrome offering those gestures has nothing left to do, and it was sitting on
+ * top of what the node draws. A full plot's legend was disappearing behind the
+ * zoom buttons, which is how this was noticed.
+ *
+ * Measured rather than assumed: a full node fills the viewport whatever the
+ * zoom is, so the buttons were not merely idle, they were describing an effect
+ * they would not have.
+ */
+test('the viewport controls step aside for a node that has the surface', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const controls = page.locator('.viewport-controls');
+
+  await expect(controls).toHaveCount(1);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const plot = editor.addNode('graph-timeseries');
+
+    plot.position = { x: 10, y: 60 };
+    editor.setView(plot.id, 'full');
+
+    return plot.id as number;
+  });
+
+  await expect(controls).toHaveCount(0);
+
+  // And back, because the node is what changed, not the editor.
+  await page.evaluate(nodeId => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.setView(nodeId, 'normal');
+  }, id);
+
+  await expect(controls).toHaveCount(1);
+});

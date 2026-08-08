@@ -312,7 +312,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 23 },
+  config: { seedVersion: 24 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -1645,10 +1645,18 @@ export const tno = () => ({
        * them off screen. A network belongs to the map its data fits.
        */
       config: { which: 1 },
+      /*
+       * Files, not places. The sockets said `geo` from when this switch chose
+       * between two lists of stations, and kept saying it after it began
+       * carrying whole network files — so the editor counted three sockets
+       * whose type never settled and said so in the toolbar. It was right:
+       * everything ran, because a saved connection is not re-checked, and the
+       * flow was still describing itself wrongly.
+       */
       sockets: [
-        { id: 510, type: 'in', formats: ['geo'] },
-        { id: 511, type: 'in', formats: ['geo'] },
-        { id: 512, type: 'out', format: 'geo' },
+        { id: 510, type: 'in', formats: ['data'] },
+        { id: 511, type: 'in', formats: ['data'] },
+        { id: 512, type: 'out', format: 'data' },
       ],
       position: { x: 40, y: 26 },
     },
