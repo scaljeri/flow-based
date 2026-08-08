@@ -2967,9 +2967,18 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
      * station that does not publish what was asked for is the ordinary case,
      * not an edge one.
      */
-    if (/series\/(lml|samenmeten)\/S[12]\/PM2\.5-metingen\.json$/.test(url)
-      || /series\/eea\/S3\/PM2\.5-metingen\.json$/.test(url)) {
-      return route.fulfill(answer({ code: 'S1', start: '2026-05-21', resolution: 'day', values: [3, null, 5, 4] }));
+    if (/series\/(lml|samenmeten)\/S[12]\/PM2\.5-sectoren\.json$/.test(url)
+      || /series\/eea\/S3\/PM2\.5-sectoren\.json$/.test(url)) {
+      return route.fulfill(answer({
+        code: 'S1',
+        name: 'Somewhere',
+        start: '2026-05-21',
+        resolution: 'day',
+        labels: ['Shipping', 'Livestock', 'Boundary'],
+        // A null row is a day nobody computed, which is not a day that came to
+        // nothing — the plot has to keep those apart.
+        values: [[1, 2, 3], null, [2, 2, 2], [0, 1, 5]],
+      }));
     }
 
     // Anything else is a URL this flow should never have built.
@@ -3066,18 +3075,30 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     const request = station?.children.find((child: any) => child.type === 'net-request');
 
     return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
-  }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/lml/S1/PM2.5-metingen.json');
+  }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/lml/S1/PM2.5-sectoren.json');
 
   /*
-   * And it is drawn. Three points out of four values: the null is a day the
-   * station did not report, and it stays a hole rather than sliding the two
-   * readings after it a day earlier.
+   * And it is drawn: three named parts over four days, one of which nobody
+   * computed. The null row stays null rather than becoming three zeros — a day
+   * with no answer and a day that came to nothing are different answers, and a
+   * bar of height zero would claim the second.
    */
   await expect.poll(() => page.evaluate(() => {
     const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const stack = (flow.getWorker(1100) as { buffer: { stack?: { labels: string[]; rows: unknown[] } } })
+      .buffer.stack;
 
-    return (flow.getWorker(1100) as { buffer: { points: unknown[] } }).buffer.points.length;
-  })).toBe(3);
+    return stack ? `${stack.labels.join()}|${stack.rows.length}|${stack.rows[1]}` : '';
+  })).toBe('Shipping,Livestock,Boundary|4|null');
+
+  // And the plot is captioned with what the FILE calls the thing, not with
+  // what the request asked for: the question knows it wanted a station, the
+  // answer knows which one.
+  expect(await page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+
+    return (flow.getWorker(1100) as { buffer: { labels?: { title?: string } } }).buffer.labels?.title;
+  })).toBe('Somewhere');
 
   // Every part of that address came from somewhere else: `nl` from the config's
   // region id, `lml` and `metingen` from the network's own file, `PM2.5` from
@@ -3104,7 +3125,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     const request = station?.children.find((child: any) => child.type === 'net-request');
 
     return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
-  }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/samenmeten/S2/PM2.5-metingen.json');
+  }), { timeout: 20_000 }).toBe('../tno-topas/data/nl/series/samenmeten/S2/PM2.5-sectoren.json');
 
   /*
    * A press on the European map asks the European way — `eu` and `eea` — from
@@ -3122,7 +3143,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     const request = station?.children.find((child: any) => child.type === 'net-request');
 
     return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
-  }), { timeout: 20_000 }).toBe('../tno-topas/data/eu/series/eea/S3/PM2.5-metingen.json');
+  }), { timeout: 20_000 }).toBe('../tno-topas/data/eu/series/eea/S3/PM2.5-sectoren.json');
 
   /*
    * And a station that cannot answer empties the picture rather than leaving
@@ -3137,8 +3158,8 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   await expect.poll(() => page.evaluate(() => {
     const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
 
-    return (flow.getWorker(1100) as { buffer: { points: unknown[] } }).buffer.points.length;
-  }), { timeout: 20_000 }).toBe(0);
+    return (flow.getWorker(1100) as { buffer: { stack?: unknown } }).buffer.stack === undefined;
+  }), { timeout: 20_000 }).toBe(true);
 
   // The Dutch switch offers the two Dutch networks and nothing else.
   await page.evaluate(() => {

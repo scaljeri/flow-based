@@ -24,6 +24,19 @@ export interface SeriesBuffer {
    * not tell "here are four values" from "here is where it went".
    */
   marks?: { re: number; im: number; label?: string }[];
+  /**
+   * A composition rather than a quantity: what a total is MADE of, per step.
+   *
+   * `labels` names the parts once, and every row is that day's amount for
+   * each of them, in the same order. Kept apart from `points` because the two
+   * answer different questions — a point says how much, a stack says how much
+   * of what — and a plot that mixed them would have to guess which of a row's
+   * eighteen numbers was the y.
+   *
+   * A null row is a step with no answer, which is not the same as a step whose
+   * parts are all zero.
+   */
+  stack?: { labels: string[]; rows: (number[] | null)[] };
   /** Which mark the producer is on now, if any. */
   current?: number;
 }
@@ -109,6 +122,25 @@ export class TimeseriesWorker implements FbNodeWorker {
 
       buffer.marks = message.marks;
       buffer.current = message.current;
+
+      return true;
+    }
+
+    if (value && typeof value === 'object' && 'stack' in (value as object)) {
+      const message = value as { stack: SeriesBuffer['stack']; title?: string };
+
+      // An empty stack is an answer: see the empty sweep below.
+      buffer.stack = message.stack?.labels?.length ? message.stack : undefined;
+
+      /*
+       * And what it is a breakdown OF, when the source said. Carried on the
+       * same message rather than a separate one, because the name and the
+       * composition are one answer to one question — sending them apart is
+       * how a plot ends up captioned with the previous station's name.
+       */
+      if (message.title !== undefined) {
+        buffer.labels = { ...buffer.labels, title: message.title };
+      }
 
       return true;
     }

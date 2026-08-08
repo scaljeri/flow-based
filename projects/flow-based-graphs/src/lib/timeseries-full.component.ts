@@ -47,6 +47,7 @@ import { TimeseriesView } from './timeseries-view';
   `]
 })
 export class TimeseriesFullComponent extends TimeseriesView {
+  protected override readonly legend = true;
   protected override readonly axes = true;
 
 }

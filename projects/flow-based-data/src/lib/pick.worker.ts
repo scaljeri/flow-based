@@ -1,7 +1,7 @@
 import { FbConnection, FbNodeWorker, FbSocket, readConfigValue, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
-export type PickShape = 'value' | 'text' | 'geo' | 'point' | 'grid';
+export type PickShape = 'value' | 'text' | 'geo' | 'point' | 'grid' | 'stack';
 
 export interface PickConfig {
   /** What to build out of what arrives. */
@@ -16,8 +16,13 @@ export interface PickConfig {
   ref?: string;
   /** How many items to keep. */
   limit?: number;
-  /** Where a raster's parts are, when the shape is a grid. */
+  /** Where a raster's parts are, when the shape is a grid — and where a
+   *  stack's rows are, which is the same field for the same reason. */
   values?: string;
+  /** Where a stack's part names live. */
+  labels?: string;
+  /** Path to what the whole composition is called, for a plot to put above it. */
+  title?: string;
   lat?: string;
   lon?: string;
   /** Named `dims` rather than `shape`, which this config already spends on
@@ -220,6 +225,9 @@ export class PickWorker implements FbNodeWorker {
       case 'point':
         return [];
 
+      case 'stack':
+        return { stack: { labels: [], rows: [] }, ...this.meta };
+
       case 'text':
         return '';
 
@@ -235,6 +243,23 @@ export class PickWorker implements FbNodeWorker {
   private pick(source: unknown): unknown {
     if (this.shape === 'grid') {
       return { grid: this.toGrid(source), ...this.meta };
+    }
+
+    if (this.shape === 'stack') {
+      /*
+       * The name comes from the FILE when it says one, and from the source's
+       * own title otherwise. A breakdown is about one thing — a station, a
+       * region, a machine — and that thing's name is in the answer far more
+       * often than in the question: the request only knows it asked for a
+       * station, the file knows which.
+       */
+      const named = this.config.title ? readConfigValue(source, this.config.title) : undefined;
+
+      return {
+        stack: this.toStack(source),
+        ...this.meta,
+        ...(named === undefined || named === null ? {} : { title: String(named) }),
+      };
     }
 
     if (this.shape === 'value' || this.shape === 'text') {
@@ -319,6 +344,39 @@ export class PickWorker implements FbNodeWorker {
     this.count = points.length;
 
     return points;
+  }
+
+  /**
+   * A composition per step: what the total is made OF.
+   *
+   * The names once, the amounts per step — which is how anyone publishing a
+   * breakdown writes it, because repeating eighteen names on every one of
+   * forty-five days would be forty-five times the file for no information.
+   *
+   * A row that is not an array stays `null` rather than becoming a row of
+   * zeros: a day nobody computed and a day that came to nothing are different
+   * answers, and a bar of height zero would claim the second.
+   */
+  private toStack(source: unknown): { labels: string[]; rows: (number[] | null)[] } {
+    const labels = readConfigValue(source, this.config.labels || 'labels');
+    const rows = readConfigValue(source, this.config.values || 'values');
+
+    if (!Array.isArray(labels) || !Array.isArray(rows)) {
+      throw new Error(
+        `Expected "${this.config.labels || 'labels'}" and "${this.config.values || 'values'}" to be arrays`,
+      );
+    }
+
+    const named = labels.map(String);
+
+    this.count = rows.length;
+
+    return {
+      labels: named,
+      rows: rows.map(row => (Array.isArray(row)
+        ? named.map((_, index) => Number(row[index]) || 0)
+        : null)),
+    };
   }
 
   /**

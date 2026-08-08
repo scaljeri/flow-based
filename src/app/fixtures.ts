@@ -1265,7 +1265,7 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
    */
   const seriesPath = reads('series path', 'series.path', { x: 4, y: 20 });
   const networkId = reads('network id', 'network', { x: 4, y: 34 });
-  const seriesType = reads('measurements', 'series.types.measurements', { x: 4, y: 48 });
+  const seriesType = reads('breakdown', 'series.types.sectors', { x: 4, y: 48 });
   const regionId = reads('region', regionPath, { x: 4, y: 62 });
 
   const file = builds(
@@ -1276,7 +1276,12 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
   const url = builds('series URL', ['path'], { x: 48, y: 20 }, '../tno-topas/{path}');
 
   const get = fetches('That station’s readings', { x: 68, y: 20 });
-  const points = shapes('readings', { shape: 'point', list: 'values' }, 'point', { x: 88, y: 20 });
+  const points = shapes(
+    'breakdown',
+    { shape: 'stack', labels: 'labels', values: 'values', title: 'name' },
+    'stack',
+    { x: 88, y: 20 },
+  );
 
   const wire = (from: { id: number }, out_: number, to: { id: number }, in_: number) =>
     ({ id: nextId(), from: from.id, to: to.id, out: out_, in: in_ });
@@ -1295,7 +1300,7 @@ function stationReadings(flowId: number, regionPath: string, position: { x: numb
       { id: inn.network, type: 'in', name: 'network file', format: 'data' },
       { id: inn.config, type: 'in', name: 'config', format: 'data' },
       { id: inn.pollutant, type: 'in', name: 'pollutant', format: 'string' },
-      { id: out.readings, type: 'out', name: 'readings', format: 'point' },
+      { id: out.readings, type: 'out', name: 'breakdown', format: 'stack' },
     ],
     children: [
       code.node, seriesPath.node, networkId.node, seriesType.node, regionId.node,
@@ -1328,7 +1333,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 19 },
+  config: { seedVersion: 20 },
   /*
    * The same flow, read as an article.
    *
@@ -1501,38 +1506,41 @@ export const tno = () => ({
           'official network’s name — three thousand markers you could press and get ' +
           'nothing.\n' +
           '\n' +
-          'What comes back is a bare array of numbers with its start date and its step ' +
-          'stated once beside it — no timestamp per reading, which would double the ' +
-          'file for no information. So the horizontal axis is the day number of the ' +
-          'published window, and the gaps are real: a null is a day the station did not ' +
-          'report, and it stays a hole rather than sliding everything after it a day ' +
-          'earlier.\n' +
+          'What comes back is not a measurement. It is the model’s answer for that ' +
+          'spot, broken into the eighteen labels from the second section — and this is ' +
+          'where the labelling stops being a method and becomes a picture. Eighteen ' +
+          'names once, then one row of eighteen numbers per day, because repeating the ' +
+          'names on every one of forty-five days would be forty-five times the file for ' +
+          'no information.\n' +
           '\n' +
-          'Bars rather than a line, and that is not decoration. Each of these is a day’s ' +
-          'value, standing on its own; a line between two of them draws a claim nobody ' +
-          'made — that the air moved smoothly from Tuesday’s number to Wednesday’s. A ' +
-          'bar says *this day, this much*, which is all the file says.\n' +
-          '\n' +
-          'Not every station answers. Twenty-three of the ninety-three official ones do ' +
-          'not measure PM2.5 at all, and asking them for it gets a plain 404 — which the ' +
-          'request says, in red, and the graph answers by emptying. That last part had ' +
-          'to be built: a failed fetch used to travel nowhere, so the picture went on ' +
-          'showing the previous station’s readings with this station’s name in your ' +
-          'head. An empty graph is the honest answer to a question the data cannot ' +
-          'take.\n' +
-          '\n' +
-          'The European map has a pair of its own, off to the side of this page. Press a ' +
-          'station there and the address says `eu` and `eea` instead, worked out the ' +
-          'same way from the same three files.',
+          'Stacked bars, one per day: the height is the total and each band is one ' +
+          'source’s share of it. Bars rather than a line because these are daily values ' +
+          'standing on their own — a line between two of them draws a claim nobody ' +
+          'made, that the air moved smoothly from Tuesday’s number to Wednesday’s.',
       },
-      { type: 'node', nodeId: 1100, float: 'none', width: '420px', caption: 'One station, day by day' },
+      { type: 'node', nodeId: 1100, float: 'none', width: '440px', caption: 'One station, taken apart' },
       {
         type: 'text',
         text:
+          'The legend is the reading. `Boundary` is what blew in across the edge of the ' +
+          'model; `Seasalt` and `Saharan Dust` are nobody’s to reduce; the rest is a ' +
+          'list of decisions somebody could make. Read the percentages and the second ' +
+          'section stops being a claim about the Netherlands and becomes a claim about ' +
+          'this street.\n' +
+          '\n' +
+          'Not every station answers. Twenty-three of the ninety-three official ones do ' +
+          'not measure PM2.5 at all, so the model publishes nothing for them under that ' +
+          'name and asking gets a plain 404 — which the request says, in red, and the ' +
+          'graph answers by emptying. That last part had to be built: a failed fetch ' +
+          'used to travel nowhere, so the picture went on showing the previous ' +
+          'station’s bars with this station’s name in your head. An empty graph is the ' +
+          'honest answer to a question the data cannot take.\n' +
+          '\n' +
           'Change the pollutant above and press again: the same station, a different ' +
           'file, because the choice is one of the five parts the address is built from. ' +
-          'That is the whole trick of this flow, and it is not a trick — the publisher ' +
-          'wrote down where everything is, and the flow reads it rather than guessing.',
+          'The European map has a pair of its own, off to the side of this page — press ' +
+          'a station there and the address says `eu` and `eea` instead, worked out the ' +
+          'same way from the same three files.',
       },
 
       { type: 'heading', text: 'Why the colours are not decoration', level: 2 },
@@ -1742,7 +1750,7 @@ export const tno = () => ({
        * A bar says "this day, this much", which is all the file says.
        */
       config: { style: 'bars' },
-      sockets: [{ id: 1110, type: 'in', formats: ['number', 'point'] }],
+      sockets: [{ id: 1110, type: 'in', formats: ['number', 'point', 'stack'] }],
       position: { x: 84, y: 32 },
     },
     {
@@ -1750,7 +1758,7 @@ export const tno = () => ({
       title: 'One European station',
       id: 1200,
       config: { style: 'bars' },
-      sockets: [{ id: 1210, type: 'in', formats: ['number', 'point'] }],
+      sockets: [{ id: 1210, type: 'in', formats: ['number', 'point', 'stack'] }],
       position: { x: 84, y: 66 },
     },
   ],

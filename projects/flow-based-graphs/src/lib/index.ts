@@ -1,5 +1,5 @@
 import { FbModule } from '@scaljeri/flow-based';
-import { fbArray, fbNumber, fbObject } from '@scaljeri/flow-based-core';
+import { fbArray, fbNumber, fbObject, fbString } from '@scaljeri/flow-based-core';
 import { TimeseriesWorker } from './timeseries.worker';
 import { TimeseriesSmallComponent } from './timeseries-small.component';
 import { TimeseriesNormalComponent } from './timeseries-normal.component';
@@ -86,6 +86,19 @@ export const GRAPHS_MODULE: FbModule = {
       color: '#7f8fd8',
       shape: fbObject({ re: fbNumber, im: fbNumber, span: fbNumber }),
     },
+    /*
+     * What a total is made of, per step. Not a `point`: a point says how much,
+     * this says how much of what, and a plot handed one where it expected the
+     * other would have to guess which of eighteen numbers was the y.
+     */
+    {
+      name: 'stack',
+      description: 'A composition per step: named parts and a row of amounts each',
+      color: '#d18f4a',
+      shape: fbObject({
+        stack: fbObject({ labels: fbArray(fbString), values: fbArray(fbArray(fbNumber)) }),
+      }),
+    },
     {
       name: 'grid', description: 'A regular raster of values over an area', color: '#e0a55a',
       shape: fbObject({
@@ -113,7 +126,7 @@ export const GRAPHS_MODULE: FbModule = {
         resizable: true,
         config: { style: 'line' },
         // Readings over time, or sampled points — both are drawable series.
-        sockets: [{ type: 'in', formats: ['number', 'point'] }],
+        sockets: [{ type: 'in', formats: ['number', 'point', 'stack'] }],
         /*
          * Every input is one drawn layer, so there can be as many as you like
          * — but a plot has nothing to send anywhere, and an output would be a

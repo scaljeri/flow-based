@@ -45,6 +45,26 @@ function niceTicks(min: number, max: number, maxCount: number): number[] {
   return ticks;
 }
 
+
+/**
+ * One colour per band, by position.
+ *
+ * Eighteen that stay apart at six pixels wide, which is a harder problem than
+ * eighteen that look nice: neighbours in the list end up as neighbours in the
+ * bar, so the order alternates hue rather than walking the wheel. Repeats
+ * after the list runs out, which is honest — a stack of forty parts has no
+ * readable colouring and should not pretend to.
+ */
+const BANDS = [
+  '#bada55', '#ff4081', '#2aa7a0', '#f6c87d', '#9988cf', '#4fa3d1',
+  '#e34948', '#19d57f', '#d081b8', '#e0a55a', '#6a5acd', '#4ff1f3',
+  '#c77d0a', '#8ac944', '#b0e0e6', '#c71585', '#00807f', '#ffd700',
+];
+
+/** Roughly the width of a legend entry, and the height of one row. */
+const LEGEND_COLUMN = 96;
+const LEGEND_ROW = 11;
+
 @Directive()
 export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy {
   protected readonly service = inject(NodeService);
@@ -108,6 +128,17 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
   /** The open views draw axes; the sparkline stays bare. */
   protected readonly axes: boolean = false;
 
+  /**
+   * And a legend, which only the open views have room for.
+   *
+   * A stack of eighteen parts is unreadable without one — the bars say a
+   * composition changed and nothing about what it is composed OF. At sparkline
+   * size there is no room for eighteen names, and a legend squeezed into 110
+   * pixels is worse than none: the shape still reads, and the reader who wants
+   * the names opens the node.
+   */
+  protected readonly legend: boolean = false;
+
   /** The series' own title, for the open views to put above the plot. */
   get title(): string {
     return this.worker?.buffer.labels?.title ?? '';
@@ -136,10 +167,18 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     }
 
     const ctx = canvas.getContext('2d')!;
-    const { points } = this.worker.buffer;
+    const { points, stack } = this.worker.buffer;
     const { width, height } = canvas;
 
     ctx.clearRect(0, 0, width, height);
+
+    // A composition is drawn differently from a quantity, and it arrives on
+    // its own field, so it decides the drawing before anything else does.
+    if (stack) {
+      this.drawStack(ctx, stack, width, height);
+
+      return;
+    }
 
     if (points.length < 2) {
       return;
@@ -240,6 +279,135 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
    * itself (set at the formula, travelling with the samples), with f(x) and
    * x as the honest defaults for a series that never introduced itself.
    */
+  /**
+   * A stack of parts per step, drawn as one bar per step.
+   *
+   * The bars are the whole point: a line would need eighteen of them and no
+   * reader can follow eighteen lines, while a stacked bar puts the total and
+   * its composition in the same shape. Height is the total, and each band is
+   * one part of it.
+   *
+   * The colours are assigned by POSITION in the label list, not by name.
+   * Naming them would mean this module knowing what the labels mean, which is
+   * exactly what it must not: a plot draws whatever arrives, and the file that
+   * arrived is the only thing that knows whether band four is shipping or
+   * Switzerland. Position is stable for as long as the source keeps its own
+   * order, which is the same promise the labels themselves make.
+   */
+  private drawStack(
+    ctx: CanvasRenderingContext2D,
+    stack: { labels: string[]; rows: (number[] | null)[] },
+    width: number,
+    height: number,
+  ): void {
+    const rows = stack.rows;
+
+    if (!rows.length) {
+      return;
+    }
+
+    const totals = rows.map(row => (row ? row.reduce((sum, part) => sum + (part || 0), 0) : 0));
+    const maxY = Math.max(...totals, 0) || 1;
+
+    const pad = 6;
+    const left = this.axes ? 44 : pad;
+    const top = this.axes ? 10 : pad;
+    const legendHeight = this.legend ? this.legendHeight(stack.labels.length, width) : 0;
+    const bottom = (this.axes ? 34 : pad) + legendHeight;
+
+    if (this.axes) {
+      this.drawAxes(ctx, {
+        width, height, left, bottom, top, pad,
+        minX: 0, maxX: Math.max(1, rows.length - 1), minY: 0, maxY,
+      });
+    }
+
+    const plotHeight = height - bottom - top;
+    const slot = (width - left - pad) / rows.length;
+    const barWidth = Math.max(1, slot - 1);
+
+    rows.forEach((row, index) => {
+      if (!row) {
+        return;
+      }
+
+      const x = left + index * slot;
+      let base = height - bottom;
+
+      row.forEach((part, band) => {
+        const value = part || 0;
+
+        if (value <= 0) {
+          return;
+        }
+
+        const bandHeight = (value / maxY) * plotHeight;
+
+        ctx.fillStyle = BANDS[band % BANDS.length];
+        ctx.fillRect(x, base - bandHeight, barWidth, bandHeight);
+        base -= bandHeight;
+      });
+    });
+
+    if (this.legend) {
+      this.drawLegend(ctx, stack, totals, width, height, legendHeight);
+    }
+  }
+
+  /** How much room the names need, which decides where the bars stop. */
+  private legendHeight(count: number, width: number): number {
+    const columns = Math.max(1, Math.floor(width / LEGEND_COLUMN));
+
+    return Math.ceil(count / columns) * LEGEND_ROW + 6;
+  }
+
+  /**
+   * The names, with each one's share of the whole window.
+   *
+   * The share is what turns a legend into a reading. "Shipping" says which
+   * band is which; "Shipping 11%" says what the picture is actually about,
+   * and it is the number a person repeats afterwards.
+   */
+  private drawLegend(
+    ctx: CanvasRenderingContext2D,
+    stack: { labels: string[]; rows: (number[] | null)[] },
+    totals: number[],
+    width: number,
+    height: number,
+    legendHeight: number,
+  ): void {
+    const sums = stack.labels.map((_, band) =>
+      stack.rows.reduce((sum, row) => sum + (row?.[band] || 0), 0));
+    const whole = sums.reduce((sum, part) => sum + part, 0) || 1;
+    const columns = Math.max(1, Math.floor(width / LEGEND_COLUMN));
+    const columnWidth = width / columns;
+    const top = height - legendHeight + 4;
+
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+
+    stack.labels.forEach((label, band) => {
+      const x = (band % columns) * columnWidth + 4;
+      const y = top + Math.floor(band / columns) * LEGEND_ROW + LEGEND_ROW / 2;
+
+      ctx.fillStyle = BANDS[band % BANDS.length];
+      ctx.fillRect(x, y - 3, 6, 6);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.fillText(
+        `${label} ${Math.round((sums[band] / whole) * 100)}%`,
+        x + 10,
+        y,
+        columnWidth - 16,
+      );
+    });
+
+    // Totals are read by drawStack for the y-range; naming the parameter keeps
+    // the two in step if one of them ever stops being a plain sum.
+    void totals;
+  }
+
   private drawAxes(
     ctx: CanvasRenderingContext2D,
     m: { width: number; height: number; left: number; bottom: number; top: number; pad: number;
