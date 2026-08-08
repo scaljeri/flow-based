@@ -1131,22 +1131,37 @@ export class FbFlowDocumentElement extends LitElement {
   }
 
   /**
-   * The blocks grouped per heading, so a section is a real element.
+   * The blocks grouped into the stretches one figure belongs to.
    *
    * A flat list of blocks cannot say where a figure stops belonging: on a
-   * narrow screen the figures are pinned while their own section is being
-   * read, and "its own section" has to be an ancestor element for that to
+   * narrow screen the figures are pinned while their own stretch is being
+   * read, and "its own stretch" has to be an ancestor element for that to
    * mean anything. A plain block-level section establishes no float context,
    * so nothing about the wide layout changes.
+   *
+   * A new stretch begins at every heading AND at every figure. The second is
+   * the part that was missing: a section with two figures pinned both of them
+   * at the top of the screen at once, and the later one painted over the
+   * earlier — a list of viewpoints sitting in the middle of the picture it
+   * was supposed to be about, with the picture's edges showing all round it.
+   *
+   * One figure per stretch means the outgoing one stops being pinned exactly
+   * when the next arrives: it is carried up and away by the stretch it
+   * belongs to, rather than staying behind to be covered.
    */
   private sectionsOf(blocks: FbDocBlock[]): FbDocBlock[][] {
     const sections: FbDocBlock[][] = [];
+    let hasFigure = false;
 
     for (const block of blocks) {
-      if (block.type === 'heading' || !sections.length) {
+      const starts = block.type === 'heading' || (block.type === 'node' && hasFigure);
+
+      if (starts || !sections.length) {
         sections.push([]);
+        hasFigure = false;
       }
 
+      hasFigure = hasFigure || block.type === 'node';
       sections[sections.length - 1].push(block);
     }
 

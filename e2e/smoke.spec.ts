@@ -4472,3 +4472,40 @@ test('the viewport controls step aside for a node that has the surface', async (
 
   await expect(controls).toHaveCount(1);
 });
+
+
+/**
+ * On a phone, one pinned figure at a time.
+ *
+ * A figure sticks to the top while its own stretch of the page is being read,
+ * so the picture and the sentence that changes it are on screen together. Two
+ * figures in one stretch pinned both at once and the later one painted over
+ * the earlier — a list of viewpoints sitting in the middle of the picture it
+ * was about, with the picture's edges showing all round it.
+ *
+ * A new stretch at every figure is the whole fix: the outgoing one stops being
+ * pinned exactly when the next arrives, carried away by the stretch it belongs
+ * to rather than left behind to be covered.
+ */
+test('a phone pins one figure per stretch of the page', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.goto('/?embed=doc');
+
+  await expect(page.locator('fb-flow-document h1')).toBeVisible();
+
+  const perSection = () => page.evaluate(() => {
+    const doc = document.querySelector('fb-flow-document')!;
+
+    return [...doc.shadowRoot!.querySelectorAll('article > section')]
+      .map(section => section.querySelectorAll('figure').length);
+  });
+
+  await expect.poll(perSection, { timeout: 20_000 }).not.toHaveLength(0);
+
+  const counts = await perSection();
+
+  // Never two, and the document is made of more than one stretch — a single
+  // section holding everything would pass the first check and mean nothing.
+  expect(Math.max(...counts)).toBeLessThanOrEqual(1);
+  expect(counts.filter(count => count === 1).length).toBeGreaterThan(3);
+});
