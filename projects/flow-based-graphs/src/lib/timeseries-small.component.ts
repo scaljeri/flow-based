@@ -5,7 +5,14 @@ import { TimeseriesView } from './timeseries-view';
 @Component({
   standalone: true,
   selector: 'fb-timeseries-small',
-  template: `<canvas #plot></canvas><span class="latest">{{latest}}</span>`,
+  template: `
+    <canvas #plot></canvas>
+    @if (waiting) {
+      <span class="waiting">nothing yet</span>
+    } @else {
+      <span class="latest">{{latest}}</span>
+    }
+  `,
   styles: [`
     :host {
       align-items: center;
@@ -25,6 +32,11 @@ import { TimeseriesView } from './timeseries-view';
     .latest {
       font-variant-numeric: tabular-nums;
       opacity: 0.7;
+    }
+
+    .waiting {
+      font-style: italic;
+      opacity: 0.45;
     }
   `]
 })

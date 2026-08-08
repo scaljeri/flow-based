@@ -121,6 +121,20 @@ export abstract class TimeseriesView implements OnInit, AfterViewInit, OnDestroy
     return value === undefined ? '' : Number.isInteger(value) ? String(value) : value.toFixed(3);
   }
 
+  /**
+   * Whether anything has arrived at all.
+   *
+   * A plot waiting for its first value draws an empty rectangle, which on a
+   * canvas full of nodes reads as a node that is broken rather than one that
+   * is ready. Saying so costs a word and answers the question a reader would
+   * otherwise have to open the node to ask.
+   */
+  get waiting(): boolean {
+    const buffer = this.worker?.buffer;
+
+    return !buffer || (!buffer.points.length && !buffer.stack && !buffer.marks?.length);
+  }
+
   protected get style(): TimeseriesStyle {
     return this.service.state.config?.style ?? 'line';
   }
