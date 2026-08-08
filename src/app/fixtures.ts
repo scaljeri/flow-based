@@ -1448,7 +1448,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 30 },
+  config: { seedVersion: 31 },
   /*
    * The same flow, read as an article.
    *
@@ -1470,9 +1470,9 @@ export const tno = () => ({
         type: 'text',
         text:
           'A measuring station tells you how much of something is in the air. It cannot ' +
-          'tell you whose it is — no instrument can separate a microgram from a ship ' +
-          'from a microgram from a farm, because by the time it arrives they are the ' +
-          'same dust.\n' +
+          'tell you whose it is — from which country, from which sector. No instrument ' +
+          'can separate a microgram from a ship from a microgram from a farm, because by ' +
+          'the time it arrives they are the same dust.\n' +
           '\n' +
           'That second question is answered by a model instead. TNO runs one daily in ' +
           'which every emission is TAGGED at its source and the tag is carried through ' +
