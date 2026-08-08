@@ -4401,7 +4401,7 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
 
   // The flow arrives asynchronously — seeded, then its modules downloaded —
   // and this one speaks three of them, so it is slower than the demo.
-  await expect(doc.locator('h1')).toHaveText('Whose air is it?', { timeout: 30_000 });
+  await expect(doc.locator('h1')).toHaveText('Air pollutants decomposed', { timeout: 30_000 });
   await expect(doc.locator('h2')).toHaveCount(2);
 
   /*

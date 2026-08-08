@@ -1439,7 +1439,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 29 },
+  config: { seedVersion: 30 },
   /*
    * The same flow, read as an article.
    *
@@ -1455,7 +1455,7 @@ export const tno = () => ({
    * is, it says whose air it is.
    */
   document: {
-    title: 'Whose air is it?',
+    title: 'Air pollutants decomposed',
     blocks: [
       {
         type: 'text',
