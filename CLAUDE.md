@@ -9,16 +9,31 @@ This file is the working contract for the repository: the commands, the rules
 that hold everywhere, and what counts as finished. Background and the reasoning
 behind individual decisions belong in the code comments and in `docs/`.
 
+## Map
+
+| Piece | Path | Is |
+|---|---|---|
+| Engine | `projects/flow-based-core` | Framework-free: the flow graph (`flow.ts`), save/load and migrations (`serialization.ts`, `FB_FLOW_FORMAT_VERSION`), the inline prose parser (`inline.ts`). |
+| Shell | `projects/flow-based-lit` | Web components on core alone — canvas, nodes, connections, the document renderer (`document-element.ts`). No Angular. |
+| Angular wrapper | `projects/flow-based` | Hosts the shell; owns the module and format registry (`module-registry.ts`). Never duplicate what the shell already does. |
+| Node modules | `projects/flow-based-{math,graphs,network,data}` | Lazily loaded chunks, registered via `src/app/modules.service.ts`. |
+| Demo | `src/app` | The application, with its seeded flows in `src/app/fixtures.ts`. |
+
+Build order is core → lit → flow-based → modules; `npm run build:lib` encodes
+it. End-to-end tests use two servers: port 4200 serves the Angular demo
+(`e2e/smoke.spec.ts`), port 4400 the lit harness (`e2e/lit-shell.spec.ts`).
+
 ## Commands
 
 | Command | Does |
 |---|---|
-| `npm run build:lib` | Builds the libraries in dependency order. Required before a demo build can resolve them. |
+| `npm start` | Builds the libraries, then serves the demo on port 4200. |
+| `npm run build:lib` | Builds the libraries in dependency order. Required before the demo can build or its tests can resolve them — including on a fresh clone. |
 | `npm run build:demo` | Libraries, demo application and playground modules into `dist/demo/browser`. |
 | `npm test` | Unit tests (core, flow-based, demo). |
 | `npm run lint` | Every project. |
 | `npx playwright test` | End-to-end tests. `-g "<name>"` runs one. |
-| `npm run check:docs` | Compiles the `ts check` blocks in `docs/`. |
+| `npm run check:docs` | Compiles the `ts check` blocks in `docs/MODULES.md` — the only file it reads; a new doc with checked blocks joins `DOCS` in `scripts/check-doc-examples.mjs`. |
 | `npm run deploy` | Builds with base-href `/fbp/` and uploads. Needs `ACCESS_TOKEN`; see `.env.example`. |
 
 Always run the npm script rather than the steps inside it: `ng` is not on the
@@ -51,7 +66,8 @@ fail on the deployed sub-path.
 - **No case-specific knowledge in the editor or its modules.** A demo's data
   source is one case: its field names, its vocabulary and its defaults belong in
   a flow, never in `projects/`. The generic form goes in the module ("read this
-  path from what arrived"); the specific string goes in the fixture.
+  path from what arrived"); the specific string goes in the flow — for shipped
+  demos, in `src/app/fixtures.ts`.
 - **Opening a flow must not execute a module the browser has never seen.** A
   flow is a file, and doing so would be a drive-by execution.
 - **No new dependency without agreement.**

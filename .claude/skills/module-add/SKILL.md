@@ -1,6 +1,6 @@
 ---
 name: module-add
-description: Add a node module or a node type — a new lazily loaded workspace package under projects/, or a new type inside an existing module. Use when a new kind of node is needed, when a module needs a new format, or when node types are renamed or split.
+description: Add a node module or a node type — a new lazily loaded workspace package under projects/, or a new type inside an existing module. Use when a new kind of node is needed, when a module needs a new wire format, when node types are renamed or split, or when a saved-flow migration or format-version bump is needed.
 ---
 
 # Adding a module or a node type
@@ -59,8 +59,8 @@ specific string lives in the flow.
 ## Renaming or splitting a type
 
 Saved flows exist in browsers that cannot be reached. A rename requires a
-migration step in `serialization.ts`, keyed by the version it migrates from, and
-`FB_FLOW_FORMAT_VERSION` is raised by one. A split keeps the original node's id
+migration step in `projects/flow-based-core/src/lib/serialization.ts`, keyed by
+the version it migrates from, and `FB_FLOW_FORMAT_VERSION` is raised by one. A split keeps the original node's id
 and its wired sockets on one of the halves and mints fresh ids from
 `highestId(flow)` for the other.
 

@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Release a change — test, commit, push the working branch, deploy to the playground, verify against the live site and restore the local build. Use when a change is functionally complete or when it needs to be visible at playground.calje.eu/fbp.
+description: Release a change — test, commit, push the working branch, deploy to the playground, verify against the live site and restore the local build. Use when a change is functionally complete or when it needs to be visible at playground.calje.eu/fbp (Dutch cues - "zet het live", "publiceer", "deploy maar").
 ---
 
 # Ship
@@ -19,13 +19,15 @@ npx playwright test
 
 A failure is reported plainly and first. Before treating one as an environment
 flake, run that test alone (`-g "<name>"`) and check the load average: under
-contention the suite rotates failures, usually the drag-performance and
-map-highlight tests. A test that fails in isolation is a defect.
+contention the suite rotates failures, usually "a drag does not cost work
+proportional to the size of the graph" and "a clicked place stays marked on the
+map, including across a redraw". A test that fails in isolation is a defect.
 
-If the change touched a **lit** library, run `node scripts/build-lit-demo.mjs`
-first. `build:e2e` lives in the port-4200 web-server command, which Playwright
-skips when a server is already running, so the shell under test can otherwise
-be an old build.
+If the change touched a **lit** library, run `npm run build:lit-demo` first —
+it rebuilds the lit library and re-bundles the harness. The bare bundling
+script only re-bundles whatever already sits in `dist/flow-based-lit`, and
+Playwright reuses a running server, so the shell under test can otherwise be an
+old build.
 
 ## 2. Commit
 
@@ -37,10 +39,6 @@ behaviour was wrong** — the same standard the code comments are held to.
 ```bash
 set -a; . ./.env; set +a; npm run deploy
 ```
-
-Run the script, never its steps. `ng` is not on the PATH outside an npm script,
-and a hand-assembled build ships root-relative assets that fail on the deployed
-sub-path.
 
 ## 4. Verify, then restore the local build
 
@@ -59,10 +57,8 @@ afterwards.
 
 ## 5. Record and prune
 
-Write down what the work taught — a test named after the defect, a line in
-`CLAUDE.md` for a hazard no test can catch, a comment where a decision lives —
-and remove what has become dead weight: a rule now enforced by a check, a note
-about code that no longer exists, two entries saying the same thing.
+Close per "Finished means" in `CLAUDE.md`: write down what the work taught,
+then remove what the written layers no longer need.
 
 ## 6. Report
 

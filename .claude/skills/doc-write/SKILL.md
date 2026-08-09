@@ -1,6 +1,6 @@
 ---
 name: doc-write
-description: Write or revise the document a flow carries — the article shown in Doc view and at ?embed=doc. Use when adding or editing prose, headings or figures in a flow's `document`, when a section should be clearer or shorter, or when a node should appear as a figure.
+description: Write or revise the document a flow carries — the article shown in Doc view and at ?embed=doc. Use when adding or editing prose, headings or figures in a flow's `document`, when a section should be clearer or shorter, or when a node should appear as a figure (Dutch cues - "pas de tekst aan", "het artikel", "het verhaal", "het document").
 ---
 
 # Writing a flow's document
@@ -11,9 +11,10 @@ it is public writing rather than internal documentation.
 
 ## Register
 
-- **Scientific and unadorned, written for a reader who knows nothing of the
-  subject.** State what a thing is. Define each term where it first appears. Use
-  no metaphor the reader has to decode before they can use the sentence.
+- **Scientific, plainly worded and a bit enthusiastic — never poetic — written
+  for a reader who knows nothing of the subject.** State what a thing is.
+  Define each term where it first appears. Use no metaphor the reader has to
+  decode before they can use the sentence.
 - **Invite rather than embellish.** "Predict the result before you change this
   value" carries the interest; an adjective on the noun does not.
 - **Short.** Remove anything that repeats a point already made. Keep every
@@ -24,12 +25,12 @@ it is public writing rather than internal documentation.
   file disagree, quote the file.
 - **No plumbing.** A request node is not a figure. Machinery belongs in a
   subflow that presents a useful face, or off the page entirely.
-- **Do not defend a title.** Offer one and let it be changed.
+- **Offer a title and expect it to be changed** — do not defend it.
 
 ## Mechanics
 
 Blocks are `heading` | `text` | `node`, held under the flow's `document` in
-`fixtures.ts`. Inline syntax: `**strong**`, `*em*`, `` `code` ``, `$math$`,
+`src/app/fixtures.ts`. Inline syntax: `**strong**`, `*em*`, `` `code` ``, `$math$`,
 `[text](url)`, `{{nodeId:path}}` for an editable configuration value and
 `{{!name:Label}}` for a button the host application handles.
 
