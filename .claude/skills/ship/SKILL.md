@@ -59,15 +59,10 @@ afterwards.
 
 ## 5. Record and prune
 
-Before reporting, while the work is still in hand:
-
-- Write down anything discovered that will be needed again — as a test named
-  after the defect, as a line in `CLAUDE.md` if it always applies, or as a
-  comment where the decision lives.
-- Then remove what has become dead weight: a rule the linter now enforces, a
-  note about code that no longer exists, a hazard that has been designed out,
-  two entries saying the same thing. Written knowledge only grows unless
-  something takes it away, and stale instructions cost more than missing ones.
+Write down what the work taught — a test named after the defect, a line in
+`CLAUDE.md` for a hazard no test can catch, a comment where a decision lives —
+and remove what has become dead weight: a rule now enforced by a check, a note
+about code that no longer exists, two entries saying the same thing.
 
 ## 6. Report
 
