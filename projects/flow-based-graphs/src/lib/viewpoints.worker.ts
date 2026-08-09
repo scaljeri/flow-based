@@ -14,31 +14,22 @@ export interface ViewpointsConfig {
 }
 
 /**
- * The places people gave names to.
+ * Somewhere to stand until the flow says where to look.
  *
- * The first entry is the whole set, and it is first on purpose: a reader
- * arrives at the picture everyone has seen, and only then goes looking. The
- * rest are landmarks — a valley of seahorses, a row of elephants, a spiral
- * that repeats — and their coordinates are the point. They were found by
- * people zooming, and they are reachable by anyone who types the same eight
- * digits, because the set is not a photograph of anything. It is a rule, and
- * the rule holds at every scale.
+ * One neutral place, not a list of landmarks. This module is generic — a
+ * viewpoints node steps through whatever places its FLOW names — and the
+ * Mandelbrot landmarks that used to sit here (Seahorse Valley and friends)
+ * were one subject's knowledge inside everyone's module. The specific
+ * coordinates belong in a flow; for the shipped article they live in the
+ * demo fixture. Defaults apply only when a node is created, so nothing saved
+ * changes.
  *
  * A separate node rather than a dropdown inside the picture, because in a flow
  * "where to look" is data: it arrives on a wire, it can come from somewhere
  * else, and it is visible without opening a panel.
  */
 export const DEFAULT_PLACES: Viewpoint[] = [
-  { name: '— the whole set', re: -0.6, im: 0, span: 3.2 },
-  { name: 'Seahorse Valley', re: -0.7453, im: 0.1127, span: 0.0065 },
-  { name: 'Elephant Valley', re: 0.275, im: 0.0075, span: 0.01 },
-  /*
-   * The last one is the argument, not the scenery: at a scale eight hundred
-   * times smaller than the first entry, the whole shape is there again, with
-   * its own cardioid and its own bulb. Nothing put it there. It is what the
-   * rule does.
-   */
-  { name: 'A smaller copy of itself', re: -0.235125, im: 0.827215, span: 0.004 },
+  { name: 'origin', re: 0, im: 0, span: 4 },
 ];
 
 export class ViewpointsWorker implements FbNodeWorker {

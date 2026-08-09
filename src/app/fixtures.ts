@@ -89,7 +89,7 @@ export const demo = () => ({
   type: 'flow',
   title: 'demo',
   // Bumped when the fixture changes shape; the app reseeds on mismatch.
-  config: { seedVersion: 26 },
+  config: { seedVersion: 27 },
   /*
    * The flow, read as a document. It used to be a nine-section course that
    * ended on a damped spiral and a symbolic derivative, which is more than a
@@ -623,7 +623,26 @@ export const demo = () => ({
       type: 'graph-viewpoints',
       title: 'Where to look',
       id: 1700,
-      config: { which: 0 },
+      /*
+       * The places live in the FLOW, not in the module — the graphs module is
+       * generic and these coordinates are one subject's knowledge. The first
+       * entry is the whole set, on purpose: a reader arrives at the picture
+       * everyone has seen, and only then goes looking. The landmarks were
+       * found by people zooming, and they are reachable by anyone who types
+       * the same eight digits, because the set is not a photograph of
+       * anything: it is a rule, and the rule holds at every scale. The last
+       * one is the argument, not the scenery — at a scale eight hundred times
+       * smaller, the whole shape is there again. Nothing put it there.
+       */
+      config: {
+        which: 0,
+        places: [
+          { name: '— the whole set', re: -0.6, im: 0, span: 3.2 },
+          { name: 'Seahorse Valley', re: -0.7453, im: 0.1127, span: 0.0065 },
+          { name: 'Elephant Valley', re: 0.275, im: 0.0075, span: 0.01 },
+          { name: 'A smaller copy of itself', re: -0.235125, im: 0.827215, span: 0.004 },
+        ],
+      },
       sockets: [{ id: 1710, type: 'out', format: 'region' }],
       ui: { position: { x: 2, y: 86 } },
     },
