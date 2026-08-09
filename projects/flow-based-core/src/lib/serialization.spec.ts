@@ -274,6 +274,25 @@ describe('deserializeFlow', () => {
     expect(read.children![2].config).toEqual({ which: 1 });
   });
 
+  it('drops the slider bounds a random-numbers config used to carry', () => {
+    // min/max/intervalMin/intervalMax described the settings panel, not the
+    // node; a reader of the shared JSON could not tell furniture from fact.
+    const older = {
+      id: 1,
+      type: 'flow',
+      children: [{
+        id: 10,
+        type: 'random-numbers',
+        config: { min: 0, max: 100, intervalMin: 100, intervalMax: 10000, start: 2, end: 5, interval: 500, integer: true },
+      }],
+      connections: [],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 4, flow: older });
+
+    expect(read.children![0].config).toEqual({ start: 2, end: 5, interval: 500, integer: true });
+  });
+
   it('corrects the shipped stats socket typo in saved flows', () => {
     // Sockets travel verbatim in a saved flow, so "Min valuex" outlived the
     // registry fix in every file written before it.

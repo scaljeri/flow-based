@@ -238,6 +238,21 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
           }
         }
 
+        /*
+         * random-numbers carried its settings panel's SLIDER BOUNDS in the
+         * flow file — four numbers describing a form, beside four describing
+         * the node. The bounds live in the panel now; the file keeps only
+         * behaviour.
+         */
+        if (child.type === 'random-numbers' && child.config) {
+          const config = child.config as Record<string, unknown>;
+
+          delete config['min'];
+          delete config['max'];
+          delete config['intervalMin'];
+          delete config['intervalMax'];
+        }
+
         // A typo that shipped: the stats node's min output was named
         // "Min valuex", and a saved flow carries its sockets verbatim.
         if (child.type === 'stats') {

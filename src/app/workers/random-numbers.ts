@@ -3,13 +3,17 @@ import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_SETTINGS: FbNodeSettings = {
   title: 'Random number generator',
+  /*
+   * Behaviour only. The sliders' BOUNDS (0–100, 100–10000ms) used to live
+   * here too, which put the settings panel's furniture in every saved flow —
+   * the JSON is the shareable artefact, and a reader of it could not tell
+   * which four numbers described the node and which described a form.
+   * Bounds live in the settings component now; migration 4→5 drops them
+   * from saved files.
+   */
   config: {
-    min: 0,
-    max: 100,
     start: 0,
     end: 1,
-    intervalMax: 10000,
-    intervalMin: 100,
     interval: 1000,
     integer: true
   },
@@ -70,14 +74,6 @@ export class RandomNumbersWorker implements FbNodeWorker {
     this.config.end = value;
   }
 
-  get min(): number {
-    return this.config.min;
-  }
-
-  get max(): number {
-    return this.config.max;
-  }
-
   get interval(): number {
     return this.config.interval;
   }
@@ -95,14 +91,6 @@ export class RandomNumbersWorker implements FbNodeWorker {
 
     this.config.interval = val;
     this.initialize();
-  }
-
-  get intervalMin(): number {
-    return this.config.intervalMin;
-  }
-
-  get intervalMax(): number {
-    return this.config.intervalMax;
   }
 
   get integer(): boolean {

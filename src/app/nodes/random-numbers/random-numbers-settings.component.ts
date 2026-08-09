@@ -23,13 +23,13 @@ import { RandomNumbersWorker } from '../../workers/random-numbers';
   template: `
     <form [formGroup]="form">
       <fb-slider label="Start" formControlName="startValue"
-                 [min]="worker.min" [max]="worker.max" step="0.1"></fb-slider>
+                 [min]="RANGE.min" [max]="RANGE.max" step="0.1"></fb-slider>
 
       <fb-slider label="End" formControlName="endValue"
-                 [min]="worker.min" [max]="worker.max" step="0.1"></fb-slider>
+                 [min]="RANGE.min" [max]="RANGE.max" step="0.1"></fb-slider>
 
       <fb-slider label="Interval" formControlName="intervalValue"
-                 [min]="worker.intervalMin" [max]="worker.intervalMax" step="100"></fb-slider>
+                 [min]="RANGE.intervalMin" [max]="RANGE.intervalMax" step="100"></fb-slider>
 
       <label class="switch">
         <span>Integers only</span>
@@ -78,6 +78,12 @@ export class RandomNumbersSettingsComponent implements OnInit, OnDestroy {
 
   worker!: RandomNumbersWorker;
   form!: FormGroup;
+
+  /*
+   * The sliders' bounds are this form's furniture, not the node's behaviour —
+   * they used to sit in the node's config and travelled in every saved flow.
+   */
+  readonly RANGE = { min: 0, max: 100, intervalMin: 100, intervalMax: 10000 };
 
   private subscription?: Subscription;
 

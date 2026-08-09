@@ -43,13 +43,11 @@ export const basic = {
       type: 'random-numbers',
       title: 'Random number generator',
       id: 100,
+      // Behaviour only — the settings panel's slider bounds no longer travel
+      // in a flow file.
       config: {
-        min: 0,
-        max: 100,
         start: 0,
         end: 1,
-        intervalMax: 10000,
-        intervalMin: 100,
         interval: 1000,
         integer: true,
       },
