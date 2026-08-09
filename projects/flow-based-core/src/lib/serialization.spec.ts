@@ -251,6 +251,29 @@ describe('deserializeFlow', () => {
     expect(add.sockets).toHaveLength(3);
   });
 
+  it('shifts a saved data-choice which to the 1-based convention', () => {
+    // choice counted from 0, switch from 1 — one pill driving both was off
+    // by one. The shift keeps the same option chosen.
+    const older = {
+      id: 1,
+      type: 'flow',
+      children: [
+        { id: 10, type: 'data-choice', config: { which: 2 } },
+        { id: 11, type: 'data-choice', config: {} },
+        { id: 12, type: 'data-switch', config: { which: 1 } },
+      ],
+      connections: [],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 4, flow: older });
+
+    expect(read.children![0].config).toEqual({ which: 3 });
+    // Absent stays absent — it meant "the first" and still does.
+    expect(read.children![1].config).toEqual({});
+    // The switch already spoke this language.
+    expect(read.children![2].config).toEqual({ which: 1 });
+  });
+
   it('leaves a value already in ui alone', () => {
     // A file hand-edited back to version 1 must not have its old coordinates
     // put back over its new ones.

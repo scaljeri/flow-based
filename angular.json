@@ -346,6 +346,12 @@
               "projects/flow-based-data/**/*.html"
             ]
           }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-data/tsconfig.spec.json"
+          }
         }
       }
     }

@@ -1242,7 +1242,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 36 },
+  config: { seedVersion: 37 },
   /*
    * The same flow, read as an article.
    *
@@ -1413,7 +1413,7 @@ export const tno = () => ({
        * second copy of a fact the publisher already states, wrong the day they
        * add a sixth. Each item IS the name, so no paths beyond the list.
        */
-      config: { list: 'regions.0.pollutants', label: '', value: '', as: 'text', which: 0 },
+      config: { list: 'regions.0.pollutants', label: '', value: '', as: 'text', which: 1 },
       sockets: [
         { id: 631, type: 'in', formats: ['data', 'geo', 'point', 'number', 'grid'] },
         { id: 632, type: 'out', format: 'string' },

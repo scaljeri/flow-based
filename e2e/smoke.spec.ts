@@ -3371,10 +3371,10 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
   expect((await chooser()).url).toContain('PM2.5.json');
 
   // Choosing the other one moves the whole chain: the file name is built from
-  // it, and the request follows.
+  // it, and the request follows. `which` is 1-based — 2 is the second option.
   await page.evaluate(() => {
     (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
-      .editor.flow.getWorker(630).set(1);
+      .editor.flow.getWorker(630).set(2);
   });
 
   await expect.poll(async () => (await chooser()).url).toContain('NO2.json');

@@ -28,8 +28,8 @@ import { ChoiceWorker } from './choice.worker';
             <button
               type="button"
               role="radio"
-              [attr.aria-checked]="$index === which"
-              [class.on]="$index === which"
+              [attr.aria-checked]="$index === chosenIndex"
+              [class.on]="$index === chosenIndex"
               (click)="choose($index, $event)">{{label}}</button>
           </li>
         }
@@ -121,8 +121,8 @@ export class ChoiceSmallComponent implements OnInit, OnDestroy {
     return this.worker?.labels ?? [];
   }
 
-  get which(): number {
-    return this.worker?.which ?? 0;
+  get chosenIndex(): number {
+    return this.worker?.chosenIndex ?? -1;
   }
 
   onPress(event: PointerEvent): void {
@@ -140,7 +140,8 @@ export class ChoiceSmallComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.worker?.set(index);
+    // `which` is 1-based (0 = none), the list renders by index.
+    this.worker?.set(index + 1);
     this.cdr.detectChanges();
   }
 }

@@ -11,7 +11,7 @@ export interface ChoiceConfig {
   value?: string;
   /** What comes out: text, or the item as it stands. */
   as?: 'text' | 'data';
-  /** Which option is chosen, by index. */
+  /** Which option is chosen: 1 is the first, 0 is none — see `which` below. */
   which?: number;
 }
 
@@ -84,8 +84,20 @@ export class ChoiceWorker implements FbNodeWorker {
     });
   }
 
+  /**
+   * 1-based, 0 = none — the ordinal language data-switch already speaks, so
+   * one document pill can drive either without an off-by-one. (Until
+   * 2026-08-09 this was a 0-based index and the two siblings disagreed;
+   * migration 4→5 shifts saved values.) Absent means 1: absence always meant
+   * "the first option", and still does.
+   */
   get which(): number {
-    return Math.min(this.config.which ?? 0, Math.max(0, this.items.length - 1));
+    return Math.min(Math.max(0, this.config.which ?? 1), this.count);
+  }
+
+  /** The chosen option as an index into the list; -1 when none. */
+  get chosenIndex(): number {
+    return this.which - 1;
   }
 
   get count(): number {
@@ -94,7 +106,7 @@ export class ChoiceWorker implements FbNodeWorker {
 
   /** The chosen option's text, for the node to show when it is not a list. */
   get chosenLabel(): string {
-    return this.labels[this.which] ?? '';
+    return this.labels[this.chosenIndex] ?? '';
   }
 
   set(which: number): void {
@@ -144,7 +156,10 @@ export class ChoiceWorker implements FbNodeWorker {
   private emit(): void {
     this.ticks.next();
 
-    const item = this.items[this.which];
+    // At none (which = 0) nothing is emitted: the output promises a string or
+    // an item, and neither has an honest empty form — silence says it here,
+    // and the node's drawing says it to the reader.
+    const item = this.which === 0 ? undefined : this.items[this.chosenIndex];
 
     if (item === undefined) {
       return;

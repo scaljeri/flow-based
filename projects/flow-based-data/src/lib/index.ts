@@ -158,7 +158,8 @@ export const DATA_MODULE: FbModule = {
       settings: {
         title: 'Choice',
         group: 'Data',
-        config: { list: '', label: '', value: '', as: 'text', which: 0 },
+        // which is 1-based, 0 = none — data-switch's convention, since 2026-08-09.
+        config: { list: '', label: '', value: '', as: 'text', which: 1 },
         sockets: [
           { type: 'in', formats: ['data', 'geo', 'point', 'number', 'grid'] },
           { type: 'out', format: 'string' },

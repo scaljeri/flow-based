@@ -23,7 +23,8 @@ import { FbNodeState } from './types';
  * 5 — the 2026-08 palette cleanup, batched into one step because each saved
  *     flow pays per migration, not per change: `basic-graph` (superseded by
  *     `graph-plot`) and `merge-streams` (the same combineLatest sum
- *     `math-add` is) are mapped onto their successors.
+ *     `math-add` is) are mapped onto their successors, and `data-choice`
+ *     adopts data-switch's 1-based `which` with 0 meaning none.
  */
 export const FB_FLOW_FORMAT_VERSION = 5;
 
@@ -220,6 +221,21 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
         if (child.type === 'merge-streams') {
           child.type = 'math-add';
           child.config = { symbol: '+' };
+        }
+
+        /*
+         * data-choice adopts data-switch's ordinal language: `which` is
+         * 1-based, 0 is none. It was a 0-based index, and one document pill
+         * driving both siblings was off by one on one of them. Saved values
+         * shift so the same option stays chosen; an absent `which` meant the
+         * first option and still does.
+         */
+        if (child.type === 'data-choice') {
+          const config = child.config as { which?: number } | undefined;
+
+          if (config && typeof config.which === 'number') {
+            config.which += 1;
+          }
         }
       }
 
