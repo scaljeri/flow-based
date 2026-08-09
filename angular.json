@@ -253,6 +253,12 @@
               "projects/flow-based-math/**/*.html"
             ]
           }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-math/tsconfig.spec.json"
+          }
         }
       }
     },

@@ -7,9 +7,6 @@ import { StatsSmallComponent } from './nodes/stats/stats-small.component';
 import { StatsNormalComponent } from './nodes/stats/stats-normal.component';
 import { StatsFullComponent } from './nodes/stats/stats-full.component';
 import { STATS_SETTINGS, StatsWorker } from './workers/stats';
-import { MergeStreamsSmallComponent } from './nodes/merge-streams/merge-streams-small.component';
-import { MergeStreamsNormalComponent } from './nodes/merge-streams/merge-streams-normal.component';
-import { MERGE_STREAMS_SETTINGS, MergeStreamsWorker } from './workers/merge-streams';
 import { TapSmallComponent } from './nodes/tap/tap-small.component';
 import { TapNormalComponent } from './nodes/tap/tap-normal.component';
 import { TapFullComponent } from './nodes/tap/tap-full.component';
@@ -53,17 +50,8 @@ export const FB_CONFIG: FbNodeTypes = {
   },
   // basic-graph is gone (2026-08-09): superseded by graph-plot, and it
   // inherited tap's old rounding so the "graph" altered the wire it drew.
-  // Migration 4→5 maps saved ones onto graph-plot.
-  // No full: this node draws measured lines between its own elements, and on
-  // the whole surface those became sweeps across an empty middle.
-  'merge-streams': {
-    component: {
-      small: MergeStreamsSmallComponent,
-      normal: MergeStreamsNormalComponent,
-    },
-    settings: MERGE_STREAMS_SETTINGS,
-    worker: MergeStreamsWorker,
-  },
+  // merge-streams went the same day — it was math-add's combineLatest sum
+  // under a name that promised an interleave. Migration 4→5 maps both.
   /*
    * A drawing PER VIEW rather than one that branches on how open it is.
    *

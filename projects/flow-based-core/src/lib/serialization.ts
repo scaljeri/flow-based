@@ -22,7 +22,8 @@ import { FbNodeState } from './types';
  *     anything can draw a field and anything can produce one.
  * 5 — the 2026-08 palette cleanup, batched into one step because each saved
  *     flow pays per migration, not per change: `basic-graph` (superseded by
- *     `graph-plot`) is mapped onto its successor.
+ *     `graph-plot`) and `merge-streams` (the same combineLatest sum
+ *     `math-add` is) are mapped onto their successors.
  */
 export const FB_FLOW_FORMAT_VERSION = 5;
 
@@ -208,6 +209,17 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
 
           node.connections = (node.connections ?? [])
             .filter(connection => !outIds.includes(connection.out));
+        }
+
+        /*
+         * merge-streams and math-add were both the combineLatest sum of their
+         * inputs; math-add (n-ary since the merge) is the one that stays. The
+         * sockets carry over as they are — same shape, two number ins and a
+         * number out — and the symbol is what the drawing shows.
+         */
+        if (child.type === 'merge-streams') {
+          child.type = 'math-add';
+          child.config = { symbol: '+' };
         }
       }
 

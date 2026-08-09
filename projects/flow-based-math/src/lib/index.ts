@@ -1,6 +1,6 @@
 import { FbNodeTypes } from '@scaljeri/flow-based';
 import { FbModule } from '@scaljeri/flow-based';
-import { OperatorWorker } from './operator.worker';
+import { OperatorWorker, SumWorker } from './operator.worker';
 import { OperatorSmallComponent } from './operator-small.component';
 import { FormulaWorker } from './formula.worker';
 import { FormulaSmallComponent } from './formula-small.component';
@@ -35,11 +35,11 @@ import { SamplerSettingsComponent } from './sampler-settings.component';
 
 const GROUP = 'Mathematics';
 
-/** An operator type is the same node three times, differing in one function. */
+/** An operator type is the same node several times, differing in one function. */
 const operator = (
   title: string,
   symbol: string,
-  operate: (a: number, b: number) => number,
+  operate: (a: number, b: number) => number | undefined,
 ): FbNodeTypes[string] => ({
   component: { small: OperatorSmallComponent },
   settings: {
@@ -96,9 +96,32 @@ export const MATH_MODULE: FbModule = {
   ],
 
   types: {
-    'math-add': operator('Add', '+', (a, b) => a + b),
+    /*
+     * Add is n-ary where its siblings are binary: a sum has no fixed arity,
+     * and this is where merge-streams went when the two nodes answering "add
+     * two streams" became one (2026-08-09). More terms are more sockets —
+     * the array-port pattern the plots already use.
+     */
+    'math-add': {
+      component: { small: OperatorSmallComponent },
+      settings: {
+        title: 'Add',
+        group: GROUP,
+        config: { symbol: '+' },
+        sockets: [
+          { type: 'in', format: 'number' },
+          { type: 'in', format: 'number' },
+          { type: 'out', format: 'number' },
+        ],
+        addableSockets: 'in',
+      },
+      worker: SumWorker,
+    },
     'math-subtract': operator('Subtract', '−', (a, b) => a - b),
     'math-multiply': operator('Multiply', '×', (a, b) => a * b),
+    // Divide says nothing at b = 0: Infinity on a wire poisons every plot
+    // downstream, silence holds the last honest value. See OperatorWorker.
+    'math-divide': operator('Divide', '÷', (a, b) => b === 0 ? undefined : a / b),
 
     /*
      * A producer: it emits a FUNCTION, not numbers. Its whole configuration is

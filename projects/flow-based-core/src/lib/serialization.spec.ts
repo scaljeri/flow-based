@@ -223,6 +223,34 @@ describe('deserializeFlow', () => {
     expect(read.connections!.map(c => c.id)).toEqual([900]);
   });
 
+  it('maps merge-streams onto math-add, wires and sockets untouched', () => {
+    // Both were the combineLatest sum of their inputs; math-add is the one
+    // that stays, n-ary since the fusion. Only the type and the drawn symbol
+    // change — the sockets carry over, so every wire still lands.
+    const older = {
+      id: 1,
+      type: 'flow',
+      children: [{
+        id: 10,
+        type: 'merge-streams',
+        config: {},
+        sockets: [
+          { id: 100, type: 'in', format: 'number' },
+          { id: 101, type: 'in', format: 'number' },
+          { id: 102, type: 'out', format: 'number' },
+        ],
+      }],
+      connections: [],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 4, flow: older });
+    const add = read.children![0];
+
+    expect(add.type).toBe('math-add');
+    expect(add.config).toEqual({ symbol: '+' });
+    expect(add.sockets).toHaveLength(3);
+  });
+
   it('leaves a value already in ui alone', () => {
     // A file hand-edited back to version 1 must not have its old coordinates
     // put back over its new ones.

@@ -46,8 +46,6 @@ import { ComponentSelectionService } from './component-selection.service';
 import { RandomNumbersSmallComponent } from './nodes/random-numbers/random-numbers-small.component';
 import { RandomNumbersNormalComponent } from './nodes/random-numbers/random-numbers-normal.component';
 import { RandomNumbersSettingsComponent } from './nodes/random-numbers/random-numbers-settings.component';
-import { MergeStreamsSmallComponent } from './nodes/merge-streams/merge-streams-small.component';
-import { MergeStreamsNormalComponent } from './nodes/merge-streams/merge-streams-normal.component';
 import { typeScriptOf } from '@scaljeri/flow-based-core';
 import { FB_CONFIG, FB_SOCKET_PALETTE } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
@@ -75,8 +73,6 @@ import { StatsFullComponent } from './nodes/stats/stats-full.component';
     FlowsDialogComponent,
     FlowComponent,
     ComponentSelectionComponent,
-    MergeStreamsSmallComponent,
-    MergeStreamsNormalComponent,
     StatsSmallComponent,
     StatsNormalComponent,
     StatsFullComponent,
