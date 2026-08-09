@@ -1,6 +1,6 @@
 import { FbConnection, FbNodeWorker, FbSocket, readConfigValue, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
-import { unwrap } from './envelope';
+import { FbEnvelope, isEnvelope, unwrap } from './envelope';
 
 /** How an item is judged. */
 export type FilterTest = 'oneOf' | 'is' | 'has' | 'matches';
@@ -30,8 +30,18 @@ export interface FilterConfig {
  * list and drops the rest. Same reason Switch and Choice are two nodes.
  */
 export class FilterWorker implements FbNodeWorker {
-  private readonly subject = new ReplaySubject<unknown[]>(1);
+  private readonly subject = new ReplaySubject<unknown>(1);
   private readonly subscriptions: { [id: number]: Subscription } = {};
+
+  /**
+   * The envelope the list arrived in, if it arrived in one.
+   *
+   * A filtered stream still knows its source's name: this node used to emit
+   * the bare kept array, stripping the `{meta, value}` a request wrapped its
+   * answer in — so a downstream switch labelling its inputs by their meta
+   * went back to numbering them, for exactly the streams that had names.
+   */
+  private sourceMeta?: FbEnvelope['meta'];
 
   /** What arrived, and what survived — for the node's own drawing. */
   private incoming = 0;
@@ -66,7 +76,7 @@ export class FilterWorker implements FbNodeWorker {
     this.ticks.complete();
   }
 
-  getStream(): Observable<unknown[]> {
+  getStream(): Observable<unknown> {
     return this.subject.asObservable();
   }
 
@@ -83,6 +93,8 @@ export class FilterWorker implements FbNodeWorker {
     }
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
+      this.sourceMeta = isEnvelope(value) ? value.meta : undefined;
+
       const source = unwrap(value);
       const list = this.config.list ? readConfigValue(source, this.config.list) : source;
 
@@ -206,6 +218,7 @@ export class FilterWorker implements FbNodeWorker {
 
     this.kept = kept.length;
     this.ticks.next();
-    this.subject.next(kept);
+    // Re-wrapped in the envelope it arrived in — see `sourceMeta`.
+    this.subject.next(this.sourceMeta ? { meta: this.sourceMeta, value: kept } : kept);
   }
 }
