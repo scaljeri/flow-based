@@ -1,16 +1,13 @@
 ---
 name: ship
-description: Finish and publish a change on flow-based — test, lint, commit, push the working branch, deploy to the playground, verify live, and restore the local dist. Use when a task is functionally complete, when the user says it can go live, or whenever a change needs to be visible at playground.calje.eu/fbp.
+description: Release a change — test, commit, push the working branch, deploy to the playground, verify against the live site and restore the local build. Use when a change is functionally complete or when it needs to be visible at playground.calje.eu/fbp.
 ---
 
 # Ship
 
-The procedure that turns a working change into a published one. It exists
-because the order matters and two of the steps are easy to forget in a way that
-silently breaks the NEXT thing.
-
-The site is the only place most people see this project, so a change nobody can
-look at is not finished.
+Turning a working change into a published one. The order matters, and two steps
+are easy to skip in a way that breaks the next piece of work rather than this
+one.
 
 ## 1. Prove it
 
@@ -20,28 +17,20 @@ npm test
 npx playwright test
 ```
 
-A red test is reported plainly and first. Before calling anything a flake,
-re-run that one test alone (`-g "<name>"`) and check `uptime`. On a small
-machine the suite rotates failures above load ~5; the drag-perf and
-map-highlight tests are the usual casualties. A test that fails alone is a
-failure.
+A failure is reported plainly and first. Before treating one as an environment
+flake, run that test alone (`-g "<name>"`) and check the load average: under
+contention the suite rotates failures, usually the drag-performance and
+map-highlight tests. A test that fails in isolation is a defect.
 
-If the change touched a **lit** library, `node scripts/build-lit-demo.mjs`
-first: `build:e2e` lives in the :4200 webServer command, which is skipped when a
-server is already running, and a stale shell has passed fifty tests before.
+If the change touched a **lit** library, run `node scripts/build-lit-demo.mjs`
+first. `build:e2e` lives in the port-4200 web-server command, which Playwright
+skips when a server is already running, so the shell under test can otherwise
+be an old build.
 
 ## 2. Commit
 
-Branch, never `master`. The message says what changed and **why it was wrong
-before** — the same standard as a comment. End with the Co-Authored-By and
-session trailers.
-
-```bash
-git add -A && git commit -F - <<'MSG'
-…
-MSG
-git push origin <branch>
-```
+Work on a branch. The message states what changed and **why the previous
+behaviour was wrong** — the same standard the code comments are held to.
 
 ## 3. Deploy
 
@@ -49,25 +38,26 @@ git push origin <branch>
 set -a; . ./.env; set +a; npm run deploy
 ```
 
-Run the script, never its steps: `ng` is not on PATH outside an npm script, and
-a hand-rolled build ships root-relative assets that 404 on the live site.
+Run the script, never its steps. `ng` is not on the PATH outside an npm script,
+and a hand-assembled build ships root-relative assets that fail on the deployed
+sub-path.
 
-## 4. Verify live, then restore the dist
+## 4. Verify, then restore the local build
 
 ```bash
 npm run build:demo
 ```
 
-**Do this every time.** The deploy leaves `dist/demo/browser` built with
-base-href `/fbp/`, and port 4200 serves that directory statically — so until it
-is rebuilt, localhost 404s every asset and the next e2e run fails on something
-unrelated to the change.
+Required every time: the deploy leaves `dist/demo/browser` built with base-href
+`/fbp/`, so anything served from that directory afterwards fails to load its
+assets, and the next test run fails for reasons unrelated to the change.
 
-Verification is against `https://playground.calje.eu/fbp/`, not localhost. A
-throwaway Playwright spec that navigates there, asserts the thing that changed
-and takes a screenshot is the fastest honest check; delete it afterwards.
+Verification is against <https://playground.calje.eu/fbp/>, not a local server.
+A throwaway Playwright spec that navigates there, asserts the behaviour that
+changed and captures a screenshot is the quickest honest check; delete it
+afterwards.
 
 ## 5. Report
 
-Result first: what was verified and how, and what was skipped and why. No
-summary of the steps — the commit says those.
+The result first: what was verified and how, and what was skipped and why. The
+commit already records the steps.
