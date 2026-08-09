@@ -305,7 +305,19 @@ export class FbConnectionsElement extends LitElement {
       + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing},`
       // Whether this line is being held. Without it `guard` sees an unchanged
       // key and skips the very re-render that turns the line red.
-      + `${this.arming?.id === connection.id}`;
+      + `${this.arming?.id === connection.id}`
+      /*
+       * A line with an end on the boundary also moves with the VIEWPORT: its
+       * screen-pinned end is pulled back through zoom and pan (boundaryAt), so
+       * the memoised path must expire when either changes. Only for those
+       * lines — an all-inner connection is carried by the plane transform, and
+       * charging every line for the boundary's dependence would put viewport
+       * churn back into the drag cost the perf test forbids.
+       */
+      + (from.id === this.editor.state?.id || to.id === this.editor.state?.id
+        ? `,${this.editor.viewport.zoom},${this.editor.viewport.pan.x},${this.editor.viewport.pan.y},`
+          + `${this.editor.viewport.viewSize.width},${this.editor.viewport.viewSize.height}`
+        : '');
   }
 
   private renderConnection(connection: FbConnection) {
@@ -390,7 +402,7 @@ export class FbConnectionsElement extends LitElement {
 
     const onBoundary = node.id === this.editor.state?.id;
     const anchor = onBoundary
-      ? boundarySocketPosition(node, pending.socket, this.editor.viewport.planeSize)
+      ? this.boundaryAt(node, pending.socket)
       : this.editor.geometry.socketPosition(node, pending.socket, this.editor.viewport.planeSize);
 
     if (!anchor) {
@@ -613,6 +625,24 @@ export class FbConnectionsElement extends LitElement {
     this.requestUpdate();
   }
 
+  /**
+   * Where a boundary socket is, in PLANE coordinates.
+   *
+   * The dot itself is pinned to the VIEWPORT's edges — full-size, unscaled,
+   * outside the plane's transform (see the canvas element). This layer draws
+   * inside that transform, so the meeting point is the screen-edge position
+   * pulled back through the current zoom and pan. It moves every time the
+   * viewport does, which is exactly the point: the line follows the graph at
+   * one end and the screen at the other.
+   */
+  private boundaryAt(node: FbNodeState, socket: FbSocket): FbPosition | undefined {
+    const viewport = this.editor.viewport;
+    const view = viewport.viewSize.width ? viewport.viewSize : viewport.planeSize;
+    const at = boundarySocketPosition(node, socket, view);
+
+    return at && viewport.toPlane(at);
+  }
+
   private endpoints(connection: FbConnection): FbEnds | null {
     const { geometry, viewport } = this.editor;
     const plane = viewport.planeSize;
@@ -643,7 +673,7 @@ export class FbConnectionsElement extends LitElement {
 
     const endpoint = (node: FbNodeState, socket: FbSocket): { at?: FbPosition; side: FbSocketSide } =>
       node.id === boundaryId
-        ? { at: boundarySocketPosition(node, socket, plane), side: opposite[sideOf(socket)] }
+        ? { at: this.boundaryAt(node, socket), side: opposite[sideOf(socket)] }
         : { at: geometry.socketPosition(node, socket, plane), side: sideOf(socket) };
 
     const from = endpoint(fromNode, out);

@@ -3,11 +3,12 @@ import {
   FB_DRAG_IGNORE,
   FbNodeState,
   FbPosition,
+  FbSize,
   FbSocket,
   boundarySocketPosition,
 } from '@scaljeri/flow-based-core';
 import { repeat } from 'lit/directives/repeat.js';
-import { FbEditor, FbEditorChange } from './editor';
+import { FbEditor, FbEditorChange, FbPendingSocket } from './editor';
 
 import './connections-element';
 import './node-settings-element';
@@ -163,6 +164,21 @@ export class FbFlowCanvasElement extends LitElement {
      * like any other socket. This is how the nodes within are connected to the
      * flow outside.
      */
+    /*
+     * The subflow's own border, drawn where it now is: around the screen.
+     * Inside a subflow the viewport IS the node, and the frame says so — the
+     * sockets sit ON this line. Inert: an indication, not a control.
+     */
+    .boundary-frame {
+      border: 2px solid var(--fb-socket-border, #999);
+      border-radius: 6px;
+      inset: 0;
+      opacity: 0.55;
+      pointer-events: none;
+      position: absolute;
+      z-index: 29;
+    }
+
     .boundary-socket {
       align-items: center;
       background-color: #fff;
@@ -489,25 +505,37 @@ export class FbFlowCanvasElement extends LitElement {
      * tab measures 0x0, and freezing THAT put every node at the origin for
      * good. Wait for the element to actually have a size, take the first real
      * one, and freeze that instead.
+     *
+     * The observer stays connected for good. The PLANE is frozen once, but the
+     * VIEW is the element's live size — the boundary sockets sit on its edges
+     * and have to follow a resize, a rotation, a keyboard appearing.
      */
     if (rect.width && rect.height) {
       this.editor?.viewport.setPlaneSize(rect.width, rect.height);
+      this.editor?.viewport.setViewSize(rect.width, rect.height);
       // A plane bigger than the screen it opened on is shown whole, not
       // cropped to its top-left corner.
       this.editor?.viewport.fitPlane(rect);
-
-      return;
     }
 
     this.resizeObserver = new ResizeObserver(() => {
       const measured = this.getBoundingClientRect();
 
-      if (measured.width && measured.height) {
-        this.editor?.viewport.setPlaneSize(measured.width, measured.height);
-        this.editor?.viewport.fitPlane(measured);
-        this.resizeObserver?.disconnect();
-        this.resizeObserver = undefined;
+      if (!measured.width || !measured.height) {
+        return;
       }
+
+      /*
+       * Freeze-and-fit exactly once, at the first REAL size — a later resize
+       * must not re-fit, or a phone's keyboard appearing would throw away the
+       * zoom the user chose. The view size, by contrast, follows every resize.
+       */
+      if (this.editor?.viewport.planeSize.width === 0) {
+        this.editor.viewport.setPlaneSize(measured.width, measured.height);
+        this.editor.viewport.fitPlane(measured);
+      }
+
+      this.editor?.viewport.setViewSize(measured.width, measured.height);
     });
     this.resizeObserver.observe(this);
   }
@@ -854,13 +882,21 @@ export class FbFlowCanvasElement extends LitElement {
    * them inside the zoom/pan transform.
    */
   /**
-   * The sockets of the flow on screen, drawn on the surface's edges.
+   * The sockets of the flow on screen, drawn on the SCREEN's edges.
    *
    * Only inside a subflow: the root is the document and its socket list is
    * empty. Half of each dot shows on the inside — the centre sits exactly on
    * the boundary — and pressing one starts or completes a connection exactly as
    * a node's socket does, with the direction read from the inside: an in-socket
    * FEEDS the children here, so its arrow points on in.
+   *
+   * The boundary is the VIEWPORT, not the plane. Inside a subflow the border
+   * you are looking at IS the node's border, so its sockets belong on the
+   * edges of what you see — and they stay there through every zoom and pan,
+   * full-size, while the graph shrinks behind them. That is why these dots
+   * live OUTSIDE the transformed `.plane`: pinned in host space, they never
+   * scale, and the connections meet them by converting the same edge points
+   * into plane space per frame (see fb-connections).
    */
   private renderBoundarySockets() {
     const flow = this.editor.state;
@@ -869,31 +905,44 @@ export class FbFlowCanvasElement extends LitElement {
       return nothing;
     }
 
-    const plane = this.editor.viewport.planeSize;
+    const viewport = this.editor.viewport;
+    // Before the first measure the view is 0x0; the plane is the same
+    // rectangle at that moment, so it is the honest fallback.
+    const view = viewport.viewSize.width ? viewport.viewSize : viewport.planeSize;
     const pending = this.editor.pending;
 
-    return flow.sockets.map(socket => {
-      const at = boundarySocketPosition(flow, socket, plane);
+    return html`
+      <div class="boundary-frame"></div>
+      ${flow.sockets.map(socket => this.renderBoundarySocket(flow, socket, view, pending))}
+    `;
+  }
 
-      if (!at) {
-        return nothing;
-      }
+  private renderBoundarySocket(
+    flow: FbNodeState,
+    socket: FbSocket,
+    view: FbSize,
+    pending: FbPendingSocket | null,
+  ) {
+    const at = boundarySocketPosition(flow, socket, view);
 
-      const isActive = pending?.socket.id === socket.id;
-      const accepts = this.editor.accepts(socket, flow.id!);
-      const colour = this.editor.colorsEnabled && socket.color ? `border-color:${socket.color};` : '';
+    if (!at) {
+      return nothing;
+    }
 
-      return html`
-        <div
-          class="boundary-socket ${isActive ? 'is-active' : ''} ${accepts === true ? 'is-accepting' : ''} ${accepts === false ? 'is-rejecting' : ''}"
-          style=${`left:${at.x}px;top:${at.y}px;${colour}`}
-          data-socket-id=${String(socket.id)}
-          title=${socket.name || socket.format || socket.type}
-          @pointerdown=${(e: PointerEvent) => this.onBoundarySocketDown(e, socket)}>
-          ${socketArrow(socket)}
-        </div>
-      `;
-    });
+    const isActive = pending?.socket.id === socket.id;
+    const accepts = this.editor.accepts(socket, flow.id!);
+    const colour = this.editor.colorsEnabled && socket.color ? `border-color:${socket.color};` : '';
+
+    return html`
+      <div
+        class="boundary-socket ${isActive ? 'is-active' : ''} ${accepts === true ? 'is-accepting' : ''} ${accepts === false ? 'is-rejecting' : ''}"
+        style=${`left:${at.x}px;top:${at.y}px;${colour}`}
+        data-socket-id=${String(socket.id)}
+        title=${socket.name || socket.format || socket.type}
+        @pointerdown=${(e: PointerEvent) => this.onBoundarySocketDown(e, socket)}>
+        ${socketArrow(socket)}
+      </div>
+    `;
   }
 
   private onBoundarySocketDown(event: PointerEvent, socket: FbSocket): void {
@@ -1053,12 +1102,12 @@ export class FbFlowCanvasElement extends LitElement {
     return html`
       ${this.renderHead()}
       ${this.renderSocketNote()}
+      ${full ? nothing : this.renderBoundarySockets()}
       <div
         class="plane"
         data-full=${full ? 'true' : 'false'}
         style=${this.planeStyle(full ? 0 : plane.width, full ? 0 : plane.height, transform)}
         @connection-remove=${this.onConnectionRemove}>
-        ${this.renderBoundarySockets()}
         ${this.marquee
           ? html`<div
               class="marquee"

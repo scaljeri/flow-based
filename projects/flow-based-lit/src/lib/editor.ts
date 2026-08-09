@@ -1180,10 +1180,18 @@ export class FbEditor {
       }
     }
 
-    // The boundary of the flow on screen: inside a subflow, its own sockets sit
-    // on the plane's edges and are as droppable as any other.
+    /*
+     * The boundary of the flow on screen: inside a subflow, its own sockets
+     * are as droppable as any other. They are DRAWN pinned to the viewport's
+     * edges, outside the plane transform, so the hit target is that screen
+     * position pulled back into plane space — the space `point` arrives in.
+     */
+    const view = this.viewport.viewSize.width ? this.viewport.viewSize : plane;
+
     for (const socket of this.state?.sockets ?? []) {
-      consider(socket, this.state.id!, boundarySocketPosition(this.state, socket, plane));
+      const at = boundarySocketPosition(this.state, socket, view);
+
+      consider(socket, this.state.id!, at && this.viewport.toPlane(at));
     }
 
     return best;

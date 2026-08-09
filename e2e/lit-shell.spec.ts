@@ -2533,3 +2533,88 @@ test('a press pans from anywhere on the surface, not only where the plane still 
   expect(after.x).not.toBe(before.x);
   expect(after.y).not.toBe(before.y);
 });
+
+/**
+ * Inside a subflow the boundary is the SCREEN, not the plane: the frame runs
+ * around the viewport, the flow's sockets sit on its edges at full size, and
+ * they stay there while the graph zooms underneath. The connection to a
+ * boundary socket is re-anchored per frame — its screen-pinned end is pulled
+ * back through the current zoom and pan — so the line still MEETS the dot at
+ * any zoom. Both halves are measured: the dot's screen position surviving a
+ * zoom, and the curve's endpoint landing on it.
+ */
+test('a subflow\'s boundary sockets stay on the screen edges through a zoom', async ({ page }) => {
+  await page.goto(`${HARNESS}?subflow=1`);
+  await expect(canvas(page)).toBeVisible();
+
+  await page.evaluate(() => {
+    const group = window.fbEditor.children.find(n => n.title === 'Group')!;
+
+    window.fbEditor.enter(group.id!);
+
+    // A wire ONTO the boundary, so there is a screen-anchored end to measure.
+    const flow = window.fbEditor.state;
+    const sink = window.fbEditor.addNode('sink')!;
+    const boundary = flow.sockets!.find(s => s.type === 'in')!;
+
+    window.fbEditor.socketClicked(boundary, flow.id!);
+    window.fbEditor.socketClicked(sink.sockets![0], sink.id!);
+  });
+
+  const measure = () => page.evaluate(() => {
+    const root = document.querySelector('fb-flow-canvas')!;
+    const host = root.getBoundingClientRect();
+    const shadow = root.shadowRoot!;
+    const dot = shadow.querySelector<HTMLElement>('.boundary-socket')!.getBoundingClientRect();
+    const frame = shadow.querySelector('.boundary-frame');
+
+    /*
+     * The curve that ends on the boundary is the one whose start sits
+     * furthest left — the boundary in-socket is on the left edge. Plane-space
+     * points are projected to the screen through the plane's own rect and the
+     * zoom, which is exactly the transform the browser applies to the SVG.
+     */
+    const layer = shadow.querySelector('fb-connections')!.shadowRoot!;
+    const plane = shadow.querySelector('.plane')!.getBoundingClientRect();
+    const zoom = window.fbEditor.viewport.zoom;
+    const starts = [...layer.querySelectorAll<SVGPathElement>('path.connection')]
+      .map(path => path.getPointAtLength(0))
+      .sort((a, b) => a.x - b.x);
+    const start = starts[0];
+
+    return {
+      frame: !!frame,
+      zoom,
+      dotCentreX: dot.left + dot.width / 2 - host.left,
+      dotSize: dot.width,
+      lineStartX: start ? plane.left + start.x * zoom - host.left : null,
+      lineStartY: start ? plane.top + start.y * zoom - host.top : null,
+      dotCentreY: dot.top + dot.height / 2 - host.top,
+    };
+  });
+
+  const before = await measure();
+
+  // On the host's left edge, and the frame is drawn.
+  expect(before.frame).toBe(true);
+  expect(Math.round(before.dotCentreX)).toBe(0);
+
+  await page.evaluate(() => {
+    window.fbEditor.viewport.zoomAt(0.4, { x: 300, y: 200 });
+  });
+
+  const after = await measure();
+
+  // The graph shrank; the dot did not move and did not scale.
+  expect(after.zoom).toBeLessThan(before.zoom);
+  expect(Math.round(after.dotCentreX)).toBe(0);
+  expect(after.dotSize).toBe(before.dotSize);
+
+  // And the wire still meets it: the curve's boundary end sits on the dot,
+  // at BOTH zoom levels.
+  for (const state of [before, after]) {
+    expect(state.lineStartX).not.toBeNull();
+    expect(Math.abs(state.lineStartX! - state.dotCentreX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(state.lineStartY! - state.dotCentreY)).toBeLessThanOrEqual(2);
+  }
+});

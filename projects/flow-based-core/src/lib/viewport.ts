@@ -32,8 +32,31 @@ export class FbViewport {
   private zoomLevel = 1;
   private panOffset: FbPosition = { x: 0, y: 0 };
   private plane: FbSize = { width: 0, height: 0 };
+  private view: FbSize = { width: 0, height: 0 };
 
   readonly changes = new FbEmitter<void>();
+
+  /**
+   * The VISIBLE surface, in CSS pixels — the element the user is looking at,
+   * as opposed to `planeSize`, which is the design surface the nodes are laid
+   * out on. The two start equal and part ways the moment the window resizes
+   * or the plane is zoomed: the plane is frozen once, the view follows the
+   * element for as long as it lives.
+   *
+   * It exists for the things that are pinned to the SCREEN rather than to the
+   * graph — a subflow's boundary sockets sit on the edges of what you see,
+   * whatever the zoom, and need to know where those edges are.
+   */
+  get viewSize(): FbSize {
+    return this.view;
+  }
+
+  setViewSize(width: number, height: number): void {
+    if (width > 0 && height > 0 && (width !== this.view.width || height !== this.view.height)) {
+      this.view = { width, height };
+      this.changes.emit();
+    }
+  }
 
   get zoom(): number {
     return this.zoomLevel;
