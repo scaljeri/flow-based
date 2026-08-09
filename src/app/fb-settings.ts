@@ -7,10 +7,6 @@ import { StatsSmallComponent } from './nodes/stats/stats-small.component';
 import { StatsNormalComponent } from './nodes/stats/stats-normal.component';
 import { StatsFullComponent } from './nodes/stats/stats-full.component';
 import { STATS_SETTINGS, StatsWorker } from './workers/stats';
-import { BasicGraphSmallComponent } from './nodes/basic-graph/basic-graph-small.component';
-import { BasicGraphNormalComponent } from './nodes/basic-graph/basic-graph-normal.component';
-import { BasicGraphFullComponent } from './nodes/basic-graph/basic-graph-full.component';
-import { BASIC_GRAPH_CONFIG, BasicGraphWorker } from './workers/basic-graph';
 import { MergeStreamsSmallComponent } from './nodes/merge-streams/merge-streams-small.component';
 import { MergeStreamsNormalComponent } from './nodes/merge-streams/merge-streams-normal.component';
 import { MERGE_STREAMS_SETTINGS, MergeStreamsWorker } from './workers/merge-streams';
@@ -55,15 +51,9 @@ export const FB_CONFIG: FbNodeTypes = {
     settings: STATS_SETTINGS,
     worker: StatsWorker,
   },
-  'basic-graph': {
-    component: {
-      small: BasicGraphSmallComponent,
-      normal: BasicGraphNormalComponent,
-      full: BasicGraphFullComponent,
-    },
-    settings: BASIC_GRAPH_CONFIG,
-    worker: BasicGraphWorker,
-  },
+  // basic-graph is gone (2026-08-09): superseded by graph-plot, and it
+  // inherited tap's old rounding so the "graph" altered the wire it drew.
+  // Migration 4→5 maps saved ones onto graph-plot.
   // No full: this node draws measured lines between its own elements, and on
   // the whole surface those became sweeps across an empty middle.
   'merge-streams': {

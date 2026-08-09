@@ -183,6 +183,46 @@ describe('deserializeFlow', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('maps basic-graph onto graph-plot, and severs the passthrough it had', () => {
+    /*
+     * basic-graph drew a line over the numbers passing through and passed
+     * them on; graph-plot draws better and passes nothing on. The migration
+     * keeps the input (same single number layer) and knowingly cuts any wire
+     * off the old OUT — the alternative was a socket that lies.
+     */
+    const older = {
+      id: 1,
+      type: 'flow',
+      children: [
+        { id: 10, type: 'source', sockets: [{ id: 100, type: 'out', format: 'number' }] },
+        {
+          id: 20,
+          type: 'basic-graph',
+          config: { expanded: true },
+          sockets: [
+            { id: 200, type: 'in', format: 'number' },
+            { id: 201, type: 'out', format: 'number' },
+          ],
+        },
+        { id: 30, type: 'tap', sockets: [{ id: 300, type: 'in' }] },
+      ],
+      connections: [
+        { id: 900, from: 10, to: 20, out: 100, in: 200 },
+        { id: 901, from: 20, to: 30, out: 201, in: 300 },
+      ],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 4, flow: older });
+    const plot = read.children!.find(child => child.id === 20)!;
+
+    expect(plot.type).toBe('graph-plot');
+    expect(plot.config).toEqual({});
+    expect(plot.sockets).toEqual([{ id: 200, type: 'in', format: 'number' }]);
+
+    // The feed into the drawing survives; the passthrough out of it does not.
+    expect(read.connections!.map(c => c.id)).toEqual([900]);
+  });
+
   it('leaves a value already in ui alone', () => {
     // A file hand-edited back to version 1 must not have its old coordinates
     // put back over its new ones.

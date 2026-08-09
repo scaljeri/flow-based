@@ -1,7 +1,7 @@
 /*
  * Minimal structural types for the parts of the `google-charts` visualization API
  * this app actually touches. The package ships no typings of its own, so these
- * describe the surface used by BasicGraphComponent and StatsComponent instead of
+ * describe the surface used by StatsComponent instead of
  * spreading `any` through both.
  */
 export interface GoogleChart {

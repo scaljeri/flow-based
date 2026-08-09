@@ -20,8 +20,11 @@ import { FbNodeState } from './types';
  *     every point of a square, and colouring the answers. It becomes two —
  *     `math-mandelbrot` computing a field, `graph-field` drawing one — so that
  *     anything can draw a field and anything can produce one.
+ * 5 — the 2026-08 palette cleanup, batched into one step because each saved
+ *     flow pays per migration, not per change: `basic-graph` (superseded by
+ *     `graph-plot`) is mapped onto its successor.
  */
-export const FB_FLOW_FORMAT_VERSION = 4;
+export const FB_FLOW_FORMAT_VERSION = 5;
 
 export interface FbSerializedFlow {
   version: number;
@@ -177,6 +180,43 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
     };
 
     return split(flow);
+  },
+
+  /*
+   * 4 → 5: the palette cleanup. One migration for several removals, because a
+   * saved flow pays per STEP — every change that can share this version
+   * number should.
+   *
+   * `basic-graph` becomes `graph-plot`: same single number input, a strictly
+   * better drawing. Its config was presentation defaults graph-plot does not
+   * read, so it is dropped rather than carried as dead keys. The passthrough
+   * OUT socket has no graph-plot equivalent and goes too — a wire hanging off
+   * it is severed HERE, knowingly: the alternative was a socket that lies
+   * about being connected to anything.
+   */
+  4: flow => {
+    const migrate = (node: FbNodeState): FbNodeState => {
+      for (const child of node.children ?? []) {
+        if (child.type === 'basic-graph') {
+          const outIds = (child.sockets ?? [])
+            .filter(socket => socket.type === 'out')
+            .map(socket => socket.id);
+
+          child.type = 'graph-plot';
+          child.config = {};
+          child.sockets = (child.sockets ?? []).filter(socket => socket.type !== 'out');
+
+          node.connections = (node.connections ?? [])
+            .filter(connection => !outIds.includes(connection.out));
+        }
+      }
+
+      (node.children ?? []).forEach(migrate);
+
+      return node;
+    };
+
+    return migrate(flow);
   },
 };
 

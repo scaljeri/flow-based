@@ -46,9 +46,6 @@ import { ComponentSelectionService } from './component-selection.service';
 import { RandomNumbersSmallComponent } from './nodes/random-numbers/random-numbers-small.component';
 import { RandomNumbersNormalComponent } from './nodes/random-numbers/random-numbers-normal.component';
 import { RandomNumbersSettingsComponent } from './nodes/random-numbers/random-numbers-settings.component';
-import { BasicGraphSmallComponent } from './nodes/basic-graph/basic-graph-small.component';
-import { BasicGraphNormalComponent } from './nodes/basic-graph/basic-graph-normal.component';
-import { BasicGraphFullComponent } from './nodes/basic-graph/basic-graph-full.component';
 import { MergeStreamsSmallComponent } from './nodes/merge-streams/merge-streams-small.component';
 import { MergeStreamsNormalComponent } from './nodes/merge-streams/merge-streams-normal.component';
 import { typeScriptOf } from '@scaljeri/flow-based-core';
@@ -78,9 +75,6 @@ import { StatsFullComponent } from './nodes/stats/stats-full.component';
     FlowsDialogComponent,
     FlowComponent,
     ComponentSelectionComponent,
-    BasicGraphSmallComponent,
-    BasicGraphNormalComponent,
-    BasicGraphFullComponent,
     MergeStreamsSmallComponent,
     MergeStreamsNormalComponent,
     StatsSmallComponent,

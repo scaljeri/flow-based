@@ -6,8 +6,8 @@ describe('TapWorker', () => {
   /*
    * Why this matters: an observer must not change what it observes. The tap
    * used to round non-integer numbers to two decimals on the way THROUGH, so a
-   * tap wired between a formula and a plot changed the plot — and meter and
-   * basic-graph inherited the same via TapWorker.
+   * tap wired between a formula and a plot changed the plot — and meter
+   * inherited the same via TapWorker.
    */
   it('a tap does not change the number it passes on', () => {
     const worker = new TapWorker();
