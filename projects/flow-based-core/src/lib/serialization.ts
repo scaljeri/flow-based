@@ -237,6 +237,16 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
             config.which += 1;
           }
         }
+
+        // A typo that shipped: the stats node's min output was named
+        // "Min valuex", and a saved flow carries its sockets verbatim.
+        if (child.type === 'stats') {
+          for (const socket of child.sockets ?? []) {
+            if (socket.name === 'Min valuex') {
+              socket.name = 'Min value';
+            }
+          }
+        }
       }
 
       (node.children ?? []).forEach(migrate);

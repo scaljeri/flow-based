@@ -13,7 +13,7 @@ export const STATS_SETTINGS: FbNodeSettings = {
     {
       type: 'out',
       aux: 'min',
-      name: 'Min valuex',
+      name: 'Min value',
       format: 'number'
     },
     {
@@ -35,7 +35,9 @@ export interface StatsDistribution {
 export class StatsWorker implements FbNodeWorker {
   // Keyed by FbSocket.aux, so this needs an index signature, not a literal type.
   private subjects: Record<string, Subject<any>> = {min: new Subject<any>(), max: new Subject<any>()};
-  private subscriptions: Subscription[] = [];
+  // Keyed by connection id — this was typed as an array, which happened to
+  // work because an array takes any numeric index, and lied about the shape.
+  private subscriptions: Record<number, Subscription> = {};
 
   public min: number | null = null;
   public max: number | null = null;
@@ -54,6 +56,9 @@ export class StatsWorker implements FbNodeWorker {
   }
 
   destroy(): void {
+    Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
+    Object.values(this.subjects).forEach(subject => subject.complete());
+    this.updatedSubject.complete();
   }
 
   getStream(socket: FbSocket): Observable<any> {
@@ -73,9 +78,13 @@ export class StatsWorker implements FbNodeWorker {
   }
 
   reset(): void {
+    // Everything, min and histogram included: a reset that kept the old
+    // minimum showed a reading no arrived value could explain.
+    this.min = null;
     this.max = null;
     this.total = 0;
     this.count = 0;
+    this.values = [];
   }
 
   // INPUT

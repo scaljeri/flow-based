@@ -274,6 +274,25 @@ describe('deserializeFlow', () => {
     expect(read.children![2].config).toEqual({ which: 1 });
   });
 
+  it('corrects the shipped stats socket typo in saved flows', () => {
+    // Sockets travel verbatim in a saved flow, so "Min valuex" outlived the
+    // registry fix in every file written before it.
+    const older = {
+      id: 1,
+      type: 'flow',
+      children: [{
+        id: 10,
+        type: 'stats',
+        sockets: [{ id: 100, type: 'out', aux: 'min', name: 'Min valuex' }],
+      }],
+      connections: [],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 4, flow: older });
+
+    expect(read.children![0].sockets![0].name).toBe('Min value');
+  });
+
   it('leaves a value already in ui alone', () => {
     // A file hand-edited back to version 1 must not have its old coordinates
     // put back over its new ones.
