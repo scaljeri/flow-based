@@ -85,7 +85,17 @@ export abstract class TapView implements OnInit, OnDestroy {
       return '—';
     }
 
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    /*
+     * The READING is rounded; the wire is not. The worker passes values on
+     * untouched (it used to round the passthrough, which changed the plot
+     * downstream), so 3.14 here can stand for 3.14159 on the wire — that is
+     * the difference between a display and a filter.
+     */
+    if (typeof value === 'number') {
+      return Number.isInteger(value) ? String(value) : value.toFixed(2);
+    }
+
+    if (typeof value === 'string' || typeof value === 'boolean') {
       return String(value);
     }
 

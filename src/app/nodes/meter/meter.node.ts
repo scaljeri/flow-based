@@ -4,7 +4,10 @@ import { TapWorker } from '../../workers/tap';
 
 export const METER_SETTINGS: FbNodeSettings = {
   title: 'Meter',
-  config: {},
+  // The range is config, not a constant: a meter that can only read 0–100
+  // teaches the wrong lesson from the one node whose job is showing how a
+  // node is written — a node's numbers come from its config.
+  config: { min: 0, max: 100 },
   sockets: [
     { type: 'in', format: 'number' },
     { type: 'out', format: 'number' },
@@ -32,9 +35,22 @@ export const METER_SETTINGS: FbNodeSettings = {
  * track.
  */
 
+interface MeterRange {
+  min: number;
+  max: number;
+}
+
+/** The range from config, with the defaults the settings promise. */
+const rangeOf = (config: Record<string, unknown> | undefined): MeterRange => {
+  const min = typeof config?.['min'] === 'number' ? config['min'] as number : 0;
+  const max = typeof config?.['max'] === 'number' ? config['max'] as number : 100;
+
+  return { min, max };
+};
+
 /** Shared plumbing: subscribe to the worker, hand each reading to a renderer. */
 function meterNode(
-  build: (root: HTMLElement) => (reading: number | undefined) => void,
+  build: (root: HTMLElement) => (reading: number | undefined, range: MeterRange) => void,
 ): FbNodeMount {
   return (host, { api }) => {
     const root = document.createElement('div');
@@ -45,11 +61,12 @@ function meterNode(
      * it through NodeService — which is a facade over this very interface.
      */
     const worker = api.worker as TapWorker | undefined;
+    const redraw = () => draw(worker?.currentNumber, rangeOf(api.state.config));
     let subscription: Subscription | undefined;
 
     if (worker) {
-      draw(worker.currentNumber);
-      subscription = worker.getStream().subscribe(() => draw(worker.currentNumber));
+      redraw();
+      subscription = worker.getStream().subscribe(redraw);
     }
 
     host.appendChild(root);
@@ -61,6 +78,42 @@ function meterNode(
         subscription?.unsubscribe();
         root.remove();
       },
+
+      /*
+       * The range's two numbers, contributed to the shell's own panel — the
+       * framework-free counterpart of a settingsComponent, and the second half
+       * of what this node demonstrates: config in, config editable.
+       */
+      mountSettings(settingsHost: HTMLElement) {
+        const form = document.createElement('div');
+        form.className = 'fb-meter-settings';
+
+        (['min', 'max'] as const).forEach(key => {
+          const label = document.createElement('label');
+          label.textContent = key;
+
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.value = String(rangeOf(api.state.config)[key]);
+          input.addEventListener('input', () => {
+            const value = Number(input.value);
+
+            if (!Number.isNaN(value)) {
+              // In place, not a fresh object: workers and autosave hold the
+              // very config object the flow was loaded with.
+              (api.state.config ??= {})[key] = value;
+              redraw();
+            }
+          });
+
+          label.appendChild(input);
+          form.appendChild(label);
+        });
+
+        settingsHost.appendChild(form);
+
+        return () => form.remove();
+      },
     };
   };
 }
@@ -68,8 +121,18 @@ function meterNode(
 const reading = (value: number | undefined): string =>
   typeof value === 'number' && !Number.isNaN(value) ? value.toFixed(1) : '—';
 
-const clamped = (value: number | undefined): number =>
-  typeof value === 'number' && !Number.isNaN(value) ? Math.max(0, Math.min(100, value)) : 0;
+/** Where the reading sits in the range, as a fill percentage. */
+const percent = (value: number | undefined, { min, max }: MeterRange): number => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return 0;
+  }
+
+  // `|| 1`: an empty or inverted range has no sensible needle position, and a
+  // division by zero paints NaN% — pin the fill instead of the whole meter.
+  const span = max - min || 1;
+
+  return Math.max(0, Math.min(100, ((value - min) / span) * 100));
+};
 
 /** At rest: the number, and nothing that needs explaining. */
 export const meterSmall = meterNode(root => {
@@ -89,14 +152,16 @@ export const meterNormal = meterNode(root => {
   root.innerHTML = `
     <div class="fb-meter-value">—</div>
     <div class="fb-meter-track"><div class="fb-meter-fill"></div></div>
-    <div class="fb-meter-range">0 – 100</div>
+    <div class="fb-meter-range"></div>
   `;
 
   const value = root.querySelector<HTMLElement>('.fb-meter-value')!;
   const fill = root.querySelector<HTMLElement>('.fb-meter-fill')!;
+  const rangeLabel = root.querySelector<HTMLElement>('.fb-meter-range')!;
 
-  return current => {
+  return (current, range) => {
     value.textContent = reading(current);
-    fill.style.width = `${clamped(current)}%`;
+    fill.style.width = `${percent(current, range)}%`;
+    rangeLabel.textContent = `${range.min} – ${range.max}`;
   };
 });

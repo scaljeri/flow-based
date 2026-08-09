@@ -61,22 +61,19 @@ export class TapWorker implements FbNodeWorker {
 
     this.subscriptions[connection.id] = stream.subscribe((incoming: unknown) => {
       /*
-       * Rounded only when it IS a number. The old test was `!isNaN(val)`, which
-       * is also true of the string "3" — and a string has no toFixed, so a
-       * text-carrying wire threw inside the subscription and the tap stopped
-       * logging. Anything that is not a number is kept exactly as it arrived;
-       * the drawings decide how to show it.
+       * Passed on exactly as it arrived. An observer must not change what it
+       * observes: this used to round non-integer numbers to two decimals on
+       * the way THROUGH, so a tap between a formula and a plot changed the
+       * plot. Rounding is the drawings' job — see TapView.label. (An earlier
+       * version also called toFixed on anything `!isNaN`, which is true of the
+       * string "3" too, and a text-carrying wire threw mid-subscription.)
        */
-      const val = typeof incoming === 'number' && !Number.isInteger(incoming)
-        ? parseFloat(incoming.toFixed(2))
-        : incoming;
-
-      this.currentValue = val;
+      this.currentValue = incoming;
       this.count++;
 
-      this.history.unshift(val);
+      this.history.unshift(incoming);
       this.history = this.history.slice(0, 33);
-      this.subject.next(val);
+      this.subject.next(incoming);
     });
   }
 
