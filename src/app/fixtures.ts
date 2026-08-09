@@ -1459,7 +1459,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 33 },
+  config: { seedVersion: 34 },
   /*
    * The same flow, read as an article.
    *
@@ -1540,22 +1540,17 @@ export const tno = () => ({
       {
         type: 'text',
         text:
-          'Press one. What comes back is that station taken apart by sector: one bar per ' +
-          'day, the height its total, each band one source’s share of it. `Boundary` is ' +
-          'what blew in across the edge of the model; `Seasalt` and `Saharan Dust` are ' +
-          'nobody’s to reduce; the rest is a list of decisions somebody could make.',
+          'Press one. That station comes back taken apart twice — by sector and by ' +
+          'country, what was done and where it was done. Same bar, same day, cut two ' +
+          'ways: one bar per day, its height the total, each band a share of it. ' +
+          '`Boundary` is what blew in over the edge of the model; `Seasalt` and ' +
+          '`Saharan Dust` are nobody’s to reduce; the rest is a list of decisions ' +
+          'somebody could make.',
       },
+      // Back to back, deliberately. The two cuts of one bar are read against
+      // each other, and a paragraph between them is a paragraph you have to
+      // scroll past to make the comparison the page is about.
       { type: 'node', nodeId: 1100, float: 'none', width: '440px', caption: 'One station, by sector' },
-      {
-        type: 'text',
-        text:
-          'The same press also answers the other half of the question. Sectors say what ' +
-          'was done; countries say where it was done — the same bar, the same day, cut ' +
-          'the other way, because the label a molecule carries records both. Set the ' +
-          'Dutch band against the German and Belgian ones underneath it, and then find ' +
-          '`Boundary` again: that is the share this model inherited rather than worked ' +
-          'out.',
-      },
       { type: 'node', nodeId: 1300, float: 'none', width: '440px', caption: 'The same station, by country' },
 
       { type: 'heading', text: 'Europe', level: 2 },
