@@ -9,7 +9,7 @@ A flow's `document` is an article that teaches something, with the flow's own
 live nodes as its figures. It is deployed and shared standalone, so it is
 public writing, not a comment.
 
-## The style, which is Luca's and not negotiable
+## The voice these articles are written in
 
 - **Scientific, a bit enthusiastic, written for dummies.** Never poetic. State
   what a thing is; define each term as it arrives; no metaphor the reader has to
@@ -24,7 +24,7 @@ public writing, not a comment.
   disagree, quote the file.
 - **No plumbing.** A request node is not a figure. Machinery goes into a subflow
   that wears a useful face, or off the page.
-- **Titles are Luca's call.** Offer one, do not defend it.
+- **A title is the author's call.** Offer one; do not defend it.
 
 ## The mechanics
 
@@ -48,8 +48,4 @@ Blocks are `heading` | `text` | `node`, in `fixtures.ts` under the flow's
 
 Update the e2e that asserts the document's shape (figure count and the
 `fig-<nodeId>` slot list) — it is what catches a renumbered fixture. Then read
-the deployed page at phone width and at desktop width before saying it is done,
-and send Luca a screenshot.
-
-If he corrects the wording, write the correction into the
-`document-writing-style` memory the same turn, in his words.
+the deployed page at phone width and at desktop width before calling it done.

@@ -9,7 +9,8 @@ The procedure that turns a working change into a published one. It exists
 because the order matters and two of the steps are easy to forget in a way that
 silently breaks the NEXT thing.
 
-Luca cannot run the app himself, so a change he cannot look at is not finished.
+The site is the only place most people see this project, so a change nobody can
+look at is not finished.
 
 ## 1. Prove it
 
@@ -20,9 +21,10 @@ npx playwright test
 ```
 
 A red test is reported plainly and first. Before calling anything a flake,
-re-run that one test alone (`-g "<name>"`) and check `uptime` — this machine
-rotates failures above load ~5, and the drag-perf and map-highlight tests are
-the usual ones. A test that fails alone is a failure.
+re-run that one test alone (`-g "<name>"`) and check `uptime`. On a small
+machine the suite rotates failures above load ~5; the drag-perf and
+map-highlight tests are the usual casualties. A test that fails alone is a
+failure.
 
 If the change touched a **lit** library, `node scripts/build-lit-demo.mjs`
 first: `build:e2e` lives in the :4200 webServer command, which is skipped when a
@@ -63,10 +65,9 @@ unrelated to the change.
 
 Verification is against `https://playground.calje.eu/fbp/`, not localhost. A
 throwaway Playwright spec that navigates there, asserts the thing that changed
-and takes a screenshot is the fastest honest check; delete it afterwards. Send
-Luca the screenshot with `SendUserFile`.
+and takes a screenshot is the fastest honest check; delete it afterwards.
 
 ## 5. Report
 
-Result first. What was verified and how, what was skipped and why. No summary of
-the steps — he can see the commit.
+Result first: what was verified and how, and what was skipped and why. No
+summary of the steps — the commit says those.

@@ -52,9 +52,9 @@ name, a vocabulary, a colour per sector — the generic version goes in the modu
 
 ## Renaming or splitting a type
 
-Saved flows exist, including on Luca's phone. A rename needs a migration step in
-`serialization.ts` keyed by the from-version, and `FB_FLOW_FORMAT_VERSION` goes
-up by one. A split must keep the old node's id and its wired sockets on one of
+Saved flows exist in browsers you cannot reach. A rename needs a migration step
+in `serialization.ts` keyed by the from-version, and `FB_FLOW_FORMAT_VERSION`
+goes up by one. A split must keep the old node's id and its wired sockets on one of
 the halves, and mint fresh ids from `highestId(flow)` for the other.
 
 ## Finish

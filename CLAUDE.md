@@ -71,9 +71,9 @@ a fresh session.
   it is why the claim matters.
 - Match the file you are in: comment density, naming, idiom.
 
-Prose in a flow's *document* has its own rules — scientific, a bit
-enthusiastic, short, every number sourced, no plumbing on the page. Those are
-Luca's and they live in memory (`document-writing-style`).
+Prose in a flow's *document* is a different register with the same intent —
+scientific, a bit enthusiastic, short, every number sourced, no plumbing on the
+page. The `doc-write` skill has the whole of it.
 
 ## Done means
 
