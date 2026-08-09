@@ -11,6 +11,14 @@
  * The tap's input declares no format on purpose. It takes one from whatever it
  * is connected to, which is the engine's format propagation doing its job — and
  * it means this fixture keeps working if the generator's type ever changes.
+ *
+ * Hand-writing fixtures in this file, four things that have each cost real
+ * time: connection ids must be unique per flow (a duplicate silently REPLACES
+ * the first wire and that part of the flow stops being fed); more than one
+ * flow declares a seedVersion, so bump the right line, not the first match;
+ * positions are percentages and a node's label sits BELOW its box, so check
+ * the flow view after moving one; and the `basic` and `demo` fixtures share
+ * node ids 200 and 900, so a search by id can land in the wrong flow.
  */
 export const basic = {
   id: 1,
