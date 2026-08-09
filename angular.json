@@ -354,6 +354,41 @@
           }
         }
       }
+    },
+    "@scaljeri/flow-based-basics": {
+      "projectType": "library",
+      "root": "projects/flow-based-basics",
+      "sourceRoot": "projects/flow-based-basics/src",
+      "prefix": "fb",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-basics/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-basics/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-basics/**/*.ts",
+              "projects/flow-based-basics/**/*.html"
+            ]
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-basics/tsconfig.spec.json"
+          }
+        }
+      }
     }
   }
 }

@@ -3,14 +3,6 @@ import { BrowserModule } from '@angular/platform-browser';
 import { CUSTOM_ELEMENTS_SCHEMA, NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
-import { TapSmallComponent } from './nodes/tap/tap-small.component';
-import { TapNormalComponent } from './nodes/tap/tap-normal.component';
-import { TapFullComponent } from './nodes/tap/tap-full.component';
-import { SubflowComponent } from './nodes/subflow/subflow.component';
-import { ScriptSmallComponent } from './nodes/script/script-small.component';
-import { ScriptNormalComponent } from './nodes/script/script-normal.component';
-import { ScriptFullComponent } from './nodes/script/script-full.component';
-import { SubflowSettingsComponent } from './nodes/subflow/subflow-settings.component';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { SocketTypesDialogComponent } from './components/socket-types/socket-types-dialog.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
@@ -43,39 +35,19 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
 import { FullscreenOverlayContainer, OverlayContainer, OverlayModule } from '@angular/cdk/overlay';
 import { ComponentSelectionService } from './component-selection.service';
-import { RandomNumbersSmallComponent } from './nodes/random-numbers/random-numbers-small.component';
-import { RandomNumbersNormalComponent } from './nodes/random-numbers/random-numbers-normal.component';
-import { RandomNumbersSettingsComponent } from './nodes/random-numbers/random-numbers-settings.component';
 import { typeScriptOf } from '@scaljeri/flow-based-core';
 import { FB_CONFIG, FB_SOCKET_PALETTE } from './fb-settings';
 import { NODE_HELPERS } from './node-helpers';
-import { StatsSmallComponent } from './nodes/stats/stats-small.component';
-import { StatsNormalComponent } from './nodes/stats/stats-normal.component';
-import { StatsFullComponent } from './nodes/stats/stats-full.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    RandomNumbersSmallComponent,
-    RandomNumbersNormalComponent,
-    RandomNumbersSettingsComponent,
-    TapSmallComponent,
-    TapNormalComponent,
-    TapFullComponent,
-    SubflowComponent,
-    ScriptSmallComponent,
-    ScriptNormalComponent,
-    ScriptFullComponent,
-    SubflowSettingsComponent,
     TypeColorsComponent,
     SocketTypesDialogComponent,
     ModulesDialogComponent,
     FlowsDialogComponent,
     FlowComponent,
     ComponentSelectionComponent,
-    StatsSmallComponent,
-    StatsNormalComponent,
-    StatsFullComponent,
   ],
   imports: [
     BrowserModule,

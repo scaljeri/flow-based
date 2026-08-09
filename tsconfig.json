@@ -21,6 +21,9 @@
       "@scaljeri/flow-based": [
         "./dist/flow-based"
       ],
+      "@scaljeri/flow-based-basics": [
+        "./dist/flow-based-basics"
+      ],
       "@scaljeri/flow-based-math": [
         "./dist/flow-based-math"
       ],
