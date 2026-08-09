@@ -13,6 +13,7 @@ import { PickConfig, PickShape, PickWorker } from './pick.worker';
         <option value="geo">Places (lat, lon, label)</option>
         <option value="point">Points (x, y)</option>
         <option value="grid">A grid (a raster over an area)</option>
+        <option value="stack">A stack (bands over a series)</option>
         <option value="value">One value (a number)</option>
         <option value="text">One value (as text)</option>
       </select>
@@ -105,6 +106,23 @@ export class PickSettingsComponent {
         { key: 'lat', label: 'Latitude bounds', hint: 'lat' },
         { key: 'lon', label: 'Longitude bounds', hint: 'lon' },
         { key: 'dims', label: 'Shape [rows, cols]', hint: 'shape' },
+        { key: 'unit', label: 'Unit field', hint: 'unit' },
+      ];
+    }
+
+    /*
+     * The shape this panel could not build until 2026-08-10: the tno flow's
+     * six stack picks were hand-written in the fixture because the panel
+     * simply had no stack entry — an author without the source file could
+     * not make one.
+     */
+    if (this.shape === 'stack') {
+      return [
+        { key: 'values', label: 'Rows array', hint: 'values' },
+        { key: 'labels', label: 'Part names array', hint: 'labels' },
+        { key: 'title', label: 'Title field', hint: 'title' },
+        { key: 'merge', label: 'Merge pattern — first group is the name', hint: '^(.*?) ' },
+        { key: 'top', label: 'Keep the largest, plus Other — empty keeps all', hint: '12' },
       ];
     }
 
@@ -137,7 +155,11 @@ export class PickSettingsComponent {
   write(key: keyof PickConfig, event: Event): void {
     const raw = (event.target as HTMLInputElement | HTMLSelectElement).value;
 
-    this.worker?.set(key, key === 'limit' ? Number(raw) || 500 : raw);
+    // The two counted fields travel as numbers; `top` empty means keep all.
+    this.worker?.set(
+      key,
+      key === 'limit' ? Number(raw) || 500 : key === 'top' ? Number(raw) || 0 : raw,
+    );
 
     /*
      * The shape decides what the out socket carries, and the worker rewrites

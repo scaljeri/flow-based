@@ -3548,6 +3548,74 @@ test('a choice offers what arrived, and sends on the field it was told to', asyn
 
 
 /**
+ * Every shape a pick can build is buildable FROM ITS PANEL.
+ *
+ * The stack shape had no entry in the settings select until 2026-08-10: the
+ * tno flow's six stack picks were hand-written in the fixture, and an author
+ * without the source file could not make one. The fields are per shape on
+ * purpose — most of the config's seventeen keys mean something for exactly
+ * one shape, and a panel showing all of them is six nodes sharing one form.
+ */
+test('a pick offers every shape, and shows only the chosen shape\'s fields', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor
+      .addNode('data-pick');
+  });
+
+  // A pick is a small-only type: double-clicking it opens its settings panel
+  // directly, because small draws no header to reach them by.
+  await expect
+    .poll(() => page.evaluate(() => {
+      const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+        .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'data-pick');
+
+      box?.shadowRoot?.querySelector('.box')
+        ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+
+      return !!box?.shadowRoot?.querySelector('fb-node-settings');
+    }))
+    .toBe(true);
+
+  const panel = async () => page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'data-pick')!;
+    const own = box.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('.own');
+
+    return {
+      shapes: [...(own?.querySelectorAll('select option') ?? [])].map(o => o.getAttribute('value')),
+      fields: [...(own?.querySelectorAll('.field .label') ?? [])].map(l => l.textContent!.trim()),
+    };
+  });
+
+  await expect.poll(async () => (await panel()).shapes)
+    .toEqual(['geo', 'point', 'grid', 'stack', 'value', 'text']);
+
+  // Switch to stack: the fields follow the shape.
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'data-pick')!;
+    const select = box.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector<HTMLSelectElement>('.own select')!;
+
+    select.value = 'stack';
+    select.dispatchEvent(new Event('change'));
+  });
+
+  await expect.poll(async () => (await panel()).fields).toEqual([
+    'Build',
+    'Rows array',
+    'Part names array',
+    'Title field',
+    'Merge pattern — first group is the name',
+    'Keep the largest, plus Other — empty keeps all',
+  ]);
+});
+
+/**
  * A pressed socket says what it is.
  *
  * A socket is a dot on the edge of a box, and pressing one starts a
