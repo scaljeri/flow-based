@@ -1982,11 +1982,12 @@ test('pressing a socket on the rim opens that socket', async ({ page }) => {
   expect(editor).toEqual({
     open: true,
     /*
-     * Two text fields: what this socket is called, and what travels through
-     * it. No colour picker — a colour belongs to a data TYPE and is chosen
-     * once in the colours menu, or the same type could look like two.
+     * Two text fields — what this socket is called, and what travels through
+     * it — and the fan checkbox. No colour picker: a colour belongs to a data
+     * TYPE and is chosen once in the colours menu, or the same type could
+     * look like two.
      */
-    fields: ['text', 'text'],
+    fields: ['text', 'text', 'checkbox'],
     title: 'Socket in',
     offersAChoice: false,
     lit: 1,
@@ -2287,65 +2288,67 @@ test('the loose end of a connection can be picked up and dropped on a socket', a
 });
 
 /**
- * An input takes ONE connection.
+ * Fan is the rule on both sides (2026-08-09).
  *
- * An output may feed many — that is fan-out, and the engine copies the stream to
- * each — but two things arriving at one input is not a merge, it is a question
- * with no answer: which value is the value?
- *
- * The engine says the same thing in code. `FlowWorker.setStream` keys its
- * subscription by SOCKET id, so a second stream into one input silently replaced
- * the first without unsubscribing it — a leak, and a stream that stopped
- * arriving. A node wanting several inputs asks for several sockets.
+ * An output copies its stream to every consumer, and wires fanning INTO an
+ * input interleave — every packet arrives one by one and the node handles
+ * them one by one; the engine merges the wires into the one stream the worker
+ * sees. Until then an input took one connection, because the engine of the
+ * day silently replaced the first stream instead of merging.
  */
-test('an input socket refuses a second connection', async ({ page }) => {
+test('an input socket accepts a second connection', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
   const before = (await connectionPaths(page)).length;
 
-  // The Sink's input is already fed by the Source.
-  const state = await page.evaluate(() => {
+  // The Sink's input is already fed by the Source; a second wire fans in.
+  const allowed = await page.evaluate(() => {
     const source = window.fbEditor.children.find(n => n.title === 'Source')!;
-    const scope = window.fbEditor.children.find(n => n.title === 'Scope')!;
     const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
 
-    // Arm from the Scope... it has no output, so use the Source's again.
+    window.fbEditor.socketClicked(source.sockets![0], source.id!);
+
+    const accepts = window.fbEditor.accepts(sink.sockets![0], sink.id!);
+
+    window.fbEditor.socketClicked(sink.sockets![0], sink.id!);
+
+    return accepts;
+  });
+
+  expect(allowed).toBe(true);
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
+});
+
+/**
+ * `fan: false` is a socket declaring it takes ONE connection — the toggle in
+ * the socket's own dialog writes it. The occupied input must both PAINT as
+ * rejecting (accepts) and actually refuse the drop (buildConnection): paint is
+ * not enforcement, a loose end can be dropped straight on a socket.
+ */
+test('a socket with fan switched off refuses a second connection', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = (await connectionPaths(page)).length;
+
+  const state = await page.evaluate(() => {
+    const source = window.fbEditor.children.find(n => n.title === 'Source')!;
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.updateSocket(sink.sockets![0], { fan: false });
+
     window.fbEditor.socketClicked(source.sockets![0], source.id!);
 
     const taken = window.fbEditor.accepts(sink.sockets![0], sink.id!);
 
     window.fbEditor.socketClicked(sink.sockets![0], sink.id!);
 
-    return { taken, free: scope.id };
+    return { taken };
   });
 
-  // The occupied input reports itself as rejecting, and nothing was added.
   expect(state.taken).toBe(false);
   expect(await connectionPaths(page)).toHaveLength(before);
-
-  /*
-   * An output is not limited the same way. The Source already feeds two things;
-   * a third is fan-out, which the engine copies rather than contests.
-   */
-  const fanned = await page.evaluate(() => {
-    const source = window.fbEditor.children.find(n => n.title === 'Source')!;
-
-    window.fbEditor.addNode('sink');
-
-    const fresh = window.fbEditor.children[window.fbEditor.children.length - 1];
-
-    window.fbEditor.socketClicked(source.sockets![0], source.id!);
-
-    const allowed = window.fbEditor.accepts(fresh.sockets![0], fresh.id!);
-
-    window.fbEditor.socketClicked(fresh.sockets![0], fresh.id!);
-
-    return allowed;
-  });
-
-  expect(fanned).toBe(true);
-  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
 });
 
 /* ==========================================================================
@@ -2392,9 +2395,9 @@ test('a subflow\'s sockets are connectable from inside, and the stream crosses',
   /*
    * Connect the boundary to a fresh sink inside. The boundary's in-socket is
    * the SOURCE end here, so the editor must accept the pair even though both
-   * sockets are type `in` — direction reverses at the boundary. The inner
-   * scope will not do as a target: the inner source already feeds it, and an
-   * input takes one connection.
+   * sockets are type `in` — direction reverses at the boundary. A fresh sink
+   * rather than the inner scope, so the one asserted wire is unmistakably the
+   * one this test drew.
    */
   const wired = await page.evaluate(() => {
     const flow = window.fbEditor.state;

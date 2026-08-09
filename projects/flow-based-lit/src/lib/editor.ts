@@ -574,8 +574,16 @@ export class FbEditor {
     }
   }
 
-  updateSocket(socket: FbSocket, patch: { name?: string; color?: string; description?: string }): void {
+  updateSocket(socket: FbSocket, patch: { name?: string; color?: string; description?: string; fan?: boolean }): void {
     Object.assign(socket, patch);
+
+    // Absent means true, so switching fan back ON removes the key — the saved
+    // JSON stays as it was before the flag existed instead of collecting
+    // `"fan": true` on every socket someone toggled twice.
+    if (patch.fan === true) {
+      delete socket.fan;
+    }
+
     this.changes.emit({ kind: 'sockets' });
   }
 
@@ -1221,8 +1229,8 @@ export class FbEditor {
       return false;
     }
 
-    // An input takes ONE connection; see isTaken.
-    if (this.isTaken(socket, nodeId) || this.isTaken(pending.socket, pending.nodeId)) {
+    // A socket with fan switched OFF takes one connection; see isTaken.
+    if (this.isTaken(socket) || this.isTaken(pending.socket)) {
       return false;
     }
 
@@ -1260,25 +1268,26 @@ export class FbEditor {
   /**
    * Whether a socket already carries all it can.
    *
-   * An INPUT takes one connection. An output may feed many — that is fan-out,
-   * and the engine copies the stream to each — but two things arriving at one
-   * input is not a merge, it is a question with no answer: which value is the
-   * value?
+   * By default it never does: fan is the rule on both sides. An output copies
+   * its stream to every consumer, and wires fanning INTO an input interleave —
+   * every packet arrives one by one and the node handles them one by one; the
+   * engine merges the wires into the one stream the worker sees. (Until
+   * 2026-08-09 an input took one connection, because the engine of the day
+   * silently replaced the first stream instead of merging.)
    *
-   * The engine says the same thing in code. `FlowWorker.setStream` keys its
-   * subscription by SOCKET id, so a second stream into one input silently
-   * replaced the first without unsubscribing it — a leak, and a stream that
-   * stopped arriving. A node that wants several inputs asks for several sockets,
-   * which is what its settings panel is for.
+   * `fan: false` is the socket declaring it takes ONE connection — a node
+   * whose input means "the one function to plot" can say so. Absent means
+   * true, which is what every flow saved before the flag existed means.
    */
-  private isTaken(socket: FbSocket, nodeId: number): boolean {
-    if (this.effectiveType(socket, nodeId) !== 'in') {
+  private isTaken(socket: FbSocket): boolean {
+    if (socket.fan !== false) {
       return false;
     }
 
-    // An inner connection to the boundary stores the subflow's socket in the
-    // same field an ordinary input uses, so one test covers both.
-    return this.connections.some(c => c.in === socket.id);
+    // A socket keeps its own id in the connection field its OUTER role uses,
+    // whichever end of an inner connection it stands at — so matching both
+    // fields covers ordinary sockets and a subflow's boundary alike.
+    return this.connections.some(c => c.in === socket.id || c.out === socket.id);
   }
 
   private buildConnection(a: FbPendingSocket, b: FbPendingSocket): FbConnection | null {
@@ -1309,7 +1318,7 @@ export class FbEditor {
      * all along), while a type mismatch and a connection from a node to itself
      * were not refused anywhere.
      */
-    if (this.isTaken(inn.socket, inn.nodeId)) {
+    if (this.isTaken(inn.socket) || this.isTaken(out.socket)) {
       return null;
     }
 

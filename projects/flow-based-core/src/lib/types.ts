@@ -56,6 +56,17 @@ export interface FbSocket {
   position?: number;
   description?: string;
   aux?: string;
+  /**
+   * Whether this socket takes more than one connection: fan-in on an `in`,
+   * fan-out on an `out`. Absent means true — the default, and what every flow
+   * saved before this existed means. `false` caps the socket at ONE connection.
+   *
+   * Wires fanning into an input interleave: every packet arrives one by one
+   * and the node handles them one by one. The engine merges them into the one
+   * stream the worker sees (see `Flow.connectWorkers`), so a worker never has
+   * to know how many wires feed a socket.
+   */
+  fan?: boolean;
 }
 
 /**

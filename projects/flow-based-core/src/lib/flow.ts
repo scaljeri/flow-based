@@ -10,6 +10,7 @@ import { FbAssignable, commonFormats, formatsCompatible, sameName } from './form
 import { FlowWorker } from './flow-worker';
 import { IdGenerator } from './id-generator';
 import { FbChangeEmitter } from './change-emitter';
+import { ReplaySubject, Subscription } from 'rxjs';
 
 interface Node {
   state: FbNodeState;
@@ -19,6 +20,18 @@ interface Node {
 interface NodeConnection {
   connection: FbConnection;
   state: FbNodeState;
+}
+
+/**
+ * The merge point where every wire into one input socket becomes the ONE
+ * stream its worker sees. See `connectWorkers`.
+ */
+interface InputBridge {
+  subject: ReplaySubject<unknown>;
+  /** The connection `setStream` was called with — `removeStream` must get the
+   *  same one back, because workers key their subscriptions by it. */
+  connection: FbConnection;
+  wires: FbKeyValues<Subscription>;
 }
 
 /**
@@ -42,6 +55,7 @@ export class Flow {
   private nodes: FbKeyValues<Node> = {};
   private connections: FbKeyValues<NodeConnection> = {};
   private sockets: FbKeyValues<number> = {};
+  private inputBridges: FbKeyValues<InputBridge> = {};
   private propagationReport: FbPropagationReport | null = null;
 
   /**
@@ -164,10 +178,7 @@ export class Flow {
   }
 
   removeConnection(connection: FbConnection, state: FbNodeState, doRebuild = true): void {
-    const worker = this.workers[connection.to as number];
-    if (worker && worker.removeStream) {
-      worker.removeStream(connection);
-    }
+    this.releaseWire(connection);
 
     delete this.connections[connection.id];
     state.connections = state.connections!.filter(c => c.id !== connection.id);
@@ -227,13 +238,7 @@ export class Flow {
         delete this.connections[key];
         dropped = true;
 
-        // Guarded, like removeConnection: a node type with neither a worker nor
-        // isFlow has no worker at all, and this threw a bare TypeError on it.
-        const worker = this.workers[connection.to as number];
-
-        if (worker && worker.removeStream) {
-          worker.removeStream(connection);
-        }
+        this.releaseWire(connection);
       }
     }
 
@@ -792,14 +797,81 @@ export class Flow {
     }
   }
 
+  /*
+   * Fan-in is legal: every wire into an input interleaves, and the node
+   * handles the packets one by one, in arrival order.
+   *
+   * The merge happens HERE and not in the workers, because there are dozens
+   * of workers and every custom node someone loads is one more — each keying
+   * its subscription by socket or by connection as it pleases. Before this
+   * bridge existed, a second wire into `FlowWorker` silently replaced the
+   * first without unsubscribing: a leak, and a stream that stopped arriving.
+   * Now a worker is handed exactly ONE stream per socket, however many wires
+   * feed it, and never has to know.
+   *
+   * The bridge replays its latest value on subscribe, because workers may
+   * subscribe LATE or subscribe AGAIN: the operator worker re-subscribes its
+   * combineLatest every time an input is added or removed, and with a plain
+   * Subject the value a source had already replayed into the bridge would be
+   * gone — the operator sat silent until every input happened to emit anew.
+   */
   private connectWorkers(connection: FbConnection): void {
     const fromWorker = this.getWorker(connection.from as number);
     const toWorker = this.getWorker(connection.to as number);
     const outSocket = this.getSocket(connection.out!);
     const inSocket = this.getSocket(connection.in!);
 
-    if (toWorker && fromWorker && outSocket && inSocket) {
-      toWorker.setStream(fromWorker.getStream(outSocket), inSocket, connection);
+    if (!(toWorker && fromWorker && outSocket && inSocket)) {
+      return;
     }
+
+    let bridge = this.inputBridges[inSocket.id!];
+
+    if (!bridge) {
+      bridge = this.inputBridges[inSocket.id!] = {
+        subject: new ReplaySubject<unknown>(1),
+        connection,
+        wires: {},
+      };
+
+      // Before the wire below, so a source that replays its latest value on
+      // subscribe finds the worker already listening.
+      toWorker.setStream(bridge.subject.asObservable(), inSocket, connection);
+    }
+
+    bridge.wires[connection.id] = fromWorker.getStream(outSocket)
+      .subscribe(value => bridge.subject.next(value));
+  }
+
+  /**
+   * Undo `connectWorkers` for one wire. Only the LAST wire out of a bridge
+   * takes the stream away from the worker — and hands `removeStream` the same
+   * connection `setStream` got, because workers key their subscriptions by it.
+   */
+  private releaseWire(connection: FbConnection): void {
+    const bridge = this.inputBridges[connection.in!];
+
+    if (!bridge) {
+      // No bridge was ever built — one end had no worker (an unknown type,
+      // or a connection removed before any stream was set through it).
+      return;
+    }
+
+    bridge.wires[connection.id]?.unsubscribe();
+    delete bridge.wires[connection.id];
+
+    if (Object.keys(bridge.wires).length) {
+      return;
+    }
+
+    delete this.inputBridges[connection.in!];
+
+    const worker = this.workers[connection.to as number];
+
+    if (worker && worker.removeStream) {
+      worker.removeStream(bridge.connection);
+    }
+
+    bridge.subject.complete();
   }
 }

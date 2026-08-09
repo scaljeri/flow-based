@@ -414,6 +414,19 @@ export class FbNodeSettingsElement extends LitElement {
       opacity: 0.45;
     }
 
+    /* One checkbox and its sentence on a row, unlike the stacked text fields. */
+    .socket-editor .fan {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+    }
+
+    .socket-editor .fan input {
+      margin: 0;
+      width: auto;
+    }
+
 
     /* Whatever the node type contributes for its own settings. */
     .config .own:not(:empty) {
@@ -1084,6 +1097,25 @@ export class FbNodeSettingsElement extends LitElement {
               this.captureOnce();
               this.editor.updateSocket(socket, { description: (e.target as HTMLInputElement).value });
             }}>
+        </label>
+
+        <!--
+          Fan on an input means wires interleave: every packet arrives one by
+          one and the node handles them one by one. Off caps the socket at ONE
+          connection, for an input whose meaning is singular — "the one
+          function to plot". Existing connections are left alone on purpose:
+          cutting wires on a toggle would destroy work to enforce a rule the
+          author is still deciding on.
+        -->
+        <label class="fan">
+          <input
+            type="checkbox"
+            .checked=${socket.fan !== false}
+            @change=${(e: Event) => {
+              this.captureOnce();
+              this.editor.updateSocket(socket, { fan: (e.target as HTMLInputElement).checked });
+            }}>
+          ${socket.type === 'in' ? 'Fan-in — accepts several connections' : 'Fan-out — feeds several connections'}
         </label>
 
         <!--

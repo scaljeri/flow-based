@@ -237,6 +237,107 @@ describe('Flow.removeConnection', () => {
   });
 });
 
+/*
+ * Fan-in became legal on 2026-08-09: wires into one input interleave, and the
+ * node handles the packets one by one. The engine merges the wires into ONE
+ * stream per socket (the input bridge), so no worker has to know how many
+ * wires feed it — before the bridge, a second stream into `FlowWorker`
+ * silently replaced the first without unsubscribing.
+ */
+describe('fan-in: wires into one input interleave', () => {
+  function withSecondSource() {
+    const { root, conn } = flatFixture();
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    const second: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
+    flow.addNode(second, root);
+    const conn2: any = { id: 1001, from: 30, to: 20, out: 300, in: 200 };
+    flow.addConnection(root, conn2);
+
+    return {
+      flow,
+      root,
+      conn,
+      conn2,
+      a: flow.getWorker(10) as any as RecordingWorker,
+      b: flow.getWorker(30) as any as RecordingWorker,
+      sink: flow.getWorker(20) as any as RecordingWorker,
+    };
+  }
+
+  it('delivers packets from every wire, one by one, in arrival order', () => {
+    const { a, b, sink } = withSecondSource();
+
+    // One stream per socket, however many wires feed it.
+    expect(sink.setStreamCalls).toHaveLength(1);
+
+    a.subject.next(1);
+    b.subject.next(2);
+    a.subject.next(3);
+
+    expect(sink.received).toEqual([1, 2, 3]);
+  });
+
+  it('removing one of two wires leaves the other alive', () => {
+    const { flow, root, conn, conn2, a, b, sink } = withSecondSource();
+
+    flow.removeConnection(conn, root);
+
+    // The socket is still fed, so the worker keeps its stream.
+    expect(sink.removeStreamCalls).toEqual([]);
+
+    a.subject.next('cut');
+    b.subject.next('alive');
+
+    expect(sink.received).toEqual(['alive']);
+
+    // The LAST wire takes the stream away — and removeStream gets the same
+    // connection setStream got, because workers key their subscriptions by it.
+    flow.removeConnection(conn2, root);
+
+    expect(sink.removeStreamCalls).toEqual([conn]);
+  });
+
+  it('replays the latest value to a worker that subscribes late', () => {
+    /*
+     * The operator worker re-subscribes its combineLatest every time an input
+     * is added or removed. With a plain Subject as the bridge, the value a
+     * source had already emitted was gone by then, and the operator sat
+     * silent until every input happened to emit anew.
+     */
+    class LateWorker extends RecordingWorker {
+      stream: any;
+
+      override setStream(stream: any, socket: any, connection: any) {
+        this.setStreamCalls.push({ socket, connection });
+        this.stream = stream;
+      }
+
+      subscribeNow() {
+        this.stream.subscribe((v: any) => this.received.push(v));
+      }
+    }
+
+    const types = { ...flowTypes(), late: { worker: LateWorker, settings: { isFlow: false, title: 'Late', config: {}, sockets: [] } } };
+    const a: any = { id: 10, type: 'source', sockets: [{ id: 100, type: 'out', format: 'number' }] };
+    const b: any = { id: 20, type: 'late', sockets: [{ id: 200, type: 'in', format: 'number' }] };
+    const root: any = {
+      id: 1, type: 'flow', sockets: [], children: [a, b],
+      connections: [{ id: 1000, from: 10, to: 20, out: 100, in: 200 }],
+    };
+    const flow = new Flow(types as any).initialize(root);
+
+    const source = flow.getWorker(10) as any as RecordingWorker;
+    const late = flow.getWorker(20) as any as LateWorker;
+
+    source.subject.next(41);
+    source.subject.next(42);
+    late.subscribeNow();
+
+    expect(late.received).toEqual([42]);
+  });
+});
+
 describe('Flow.removeNode', () => {
   it('removes the node from its parent children', () => {
     const { root, a } = flatFixture();
