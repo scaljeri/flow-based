@@ -32,7 +32,7 @@ export class ComponentSelectionComponent implements OnInit {
     return this.flowTypes[key].settings.title;
   }
 
-  /** Matches the visible title as well as the registry key (e.g. 'zoomcanvas'). */
+  /** Matches the visible title as well as the registry key (e.g. 'random-numbers'). */
   onQuery(query: string): void {
     this.query = query;
     this.rebuild();

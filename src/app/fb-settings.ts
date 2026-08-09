@@ -21,25 +21,10 @@ import { TAP_SETTINGS, TapWorker } from './workers/tap';
 import { METER_SETTINGS, meterNormal, meterSmall } from './nodes/meter/meter.node';
 import { SubflowComponent } from './nodes/subflow/subflow.component';
 import { SubflowSettingsComponent } from './nodes/subflow/subflow-settings.component';
-import { CustomCodeSmallComponent } from './nodes/custom-code/custom-code-small.component';
-import { CustomCodeNormalComponent } from './nodes/custom-code/custom-code-normal.component';
-import { CustomCodeFullComponent } from './nodes/custom-code/custom-code-full.component';
-import { CUSTOM_CODE_SETTINGS, CustomCodeWorker } from './workers/custom-code';
 import { SCRIPT_SETTINGS, ScriptWorker } from './workers/script';
 import { ScriptSmallComponent } from './nodes/script/script-small.component';
 import { ScriptNormalComponent } from './nodes/script/script-normal.component';
 import { ScriptFullComponent } from './nodes/script/script-full.component';
-import { FractalSmallComponent } from './nodes/fractal/fractal-small.component';
-import { FractalSettingsComponent } from './nodes/fractal/fractal-settings.component';
-import { FRACTALS_SETTINGS, FractalsWorker } from './workers/fractals';
-import { ZOOM_CANVAS_SETTINGS, ZoomCanvasWorker } from './workers/zoom-canvas';
-import { ZoomCanvasSmallComponent } from './nodes/zoom-canvas/zoom-canvas-small.component';
-import { ZoomCanvasNormalComponent } from './nodes/zoom-canvas/zoom-canvas-normal.component';
-import { ZoomCanvasFullComponent } from './nodes/zoom-canvas/zoom-canvas-full.component';
-import { CanvasSmallComponent } from './nodes/canvas/canvas-small.component';
-import { CanvasNormalComponent } from './nodes/canvas/canvas-normal.component';
-import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
-import { CANVAS_SETTINGS, CanvasWorker } from './workers/canvas';
 
 export const FB_CONFIG: FbNodeTypes = {
   /*
@@ -122,47 +107,15 @@ export const FB_CONFIG: FbNodeTypes = {
     worker: ScriptWorker,
   },
 
-  'custom': {
-    component: {
-      small: CustomCodeSmallComponent,
-      normal: CustomCodeNormalComponent,
-      full: CustomCodeFullComponent,
-    },
-    settings: CUSTOM_CODE_SETTINGS,
-    worker: CustomCodeWorker,
-  },
   /*
-   * The select and the reset moved to the settings panel — they are
-   * configuration, not content. What is left to draw is which fractal this
-   * computes, and small says that; there is nothing more a bigger view could
-   * add, so there isn't one.
+   * The custom/fractals/zoomcanvas/canvas quartet is gone (2026-08-09):
+   * `custom` was script minus state, emit and error display; the other three
+   * were the pre-module fractal pipeline that math-mandelbrot, graph-field
+   * and graph-viewpoints replaced. There is no migration on purpose — the
+   * engine keeps an unknown type visible and editable, and rewriting a
+   * user's saved code body (custom → script changed the API) is where a
+   * migration would go wrong.
    */
-  'fractals': {
-    component: {
-      small: FractalSmallComponent,
-    },
-    settingsComponent: FractalSettingsComponent,
-    settings: FRACTALS_SETTINGS,
-    worker: FractalsWorker,
-  },
-  'zoomcanvas': {
-    component: {
-      small: ZoomCanvasSmallComponent,
-      normal: ZoomCanvasNormalComponent,
-      full: ZoomCanvasFullComponent,
-    },
-    settings: ZOOM_CANVAS_SETTINGS,
-    worker: ZoomCanvasWorker,
-  },
-  'canvas': {
-    component: {
-      small: CanvasSmallComponent,
-      normal: CanvasNormalComponent,
-      full: CanvasFullComponent,
-    },
-    settings: CANVAS_SETTINGS,
-    worker: CanvasWorker,
-  },
   /*
    * A subflow: a node that is itself a flow. The type key stays `flow` because
    * it is in every saved file; only what it is CALLED changed.
@@ -200,7 +153,5 @@ export const FB_CONFIG: FbNodeTypes = {
 
 export const FB_SOCKET_PALETTE = {
   'number': '#025d04',
-  'worker': '#c1a',
-  'dimension': '#bebebe',
   'point': '#9988cf'
 };

@@ -1,17 +1,3 @@
-export interface IDimensions {
-  x?: number;
-  y?: number;
-  xMin: number;
-  yMin: number;
-  xMax: number;
-  yMax: number;
-  width?: number;
-  height?: number;
-  zoom?: number;
-  /** Iteration budget handed to the fractal web worker. */
-  maxIterations?: number;
-}
-
 /*
  * Minimal structural types for the parts of the `google-charts` visualization API
  * this app actually touches. The package ships no typings of its own, so these
@@ -35,16 +21,3 @@ export interface GoogleChartDataView {
   getNumberOfRows(): number;
 }
 
-export interface IZoomable {
-  metadata: {
-    label: string;
-    dimensions: IDimensions;
-  };
-  imageData: ImageData;
-}
-
-export interface IWorker {
-  label: string;
-  defaults?: IDimensions;
-  worker: Worker;
-}

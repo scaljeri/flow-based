@@ -57,17 +57,6 @@ import { NODE_HELPERS } from './node-helpers';
 import { StatsSmallComponent } from './nodes/stats/stats-small.component';
 import { StatsNormalComponent } from './nodes/stats/stats-normal.component';
 import { StatsFullComponent } from './nodes/stats/stats-full.component';
-import { CustomCodeSmallComponent } from './nodes/custom-code/custom-code-small.component';
-import { CustomCodeNormalComponent } from './nodes/custom-code/custom-code-normal.component';
-import { CustomCodeFullComponent } from './nodes/custom-code/custom-code-full.component';
-import { FractalSmallComponent } from './nodes/fractal/fractal-small.component';
-import { FractalSettingsComponent } from './nodes/fractal/fractal-settings.component';
-import { ZoomCanvasSmallComponent } from './nodes/zoom-canvas/zoom-canvas-small.component';
-import { ZoomCanvasNormalComponent } from './nodes/zoom-canvas/zoom-canvas-normal.component';
-import { ZoomCanvasFullComponent } from './nodes/zoom-canvas/zoom-canvas-full.component';
-import { CanvasSmallComponent } from './nodes/canvas/canvas-small.component';
-import { CanvasNormalComponent } from './nodes/canvas/canvas-normal.component';
-import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
 
 @NgModule({
   declarations: [
@@ -97,17 +86,6 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
     StatsSmallComponent,
     StatsNormalComponent,
     StatsFullComponent,
-    CustomCodeSmallComponent,
-    CustomCodeNormalComponent,
-    CustomCodeFullComponent,
-    FractalSmallComponent,
-    FractalSettingsComponent,
-    ZoomCanvasSmallComponent,
-    ZoomCanvasNormalComponent,
-    ZoomCanvasFullComponent,
-    CanvasSmallComponent,
-    CanvasNormalComponent,
-    CanvasFullComponent,
   ],
   imports: [
     BrowserModule,
@@ -137,11 +115,6 @@ import { CanvasFullComponent } from './nodes/canvas/canvas-full.component';
     OverlayModule,
     MatAutocompleteModule,
     MatSelectModule,
-    /*
-     * CodemirrorModule (@ctrl/ngx-codemirror) is gone with the move to
-     * CodeMirror 6, which has no Angular wrapper and needs none — the editor is
-     * constructed directly in CustomCodeComponent.
-     */
   ],
   providers: [
     ComponentSelectionService,
