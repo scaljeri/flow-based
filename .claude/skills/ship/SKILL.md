@@ -57,7 +57,19 @@ A throwaway Playwright spec that navigates there, asserts the behaviour that
 changed and captures a screenshot is the quickest honest check; delete it
 afterwards.
 
-## 5. Report
+## 5. Record and prune
+
+Before reporting, while the work is still in hand:
+
+- Write down anything discovered that will be needed again — as a test named
+  after the defect, as a line in `CLAUDE.md` if it always applies, or as a
+  comment where the decision lives.
+- Then remove what has become dead weight: a rule the linter now enforces, a
+  note about code that no longer exists, a hazard that has been designed out,
+  two entries saying the same thing. Written knowledge only grows unless
+  something takes it away, and stale instructions cost more than missing ones.
+
+## 6. Report
 
 The result first: what was verified and how, and what was skipped and why. The
 commit already records the steps.

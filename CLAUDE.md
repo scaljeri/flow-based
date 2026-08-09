@@ -80,3 +80,20 @@ skill covers it.
 Tested, lint-clean, committed to a working branch and — if it ships — deployed
 and verified against the live site, with `npm run build:demo` afterwards to
 restore the local build. Anything skipped is stated explicitly.
+
+Then two closing steps, in this order.
+
+**Record what was learned.** Anything discovered during the work that will be
+needed again is written down before the work is called done — while it is still
+in hand. A defect becomes a test named after it; a hazard no test can catch
+becomes one line here or in the notes for that area; a decision becomes a
+comment where the decision lives. Nothing worth keeping is left in a
+conversation, a terminal or a memory.
+
+**Then prune.** Written knowledge grows and does not shrink by itself, and every
+line of it competes with the work for attention. So the last pass asks what can
+now go: a rule a test or the linter enforces on its own; a note describing code
+that no longer exists; a hazard that has been designed out; two entries saying
+the same thing. Delete what is wrong — an instruction that is confidently out of
+date costs more than a missing one. If nothing can go, say so; that is a result
+too.
