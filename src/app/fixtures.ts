@@ -1285,6 +1285,7 @@ function stationReadings(
   regionPath: string,
   position: { x: number; y: number },
   typePath = 'series.types.sectors',
+  top = 0,
 ) {
   const inn = { place: flowId + 10, network: flowId + 11, config: flowId + 12, pollutant: flowId + 13 };
   const out = { readings: flowId + 1 };
@@ -1325,6 +1326,9 @@ function stationReadings(
     {
       shape: 'stack', labels: 'labels', values: 'values', title: 'name',
       merge: '^(.*?) (?:non-)?native$',
+      // Only where the file names every possible contributor rather than the
+      // ones that contributed — see the European country breakdown.
+      ...(top ? { top } : {}),
     },
     'stack',
     { x: 86, y: 48 },
@@ -1459,7 +1463,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 34 },
+  config: { seedVersion: 36 },
   /*
    * The same flow, read as an article.
    *
@@ -1567,7 +1571,8 @@ export const tno = () => ({
           'is a view fitted to Europe, in which the Netherlands is forty pixels across.',
       },
       { type: 'node', nodeId: 700, float: 'none', width: '440px', caption: 'The same day over Europe' },
-      { type: 'node', nodeId: 1200, float: 'none', width: '440px', caption: 'A European station, taken apart' },
+      { type: 'node', nodeId: 1200, float: 'none', width: '440px', caption: 'A European station, by sector' },
+      { type: 'node', nodeId: 1400, float: 'none', width: '440px', caption: 'The same station, by country' },
 
       {
         type: 'text',
@@ -1746,7 +1751,7 @@ export const tno = () => ({
      */
     stationsToDraw(3200, { x: 44, y: 12 }),
     stationsToDraw(3300, { x: 44, y: 44 }),
-    stationReadings(3000, 'regions.0.id', { x: 84, y: 4 }),
+    stationReadings(3000, 'regions.0.id', { x: 75, y: 4 }),
     /*
      * The same click, asked a second question.
      *
@@ -1755,8 +1760,18 @@ export const tno = () => ({
      * bar, side by side. It costs one more fetch per press and buys the
      * comparison the whole page is about.
      */
-    stationReadings(3400, 'regions.0.id', { x: 84, y: 36 }, 'series.types.countries'),
-    stationReadings(3100, 'regions.1.id', { x: 84, y: 68 }),
+    stationReadings(3400, 'regions.0.id', { x: 75, y: 36 }, 'series.types.countries'),
+
+    // And the same pair for Europe, in its own column: one press, two
+    // questions, on whichever map was pressed.
+    stationReadings(3100, 'regions.1.id', { x: 88, y: 4 }),
+    /*
+     * Capped, and only here. The European country file lists all thirty-seven
+     * of them plus the naturals — forty-four bands, of which four are the
+     * answer. The Dutch one names sixteen and is readable whole, so it is left
+     * alone: a rule applied where it does not bite only hides data.
+     */
+    stationReadings(3500, 'regions.1.id', { x: 88, y: 36 }, 'series.types.countries', 12),
     {
       type: 'graph-plot',
       title: 'One station, by sector',
@@ -1769,7 +1784,7 @@ export const tno = () => ({
        */
       config: { style: 'bars' },
       sockets: [{ id: 1110, type: 'in', formats: ['number', 'point', 'stack'] }],
-      ui: { position: { x: 84, y: 20 } },
+      ui: { position: { x: 75, y: 20 } },
     },
     {
       type: 'graph-plot',
@@ -1777,15 +1792,23 @@ export const tno = () => ({
       id: 1300,
       config: { style: 'bars' },
       sockets: [{ id: 1310, type: 'in', formats: ['number', 'point', 'stack'] }],
-      ui: { position: { x: 84, y: 52 } },
+      ui: { position: { x: 75, y: 52 } },
     },
     {
       type: 'graph-plot',
-      title: 'One European station',
+      title: 'One European station, by sector',
       id: 1200,
       config: { style: 'bars' },
       sockets: [{ id: 1210, type: 'in', formats: ['number', 'point', 'stack'] }],
-      ui: { position: { x: 84, y: 84 } },
+      ui: { position: { x: 88, y: 20 } },
+    },
+    {
+      type: 'graph-plot',
+      title: 'The same European station, by country',
+      id: 1400,
+      config: { style: 'bars' },
+      sockets: [{ id: 1410, type: 'in', formats: ['number', 'point', 'stack'] }],
+      ui: { position: { x: 88, y: 52 } },
     },
   ],
   connections: [
@@ -1835,5 +1858,12 @@ export const tno = () => ({
     { id: 1017, from: 600, to: 3100, out: 610, in: 3112 },
     { id: 1018, from: 630, to: 3100, out: 632, in: 3113 },
     { id: 1019, from: 3100, to: 1200, out: 3101, in: 1210 },
+
+    // And the European press, asked the other way.
+    { id: 1038, from: 700, to: 3500, out: 713, in: 3510 },
+    { id: 1039, from: 2000, to: 3500, out: 2005, in: 3511 },
+    { id: 1040, from: 600, to: 3500, out: 610, in: 3512 },
+    { id: 1041, from: 630, to: 3500, out: 632, in: 3513 },
+    { id: 1042, from: 3500, to: 1400, out: 3501, in: 1410 },
   ],
 });

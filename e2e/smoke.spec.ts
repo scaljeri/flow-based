@@ -3012,6 +3012,24 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     }
 
     /*
+     * Europe answers the country question too — and it names every country in
+     * the domain whether or not it contributed, which is what the cap is for.
+     * Fourteen bands here, descending, plus the file's own `Other`.
+     */
+    if (/series\/eea\/S[03]\/PM2\.5-countries\.json$/.test(url)) {
+      const descending = [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+
+      return route.fulfill(answer({
+        code: 'S3',
+        name: 'Elsewhere',
+        start: '2026-05-21',
+        resolution: 'day',
+        labels: [...Array.from({ length: 13 }, (_, i) => `C${i + 1}`), 'Other'],
+        values: [descending, descending],
+      }));
+    }
+
+    /*
      * The European files split every sector again by whether it came from the
      * country itself — eighteen sources arriving as thirty-six labels. The
      * flow sums the pairs back together, so this stub says it the same way.
@@ -3070,6 +3088,7 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
     // The two the default selection asks for: each map picks its first
     // station, so a reader arrives at a page with something in every figure
     // rather than at two blank frames.
+    'data/eu/series/eea/S0/PM2.5-countries.json',
     'data/eu/series/eea/S0/PM2.5-sectoren.json',
     'data/nl/grid/2026-07-01/PM2.5.json',
     // Two questions about the same first station: what was done, and where.
@@ -3269,6 +3288,25 @@ test('the TOPAS subflow fetches everything from the publisher\'s own config', as
 
     return request ? (editor.flow.getWorker(request.id) as { url: string }).url : '';
   }), { timeout: 20_000 }).toBe('../tno-topas/data/eu/series/eea/S3/PM2.5-sectoren.json');
+
+  /*
+   * Both maps ask both questions — and the European country chart is capped,
+   * because that file names every country in the domain rather than the ones
+   * that contributed.
+   *
+   * Twelve kept in the FILE's order plus one `Other`, and the total per day is
+   * unchanged: a cap that quietly dropped 3 µg/m³ would make every bar shorter
+   * than the sector chart's beside it, and the two are the same air.
+   */
+  await expect.poll(() => page.evaluate(() => {
+    const flow = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor.flow;
+    const stack = (flow.getWorker(1400) as {
+      buffer: { stack?: { labels: string[]; rows: (number[] | null)[] } };
+    }).buffer.stack;
+    const row = stack?.rows[0];
+
+    return stack ? `${stack.labels.join()}|${row?.reduce((sum, value) => sum + value, 0)}` : '';
+  }), { timeout: 20_000 }).toBe('C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,Other|105');
 
   /*
    * And its two halves are added back together: `Shipping native` and
@@ -4458,11 +4496,11 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
   await expect(doc.locator('h2')).toHaveCount(2);
 
   /*
-   * Every figure is mounted node content. Seven of them, and each one has to
+   * Every figure is mounted node content. Eight of them, and each one has to
    * resolve: an unresolved `{{id}}` renders as its own source text, which is
    * honest in a document and useless in a test that means to catch it.
    */
-  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(7);
+  await expect.poll(() => doc.locator('.fb-node-content').count()).toBe(8);
   await expect(doc).not.toContainText('{{');
 
   // Claims with sources: an article that quotes a number names where it is
@@ -4480,8 +4518,8 @@ test('the measuring-network flow reads as an article, with its own nodes as figu
     [...document.querySelectorAll('fb-flow-document [slot^="fig-"]')]
       .map(node => node.getAttribute('slot'))
       .sort())).toEqual([
-        'fig-1100', 'fig-1200', 'fig-1300', 'fig-300', 'fig-500', 'fig-630',
-        'fig-700',
+        'fig-1100', 'fig-1200', 'fig-1300', 'fig-1400', 'fig-300', 'fig-500',
+        'fig-630', 'fig-700',
       ]);
 });
 

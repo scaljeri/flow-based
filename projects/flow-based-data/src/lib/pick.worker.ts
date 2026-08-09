@@ -28,6 +28,18 @@ export interface PickConfig {
    * under. Empty leaves every part on its own.
    */
   merge?: string;
+  /**
+   * How many bands of a stack to keep, largest first; the rest are added
+   * together under one name.
+   *
+   * For the files that name every possible contributor rather than the ones
+   * that contributed: thirty-seven countries, of which four are the answer
+   * and the others are rounding. A legend with forty-four entries in it is
+   * not a legend, and the small bands are invisible in the bars anyway — so
+   * the choice is between saying "and the rest" once or drawing a wall of
+   * names nobody can read. Empty keeps every band.
+   */
+  top?: number;
   lat?: string;
   lon?: string;
   /** Named `dims` rather than `shape`, which this config already spends on
@@ -445,7 +457,67 @@ export class PickWorker implements FbNodeWorker {
         : null)),
     };
 
-    return this.config.merge ? this.mergeLabels(stack.labels, stack.rows) : stack;
+    const merged = this.config.merge ? this.mergeLabels(stack.labels, stack.rows) : stack;
+
+    return this.keepTop(merged);
+  }
+
+  /**
+   * The largest bands, and one band for everything else.
+   *
+   * Ranked by the total over the whole series rather than by any single row,
+   * because a band that is biggest on one day and absent on the rest is not
+   * one of the answers — and a legend that changed its entries as you scrolled
+   * would be worse than a long one.
+   *
+   * The kept bands stay in the FILE's order. Sorting them by size would put
+   * the same country in a different place in each of two charts standing side
+   * by side, and colours are assigned by position: the reader would be
+   * comparing two pictures whose palettes disagree.
+   */
+  private keepTop(
+    stack: { labels: string[]; rows: (number[] | null)[] },
+  ): { labels: string[]; rows: (number[] | null)[] } {
+    const top = Math.floor(this.config.top ?? 0);
+
+    if (top < 1 || stack.labels.length <= top) {
+      return stack;
+    }
+
+    const totals = stack.labels.map((_, index) =>
+      stack.rows.reduce((sum, row) => sum + (row ? row[index] : 0), 0));
+    const ranked = stack.labels.map((_, index) => index).sort((a, b) => totals[b] - totals[a]);
+    const keep = ranked.slice(0, top).sort((a, b) => a - b);
+    const rest = ranked.slice(top);
+
+    // Into an `Other` the file already has, when it has one: two bands both
+    // meaning "the ones not listed" is one band too many.
+    const existing = keep.findIndex(index => stack.labels[index].toLowerCase() === 'other');
+    const labels = keep.map(index => stack.labels[index]);
+
+    if (existing < 0) {
+      labels.push('Other');
+    }
+
+    return {
+      labels,
+      rows: stack.rows.map(row => {
+        if (!row) {
+          return null;
+        }
+
+        const kept = keep.map(index => row[index]);
+        const other = rest.reduce((sum, index) => sum + row[index], 0);
+
+        if (existing < 0) {
+          kept.push(other);
+        } else {
+          kept[existing] += other;
+        }
+
+        return kept;
+      }),
+    };
   }
 
   /**
