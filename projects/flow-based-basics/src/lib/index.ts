@@ -18,6 +18,9 @@ import { SCRIPT_SETTINGS, ScriptWorker } from './script.worker';
 import { ScriptSmallComponent } from './script-small.component';
 import { ScriptNormalComponent } from './script-normal.component';
 import { ScriptFullComponent } from './script-full.component';
+import { VALUE_SETTINGS, ValueWorker } from './value.worker';
+import { ValueSmallComponent } from './value-small.component';
+import { ValueSettingsComponent } from './value-settings.component';
 
 /**
  * The standard palette: the set every editor starts with.
@@ -32,6 +35,18 @@ import { ScriptFullComponent } from './script-full.component';
  * into the registry it provides.
  */
 export const BASICS_TYPES: FbNodeTypes = {
+  /*
+   * A constant with a handle on it: the reader's hand on the model. Small IS
+   * the control — see the component. No bigger views; there is nothing more
+   * to show.
+   */
+  'value': {
+    component: { small: ValueSmallComponent },
+    settingsComponent: ValueSettingsComponent,
+    settings: VALUE_SETTINGS,
+    worker: ValueWorker,
+  },
+
   /*
    * Small and normal say nearly the same thing — the number it just produced —
    * because everything a generator can be TOLD lives in its settings, which
