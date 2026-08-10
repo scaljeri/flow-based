@@ -3,7 +3,12 @@
 An Angular library for flow-based programming (`projects/flow-based*`), a
 framework-free web-component shell (`flow-based-lit`), lazily loaded node
 modules (`-math`, `-graphs`, `-network`, `-data`), and a demo application in
-`src/app` that doubles as the showcase at <https://playground.calje.eu/fbp/>.
+`src/app`, deployed at <https://playground.calje.eu/fbp/>. The app bundles no
+demo flow: it opens one it ships as a file (`src/assets/flows/`), the same way
+anyone loads a flow. Those files are the demos — imaginary numbers, a crypto
+price with its moving average — and a flow may bring its own framework-free
+lib from a URL (`libs/` → `src/assets/modules/`), which is what the crypto demo
+does.
 
 This file is the working contract for the repository: the commands, the rules
 that hold everywhere, and what counts as finished. Background and the reasoning
@@ -18,7 +23,9 @@ behind individual decisions belong in the code comments and in `docs/`.
 | Angular wrapper | `projects/flow-based` | Hosts the shell; owns the module and format registry (`module-registry.ts`). Never duplicate what the shell already does. |
 | Standard palette | `projects/flow-based-basics` | The set every editor starts with — value, clock/trigger/gate, tap, script, stats, meter, the state cells, the subflow and its flow-param. A host spreads `BASICS_TYPES` into its registry; not a lazily loaded module. |
 | Node modules | `projects/flow-based-{math,complex,graphs,network,data}` | Lazily loaded chunks, registered via `src/app/modules.service.ts`. `complex` is the imaginary-numbers article's machinery — the proof that one subject's nodes ship as a module a flow asks for. |
-| Demo | `src/app` | The application, with its seeded flows in `src/app/fixtures.ts`. |
+| Demo | `src/app` | The application. Opens on a shipped flow; `fixtures.ts` holds only the `basic` starter it falls back to. |
+| Demo flows | `src/assets/flows` | The flows the app ships as files: `crypto.json` (the default it opens on), `imaginary-numbers.json`, `tno.json`. Loaded, not bundled. |
+| Flow libs | `libs` → `src/assets/modules` | Framework-free node modules a demo flow loads by URL (`config.modules`). `libs/crypto.ts` builds to `assets/modules/crypto.js` via `scripts/build-libs.mjs`; must stay framework-free, like `playground/modules/`. |
 
 Build order is core → lit → flow-based → basics → modules; `npm run build:lib` encodes
 it. End-to-end tests use two servers: port 4200 serves the Angular demo
@@ -68,7 +75,7 @@ fail on the deployed sub-path.
   source is one case: its field names, its vocabulary and its defaults belong in
   a flow, never in `projects/`. The generic form goes in the module ("read this
   path from what arrived"); the specific string goes in the flow — for shipped
-  demos, in `src/app/fixtures.ts`.
+  demos, in their file under `src/assets/flows/`.
 - **Opening a flow must not execute a module the browser has never seen.** A
   flow is a file, and doing so would be a drive-by execution.
 - **No new dependency without agreement.**

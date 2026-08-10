@@ -1051,31 +1051,41 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
 });
 
 /**
- * A genuinely fresh browser opens the small starter, not a bundled article.
+ * A fresh browser opens the crypto showcase, and its lib loads from a URL.
  *
- * The showcase flows were moved out of the app into standalone files under
- * `assets/flows/`; the app bundles neither, so a first visit lands on the
- * two-node starter (title 'main'), and the articles are reached by loading
- * them. `fbnoseed` tells the harness to skip the seed it gives every other
- * test, so this one sees what a new visitor sees. This is the behaviour the
- * un-bundling introduced, named so a regression that re-bundles a flow — or
- * leaves the fresh browser blank — is caught.
+ * The app bundles no demo now — a first visit LOADS one: `assets/flows/crypto.json`,
+ * which declares its own lib (`assets/modules/crypto.js`) in `config.modules`.
+ * The app loads that lib (ours, same-origin, so without asking) before drawing,
+ * so the `crypto-*` nodes register and the plot fills. `fbnoseed` tells the
+ * harness to skip the demo/tno seed it gives every other test, so this one sees
+ * what a new visitor sees. Named so a regression — a blank first visit, or a
+ * lib that silently failed to load and left empty boxes — is caught.
  */
-test('a fresh browser opens the small starter, not a bundled article', async ({ page }) => {
+test('a fresh browser opens the crypto showcase, its lib loaded by URL', async ({ page }) => {
   await page.goto('/?fbnoseed');
 
   await expect
     .poll(() => page.evaluate(() =>
       (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
         ?.editor?.state?.title), { timeout: 15_000 })
-    .toBe('main');
+    .toBe('Bitcoin, a month');
 
-  // The starter stands, and it is not one of the articles.
-  expect(await page.locator('fb-node-box').count()).toBeGreaterThan(1);
-  const title = await page.evaluate(() =>
-    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
-      ?.editor?.state?.title);
-  expect(['demo', 'tno']).not.toContain(title);
+  await expect(page.locator('p.load-error')).toHaveCount(0);
+
+  // The lib registered: a crypto-* type is on the canvas, and only the
+  // URL-loaded lib provides it. Empty boxes would mean the lib never loaded.
+  const types = await page.evaluate(() =>
+    [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .map(n => (n as unknown as { state?: { type?: string } }).state?.type));
+  expect(types).toContain('crypto-prices');
+  expect(types).toContain('crypto-sma');
+
+  // And the data flowed: the plot buffered the month of prices its source sent.
+  const points = await page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as
+      { editor?: { flow?: { getWorker(id: number): { buffer?: { points: number[][] } } } } })
+      ?.editor?.flow?.getWorker(900)?.buffer?.points?.length ?? 0);
+  expect(points).toBeGreaterThan(20);
 });
 
 /**

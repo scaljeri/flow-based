@@ -316,11 +316,15 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     /*
-     * A fresh browser opens the small starter. enableFor registers the modules
-     * its types name (the plane is a graphs node) before it is drawn — a flow
-     * shown before its types are registered draws dead boxes. Cloned, so the
-     * editor mutates a copy rather than the shared import.
+     * A fresh browser opens the default showcase — a flow file we ship, loaded
+     * like any other, which is the whole point: the app no longer bundles a
+     * demo, it opens one. If that or its lib is unreachable (offline, a broken
+     * deploy), the small starter stands in rather than a blank canvas.
      */
+    if (await this.loadShowcase()) {
+      return;
+    }
+
     const starter = structuredClone(data.basic) as FbNodeState;
 
     await this.modules.enableFor(starter);
@@ -337,6 +341,58 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.currentFlowId = this.store.create(starter);
       this.cdr.detectChanges();
     });
+  }
+
+  /** Where the shipped showcase lives, relative to the app. */
+  private static readonly SHOWCASE = 'assets/flows/crypto.json';
+
+  /**
+   * Open the shipped showcase — in memory, with its own libs loaded.
+   *
+   * The showcase is a flow WE ship, so its declared libs are ours: they load
+   * without the consent step a stranger's flow gets, but only when they are
+   * served from our own origin — a shipped flow pointing a `libs` entry at some
+   * other site is still a stranger's code and stays gated. Returns false on any
+   * failure so the caller can fall back rather than open on nothing.
+   */
+  private async loadShowcase(): Promise<boolean> {
+    try {
+      const url = new URL(AppComponent.SHOWCASE, location.href).href;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const flow = deserializeFlowFromJson(await response.text());
+
+      // Our own libs first (trusted, same-origin), then the built-in modules the
+      // flow's types name by prefix — both before it is drawn, or its nodes
+      // arrive as empty boxes with no workers.
+      for (const lib of (flow.config?.modules ?? []) as { url: string }[]) {
+        const href = new URL(lib.url, location.href).href;
+
+        if (new URL(href).origin === location.origin) {
+          await this.modules.addFromUrl(href);
+        }
+      }
+
+      await this.modules.enableFor(flow);
+
+      this.zone.run(() => {
+        this.history.clear();
+        this.currentFlowId = null;      // the home page: in memory, no shelf entry
+        this.currentSourceUrl = null;   // and a clean address bar
+        this.dirty = false;
+        this.flow = flow;
+        this.loadedJson = serializeFlowToJson(flow);
+        this.cdr.detectChanges();
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
