@@ -15,6 +15,11 @@ import { TemplateSmallComponent } from './template-small.component';
 import { TemplateSettingsComponent } from './template-settings.component';
 import { SwitchSmallComponent } from './switch-small.component';
 import { SwitchSettingsComponent } from './switch-settings.component';
+import { FieldsWorker } from './fields.worker';
+import { FieldsSmallComponent } from './fields-small.component';
+import { JoinWorker } from './join.worker';
+import { JoinSmallComponent } from './join-small.component';
+import { JoinSettingsComponent } from './join-settings.component';
 
 /**
  * The Data module: reshaping what flows, without writing code.
@@ -175,6 +180,48 @@ export const DATA_MODULE: FbModule = {
      * the RULE rather than the answer, so the day a publisher adds a sixth
      * item the flow has an opinion somebody actually wrote down.
      */
+    /*
+     * Several values out of one arrival: the socket's NAME is the path it
+     * reads, so the socket dialog is the whole configuration. The
+     * multi-output form of the read-one-path pick — n scalars used to cost
+     * n nodes and n wires from the same source.
+     */
+    'data-fields': {
+      component: { small: FieldsSmallComponent },
+      settings: {
+        title: 'Fields',
+        group: 'Data',
+        config: {},
+        sockets: [
+          { type: 'in', formats: ['data'] },
+          { type: 'out', name: 'title', formats: ['string', 'number'] },
+        ],
+        addableSockets: 'out',
+      },
+      worker: FieldsWorker,
+    },
+
+    /*
+     * Two lists aligned by key — Morrison's collate. Model beside
+     * measurement per station, two series on one axis: comparing starts
+     * with putting the rows that belong together in one row.
+     */
+    'data-join': {
+      component: { small: JoinSmallComponent },
+      settingsComponent: JoinSettingsComponent,
+      settings: {
+        title: 'Join',
+        group: 'Data',
+        config: { pathA: '', pathB: '', how: 'inner' },
+        sockets: [
+          { type: 'in', name: 'a', formats: ['data'] },
+          { type: 'in', name: 'b', formats: ['data'] },
+          { type: 'out', format: 'data' },
+        ],
+      },
+      worker: JoinWorker,
+    },
+
     'data-filter': {
       component: { small: FilterSmallComponent },
       settingsComponent: FilterSettingsComponent,
