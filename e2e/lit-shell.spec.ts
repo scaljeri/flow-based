@@ -863,15 +863,16 @@ test('an open node carries its title and its way out in one header', async ({ pa
   await stepView(page, 'Scope', 'grow');
 
   /*
-   * Open: the header carries the title and everything reachable from here —
-   * settings, back to small, out to full. The label under the node is gone,
+   * Open: the header carries the title and the way between views — smaller,
+   * larger. No settings button: config is a long press on the node now, one
+   * gesture for every node at every size. The label under the node is gone,
    * because two copies of one title a few pixels apart is one too many.
    */
   expect(await chrome('Scope')).toEqual({
     head: true,
     name: 'Scope',
     label: null,
-    buttons: ['Settings', 'Show smaller (small)', 'Show larger (full)'],
+    buttons: ['Show smaller (small)', 'Show larger (full)'],
   });
 });
 
@@ -896,7 +897,8 @@ test('deletes a node from its settings, which every node type has', async ({ pag
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (node as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (node as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   await page.evaluate(() => {
@@ -965,7 +967,8 @@ test('edits a node\'s title and sockets from the shell, not from the host app', 
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (node as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (node as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   await openConfig();
@@ -1098,7 +1101,8 @@ test('drags a socket into order along the rim, and the node follows', async ({ p
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (node as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (node as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   /*
@@ -1728,7 +1732,8 @@ test('adding a socket shows up in the panel, not only in the model', async ({ pa
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (node as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (node as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   const counts = () => page.evaluate(() => {
@@ -1793,7 +1798,8 @@ test('a socket is dragged around the rim onto another edge', async ({ page }) =>
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (node as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (node as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   const grip = await page.evaluate(() => {
@@ -1923,7 +1929,8 @@ test('pressing a socket on the rim opens that socket', async ({ page }) => {
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Sink')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (node as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (node as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   const settings = () => page.evaluate(() => {
@@ -2586,6 +2593,48 @@ test('the settings panel info button explains the node', async ({ page }) => {
 
     return dialog?.open ? dialog.querySelector('p')?.textContent ?? null : null;
   })).toContain('emits numbers');
+});
+
+/**
+ * A long press opens any node's config — the gear button is gone.
+ *
+ * One gesture for every node, at every size and on touch or mouse, instead
+ * of a header button the small views could not show. A drag (travel) or a
+ * quick release is NOT a long press, so neither opens the panel.
+ */
+test('a long press on a node opens its settings', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const at = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const r = node.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  const panelOpen = () => page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const dialog = node.shadowRoot!.querySelector('fb-node-settings')?.shadowRoot
+      ?.querySelector<HTMLDialogElement>('dialog.config');
+
+    return !!dialog?.open;
+  });
+
+  // A quick tap does not open it.
+  await page.mouse.click(at.x, at.y);
+  await page.waitForTimeout(200);
+  expect(await panelOpen()).toBe(false);
+
+  // A held press does.
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.waitForTimeout(650);
+  await page.mouse.up();
+
+  await expect.poll(panelOpen).toBe(true);
 });
 
 /**

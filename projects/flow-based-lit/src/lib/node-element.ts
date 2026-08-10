@@ -45,14 +45,6 @@ const ICON_OPEN = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_GROW = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H4v6M4 4l6 6M14 20h6v-6M20 20l-6-6"/></svg>`;
 
-/*
- * Sliders rather than a cog. A cog is the conventional symbol and the wrong one
- * here: at 13px its teeth collapse into a blob that reads as an asterisk. Three
- * horizontal lines with knobs stay legible at any size this button will ever be.
- */
-const ICON_CONFIG = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-  stroke-linecap="round"><path d="M3 7h18M3 12h18M3 17h18"/><circle cx="8" cy="7" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="17" r="2" fill="currentColor"/></svg>`;
-
 const ICON_SHRINK = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h6V4M10 10L4 4M20 14h-6v6M14 14l6 6"/></svg>`;
 
@@ -1171,15 +1163,17 @@ export class FbNodeElement extends LitElement {
     }
 
     /*
-     * A frame has no header to reach its settings by — a long press IS its
-     * config button. Cancelled by travel (that press was a drag of the frame
-     * and its contents) and by release (that was a click).
+     * A long press opens the node's config — every node, no gear button.
+     * Cancelled by travel (the press was a drag) and by release (a click);
+     * a subflow is the exception, because a long press there would fight
+     * entering it, so it keeps the double-click-to-enter and nothing here.
      */
-    if (this.state.type === 'frame') {
-      clearTimeout(this.framePressTimer);
-      this.framePressTimer = window.setTimeout(() => {
+    if (this.state.type !== 'flow') {
+      clearTimeout(this.holdTimer);
+      this.holdTimer = window.setTimeout(() => {
         if (!this.dragMoved && this.dragPointerId !== null) {
           this.endDrag();
+          // The drag's history snapshot was for a move that never happened.
           this.editor.history.discard();
           this.configOpen = true;
           this.requestUpdate();
@@ -1192,7 +1186,7 @@ export class FbNodeElement extends LitElement {
     window.addEventListener('pointercancel', this.onPointerUp);
   };
 
-  private framePressTimer?: number;
+  private holdTimer?: number;
 
   /**
    * Content that owns the pointer owns the wheel.
@@ -1257,7 +1251,7 @@ export class FbNodeElement extends LitElement {
 
     this.dragMoved = true;
     // Travel turns the frame's long press back into the drag it became.
-    clearTimeout(this.framePressTimer);
+    clearTimeout(this.holdTimer);
     this.toggleAttribute('dragging', true);
 
     const plane = this.editor.viewport.planeSize;
@@ -1430,7 +1424,7 @@ export class FbNodeElement extends LitElement {
   };
 
   private endDrag(): void {
-    clearTimeout(this.framePressTimer);
+    clearTimeout(this.holdTimer);
     this.dragPointerId = null;
     this.dragFrom = null;
     this.dragOrigin = null;
@@ -1540,14 +1534,12 @@ export class FbNodeElement extends LitElement {
       <div class="head">
         <span class="name">${this.state?.title ?? ''}</span>
 
-        <button
-          type="button"
-          class="config-toggle ${FB_DRAG_IGNORE}"
-          title="Settings"
-          aria-label="Settings"
-          aria-pressed=${this.configOpen ? 'true' : 'false'}
-          @pointerdown=${(e: Event) => e.stopPropagation()}
-          @click=${() => this.toggleConfig()}>${ICON_CONFIG}</button>
+        <!--
+          No settings button. A long press on the node opens its config —
+          one gesture for every node, at every size and on any input, instead
+          of a gear that only the header views could show and a double-click
+          the small ones borrowed. See the long-press timer in onPointerDown.
+        -->
         ${smaller
           ? html`<button
               type="button"
@@ -1597,22 +1589,13 @@ export class FbNodeElement extends LitElement {
       return;
     }
 
+    // Otherwise a double-click opens the node up a size. Its config is a long
+    // press away, at every size — there is nothing to fall back to here.
     const bigger = stepView('small', 1, this.settings, this.component);
 
     if (bigger) {
       this.requestView(bigger);
-
-      return;
     }
-
-    /*
-     * Nothing bigger to open — but a small-only type can still HAVE settings,
-     * and small draws no header to reach them by. A formula node is exactly
-     * this: its whole configuration is its settings panel, and without this
-     * the panel existed and nothing on screen could open it.
-     */
-    this.configOpen = true;
-    this.requestUpdate();
   };
 
   private renderSocket(socket: FbSocket) {
@@ -1637,11 +1620,6 @@ export class FbNodeElement extends LitElement {
      you have entered has no node box on screen and still needs its sockets
      editing, so the panel had to be reachable from somewhere else too.
    */
-
-  private toggleConfig(): void {
-    this.configOpen = !this.panel?.isOpen;
-    this.requestUpdate();
-  }
 
   /** Called however the panel was dismissed: its button, Escape, or code. */
   private onSettingsClosed(): void {

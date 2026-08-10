@@ -704,7 +704,8 @@ test('a node type contributes its own settings to the panel', async ({ page }) =
     const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
 
-    box.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (box as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (box as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   const own = await page.evaluate(() => {
@@ -3430,7 +3431,8 @@ test('a subflow draws a picture of itself, or the child it is told to wear', asy
     const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'flow')!;
 
-    node.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')!.click();
+    (node as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (node as unknown as { requestUpdate(): void }).requestUpdate();
   });
 
   const panel = page.locator('fb-node-settings[open] .panel').first();
@@ -3564,17 +3566,20 @@ test('a pick offers every shape, and shows only the chosen shape\'s fields', asy
       .addNode('data-pick');
   });
 
-  // A pick is a small-only type: double-clicking it opens its settings panel
-  // directly, because small draws no header to reach them by.
+  // Config is a long press on any node; the test opens it straight, having
+  // no gesture to prove here.
   await expect
     .poll(() => page.evaluate(() => {
       const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
-        .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'data-pick');
+        .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'data-pick') as unknown as
+        { configOpen: boolean; requestUpdate(): void } | undefined;
 
-      box?.shadowRoot?.querySelector('.box')
-        ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+      if (box) {
+        box.configOpen = true;
+        box.requestUpdate();
+      }
 
-      return !!box?.shadowRoot?.querySelector('fb-node-settings');
+      return !!(box as unknown as { shadowRoot?: ShadowRoot } | undefined)?.shadowRoot?.querySelector('fb-node-settings');
     }))
     .toBe(true);
 
@@ -3951,7 +3956,8 @@ test('a type can be invented, and a socket can be told to carry it', async ({ pa
   const opened = await page.evaluate(() => {
     const box = document.querySelector('fb-flow-canvas fb-node-box')!;
 
-    box.shadowRoot!.querySelector<HTMLButtonElement>('.head button.config-toggle')?.click();
+    (box as unknown as { configOpen: boolean; requestUpdate(): void }).configOpen = true;
+    (box as unknown as { requestUpdate(): void }).requestUpdate();
 
     return !!box;
   });
