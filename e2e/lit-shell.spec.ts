@@ -2686,11 +2686,11 @@ test('a long press on a node opens its settings', async ({ page }) => {
 });
 
 /**
- * Panning the whole flow keeps the selection; a click on empty canvas clears
- * it. Deselection is a click too — a drag of the background is just a look
- * around, and the highlight should survive it.
+ * Panning and zooming keep the selection; a click on empty canvas clears it.
+ * Deselection is a click too — moving or scaling the view is a look around,
+ * and the highlight should survive it.
  */
-test('panning the flow keeps the selection, a background click clears it', async ({ page }) => {
+test('panning and zooming keep the selection, a background click clears it', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
 
@@ -2704,6 +2704,26 @@ test('panning the flow keeps the selection, a background click clears it', async
   await page.mouse.down();
   await page.mouse.move(140, 360, { steps: 8 });
   await page.mouse.up();
+  expect((await selectedIds(page)).length).toBe(1);
+
+  // A wheel zoom keeps it too.
+  await page.mouse.move(source.x, source.y);
+  await page.mouse.wheel(0, -240);
+  await page.waitForTimeout(50);
+  expect((await selectedIds(page)).length).toBe(1);
+
+  // And a two-finger pinch keeps it — a zoom is not a deselect.
+  const surface = canvas(page);
+
+  await surface.dispatchEvent('pointerdown', {
+    pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: 120, clientY: 320, button: 0,
+  });
+  await surface.dispatchEvent('pointerdown', {
+    pointerId: 2, pointerType: 'touch', isPrimary: false, clientX: 320, clientY: 320, button: 0,
+  });
+  await surface.dispatchEvent('pointermove', { pointerId: 2, pointerType: 'touch', clientX: 380, clientY: 320 });
+  await surface.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'touch', clientX: 120, clientY: 320 });
+  await surface.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'touch', clientX: 380, clientY: 320 });
   expect((await selectedIds(page)).length).toBe(1);
 
   // A click on empty canvas clears it.

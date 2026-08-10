@@ -1000,8 +1000,11 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     // A background press that never panned is a click on empty canvas — that
-    // is what clears the selection. A pan does not.
-    if (this.panPointerId !== null && !this.panMoved && !this.marqueeFrom) {
+    // is what clears the selection. A pan does not, and neither does a pinch:
+    // a zoom leaves the selection and its highlight where they were. The
+    // element's pointerup runs before the window's, so pinchActive is still
+    // true here for a pinch that is only now lifting.
+    if (this.panPointerId !== null && !this.panMoved && !this.marqueeFrom && !this.editor.pinchActive) {
       this.editor.clearSelection();
     }
 
