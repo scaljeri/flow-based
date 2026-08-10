@@ -358,8 +358,16 @@ export class FbFlowCanvasElement extends LitElement {
       z-index: 40;
     }
 
-    /* The on-canvas picker: a question, floated where the wire was dropped. */
-    .picker {
+    /*
+     * The picker: a modal dialog, not a box at the drop point.
+     *
+     * It used to sit at the drop position in PLANE coordinates, which is
+     * where the node will land but not where a question can stand: a wire
+     * dropped near an edge put most of the list off screen. The top layer
+     * centres it and cannot be clipped by anything; the drop point is
+     * remembered for the node, not for the menu.
+     */
+    dialog.picker {
       background: var(--fb-node-background, rgba(0, 0, 0, 0.95));
       border: 1px solid rgba(255, 255, 255, 0.3);
       border-radius: 8px;
@@ -367,9 +375,11 @@ export class FbFlowCanvasElement extends LitElement {
       color: #fff;
       font: 12px system-ui, sans-serif;
       padding: 8px;
-      position: absolute;
-      width: 200px;
-      z-index: 60;
+      width: 240px;
+    }
+
+    dialog.picker::backdrop {
+      background: rgba(0, 0, 0, 0.25);
     }
 
     .picker input {
@@ -473,11 +483,8 @@ export class FbFlowCanvasElement extends LitElement {
   private marqueeFrom: FbPosition | null = null;
   private marquee: { x: number; y: number; width: number; height: number } | null = null;
 
-  /** What is typed into the on-canvas picker; cleared when it closes. */
+  /** What is typed into the picker's search; cleared when it closes. */
   private pickerQuery = '';
-
-  /** Whether the picker was open at the last render, for the focus-once below. */
-  private pickerWasOpen = false;
   private marqueeAdditive = false;
 
   override connectedCallback(): void {
@@ -616,17 +623,18 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     /*
-     * Focus the picker's search ONCE per opening, so the reader can type
-     * straight away — and only once, or every redraw would steal the caret
-     * back from wherever it had legitimately gone.
+     * The picker is modal, and only showModal() reaches the top layer — an
+     * `open` attribute would leave it clipped under whatever the canvas
+     * stacks. Guarded on `open` so redraws while it is up do not re-enter;
+     * closing needs no counterpart, because Lit removes the element and a
+     * removed dialog closes itself. showModal also focuses the search field,
+     * which is the reason no focus bookkeeping survives here.
      */
-    const pickerOpen = !!this.editor?.picker;
+    const picker = this.renderRoot.querySelector<HTMLDialogElement>('dialog.picker');
 
-    if (pickerOpen && !this.pickerWasOpen) {
-      this.renderRoot.querySelector<HTMLInputElement>('.picker input')?.focus();
+    if (picker && !picker.open) {
+      picker.showModal();
     }
-
-    this.pickerWasOpen = pickerOpen;
 
     this.tickNote();
   }
@@ -1208,9 +1216,9 @@ export class FbFlowCanvasElement extends LitElement {
         <fb-connections .editor=${this.editor}></fb-connections>
 
         <slot></slot>
-
-        ${this.renderPicker()}
       </div>
+
+      ${this.renderPicker()}
     `;
   }
 
@@ -1220,9 +1228,7 @@ export class FbFlowCanvasElement extends LitElement {
    * input takes what the wire carries, inserted pre-connected on choice.
    */
   private renderPicker() {
-    const at = this.editor.picker;
-
-    if (!at) {
+    if (!this.editor.picker) {
       this.pickerQuery = '';
 
       return nothing;
@@ -1236,8 +1242,23 @@ export class FbFlowCanvasElement extends LitElement {
         || (c.group ?? '').toLowerCase().includes(query));
 
     return html`
-      <div class="picker" style=${`left:${at.x}px;top:${at.y}px`}
-           @pointerdown=${(e: Event) => e.stopPropagation()}>
+      <dialog
+        class="picker"
+        @keydown=${(e: KeyboardEvent) => e.stopPropagation()}
+        @close=${() => {
+          // Escape, or code — either way the question is gone, and the wire
+          // it was holding goes with it.
+          if (this.editor.picker) {
+            this.editor.closePicker();
+          }
+        }}
+        @click=${(e: MouseEvent) => {
+          // A press on the backdrop is a press on the dialog element itself;
+          // anything inside hits a child instead.
+          if (e.target === e.currentTarget) {
+            this.editor.closePicker();
+          }
+        }}>
         <input
           type="text"
           placeholder="land on…"
@@ -1247,11 +1268,7 @@ export class FbFlowCanvasElement extends LitElement {
             this.requestUpdate();
           }}
           @keydown=${(e: KeyboardEvent) => {
-            e.stopPropagation();
-
-            if (e.key === 'Escape') {
-              this.editor.closePicker();
-            } else if (e.key === 'Enter' && candidates.length) {
+            if (e.key === 'Enter' && candidates.length) {
               this.editor.completeWithNew(candidates[0].type);
             }
           }}>
@@ -1267,7 +1284,7 @@ export class FbFlowCanvasElement extends LitElement {
           `)}
           ${candidates.length ? nothing : html`<li class="none">nothing takes this type</li>`}
         </ul>
-      </div>
+      </dialog>
     `;
   }
 

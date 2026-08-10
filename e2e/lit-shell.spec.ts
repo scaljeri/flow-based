@@ -2436,6 +2436,63 @@ test('a wire dropped on empty canvas offers the types it can land on, wired on c
 });
 
 /**
+ * The picker stays on screen wherever the wire is dropped.
+ *
+ * It used to sit at the drop position in plane coordinates — where the NODE
+ * will land, but not where a question can stand: a wire dropped near an
+ * edge put most of the list outside the viewport. As a modal dialog it
+ * lives in the top layer and cannot be clipped.
+ */
+test('the picker stays on screen when the wire is dropped near an edge', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const start = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const r = node.shadowRoot!.querySelector('.socket-out')!.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.mouse.move(start.x + 60, start.y + 60);
+
+  const grip = await page.evaluate(() => {
+    const circle = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector('circle.pending-handle')!;
+    const r = circle.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  const size = page.viewportSize()!;
+
+  // Drop in the far bottom-right corner — the exact spot that clipped it.
+  await page.mouse.move(grip.x, grip.y);
+  await page.mouse.down();
+  await page.mouse.move(size.width - 8, size.height - 8, { steps: 8 });
+  await page.mouse.up();
+
+  const box = await page.evaluate(() => {
+    const dialog = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('dialog.picker');
+    const r = dialog?.getBoundingClientRect();
+
+    return r ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null;
+  });
+
+  expect(box).not.toBeNull();
+  expect(box!.left).toBeGreaterThanOrEqual(0);
+  expect(box!.top).toBeGreaterThanOrEqual(0);
+  expect(box!.right).toBeLessThanOrEqual(size.width);
+  expect(box!.bottom).toBeLessThanOrEqual(size.height);
+});
+
+/**
  * Fan is the rule on both sides (2026-08-09).
  *
  * An output copies its stream to every consumer, and wires fanning INTO an
