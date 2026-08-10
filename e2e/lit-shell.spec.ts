@@ -2326,6 +2326,56 @@ test('double-clicking a wire pins a reroute dot into it', async ({ page }) => {
 });
 
 /**
+ * Double-clicking a reroute removes it and heals the wire.
+ *
+ * A reroute is a bend, nothing to configure — so double-click does the
+ * inverse of what made it, rather than opening a panel. It is also how you
+ * delete one on a touch screen, where there is no Delete key.
+ */
+test('double-clicking a reroute removes it and rejoins the wire', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = (await connectionPaths(page)).length;
+  const nodesBefore = await nodeCount(page);
+
+  const spot = await page.evaluate(() => {
+    const path = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector<SVGPathElement>('path.hit')!;
+    const half = path.getPointAtLength(path.getTotalLength() / 2);
+    const at = new DOMPoint(half.x, half.y).matrixTransform(path.getScreenCTM()!);
+
+    return { x: at.x, y: at.y };
+  });
+
+  await page.mouse.dblclick(spot.x, spot.y);
+  await expect.poll(() => nodeCount(page)).toBe(nodesBefore + 1);
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
+
+  const dot = await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'reroute')!;
+    const r = box.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.dblclick(dot.x, dot.y);
+
+  // Gone, and the wire is whole again — one connection, not two dangling ends.
+  await expect.poll(() => nodeCount(page)).toBe(nodesBefore);
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before);
+
+  // No config panel opened in place of the removal.
+  const panelOpen = await page.evaluate(() => [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+    .some(n => n.shadowRoot?.querySelector('fb-node-settings')?.shadowRoot
+      ?.querySelector<HTMLDialogElement>('dialog.config')?.open));
+
+  expect(panelOpen).toBe(false);
+});
+
+/**
  * Hovering a wire shows what last crossed it.
  *
  * Inspection without wiring a tap in: the engine remembers the latest value

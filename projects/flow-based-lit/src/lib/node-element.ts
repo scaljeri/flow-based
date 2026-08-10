@@ -1585,6 +1585,18 @@ export class FbNodeElement extends LitElement {
 
     event.stopPropagation();
 
+    /*
+     * A reroute is a bend, nothing to configure — so double-clicking it does
+     * the inverse of what made it: it is REMOVED and the wire heals straight
+     * through. Symmetric with double-clicking a wire to add one, and the way
+     * to delete a reroute on a touch screen, where there is no Delete key.
+     */
+    if (this.state?.type === 'reroute') {
+      this.editor.removeReroute(this.state.id!);
+
+      return;
+    }
+
     const bigger = stepView('small', 1, this.settings, this.component);
 
     if (bigger) {

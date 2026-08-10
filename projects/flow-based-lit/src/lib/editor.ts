@@ -1225,6 +1225,41 @@ export class FbEditor {
     return node;
   }
 
+  /**
+   * Undo a reroute: remove the junction and heal the wire straight through.
+   *
+   * The inverse of `insertReroute`, and the double-click-to-delete gesture on
+   * a reroute. A junction has one wire in and one out; removing it should
+   * leave ONE wire from the original source to the original target, not two
+   * dangling ends. Anything less usual than one-in-one-out just drops its
+   * wires with the node — healing has no single answer there.
+   */
+  removeReroute(nodeId: number): void {
+    const incoming = this.connections.filter(c => c.to === nodeId);
+    const outgoing = this.connections.filter(c => c.from === nodeId);
+
+    this.history.capture(this.root);
+
+    if (incoming.length === 1 && outgoing.length === 1) {
+      const before = incoming[0];
+      const after = outgoing[0];
+
+      this.flow.removeNode(nodeId);
+      this.flow.addConnection(this.state, {
+        id: this.ids.create(),
+        from: before.from,
+        to: after.to,
+        out: before.out,
+        in: after.in,
+      });
+    } else {
+      this.flow.removeNode(nodeId);
+    }
+
+    this.geometry.forgetNode(nodeId);
+    this.selection.delete(nodeId);
+  }
+
   /* ----------------------------------------------------------------------
      The on-canvas picker
      ----------------------------------------------------------------------
