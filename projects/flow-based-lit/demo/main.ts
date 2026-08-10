@@ -167,17 +167,13 @@ const types: FbNodeTypes<FbNodeMount> = {
    */
   reroute: {
     component: (host: HTMLElement) => {
-      // A 60px junction with the config glyph — the 10px dot it replaced was
-      // smaller than its own sockets.
+      // A plain junction — a bend has nothing to configure, so no glyph.
       const dot = document.createElement('div');
 
-      dot.style.cssText = 'width:60px;height:60px;box-sizing:border-box;border-radius:50%;'
-        + 'border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);'
-        + 'color:rgba(255,255,255,0.7);display:grid;place-items:center';
-      dot.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
-        + ' stroke-width="2" stroke-linecap="round"><path d="M3 7h18M3 12h18M3 17h18"/>'
-        + '<circle cx="8" cy="7" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/>'
-        + '<circle cx="10" cy="17" r="2" fill="currentColor"/></svg>';
+      dot.style.cssText = 'width:44px;height:44px;box-sizing:border-box;border-radius:50%;'
+        + 'border:1px solid rgba(255,255,255,0.35);'
+        + 'background:radial-gradient(circle at center,rgba(255,255,255,0.85) 0 6px,transparent 7px),'
+        + 'rgba(255,255,255,0.12)';
       host.appendChild(dot);
 
       return { destroy: () => dot.remove() };
