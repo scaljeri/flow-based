@@ -2543,6 +2543,21 @@ test('dragging a frame carries the nodes on it', async ({ page }) => {
   // The source travelled WITH the frame.
   expect(after.x).toBeGreaterThan(before.source.x + 1);
   expect(after.y).toBeGreaterThan(before.source.y + 1);
+
+  /*
+   * And the frame is still BEHIND what it carried. The press-to-front rule
+   * gives every pressed node a fresh top z — which slid a dragged frame
+   * over the very nodes it was moving; behind is a law for this type, not a
+   * default.
+   */
+  const z = await page.evaluate(id => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === id)!;
+
+    return getComputedStyle(box as Element).zIndex;
+  }, before.frameId);
+
+  expect(z).toBe('0');
 });
 
 /**

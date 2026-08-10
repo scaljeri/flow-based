@@ -86,9 +86,14 @@ export class FbNodeElement extends LitElement {
      * A frame ANNOTATES a cluster and must sit behind it: same layer as the
      * wires, below every node it draws a border around. Without this a big
      * frame added last would swallow every press meant for the nodes on it.
+     *
+     * !important, because being behind is not a default but a LAW for this
+     * type: the press-to-front inline z-index and the [dragging] boost both
+     * outrank a plain rule, and either one put a dragged frame OVER the very
+     * nodes it was carrying.
      */
     :host([type='frame']) {
-      z-index: 0;
+      z-index: 0 !important;
     }
 
     :host([dragging]) {
@@ -1158,9 +1163,12 @@ export class FbNodeElement extends LitElement {
     this.dragMoved = false;
     this.editor.captureBeforeDrag();
 
-    // Paint on top from the press, not after the drag: a click that never moves
-    // should still raise the node.
-    this.style.zIndex = String(this.editor.nextZ());
+    // Paint on top from the press, not after the drag: a click that never
+    // moves should still raise the node. Except a frame — behind is its law,
+    // and raising it here slid the border over the nodes it was carrying.
+    if (this.state.type !== 'frame') {
+      this.style.zIndex = String(this.editor.nextZ());
+    }
 
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
