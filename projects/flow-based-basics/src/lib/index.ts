@@ -21,6 +21,11 @@ import { ScriptFullComponent } from './script-full.component';
 import { VALUE_SETTINGS, ValueWorker } from './value.worker';
 import { ValueSmallComponent } from './value-small.component';
 import { ValueSettingsComponent } from './value-settings.component';
+import { CLOCK_SETTINGS, ClockWorker } from './clock.worker';
+import { TRIGGER_SETTINGS, TriggerWorker } from './trigger.worker';
+import { GATE_SETTINGS, GateWorker } from './gate.worker';
+import { ClockSmallComponent, GateSmallComponent, TriggerSmallComponent } from './moment-small.components';
+import { ClockSettingsComponent, TriggerSettingsComponent } from './moment-settings.components';
 
 /**
  * The standard palette: the set every editor starts with.
@@ -45,6 +50,32 @@ export const BASICS_TYPES: FbNodeTypes = {
     settingsComponent: ValueSettingsComponent,
     settings: VALUE_SETTINGS,
     worker: ValueWorker,
+  },
+
+  /*
+   * The moment primitives. A moment is a PACKET on an ordinary wire (the
+   * 2026-08-10 decision): clock ticks, trigger presses and gate releases all
+   * travel as data, so anything with an input can be driven by any of them —
+   * no second kind of connection, nothing executable travelling.
+   */
+  'clock': {
+    component: { small: ClockSmallComponent },
+    settingsComponent: ClockSettingsComponent,
+    settings: CLOCK_SETTINGS,
+    worker: ClockWorker,
+  },
+
+  'trigger': {
+    component: { small: TriggerSmallComponent },
+    settingsComponent: TriggerSettingsComponent,
+    settings: TRIGGER_SETTINGS,
+    worker: TriggerWorker,
+  },
+
+  'gate': {
+    component: { small: GateSmallComponent },
+    settings: GATE_SETTINGS,
+    worker: GateWorker,
   },
 
   /*

@@ -1,0 +1,118 @@
+import { FbConnection, FbNodeSettings, FbNodeWorker, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
+import { Observable, ReplaySubject, Subscription } from 'rxjs';
+
+export interface GateConfig {
+  open?: boolean;
+}
+
+export const GATE_SETTINGS: FbNodeSettings = {
+  title: 'Gate',
+  config: { open: true },
+  sockets: [
+    // Untyped, like the tap: a gate carries whatever is on the wire.
+    { type: 'in' },
+    // 0 closes, anything else opens. Wired, it overrides the config without
+    // being saved — the run/url convention.
+    { type: 'in', name: 'open', format: 'number' },
+    { type: 'out' },
+  ],
+};
+
+/**
+ * Pass, or hold: Pd's spigot. With a clock on `open` it is a figure's
+ * play/stop — the single most common interaction in an explorable article.
+ */
+export class GateWorker implements FbNodeWorker {
+  private readonly subject = new ReplaySubject<unknown>(1);
+  private readonly ticks = new ReplaySubject<void>(1);
+  private readonly subscriptions: Record<number, Subscription> = {};
+
+  private wired?: boolean;
+  /**
+   * What arrived while the gate was closed, waiting.
+   *
+   * Reopening emits it: the house semantics is latest-value, and a gate that
+   * reopened onto silence left every consumer drawing the state from BEFORE
+   * it closed — the reader pressed play and saw the past.
+   */
+  private held?: { value: unknown };
+
+  get changes(): Observable<void> {
+    return this.ticks.asObservable();
+  }
+
+  constructor(private readonly config: GateConfig = {}) {
+    this.ticks.next();
+  }
+
+  destroy(): void {
+    Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
+    this.subject.complete();
+    this.ticks.complete();
+  }
+
+  getStream(): Observable<unknown> {
+    return this.subject.asObservable();
+  }
+
+  setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
+    if (socket.name === 'open') {
+      this.subscriptions[connection.id] = stream.subscribe(value => {
+        this.setOpen(!!value && value !== 0, 'wire');
+      });
+
+      return;
+    }
+
+    this.subscriptions[connection.id] = stream.subscribe(value => {
+      if (this.open) {
+        this.subject.next(value);
+      } else {
+        this.held = { value };
+      }
+
+      this.ticks.next();
+    });
+  }
+
+  removeStream(connection: FbConnection): void {
+    this.subscriptions[connection.id]?.unsubscribe();
+    delete this.subscriptions[connection.id];
+  }
+
+  get open(): boolean {
+    return this.wired ?? this.config.open ?? true;
+  }
+
+  /** The toggle on the node. A wired `open` outranks it — the wire is data. */
+  toggle(): void {
+    this.setOpen(!this.open, 'config');
+  }
+
+  setConfigValue(path: string, value: unknown): void {
+    if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
+      this.release();
+      this.ticks.next();
+    }
+  }
+
+  private setOpen(open: boolean, by: 'wire' | 'config'): void {
+    if (by === 'wire') {
+      this.wired = open;
+    } else {
+      this.config.open = open;
+    }
+
+    this.release();
+    this.ticks.next();
+  }
+
+  private release(): void {
+    if (this.open && this.held) {
+      const { value } = this.held;
+
+      this.held = undefined;
+      this.subject.next(value);
+    }
+  }
+}

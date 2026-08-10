@@ -15,6 +15,7 @@ import {
   deserializeFlowFromJson,
   serializeFlowToJson,
 } from '@scaljeri/flow-based';
+import { TriggerWorker } from '@scaljeri/flow-based-basics';
 import * as data from './fixtures';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentSelectionComponent } from './components/component-selection/component-selection.component';
@@ -547,17 +548,43 @@ export class AppComponent implements OnInit, AfterViewInit {
   /**
    * Something the document asked for.
    *
-   * A document names an action and the host decides what it means; this app
-   * knows one, and a name it does not know is simply ignored rather than
-   * guessed at.
+   * A document names an action and the host decides what it means. This app
+   * knows one of its own — `flow` leaves the article for the graph — and
+   * hands every OTHER name into the graph: a trigger node whose `action`
+   * matches fires, which is how a moment crosses from prose to wires. A name
+   * nothing answers to is simply ignored rather than guessed at.
    */
   onDocAction(event: Event): void {
     const action = (event as CustomEvent<{ action?: string }>).detail?.action;
 
+    if (!action) {
+      return;
+    }
+
     if (action === 'flow') {
       this.showDoc = false;
       this.cdr.detectChanges();
+
+      return;
     }
+
+    const editor = this.editor;
+
+    if (!editor) {
+      return;
+    }
+
+    // The whole tree, not just the top level: a trigger inside a subflow
+    // still answers — machinery is often foldered away exactly there.
+    const fire = (node: FbNodeState): void => {
+      if (node.type === 'trigger' && (node.config as { action?: string } | undefined)?.action === action) {
+        (editor.flow.getWorker(node.id!) as TriggerWorker | undefined)?.fire();
+      }
+
+      (node.children ?? []).forEach(fire);
+    };
+
+    (editor.state.children ?? []).forEach(fire);
   }
 
   /**
