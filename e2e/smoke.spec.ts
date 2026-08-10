@@ -3409,13 +3409,12 @@ test('a subflow draws a picture of itself, or the child it is told to wear', asy
   const box = page.locator('fb-flow-canvas fb-node-box').filter({ hasText: 'TOPAS sources' }).first();
 
   /*
-   * Unchosen: one dot per node, one line per connection, and a count. Twenty
-   * six since the config fetch and the pollutant moved OUT of here — what to
-   * point this machinery at is a decision, and it belongs where it can be
-   * seen.
+   * Unchosen: one dot per node, one line per connection, and a count.
+   * Sixteen since the eight config picks became one fields node — n scalars
+   * out of one file no longer cost n nodes.
    */
-  await expect(box).toContainText('23 nodes', { timeout: 20_000 });
-  expect(await box.locator('svg rect.dot').count()).toBe(23);
+  await expect(box).toContainText('16 nodes', { timeout: 20_000 });
+  expect(await box.locator('svg rect.dot').count()).toBe(16);
   expect(await box.locator('svg line.edge').count()).toBeGreaterThan(15);
 
   // Open it, then its own settings.
@@ -3613,6 +3612,72 @@ test('a pick offers every shape, and shows only the chosen shape\'s fields', asy
     'Merge pattern — first group is the name',
     'Keep the largest, plus Other — empty keeps all',
   ]);
+});
+
+/**
+ * The picker against the REAL registry: type-filtering with modules loaded.
+ *
+ * The lit-harness tests prove the gesture; this proves the filter where it
+ * matters — a function-carrying wire must offer the nodes that drink
+ * functions, and none that cannot.
+ */
+test('a dropped function wire offers derivative and sampler, and lands wired', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const offered = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const formula = editor.state.children.find((n: any) => n.type === 'math-formula');
+    const out = formula.sockets.find((s: any) => s.type === 'out');
+
+    editor.socketClicked(out, formula.id);
+    editor.openPicker({ x: 400, y: 300 });
+
+    return editor.pickerCandidates().map((c: any) => c.type);
+  });
+
+  expect(offered).toEqual(expect.arrayContaining(['math-derivative', 'math-sampler']));
+  expect(offered).not.toContain('math-formula');
+  expect(offered).not.toContain('graph-places');
+
+  const landed = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const before = editor.connections.length;
+    const node = editor.completeWithNew('math-derivative');
+
+    return { type: node?.type, wired: editor.connections.length === before + 1 };
+  });
+
+  expect(landed).toEqual({ type: 'math-derivative', wired: true });
+});
+
+/**
+ * The wire-peek against the demo's live streams.
+ */
+test('hovering a demo wire shows the value that last crossed it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // Give the samplers a beat to put something on the wires.
+  await page.waitForTimeout(600);
+
+  const spot = await page.evaluate(() => {
+    const path = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector<SVGPathElement>('path.hit')!;
+    const half = path.getPointAtLength(path.getTotalLength() / 2);
+    const at = new DOMPoint(half.x, half.y).matrixTransform(path.getScreenCTM()!);
+
+    return { x: at.x, y: at.y };
+  });
+
+  await page.mouse.move(spot.x, spot.y);
+
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector('.peek')?.textContent?.trim() ?? null))
+    .not.toBeNull();
 });
 
 /**

@@ -849,6 +849,34 @@ function reads(title: string, path: string, position: { x: number; y: number }) 
   };
 }
 
+/** Several values out of one arrival: each named out socket IS its path. */
+function fields(title: string, paths: string[], position: { x: number; y: number }) {
+  const id = nextId();
+  const node = {
+    type: 'data-fields',
+    title,
+    id,
+    config: {},
+    sockets: [
+      { id: nextId(), type: 'in', name: undefined as string | undefined, formats: ['data'] },
+      ...paths.map(path => ({
+        id: nextId(),
+        type: 'out',
+        name: path as string | undefined,
+        formats: ['string', 'number'],
+      })),
+    ],
+    ui: { position },
+  };
+
+  return {
+    node,
+    id,
+    get in() { return node.sockets[0].id!; },
+    out(path: string) { return node.sockets.find(socket => socket.name === path)!.id!; },
+  };
+}
+
 /** A string built from a pattern; the named sockets are its placeholders. */
 function builds(title: string, names: string[], position: { x: number; y: number }, pattern = '') {
   const id = nextId();
@@ -910,16 +938,24 @@ function shapes(title: string, config: Record<string, unknown>, format: string, 
  * of config.json. Nothing is typed but the address of that one file.
  */
 function topasSources() {
-  // What the publisher says about itself.
-  const gridPathNl = reads('NL grid path', 'regions.0.gridPath', { x: 14, y: 4 });
-  const gridPathEu = reads('EU grid path', 'regions.1.gridPath', { x: 14, y: 16 });
-  const date = reads('date', 'currentDate', { x: 14, y: 28 });
-  const idNl = reads('NL', 'regions.0.id', { x: 14, y: 40 });
-  const idEu = reads('EU', 'regions.1.id', { x: 14, y: 52 });
-
-  const lmlPath = reads('LML file', 'networks.0.path', { x: 14, y: 62 });
-  const samenPath = reads('Samen Meten file', 'networks.1.path', { x: 14, y: 72 });
-  const eeaPath = reads('EEA file', 'networks.2.path', { x: 14, y: 82 });
+  /*
+   * What the publisher says about itself — ONE node, eight questions.
+   *
+   * This used to be eight parallel picks over the same config file, because
+   * a pick has one output: n scalars cost n nodes and n wires from one
+   * source. The fields node is the multi-output form — each named out
+   * socket is the path it reads — and this subflow is its proof.
+   */
+  const cfg = fields('TOPAS config', [
+    'regions.0.gridPath',
+    'regions.1.gridPath',
+    'currentDate',
+    'regions.0.id',
+    'regions.1.id',
+    'networks.0.path',
+    'networks.1.path',
+    'networks.2.path',
+  ], { x: 14, y: 40 });
 
   // What that makes: a file name, then a whole URL.
   const gridFileNl = builds('NL grid file', ['pattern', 'region|lower', 'date', 'pollutant'], { x: 30, y: 4 });
@@ -999,38 +1035,36 @@ function topasSources() {
 
     ],
     children: [
-      gridPathNl.node, gridPathEu.node, date.node, idNl.node, idEu.node,
-      lmlPath.node, samenPath.node, eeaPath.node,
+      cfg.node,
       gridFileNl.node, gridFileEu.node, eeaFile.node,
       urlGridNl.node, urlGridEu.node, urlLml.node, urlSamen.node, urlEea.node,
       getGridNl.node, getGridEu.node, getLml.node, getSamen.node, getEea.node,
       rasterNl.node, rasterEu.node,
     ],
     connections: [
-      // One file, read eight ways — and it arrives on a socket.
-      ...[gridPathNl, gridPathEu, date, idNl, idEu, lmlPath, samenPath, eeaPath]
-        .map(pick => fromConfig(pick, pick.in)),
+      // One file, read eight ways — by one node, off one socket.
+      fromConfig(cfg, cfg.in),
 
       // The grid file names.
-      wire(gridPathNl, gridPathNl.out, gridFileNl, gridFileNl.socket('pattern')),
-      wire(idNl, idNl.out, gridFileNl, gridFileNl.socket('region|lower')),
-      wire(date, date.out, gridFileNl, gridFileNl.socket('date')),
+      wire(cfg, cfg.out('regions.0.gridPath'), gridFileNl, gridFileNl.socket('pattern')),
+      wire(cfg, cfg.out('regions.0.id'), gridFileNl, gridFileNl.socket('region|lower')),
+      wire(cfg, cfg.out('currentDate'), gridFileNl, gridFileNl.socket('date')),
       { id: nextId(), from: flowId, to: gridFileNl.id, out: inn.pollutant, in: gridFileNl.socket('pollutant') },
 
-      wire(gridPathEu, gridPathEu.out, gridFileEu, gridFileEu.socket('pattern')),
-      wire(idEu, idEu.out, gridFileEu, gridFileEu.socket('region|lower')),
-      wire(date, date.out, gridFileEu, gridFileEu.socket('date')),
+      wire(cfg, cfg.out('regions.1.gridPath'), gridFileEu, gridFileEu.socket('pattern')),
+      wire(cfg, cfg.out('regions.1.id'), gridFileEu, gridFileEu.socket('region|lower')),
+      wire(cfg, cfg.out('currentDate'), gridFileEu, gridFileEu.socket('date')),
       { id: nextId(), from: flowId, to: gridFileEu.id, out: inn.pollutant, in: gridFileEu.socket('pollutant') },
 
       // The EEA file name is itself a pattern: `{region}-eea.json`.
-      wire(eeaPath, eeaPath.out, eeaFile, eeaFile.socket('pattern')),
-      wire(idEu, idEu.out, eeaFile, eeaFile.socket('region|lower')),
+      wire(cfg, cfg.out('networks.2.path'), eeaFile, eeaFile.socket('pattern')),
+      wire(cfg, cfg.out('regions.1.id'), eeaFile, eeaFile.socket('region|lower')),
 
       // A published path is relative to the publisher, not to us.
       wire(gridFileNl, gridFileNl.out, urlGridNl, urlGridNl.socket('path')),
       wire(gridFileEu, gridFileEu.out, urlGridEu, urlGridEu.socket('path')),
-      wire(lmlPath, lmlPath.out, urlLml, urlLml.socket('path')),
-      wire(samenPath, samenPath.out, urlSamen, urlSamen.socket('path')),
+      wire(cfg, cfg.out('networks.0.path'), urlLml, urlLml.socket('path')),
+      wire(cfg, cfg.out('networks.1.path'), urlSamen, urlSamen.socket('path')),
       wire(eeaFile, eeaFile.out, urlEea, urlEea.socket('path')),
 
       // Fetch, then shape.
@@ -1050,7 +1084,7 @@ function topasSources() {
       emit(getSamen, getSamen.out, out.samen),
       emit(getEea, getEea.out, out.eea),
       { id: nextId(), from: flowId, to: flowId, out: inn.config, in: out.config },
-      emit(date, date.out, out.date),
+      emit(cfg, cfg.out('currentDate'), out.date),
     ],
   };
 }
@@ -1304,7 +1338,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 38 },
+  config: { seedVersion: 39 },
   /*
    * The same flow, read as an article.
    *

@@ -6,6 +6,9 @@ import { RequestSettingsComponent } from './request-settings.component';
 import { WEBSOCKET_SETTINGS, WebSocketWorker } from './websocket.worker';
 import { WebSocketSmallComponent } from './websocket-small.component';
 import { WebSocketSettingsComponent } from './websocket-settings.component';
+import { WEBTRANSPORT_SETTINGS, WebTransportWorker } from './webtransport.worker';
+import { WebTransportSmallComponent } from './webtransport-small.component';
+import { WebTransportSettingsComponent } from './webtransport-settings.component';
 
 /**
  * The Network module: data that arrives on somebody else's schedule.
@@ -62,15 +65,24 @@ export const NETWORK_MODULE: FbModule = {
     /*
      * The request's standing sibling: a connection that stays open, for data
      * that arrives on the server's schedule rather than being asked for.
-     * (There is no UDP node and cannot be — a browser has no raw sockets;
-     * WebTransport datagrams would be the nearest thing, behind an HTTP/3
-     * server.)
      */
     'net-websocket': {
       component: { small: WebSocketSmallComponent },
       settingsComponent: WebSocketSettingsComponent,
       settings: WEBSOCKET_SETTINGS,
       worker: WebSocketWorker,
+    },
+
+    /*
+     * The nearest thing to UDP a browser is allowed: WebTransport datagrams
+     * over HTTP/3 — unordered, unreliable, allowed to vanish. A browser
+     * without the API says so on the node instead of imitating a dead server.
+     */
+    'net-webtransport': {
+      component: { small: WebTransportSmallComponent },
+      settingsComponent: WebTransportSettingsComponent,
+      settings: WEBTRANSPORT_SETTINGS,
+      worker: WebTransportWorker,
     },
   },
 };

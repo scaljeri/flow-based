@@ -2,6 +2,45 @@
 @use 'styles/theme-colors' as fb-palette;
 
 /* ==========================================================================
+   Fonts, self-hosted
+   --------------------------------------------------------------------------
+   These were two <link>s to fonts.googleapis.com — the only third-party
+   requests a bare page made. An editor that runs offline and phones nobody
+   is worth two small files in assets: Source Code Pro is a variable font
+   (one file carries every weight), Material Icons draws the toolbar.
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Source Code Pro';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('assets/fonts/source-code-pro.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('assets/fonts/material-icons.woff2') format('woff2');
+}
+
+.material-icons {
+  direction: ltr;
+  display: inline-block;
+  font-family: 'Material Icons';
+  font-size: 24px;
+  font-style: normal;
+  font-weight: normal;
+  letter-spacing: normal;
+  line-height: 1;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+}
+
+/* ==========================================================================
    Angular Material theming
    ==========================================================================
    This replaces the `indigo-pink.css` prebuilt stylesheet that used to be listed
