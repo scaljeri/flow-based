@@ -373,7 +373,18 @@ export class FbFlowCanvasElement extends LitElement {
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       color: #fff;
+      display: flex;
+      flex-direction: column;
       font: 12px system-ui, sans-serif;
+      /*
+       * High on the screen, not centred: the search field focuses on open,
+       * the on-screen keyboard owns the bottom half of a phone, and a
+       * centred dialog vanished behind it the moment typing could start.
+       * The height cap keeps the whole thing above the keyboard; the list
+       * scrolls inside it.
+       */
+      margin: 8vh auto auto;
+      max-height: 55vh;
       padding: 8px;
       width: 240px;
     }
@@ -395,10 +406,16 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     .picker ul {
+      flex: 1;
       list-style: none;
       margin: 0;
-      max-height: 180px;
+      /* Without a minimum, flex refuses to shrink the list below its content
+         and the dialog's own height cap does nothing. */
+      min-height: 0;
       overflow-y: auto;
+      /* The list's end is not the graph's beginning: reaching the bottom
+         must not hand the gesture to whatever scrolls behind the dialog. */
+      overscroll-behavior: contain;
       padding: 0;
     }
 
@@ -486,8 +503,8 @@ export class FbFlowCanvasElement extends LitElement {
   /** What is typed into the picker's search; cleared when it closes. */
   private pickerQuery = '';
 
-  /** Whether the current gesture STARTED on the picker's backdrop; see @click. */
-  private pickerPressedBackdrop = false;
+  /** Where the current gesture STARTED, when that was the picker's backdrop. */
+  private pickerPressedAt: { x: number; y: number } | null = null;
   private marqueeAdditive = false;
 
   override connectedCallback(): void {
@@ -1256,23 +1273,39 @@ export class FbFlowCanvasElement extends LitElement {
           }
         }}
         @pointerdown=${(e: PointerEvent) => {
-          this.pickerPressedBackdrop = e.target === e.currentTarget;
+          /*
+           * Stopped here, or it reaches the canvas host — whose pointerdown
+           * treats any press while the picker is open as "dismiss". A press
+           * INSIDE the dialog (a scroll of the list, a tap on a candidate)
+           * bubbled there and closed the picker before the tap could land:
+           * the phone symptom was a list that vanished under your finger.
+           */
+          e.stopPropagation();
+
+          this.pickerPressedAt = e.target === e.currentTarget
+            ? { x: e.clientX, y: e.clientY }
+            : null;
         }}
+        @wheel=${(e: WheelEvent) => e.stopPropagation()}
         @click=${(e: MouseEvent) => {
           /*
-           * Backdrop dismissal needs the WHOLE gesture on the backdrop, not
-           * just the click. A tap on the pending handle opens this dialog on
-           * pointerup, and the browser then synthesises a click at the same
-           * spot — which lands on the backdrop that has just appeared over
-           * it. Judged by the click alone, the picker closed in the same
-           * gesture that opened it; the pointerdown check tells the two
-           * apart, because that press happened before the dialog existed.
+           * Backdrop dismissal needs the WHOLE gesture on the backdrop, and
+           * a still one. The whole: a tap on the pending handle opens this
+           * dialog on pointerup, and the browser then synthesises a click at
+           * the same spot — on the backdrop that has just appeared over it —
+           * so a click whose press predates the dialog must not count. The
+           * still: a scroll that starts beside the list is a scroll, and a
+           * press that travelled is not a tap — the same 6px slop the nodes'
+           * controls use.
            */
-          if (e.target === e.currentTarget && this.pickerPressedBackdrop) {
+          const from = this.pickerPressedAt;
+
+          this.pickerPressedAt = null;
+
+          if (e.target === e.currentTarget && from
+            && Math.hypot(e.clientX - from.x, e.clientY - from.y) <= 6) {
             this.editor.closePicker();
           }
-
-          this.pickerPressedBackdrop = false;
         }}>
         <input
           type="text"

@@ -2488,7 +2488,28 @@ test('tapping the loose end opens the picker, and the same tap does not close it
   await page.waitForTimeout(400);
   expect(await pickerOpen()).toBe(true);
 
-  // A deliberate backdrop press still dismisses — down AND up on it.
+  /*
+   * A REAL press inside the dialog must not dismiss it either: it used to
+   * bubble to the canvas host, whose pointerdown treats any press while the
+   * picker is open as "dismiss" — the list vanished under the finger that
+   * was scrolling it. Driven as a genuine press-move-release, because a
+   * synthetic click() has no pointerdown and slid past the bug.
+   */
+  const list = await page.evaluate(() => {
+    const r = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('dialog.picker ul')!.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.move(list.x, list.y);
+  await page.mouse.down();
+  await page.mouse.move(list.x, list.y + 30, { steps: 4 });
+  await page.mouse.up();
+
+  expect(await pickerOpen()).toBe(true);
+
+  // A deliberate backdrop press still dismisses — down AND up on it, still.
   const size = page.viewportSize()!;
 
   await page.mouse.click(size.width - 10, size.height - 10);
