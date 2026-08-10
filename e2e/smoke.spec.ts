@@ -1,4 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Locator, expect, test } from '@playwright/test';
+
+/*
+ * The two showcase flows the tests exercise — the imaginary-numbers article and
+ * the TOPAS measuring network — are no longer bundled into the app; they ship
+ * as standalone flow files and are opened by loading them. So the app no longer
+ * seeds them, and the harness provides them instead: a test brings its own
+ * fixture. `seedArticles` (in beforeEach) writes them into localStorage exactly
+ * as the app's own store would, so every test that used to rely on the seeded
+ * demo/tno keeps its ground. Read as the verbatim envelope files so the stored
+ * string is byte-for-byte what the app writes.
+ */
+const DEMO_JSON = readFileSync(join(process.cwd(), 'src/assets/flows/imaginary-numbers.json'), 'utf8');
+const TNO_JSON = readFileSync(join(process.cwd(), 'src/assets/flows/tno.json'), 'utf8');
 
 /**
  * Smoke test for the migrated demo.
@@ -125,6 +141,48 @@ const TILE = Buffer.from(
 test.beforeEach(async ({ page }) => {
   await page.route('**/basemaps.cartocdn.com/**', route =>
     route.fulfill({ contentType: 'image/png', body: TILE }));
+
+  /*
+   * Put the two articles on the shelf the way the app used to seed them, and
+   * enable every built-in module — the old fresh-browser default the tests were
+   * written against. Gated two ways: `fbnoseed` in the URL is how a test asks
+   * for a genuinely fresh browser (to prove the starter opens), and the
+   * `fb-flow-current` guard means a reload inside a test does not clobber an
+   * edit the app has since autosaved. Runs before the app's own script.
+   */
+  await page.addInitScript(({ demo, tno }) => {
+    if (location.search.includes('fbnoseed')) {
+      return;
+    }
+
+    if (localStorage.getItem('fb-flow-current')) {
+      return;
+    }
+
+    const titleOf = (json: string) => {
+      try {
+        return JSON.parse(json).flow.title as string;
+      } catch {
+        return 'flow';
+      }
+    };
+
+    localStorage.setItem('fb-flow-demo-seed', demo);
+    localStorage.setItem('fb-flow-tno-seed', tno);
+
+    const now = Date.now();
+
+    localStorage.setItem('fb-flows', JSON.stringify([
+      { id: 'demo-seed', title: titleOf(demo), updated: now },
+      { id: 'tno-seed', title: titleOf(tno), updated: now - 1 },
+    ]));
+    localStorage.setItem('fb-flow-current', 'demo-seed');
+    localStorage.setItem('fb-modules', JSON.stringify({
+      version: 2,
+      enabled: ['math', 'complex', 'graphs', 'network', 'data'],
+      urls: [],
+    }));
+  }, { demo: DEMO_JSON, tno: TNO_JSON });
 });
 
 test('renders the flow editor and draws connections, with no console errors', async ({ page }) => {
@@ -928,15 +986,17 @@ test('a formula flows into a derivative and comes out differentiated', async ({ 
 });
 
 /**
- * Flows live in localStorage: a fresh browser opens the demo (downloading the
- * math and graphs modules it speaks), a change survives reload, and the Flows
- * dialog creates and switches flows.
+ * Flows live in localStorage: the current one opens, a change survives reload,
+ * and the Flows dialog creates and switches flows. The demo and tno are put on
+ * the shelf by the harness now (the app no longer bundles them — see the
+ * beforeEach and `a fresh browser opens the small starter`), which is exactly
+ * the state a returning browser is in, so this still tests what it always did.
  */
 test('the demo flow appears first, changes survive a reload, and new flows can be created', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
-  // A fresh profile: the demo builds itself, modules included.
+  // The seeded demo is the current flow, so it is what opens.
   await expect
     .poll(() => page.evaluate(() =>
       (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
@@ -988,6 +1048,34 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
   // Both shipped flows plus the new one: the shelf holds what was seeded and
   // what was made, which is the whole point of it.
   await expect(page.locator('fb-flows-dialog li')).toHaveCount(3);
+});
+
+/**
+ * A genuinely fresh browser opens the small starter, not a bundled article.
+ *
+ * The showcase flows were moved out of the app into standalone files under
+ * `assets/flows/`; the app bundles neither, so a first visit lands on the
+ * two-node starter (title 'main'), and the articles are reached by loading
+ * them. `fbnoseed` tells the harness to skip the seed it gives every other
+ * test, so this one sees what a new visitor sees. This is the behaviour the
+ * un-bundling introduced, named so a regression that re-bundles a flow — or
+ * leaves the fresh browser blank — is caught.
+ */
+test('a fresh browser opens the small starter, not a bundled article', async ({ page }) => {
+  await page.goto('/?fbnoseed');
+
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+        ?.editor?.state?.title), { timeout: 15_000 })
+    .toBe('main');
+
+  // The starter stands, and it is not one of the articles.
+  expect(await page.locator('fb-node-box').count()).toBeGreaterThan(1);
+  const title = await page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+  expect(['demo', 'tno']).not.toContain(title);
 });
 
 /**

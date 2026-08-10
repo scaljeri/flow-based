@@ -249,12 +249,6 @@ export class AppComponent implements OnInit, AfterViewInit {
   private currentFlowId: string | null = null;
   private saveTimer?: ReturnType<typeof setTimeout>;
 
-  /** The seeded demo's fixed id: one shared flow Luca and the tests both know. */
-  private static readonly DEMO_ID = 'demo-seed';
-
-  /** The measuring-network case: several sources on one map. */
-  private static readonly TNO_ID = 'tno-seed';
-
   private async restoreFlow(): Promise<void> {
     /*
      * Modules FIRST, flow second. A saved flow can speak module types, and
@@ -264,23 +258,13 @@ export class AppComponent implements OnInit, AfterViewInit {
     await this.modules.restore();
 
     /*
-     * The demo lives in the store under a FIXED id, seeded from the fixture
-     * whenever it is absent OR outdated — so a browser that has flows of its
-     * own still gets it in the Flows dialog, deleting it there resets it,
-     * and shipping a new fixture reaches every browser on its next visit.
-     * One shared, reproducible flow to test on; edits to it do not survive a
-     * fixture bump, which is the point of a shared reference.
+     * The two showcase articles are no longer bundled. They used to be seeded
+     * here from `demo()` and `tno()` fixtures; they now ship as standalone flow
+     * files under `assets/flows/` and are opened by LOADING them — a specific
+     * case is a flow you load, not code in the app. Existing browsers keep any
+     * copy they already seeded (this is not destructive of local work); a fresh
+     * browser opens the small starter below.
      */
-    this.seed(AppComponent.DEMO_ID, data.demo() as FbNodeState);
-    this.seed(AppComponent.TNO_ID, data.tno() as FbNodeState);
-
-    /*
-     * A seed that is no longer shipped has to be taken back. `pollution` asked
-     * the same question as the flow above with one chain fewer, and a browser
-     * that has seen it would otherwise keep it on the shelf forever — a flow
-     * nothing maintains, next to the one that replaced it.
-     */
-    this.store.remove('pollution-seed');
 
     /*
      * A link into the app can name a flow to open: `?flow=<url>`. It wins over
@@ -332,28 +316,25 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     /*
-     * A fresh browser gets the demo — and the demo speaks math and graphs, so
-     * those modules download first. The await matters: loading a flow whose
-     * types are not registered yet would draw dead boxes.
+     * A fresh browser opens the small starter. enableFor registers the modules
+     * its types name (the plane is a graphs node) before it is drawn — a flow
+     * shown before its types are registered draws dead boxes. Cloned, so the
+     * editor mutates a copy rather than the shared import.
      */
-    await Promise.all([
-      this.modules.enable('math'),
-      this.modules.enable('complex'),
-      this.modules.enable('graphs'),
-      this.modules.enable('network'),
-      this.modules.enable('data'),
-    ]);
+    const starter = structuredClone(data.basic) as FbNodeState;
+
+    await this.modules.enableFor(starter);
 
     /*
      * Back INSIDE the zone — zone.js does not patch dynamic import(), and the
-     * module downloads above are exactly that — and then an explicit tick:
+     * module download above is exactly that — and then an explicit tick:
      * measured here, re-entering the zone alone did not schedule one, so the
-     * demo was saved and never shown until the next unrelated click.
+     * flow was saved and never shown until the next unrelated click. `create`
+     * makes it the current stored flow, so its edits autosave from the start.
      */
     this.zone.run(() => {
-      this.flow = this.store.load(AppComponent.DEMO_ID) ?? (data.demo() as FbNodeState);
-      this.currentFlowId = AppComponent.DEMO_ID;
-      this.store.setCurrent(AppComponent.DEMO_ID);
+      this.flow = starter;
+      this.currentFlowId = this.store.create(starter);
       this.cdr.detectChanges();
     });
   }
@@ -421,16 +402,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     const query = params.toString();
 
     window.history.replaceState(null, '', `${location.pathname}${query ? '?' + query : ''}`);
-  }
-
-  /** Write a shipped flow to the shelf when it is absent or out of date. */
-  private seed(id: string, fixture: FbNodeState): void {
-    const version = (flow?: FbNodeState) => (flow as { config?: { seedVersion?: number } })?.config?.seedVersion;
-    const stored = this.store.load(id);
-
-    if (!stored || version(stored) !== version(fixture)) {
-      this.store.save(id, fixture);
-    }
   }
 
   /**

@@ -1,0 +1,4030 @@
+{
+  "version": 5,
+  "flow": {
+    "id": 1,
+    "type": "flow",
+    "title": "tno",
+    "config": {
+      "seedVersion": 39
+    },
+    "document": {
+      "title": "Air pollutants decomposed",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "A measuring station tells you how much of something is in the air. It cannot tell you whose it is — from which country, from which sector. No instrument can separate a microgram from a ship from a microgram from a farm, because by the time it arrives they are the same dust.\n\nA model can, and that is the whole addition made here. TNO runs [LOTOS-EUROS](https://airqualitymodeling.tno.nl/lotos-euros/) daily over Europe, and in this version every emission is *labelled* where it leaves the ground — this country, that sector — and the label is carried with the mass through transport, chemistry and deposition. The labels are fractions of the concentration and they are made to add up to one, so every microgram in a cell belongs to somebody. One run answers it for all sources at once; the older way — switch a sector off, run again, take the difference — changes the chemistry while it is at it, and so answers a slightly different question ([Kranenburg et al., 2013](https://gmd.copernicus.org/articles/6/721/2013/); [TOPAS](https://airqualitymodeling.tno.nl/topas/topas-documentation/)).\n\nThe model is a box, and air crosses its edges. What blows in over the boundary — and what was already in the air when the run began — is not worked out here: it is taken from a global model and given a label of its own ([CAMS](https://atmosphere.copernicus.eu/sites/default/files/2023-06/LOTOS-EUROS%20Fact%20sheet.pdf)). So one of the shares you can read off is *from outside*, and that one is assumed rather than computed. It has to be: without it the fractions would not add up, and the pollution that genuinely came from elsewhere would be handed to whoever is nearest.\n\nEvery figure below is a live node of this flow. Start by choosing what to ask about: these are the pollutants the publisher offers, read from its own config rather than typed here."
+        },
+        {
+          "type": "node",
+          "nodeId": 630,
+          "float": "none",
+          "caption": "What there is to ask about"
+        },
+        {
+          "type": "heading",
+          "text": "The Netherlands",
+          "level": 2
+        },
+        {
+          "type": "text",
+          "text": "Two networks measure it here, and they could not be more different. The official one, RIVM’s Luchtmeetnet, contributes 93 reference stations — known instruments on known sites, as close to the truth as measuring gets. The citizen network, [Samen Meten](https://www.rivm.nl/lucht/meten-modelleren-berekenen/samen-meten), contributes 3,166 small sensors on balconies and fences.\n\nOne sensor is worse than one station at almost everything; three thousand are better than 93 at the one thing a map needs, which is being somewhere. Precision and coverage are different virtues."
+        },
+        {
+          "type": "node",
+          "nodeId": 500,
+          "float": "right",
+          "caption": "One network at a time"
+        },
+        {
+          "type": "text",
+          "text": "The map underneath the stations is the model: a value per cell, about 1.4 by 1.7 km, for the day the publisher last computed. The markers are the network you chose — and only the stations that can answer, because a station without an instrument for this pollutant, or one the model does not label, is a dot you could press for nothing."
+        },
+        {
+          "type": "node",
+          "nodeId": 300,
+          "float": "none",
+          "width": "440px",
+          "caption": "The model underneath, the measurements on top"
+        },
+        {
+          "type": "text",
+          "text": "Press one. That station comes back taken apart twice — by sector and by country, what was done and where it was done. Same bar, same day, cut two ways: one bar per day, its height the total, each band a share of it. `Boundary` is what blew in over the edge of the model; `Seasalt` and `Saharan Dust` are nobody’s to reduce; the rest is a list of decisions somebody could make."
+        },
+        {
+          "type": "node",
+          "nodeId": 1100,
+          "float": "none",
+          "width": "440px",
+          "caption": "One station, by sector"
+        },
+        {
+          "type": "node",
+          "nodeId": 1300,
+          "float": "none",
+          "width": "440px",
+          "caption": "The same station, by country"
+        },
+        {
+          "type": "heading",
+          "text": "Europe",
+          "level": 2
+        },
+        {
+          "type": "text",
+          "text": "The same model, the same labels, one zoom level out: cells of roughly 22 by 28 km from 30°N to 71°N, and the EEA’s network on top of them. Neither picture is more true than the other — a cell is an average, and an average over 1.4 km is still an average over a motorway, a park and the house you live in.\n\nIt is a second map rather than a second layer because a view fitted to both is a view fitted to Europe, in which the Netherlands is forty pixels across."
+        },
+        {
+          "type": "node",
+          "nodeId": 700,
+          "float": "none",
+          "width": "440px",
+          "caption": "The same day over Europe"
+        },
+        {
+          "type": "node",
+          "nodeId": 1200,
+          "float": "none",
+          "width": "440px",
+          "caption": "A European station, by sector"
+        },
+        {
+          "type": "node",
+          "nodeId": 1400,
+          "float": "none",
+          "width": "440px",
+          "caption": "The same station, by country"
+        },
+        {
+          "type": "text",
+          "text": "Add the labels up over the Netherlands and roughly a third of the particulate matter people put there is Dutch; two thirds crossed a border ([Hendriks et al., 2013](https://www.sciencedirect.com/science/article/abs/pii/S1352231012011673)). Which is what makes the question worth asking at all: the WHO’s guideline for long-term PM2.5 is 5 µg/m³, the EU’s limit falls to 10 in 2030, and the European Environment Agency attributes about 172,000 deaths in 2023 to what is left above it ([EEA, 2025](https://www.eea.europa.eu/en/analysis/publications/harm-to-human-health-from-air-pollution-burden-of-disease-status-2025)). Knowing that two thirds came from abroad is not an excuse. It is a list of the conversations that have to happen.\n\nThis page and that graph are two readings of the same JSON. {{!flow:Show me the flow}}"
+        }
+      ]
+    },
+    "sockets": [],
+    "children": [
+      {
+        "type": "flow",
+        "title": "TOPAS sources",
+        "id": 2000,
+        "config": {},
+        "ui": {
+          "position": {
+            "x": 4,
+            "y": 30
+          }
+        },
+        "sockets": [
+          {
+            "id": 2010,
+            "type": "in",
+            "name": "config",
+            "format": "data"
+          },
+          {
+            "id": 2011,
+            "type": "in",
+            "name": "pollutant",
+            "format": "string"
+          },
+          {
+            "id": 2001,
+            "type": "out",
+            "name": "NL grid",
+            "format": "grid"
+          },
+          {
+            "id": 2002,
+            "type": "out",
+            "name": "EU grid",
+            "format": "grid"
+          },
+          {
+            "id": 2003,
+            "type": "out",
+            "name": "NL · RIVM LML",
+            "format": "data"
+          },
+          {
+            "id": 2004,
+            "type": "out",
+            "name": "NL · Samen Meten",
+            "format": "data"
+          },
+          {
+            "id": 2005,
+            "type": "out",
+            "name": "EU · EEA",
+            "format": "data"
+          },
+          {
+            "id": 2006,
+            "type": "out",
+            "name": "config",
+            "format": "data"
+          },
+          {
+            "id": 2007,
+            "type": "out",
+            "name": "date",
+            "format": "string"
+          }
+        ],
+        "children": [
+          {
+            "type": "data-fields",
+            "title": "TOPAS config",
+            "id": 2101,
+            "config": {},
+            "sockets": [
+              {
+                "id": 2102,
+                "type": "in",
+                "formats": [
+                  "data"
+                ]
+              },
+              {
+                "id": 2103,
+                "type": "out",
+                "name": "regions.0.gridPath",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              },
+              {
+                "id": 2104,
+                "type": "out",
+                "name": "regions.1.gridPath",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              },
+              {
+                "id": 2105,
+                "type": "out",
+                "name": "currentDate",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              },
+              {
+                "id": 2106,
+                "type": "out",
+                "name": "regions.0.id",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              },
+              {
+                "id": 2107,
+                "type": "out",
+                "name": "regions.1.id",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              },
+              {
+                "id": 2108,
+                "type": "out",
+                "name": "networks.0.path",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              },
+              {
+                "id": 2109,
+                "type": "out",
+                "name": "networks.1.path",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              },
+              {
+                "id": 2110,
+                "type": "out",
+                "name": "networks.2.path",
+                "formats": [
+                  "string",
+                  "number"
+                ]
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 14,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "NL grid file",
+            "id": 2111,
+            "config": {
+              "pattern": ""
+            },
+            "sockets": [
+              {
+                "id": 2112,
+                "type": "in",
+                "name": "pattern"
+              },
+              {
+                "id": 2113,
+                "type": "in",
+                "name": "region|lower"
+              },
+              {
+                "id": 2114,
+                "type": "in",
+                "name": "date"
+              },
+              {
+                "id": 2115,
+                "type": "in",
+                "name": "pollutant"
+              },
+              {
+                "id": 2116,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 30,
+                "y": 4
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "EU grid file",
+            "id": 2117,
+            "config": {
+              "pattern": ""
+            },
+            "sockets": [
+              {
+                "id": 2118,
+                "type": "in",
+                "name": "pattern"
+              },
+              {
+                "id": 2119,
+                "type": "in",
+                "name": "region|lower"
+              },
+              {
+                "id": 2120,
+                "type": "in",
+                "name": "date"
+              },
+              {
+                "id": 2121,
+                "type": "in",
+                "name": "pollutant"
+              },
+              {
+                "id": 2122,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 30,
+                "y": 20
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "EEA file name",
+            "id": 2123,
+            "config": {
+              "pattern": ""
+            },
+            "sockets": [
+              {
+                "id": 2124,
+                "type": "in",
+                "name": "pattern"
+              },
+              {
+                "id": 2125,
+                "type": "in",
+                "name": "region|lower"
+              },
+              {
+                "id": 2126,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 30,
+                "y": 72
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "NL grid URL",
+            "id": 2127,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2128,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2129,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 46,
+                "y": 4
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "EU grid URL",
+            "id": 2130,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2131,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2132,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 46,
+                "y": 20
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "LML URL",
+            "id": 2133,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2134,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2135,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 46,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "Samen Meten URL",
+            "id": 2136,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2137,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2138,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 46,
+                "y": 60
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "EEA URL",
+            "id": 2139,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2140,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2141,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 46,
+                "y": 78
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "NL grid",
+            "id": 2142,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "NL grid"
+            },
+            "sockets": [
+              {
+                "id": 2143,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2144,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2145,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 62,
+                "y": 4
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "EU grid",
+            "id": 2146,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "EU grid"
+            },
+            "sockets": [
+              {
+                "id": 2147,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2148,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2149,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 62,
+                "y": 20
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "RIVM LML",
+            "id": 2150,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "RIVM LML"
+            },
+            "sockets": [
+              {
+                "id": 2151,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2152,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2153,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 62,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "Samen Meten",
+            "id": 2154,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "Samen Meten"
+            },
+            "sockets": [
+              {
+                "id": 2155,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2156,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2157,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 62,
+                "y": 60
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "EEA",
+            "id": 2158,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "EEA"
+            },
+            "sockets": [
+              {
+                "id": 2159,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2160,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2161,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 62,
+                "y": 78
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "NL raster",
+            "id": 2162,
+            "config": {
+              "shape": "grid"
+            },
+            "sockets": [
+              {
+                "id": 2163,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2164,
+                "type": "out",
+                "format": "grid"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 78,
+                "y": 4
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "EU raster",
+            "id": 2165,
+            "config": {
+              "shape": "grid"
+            },
+            "sockets": [
+              {
+                "id": 2166,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2167,
+                "type": "out",
+                "format": "grid"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 78,
+                "y": 20
+              }
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": 2168,
+            "from": 2000,
+            "to": 2101,
+            "out": 2010,
+            "in": 2102
+          },
+          {
+            "id": 2169,
+            "from": 2101,
+            "to": 2111,
+            "out": 2103,
+            "in": 2112
+          },
+          {
+            "id": 2170,
+            "from": 2101,
+            "to": 2111,
+            "out": 2106,
+            "in": 2113
+          },
+          {
+            "id": 2171,
+            "from": 2101,
+            "to": 2111,
+            "out": 2105,
+            "in": 2114
+          },
+          {
+            "id": 2172,
+            "from": 2000,
+            "to": 2111,
+            "out": 2011,
+            "in": 2115
+          },
+          {
+            "id": 2173,
+            "from": 2101,
+            "to": 2117,
+            "out": 2104,
+            "in": 2118
+          },
+          {
+            "id": 2174,
+            "from": 2101,
+            "to": 2117,
+            "out": 2107,
+            "in": 2119
+          },
+          {
+            "id": 2175,
+            "from": 2101,
+            "to": 2117,
+            "out": 2105,
+            "in": 2120
+          },
+          {
+            "id": 2176,
+            "from": 2000,
+            "to": 2117,
+            "out": 2011,
+            "in": 2121
+          },
+          {
+            "id": 2177,
+            "from": 2101,
+            "to": 2123,
+            "out": 2110,
+            "in": 2124
+          },
+          {
+            "id": 2178,
+            "from": 2101,
+            "to": 2123,
+            "out": 2107,
+            "in": 2125
+          },
+          {
+            "id": 2179,
+            "from": 2111,
+            "to": 2127,
+            "out": 2116,
+            "in": 2128
+          },
+          {
+            "id": 2180,
+            "from": 2117,
+            "to": 2130,
+            "out": 2122,
+            "in": 2131
+          },
+          {
+            "id": 2181,
+            "from": 2101,
+            "to": 2133,
+            "out": 2108,
+            "in": 2134
+          },
+          {
+            "id": 2182,
+            "from": 2101,
+            "to": 2136,
+            "out": 2109,
+            "in": 2137
+          },
+          {
+            "id": 2183,
+            "from": 2123,
+            "to": 2139,
+            "out": 2126,
+            "in": 2140
+          },
+          {
+            "id": 2184,
+            "from": 2127,
+            "to": 2142,
+            "out": 2129,
+            "in": 2144
+          },
+          {
+            "id": 2185,
+            "from": 2130,
+            "to": 2146,
+            "out": 2132,
+            "in": 2148
+          },
+          {
+            "id": 2186,
+            "from": 2133,
+            "to": 2150,
+            "out": 2135,
+            "in": 2152
+          },
+          {
+            "id": 2187,
+            "from": 2136,
+            "to": 2154,
+            "out": 2138,
+            "in": 2156
+          },
+          {
+            "id": 2188,
+            "from": 2139,
+            "to": 2158,
+            "out": 2141,
+            "in": 2160
+          },
+          {
+            "id": 2189,
+            "from": 2142,
+            "to": 2162,
+            "out": 2145,
+            "in": 2163
+          },
+          {
+            "id": 2190,
+            "from": 2146,
+            "to": 2165,
+            "out": 2149,
+            "in": 2166
+          },
+          {
+            "id": 2191,
+            "from": 2162,
+            "to": 2000,
+            "out": 2164,
+            "in": 2001
+          },
+          {
+            "id": 2192,
+            "from": 2165,
+            "to": 2000,
+            "out": 2167,
+            "in": 2002
+          },
+          {
+            "id": 2193,
+            "from": 2150,
+            "to": 2000,
+            "out": 2153,
+            "in": 2003
+          },
+          {
+            "id": 2194,
+            "from": 2154,
+            "to": 2000,
+            "out": 2157,
+            "in": 2004
+          },
+          {
+            "id": 2195,
+            "from": 2158,
+            "to": 2000,
+            "out": 2161,
+            "in": 2005
+          },
+          {
+            "id": 2196,
+            "from": 2000,
+            "to": 2000,
+            "out": 2010,
+            "in": 2006
+          },
+          {
+            "id": 2197,
+            "from": 2101,
+            "to": 2000,
+            "out": 2105,
+            "in": 2007
+          }
+        ]
+      },
+      {
+        "type": "net-request",
+        "title": "TOPAS config",
+        "id": 600,
+        "config": {
+          "url": "../tno-topas/config.json",
+          "method": "GET",
+          "every": 0,
+          "title": "TOPAS configuration",
+          "description": "What the publisher says about its own data: paths, dates, regions, pollutants."
+        },
+        "sockets": [
+          {
+            "id": 609,
+            "type": "in",
+            "name": "when"
+          },
+          {
+            "id": 608,
+            "type": "in",
+            "name": "url",
+            "format": "string"
+          },
+          {
+            "id": 610,
+            "type": "out",
+            "format": "data"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 2,
+            "y": 6
+          }
+        }
+      },
+      {
+        "type": "data-choice",
+        "title": "Which pollutant",
+        "id": 630,
+        "config": {
+          "list": "regions.0.pollutants",
+          "label": "",
+          "value": "",
+          "as": "text",
+          "which": 1
+        },
+        "sockets": [
+          {
+            "id": 631,
+            "type": "in",
+            "formats": [
+              "data",
+              "geo",
+              "point",
+              "number",
+              "grid"
+            ]
+          },
+          {
+            "id": 632,
+            "type": "out",
+            "format": "string"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 20,
+            "y": 5
+          }
+        }
+      },
+      {
+        "type": "data-switch",
+        "title": "Which Dutch network",
+        "id": 500,
+        "config": {
+          "which": 1
+        },
+        "sockets": [
+          {
+            "id": 510,
+            "type": "in",
+            "formats": [
+              "data"
+            ]
+          },
+          {
+            "id": 511,
+            "type": "in",
+            "formats": [
+              "data"
+            ]
+          },
+          {
+            "id": 512,
+            "type": "out",
+            "format": "data"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 40,
+            "y": 26
+          }
+        }
+      },
+      {
+        "type": "graph-map",
+        "title": "The Netherlands",
+        "id": 300,
+        "config": {
+          "track": false,
+          "follow": true,
+          "bounded": true,
+          "slackX": 0.08,
+          "slackY": 0.08,
+          "pickFirst": true
+        },
+        "sockets": [
+          {
+            "id": 312,
+            "type": "in",
+            "formats": [
+              "geo",
+              "grid"
+            ]
+          },
+          {
+            "id": 310,
+            "type": "in",
+            "formats": [
+              "geo",
+              "grid"
+            ]
+          },
+          {
+            "id": 313,
+            "type": "out",
+            "format": "geo"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 62,
+            "y": 12
+          }
+        }
+      },
+      {
+        "type": "graph-map",
+        "title": "Europe",
+        "id": 700,
+        "config": {
+          "track": false,
+          "follow": true,
+          "bounded": true,
+          "slackX": 0.04,
+          "slackY": 0.04,
+          "pickFirst": true
+        },
+        "sockets": [
+          {
+            "id": 712,
+            "type": "in",
+            "formats": [
+              "geo",
+              "grid"
+            ]
+          },
+          {
+            "id": 710,
+            "type": "in",
+            "formats": [
+              "geo",
+              "grid"
+            ]
+          },
+          {
+            "id": 713,
+            "type": "out",
+            "format": "geo"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 62,
+            "y": 40
+          }
+        }
+      },
+      {
+        "type": "flow",
+        "title": "Stations worth drawing",
+        "id": 3200,
+        "config": {
+          "preview": 2206
+        },
+        "ui": {
+          "position": {
+            "x": 44,
+            "y": 12
+          }
+        },
+        "sockets": [
+          {
+            "id": 3210,
+            "type": "in",
+            "name": "network file",
+            "format": "data"
+          },
+          {
+            "id": 3211,
+            "type": "in",
+            "name": "pollutant",
+            "format": "string"
+          },
+          {
+            "id": 3201,
+            "type": "out",
+            "name": "stations",
+            "format": "geo"
+          }
+        ],
+        "children": [
+          {
+            "type": "data-filter",
+            "title": "measures it",
+            "id": 2198,
+            "config": {
+              "list": "list",
+              "path": "pollutants",
+              "test": "has",
+              "value": ""
+            },
+            "sockets": [
+              {
+                "id": 2199,
+                "type": "in",
+                "formats": [
+                  "data"
+                ]
+              },
+              {
+                "id": 2200,
+                "type": "in",
+                "name": "value",
+                "format": "string"
+              },
+              {
+                "id": 2201,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 22
+              }
+            }
+          },
+          {
+            "type": "data-filter",
+            "title": "and is modelled",
+            "id": 2202,
+            "config": {
+              "list": "",
+              "path": "geenModel",
+              "test": "has",
+              "value": "",
+              "negate": true
+            },
+            "sockets": [
+              {
+                "id": 2203,
+                "type": "in",
+                "formats": [
+                  "data"
+                ]
+              },
+              {
+                "id": 2204,
+                "type": "in",
+                "name": "value",
+                "format": "string"
+              },
+              {
+                "id": 2205,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 38,
+                "y": 38
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "stations",
+            "id": 2206,
+            "config": {
+              "shape": "geo",
+              "list": "",
+              "a": "lat",
+              "b": "lon",
+              "label": "",
+              "ref": "code",
+              "limit": 400
+            },
+            "sockets": [
+              {
+                "id": 2207,
+                "type": "in",
+                "formats": [
+                  "data"
+                ]
+              },
+              {
+                "id": 2208,
+                "type": "out",
+                "format": "geo"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 68,
+                "y": 46
+              }
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": 2209,
+            "from": 3200,
+            "to": 2198,
+            "out": 3210,
+            "in": 2199
+          },
+          {
+            "id": 2210,
+            "from": 3200,
+            "to": 2198,
+            "out": 3211,
+            "in": 2200
+          },
+          {
+            "id": 2211,
+            "from": 2198,
+            "to": 2202,
+            "out": 2201,
+            "in": 2203
+          },
+          {
+            "id": 2212,
+            "from": 3200,
+            "to": 2202,
+            "out": 3211,
+            "in": 2204
+          },
+          {
+            "id": 2213,
+            "from": 2202,
+            "to": 2206,
+            "out": 2205,
+            "in": 2207
+          },
+          {
+            "id": 2214,
+            "from": 2206,
+            "to": 3200,
+            "out": 2208,
+            "in": 3201
+          }
+        ]
+      },
+      {
+        "type": "flow",
+        "title": "Stations worth drawing",
+        "id": 3300,
+        "config": {
+          "preview": 2223
+        },
+        "ui": {
+          "position": {
+            "x": 44,
+            "y": 44
+          }
+        },
+        "sockets": [
+          {
+            "id": 3310,
+            "type": "in",
+            "name": "network file",
+            "format": "data"
+          },
+          {
+            "id": 3311,
+            "type": "in",
+            "name": "pollutant",
+            "format": "string"
+          },
+          {
+            "id": 3301,
+            "type": "out",
+            "name": "stations",
+            "format": "geo"
+          }
+        ],
+        "children": [
+          {
+            "type": "data-filter",
+            "title": "measures it",
+            "id": 2215,
+            "config": {
+              "list": "list",
+              "path": "pollutants",
+              "test": "has",
+              "value": ""
+            },
+            "sockets": [
+              {
+                "id": 2216,
+                "type": "in",
+                "formats": [
+                  "data"
+                ]
+              },
+              {
+                "id": 2217,
+                "type": "in",
+                "name": "value",
+                "format": "string"
+              },
+              {
+                "id": 2218,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 22
+              }
+            }
+          },
+          {
+            "type": "data-filter",
+            "title": "and is modelled",
+            "id": 2219,
+            "config": {
+              "list": "",
+              "path": "geenModel",
+              "test": "has",
+              "value": "",
+              "negate": true
+            },
+            "sockets": [
+              {
+                "id": 2220,
+                "type": "in",
+                "formats": [
+                  "data"
+                ]
+              },
+              {
+                "id": 2221,
+                "type": "in",
+                "name": "value",
+                "format": "string"
+              },
+              {
+                "id": 2222,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 38,
+                "y": 38
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "stations",
+            "id": 2223,
+            "config": {
+              "shape": "geo",
+              "list": "",
+              "a": "lat",
+              "b": "lon",
+              "label": "",
+              "ref": "code",
+              "limit": 400
+            },
+            "sockets": [
+              {
+                "id": 2224,
+                "type": "in",
+                "formats": [
+                  "data"
+                ]
+              },
+              {
+                "id": 2225,
+                "type": "out",
+                "format": "geo"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 68,
+                "y": 46
+              }
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": 2226,
+            "from": 3300,
+            "to": 2215,
+            "out": 3310,
+            "in": 2216
+          },
+          {
+            "id": 2227,
+            "from": 3300,
+            "to": 2215,
+            "out": 3311,
+            "in": 2217
+          },
+          {
+            "id": 2228,
+            "from": 2215,
+            "to": 2219,
+            "out": 2218,
+            "in": 2220
+          },
+          {
+            "id": 2229,
+            "from": 3300,
+            "to": 2219,
+            "out": 3311,
+            "in": 2221
+          },
+          {
+            "id": 2230,
+            "from": 2219,
+            "to": 2223,
+            "out": 2222,
+            "in": 2224
+          },
+          {
+            "id": 2231,
+            "from": 2223,
+            "to": 3300,
+            "out": 2225,
+            "in": 3301
+          }
+        ]
+      },
+      {
+        "type": "flow",
+        "title": "Station readings",
+        "id": 3000,
+        "config": {
+          "preview": 2266
+        },
+        "ui": {
+          "position": {
+            "x": 75,
+            "y": 4
+          }
+        },
+        "sockets": [
+          {
+            "id": 3010,
+            "type": "in",
+            "name": "pressed place",
+            "format": "geo"
+          },
+          {
+            "id": 3011,
+            "type": "in",
+            "name": "network file",
+            "format": "data"
+          },
+          {
+            "id": 3012,
+            "type": "in",
+            "name": "config",
+            "format": "data"
+          },
+          {
+            "id": 3013,
+            "type": "in",
+            "name": "pollutant",
+            "format": "string"
+          },
+          {
+            "id": 3001,
+            "type": "out",
+            "name": "breakdown",
+            "format": "stack"
+          }
+        ],
+        "children": [
+          {
+            "type": "data-pick",
+            "title": "station code",
+            "id": 2238,
+            "config": {
+              "shape": "text",
+              "a": "places.0.ref"
+            },
+            "sockets": [
+              {
+                "id": 2239,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2240,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 8
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "series path",
+            "id": 2241,
+            "config": {
+              "shape": "text",
+              "a": "series.path"
+            },
+            "sockets": [
+              {
+                "id": 2242,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2243,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 28
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "network id",
+            "id": 2244,
+            "config": {
+              "shape": "text",
+              "a": "network"
+            },
+            "sockets": [
+              {
+                "id": 2245,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2246,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2247,
+            "config": {
+              "shape": "text",
+              "a": "series.types.sectors"
+            },
+            "sockets": [
+              {
+                "id": 2248,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2249,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2253,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 52
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "region",
+            "id": 2250,
+            "config": {
+              "shape": "text",
+              "a": "regions.0.id"
+            },
+            "sockets": [
+              {
+                "id": 2251,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2252,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2254,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 66
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series file",
+            "id": 2255,
+            "config": {
+              "pattern": ""
+            },
+            "sockets": [
+              {
+                "id": 2256,
+                "type": "in",
+                "name": "pattern"
+              },
+              {
+                "id": 2257,
+                "type": "in",
+                "name": "region|lower"
+              },
+              {
+                "id": 2258,
+                "type": "in",
+                "name": "network"
+              },
+              {
+                "id": 2259,
+                "type": "in",
+                "name": "code"
+              },
+              {
+                "id": 2260,
+                "type": "in",
+                "name": "pollutant"
+              },
+              {
+                "id": 2261,
+                "type": "in",
+                "name": "type"
+              },
+              {
+                "id": 2262,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 38,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series URL",
+            "id": 2263,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2264,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2265,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 56,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "That station’s readings",
+            "id": 2266,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "That station’s readings"
+            },
+            "sockets": [
+              {
+                "id": 2267,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2268,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2269,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 70,
+                "y": 42
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2270,
+            "config": {
+              "shape": "stack",
+              "labels": "labels",
+              "values": "values",
+              "title": "name",
+              "merge": "^(.*?) (?:non-)?native$"
+            },
+            "sockets": [
+              {
+                "id": 2271,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2272,
+                "type": "out",
+                "format": "stack"
+              },
+              {
+                "id": 2273,
+                "type": "in",
+                "name": "top",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 86,
+                "y": 48
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "breakdown",
+            "id": 2232,
+            "config": {
+              "name": "breakdown",
+              "kind": "string",
+              "value": "series.types.sectors"
+            },
+            "sockets": [
+              {
+                "id": 2233,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 8,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "region",
+            "id": 2234,
+            "config": {
+              "name": "region",
+              "kind": "string",
+              "value": "regions.0.id"
+            },
+            "sockets": [
+              {
+                "id": 2235,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 28,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "top",
+            "id": 2236,
+            "config": {
+              "name": "top",
+              "kind": "number",
+              "value": 0
+            },
+            "sockets": [
+              {
+                "id": 2237,
+                "type": "out",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 48,
+                "y": 84
+              }
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": 2274,
+            "from": 3000,
+            "to": 2238,
+            "out": 3010,
+            "in": 2239
+          },
+          {
+            "id": 2275,
+            "from": 3000,
+            "to": 2241,
+            "out": 3011,
+            "in": 2242
+          },
+          {
+            "id": 2276,
+            "from": 3000,
+            "to": 2244,
+            "out": 3011,
+            "in": 2245
+          },
+          {
+            "id": 2277,
+            "from": 3000,
+            "to": 2247,
+            "out": 3011,
+            "in": 2248
+          },
+          {
+            "id": 2278,
+            "from": 3000,
+            "to": 2250,
+            "out": 3012,
+            "in": 2251
+          },
+          {
+            "id": 2279,
+            "from": 2232,
+            "to": 2247,
+            "out": 2233,
+            "in": 2253
+          },
+          {
+            "id": 2280,
+            "from": 2234,
+            "to": 2250,
+            "out": 2235,
+            "in": 2254
+          },
+          {
+            "id": 2281,
+            "from": 2236,
+            "to": 2270,
+            "out": 2237,
+            "in": 2273
+          },
+          {
+            "id": 2282,
+            "from": 2241,
+            "to": 2255,
+            "out": 2243,
+            "in": 2256
+          },
+          {
+            "id": 2283,
+            "from": 2250,
+            "to": 2255,
+            "out": 2252,
+            "in": 2257
+          },
+          {
+            "id": 2284,
+            "from": 2244,
+            "to": 2255,
+            "out": 2246,
+            "in": 2258
+          },
+          {
+            "id": 2285,
+            "from": 2247,
+            "to": 2255,
+            "out": 2249,
+            "in": 2261
+          },
+          {
+            "id": 2286,
+            "from": 2238,
+            "to": 2255,
+            "out": 2240,
+            "in": 2259
+          },
+          {
+            "id": 2287,
+            "from": 3000,
+            "to": 2255,
+            "out": 3013,
+            "in": 2260
+          },
+          {
+            "id": 2288,
+            "from": 2255,
+            "to": 2263,
+            "out": 2262,
+            "in": 2264
+          },
+          {
+            "id": 2289,
+            "from": 2263,
+            "to": 2266,
+            "out": 2265,
+            "in": 2268
+          },
+          {
+            "id": 2290,
+            "from": 2266,
+            "to": 2270,
+            "out": 2269,
+            "in": 2271
+          },
+          {
+            "id": 2291,
+            "from": 2270,
+            "to": 3000,
+            "out": 2272,
+            "in": 3001
+          }
+        ]
+      },
+      {
+        "type": "flow",
+        "title": "Station readings",
+        "id": 3400,
+        "config": {
+          "preview": 2326
+        },
+        "ui": {
+          "position": {
+            "x": 75,
+            "y": 36
+          }
+        },
+        "sockets": [
+          {
+            "id": 3410,
+            "type": "in",
+            "name": "pressed place",
+            "format": "geo"
+          },
+          {
+            "id": 3411,
+            "type": "in",
+            "name": "network file",
+            "format": "data"
+          },
+          {
+            "id": 3412,
+            "type": "in",
+            "name": "config",
+            "format": "data"
+          },
+          {
+            "id": 3413,
+            "type": "in",
+            "name": "pollutant",
+            "format": "string"
+          },
+          {
+            "id": 3401,
+            "type": "out",
+            "name": "breakdown",
+            "format": "stack"
+          }
+        ],
+        "children": [
+          {
+            "type": "data-pick",
+            "title": "station code",
+            "id": 2298,
+            "config": {
+              "shape": "text",
+              "a": "places.0.ref"
+            },
+            "sockets": [
+              {
+                "id": 2299,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2300,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 8
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "series path",
+            "id": 2301,
+            "config": {
+              "shape": "text",
+              "a": "series.path"
+            },
+            "sockets": [
+              {
+                "id": 2302,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2303,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 28
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "network id",
+            "id": 2304,
+            "config": {
+              "shape": "text",
+              "a": "network"
+            },
+            "sockets": [
+              {
+                "id": 2305,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2306,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2307,
+            "config": {
+              "shape": "text",
+              "a": "series.types.sectors"
+            },
+            "sockets": [
+              {
+                "id": 2308,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2309,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2313,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 52
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "region",
+            "id": 2310,
+            "config": {
+              "shape": "text",
+              "a": "regions.0.id"
+            },
+            "sockets": [
+              {
+                "id": 2311,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2312,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2314,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 66
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series file",
+            "id": 2315,
+            "config": {
+              "pattern": ""
+            },
+            "sockets": [
+              {
+                "id": 2316,
+                "type": "in",
+                "name": "pattern"
+              },
+              {
+                "id": 2317,
+                "type": "in",
+                "name": "region|lower"
+              },
+              {
+                "id": 2318,
+                "type": "in",
+                "name": "network"
+              },
+              {
+                "id": 2319,
+                "type": "in",
+                "name": "code"
+              },
+              {
+                "id": 2320,
+                "type": "in",
+                "name": "pollutant"
+              },
+              {
+                "id": 2321,
+                "type": "in",
+                "name": "type"
+              },
+              {
+                "id": 2322,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 38,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series URL",
+            "id": 2323,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2324,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2325,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 56,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "That station’s readings",
+            "id": 2326,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "That station’s readings"
+            },
+            "sockets": [
+              {
+                "id": 2327,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2328,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2329,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 70,
+                "y": 42
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2330,
+            "config": {
+              "shape": "stack",
+              "labels": "labels",
+              "values": "values",
+              "title": "name",
+              "merge": "^(.*?) (?:non-)?native$"
+            },
+            "sockets": [
+              {
+                "id": 2331,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2332,
+                "type": "out",
+                "format": "stack"
+              },
+              {
+                "id": 2333,
+                "type": "in",
+                "name": "top",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 86,
+                "y": 48
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "breakdown",
+            "id": 2292,
+            "config": {
+              "name": "breakdown",
+              "kind": "string",
+              "value": "series.types.countries"
+            },
+            "sockets": [
+              {
+                "id": 2293,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 8,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "region",
+            "id": 2294,
+            "config": {
+              "name": "region",
+              "kind": "string",
+              "value": "regions.0.id"
+            },
+            "sockets": [
+              {
+                "id": 2295,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 28,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "top",
+            "id": 2296,
+            "config": {
+              "name": "top",
+              "kind": "number",
+              "value": 0
+            },
+            "sockets": [
+              {
+                "id": 2297,
+                "type": "out",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 48,
+                "y": 84
+              }
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": 2334,
+            "from": 3400,
+            "to": 2298,
+            "out": 3410,
+            "in": 2299
+          },
+          {
+            "id": 2335,
+            "from": 3400,
+            "to": 2301,
+            "out": 3411,
+            "in": 2302
+          },
+          {
+            "id": 2336,
+            "from": 3400,
+            "to": 2304,
+            "out": 3411,
+            "in": 2305
+          },
+          {
+            "id": 2337,
+            "from": 3400,
+            "to": 2307,
+            "out": 3411,
+            "in": 2308
+          },
+          {
+            "id": 2338,
+            "from": 3400,
+            "to": 2310,
+            "out": 3412,
+            "in": 2311
+          },
+          {
+            "id": 2339,
+            "from": 2292,
+            "to": 2307,
+            "out": 2293,
+            "in": 2313
+          },
+          {
+            "id": 2340,
+            "from": 2294,
+            "to": 2310,
+            "out": 2295,
+            "in": 2314
+          },
+          {
+            "id": 2341,
+            "from": 2296,
+            "to": 2330,
+            "out": 2297,
+            "in": 2333
+          },
+          {
+            "id": 2342,
+            "from": 2301,
+            "to": 2315,
+            "out": 2303,
+            "in": 2316
+          },
+          {
+            "id": 2343,
+            "from": 2310,
+            "to": 2315,
+            "out": 2312,
+            "in": 2317
+          },
+          {
+            "id": 2344,
+            "from": 2304,
+            "to": 2315,
+            "out": 2306,
+            "in": 2318
+          },
+          {
+            "id": 2345,
+            "from": 2307,
+            "to": 2315,
+            "out": 2309,
+            "in": 2321
+          },
+          {
+            "id": 2346,
+            "from": 2298,
+            "to": 2315,
+            "out": 2300,
+            "in": 2319
+          },
+          {
+            "id": 2347,
+            "from": 3400,
+            "to": 2315,
+            "out": 3413,
+            "in": 2320
+          },
+          {
+            "id": 2348,
+            "from": 2315,
+            "to": 2323,
+            "out": 2322,
+            "in": 2324
+          },
+          {
+            "id": 2349,
+            "from": 2323,
+            "to": 2326,
+            "out": 2325,
+            "in": 2328
+          },
+          {
+            "id": 2350,
+            "from": 2326,
+            "to": 2330,
+            "out": 2329,
+            "in": 2331
+          },
+          {
+            "id": 2351,
+            "from": 2330,
+            "to": 3400,
+            "out": 2332,
+            "in": 3401
+          }
+        ]
+      },
+      {
+        "type": "flow",
+        "title": "Station readings",
+        "id": 3100,
+        "config": {
+          "preview": 2386
+        },
+        "ui": {
+          "position": {
+            "x": 88,
+            "y": 4
+          }
+        },
+        "sockets": [
+          {
+            "id": 3110,
+            "type": "in",
+            "name": "pressed place",
+            "format": "geo"
+          },
+          {
+            "id": 3111,
+            "type": "in",
+            "name": "network file",
+            "format": "data"
+          },
+          {
+            "id": 3112,
+            "type": "in",
+            "name": "config",
+            "format": "data"
+          },
+          {
+            "id": 3113,
+            "type": "in",
+            "name": "pollutant",
+            "format": "string"
+          },
+          {
+            "id": 3101,
+            "type": "out",
+            "name": "breakdown",
+            "format": "stack"
+          }
+        ],
+        "children": [
+          {
+            "type": "data-pick",
+            "title": "station code",
+            "id": 2358,
+            "config": {
+              "shape": "text",
+              "a": "places.0.ref"
+            },
+            "sockets": [
+              {
+                "id": 2359,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2360,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 8
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "series path",
+            "id": 2361,
+            "config": {
+              "shape": "text",
+              "a": "series.path"
+            },
+            "sockets": [
+              {
+                "id": 2362,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2363,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 28
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "network id",
+            "id": 2364,
+            "config": {
+              "shape": "text",
+              "a": "network"
+            },
+            "sockets": [
+              {
+                "id": 2365,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2366,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2367,
+            "config": {
+              "shape": "text",
+              "a": "series.types.sectors"
+            },
+            "sockets": [
+              {
+                "id": 2368,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2369,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2373,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 52
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "region",
+            "id": 2370,
+            "config": {
+              "shape": "text",
+              "a": "regions.0.id"
+            },
+            "sockets": [
+              {
+                "id": 2371,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2372,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2374,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 66
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series file",
+            "id": 2375,
+            "config": {
+              "pattern": ""
+            },
+            "sockets": [
+              {
+                "id": 2376,
+                "type": "in",
+                "name": "pattern"
+              },
+              {
+                "id": 2377,
+                "type": "in",
+                "name": "region|lower"
+              },
+              {
+                "id": 2378,
+                "type": "in",
+                "name": "network"
+              },
+              {
+                "id": 2379,
+                "type": "in",
+                "name": "code"
+              },
+              {
+                "id": 2380,
+                "type": "in",
+                "name": "pollutant"
+              },
+              {
+                "id": 2381,
+                "type": "in",
+                "name": "type"
+              },
+              {
+                "id": 2382,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 38,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series URL",
+            "id": 2383,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2384,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2385,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 56,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "That station’s readings",
+            "id": 2386,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "That station’s readings"
+            },
+            "sockets": [
+              {
+                "id": 2387,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2388,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2389,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 70,
+                "y": 42
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2390,
+            "config": {
+              "shape": "stack",
+              "labels": "labels",
+              "values": "values",
+              "title": "name",
+              "merge": "^(.*?) (?:non-)?native$"
+            },
+            "sockets": [
+              {
+                "id": 2391,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2392,
+                "type": "out",
+                "format": "stack"
+              },
+              {
+                "id": 2393,
+                "type": "in",
+                "name": "top",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 86,
+                "y": 48
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "breakdown",
+            "id": 2352,
+            "config": {
+              "name": "breakdown",
+              "kind": "string",
+              "value": "series.types.sectors"
+            },
+            "sockets": [
+              {
+                "id": 2353,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 8,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "region",
+            "id": 2354,
+            "config": {
+              "name": "region",
+              "kind": "string",
+              "value": "regions.1.id"
+            },
+            "sockets": [
+              {
+                "id": 2355,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 28,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "top",
+            "id": 2356,
+            "config": {
+              "name": "top",
+              "kind": "number",
+              "value": 0
+            },
+            "sockets": [
+              {
+                "id": 2357,
+                "type": "out",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 48,
+                "y": 84
+              }
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": 2394,
+            "from": 3100,
+            "to": 2358,
+            "out": 3110,
+            "in": 2359
+          },
+          {
+            "id": 2395,
+            "from": 3100,
+            "to": 2361,
+            "out": 3111,
+            "in": 2362
+          },
+          {
+            "id": 2396,
+            "from": 3100,
+            "to": 2364,
+            "out": 3111,
+            "in": 2365
+          },
+          {
+            "id": 2397,
+            "from": 3100,
+            "to": 2367,
+            "out": 3111,
+            "in": 2368
+          },
+          {
+            "id": 2398,
+            "from": 3100,
+            "to": 2370,
+            "out": 3112,
+            "in": 2371
+          },
+          {
+            "id": 2399,
+            "from": 2352,
+            "to": 2367,
+            "out": 2353,
+            "in": 2373
+          },
+          {
+            "id": 2400,
+            "from": 2354,
+            "to": 2370,
+            "out": 2355,
+            "in": 2374
+          },
+          {
+            "id": 2401,
+            "from": 2356,
+            "to": 2390,
+            "out": 2357,
+            "in": 2393
+          },
+          {
+            "id": 2402,
+            "from": 2361,
+            "to": 2375,
+            "out": 2363,
+            "in": 2376
+          },
+          {
+            "id": 2403,
+            "from": 2370,
+            "to": 2375,
+            "out": 2372,
+            "in": 2377
+          },
+          {
+            "id": 2404,
+            "from": 2364,
+            "to": 2375,
+            "out": 2366,
+            "in": 2378
+          },
+          {
+            "id": 2405,
+            "from": 2367,
+            "to": 2375,
+            "out": 2369,
+            "in": 2381
+          },
+          {
+            "id": 2406,
+            "from": 2358,
+            "to": 2375,
+            "out": 2360,
+            "in": 2379
+          },
+          {
+            "id": 2407,
+            "from": 3100,
+            "to": 2375,
+            "out": 3113,
+            "in": 2380
+          },
+          {
+            "id": 2408,
+            "from": 2375,
+            "to": 2383,
+            "out": 2382,
+            "in": 2384
+          },
+          {
+            "id": 2409,
+            "from": 2383,
+            "to": 2386,
+            "out": 2385,
+            "in": 2388
+          },
+          {
+            "id": 2410,
+            "from": 2386,
+            "to": 2390,
+            "out": 2389,
+            "in": 2391
+          },
+          {
+            "id": 2411,
+            "from": 2390,
+            "to": 3100,
+            "out": 2392,
+            "in": 3101
+          }
+        ]
+      },
+      {
+        "type": "flow",
+        "title": "Station readings",
+        "id": 3500,
+        "config": {
+          "preview": 2446
+        },
+        "ui": {
+          "position": {
+            "x": 88,
+            "y": 36
+          }
+        },
+        "sockets": [
+          {
+            "id": 3510,
+            "type": "in",
+            "name": "pressed place",
+            "format": "geo"
+          },
+          {
+            "id": 3511,
+            "type": "in",
+            "name": "network file",
+            "format": "data"
+          },
+          {
+            "id": 3512,
+            "type": "in",
+            "name": "config",
+            "format": "data"
+          },
+          {
+            "id": 3513,
+            "type": "in",
+            "name": "pollutant",
+            "format": "string"
+          },
+          {
+            "id": 3501,
+            "type": "out",
+            "name": "breakdown",
+            "format": "stack"
+          }
+        ],
+        "children": [
+          {
+            "type": "data-pick",
+            "title": "station code",
+            "id": 2418,
+            "config": {
+              "shape": "text",
+              "a": "places.0.ref"
+            },
+            "sockets": [
+              {
+                "id": 2419,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2420,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 8
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "series path",
+            "id": 2421,
+            "config": {
+              "shape": "text",
+              "a": "series.path"
+            },
+            "sockets": [
+              {
+                "id": 2422,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2423,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 28
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "network id",
+            "id": 2424,
+            "config": {
+              "shape": "text",
+              "a": "network"
+            },
+            "sockets": [
+              {
+                "id": 2425,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2426,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2427,
+            "config": {
+              "shape": "text",
+              "a": "series.types.sectors"
+            },
+            "sockets": [
+              {
+                "id": 2428,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2429,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2433,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 52
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "region",
+            "id": 2430,
+            "config": {
+              "shape": "text",
+              "a": "regions.0.id"
+            },
+            "sockets": [
+              {
+                "id": 2431,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2432,
+                "type": "out",
+                "format": "string"
+              },
+              {
+                "id": 2434,
+                "type": "in",
+                "name": "path",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 10,
+                "y": 66
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series file",
+            "id": 2435,
+            "config": {
+              "pattern": ""
+            },
+            "sockets": [
+              {
+                "id": 2436,
+                "type": "in",
+                "name": "pattern"
+              },
+              {
+                "id": 2437,
+                "type": "in",
+                "name": "region|lower"
+              },
+              {
+                "id": 2438,
+                "type": "in",
+                "name": "network"
+              },
+              {
+                "id": 2439,
+                "type": "in",
+                "name": "code"
+              },
+              {
+                "id": 2440,
+                "type": "in",
+                "name": "pollutant"
+              },
+              {
+                "id": 2441,
+                "type": "in",
+                "name": "type"
+              },
+              {
+                "id": 2442,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 38,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "data-template",
+            "title": "series URL",
+            "id": 2443,
+            "config": {
+              "pattern": "../tno-topas/{path}"
+            },
+            "sockets": [
+              {
+                "id": 2444,
+                "type": "in",
+                "name": "path"
+              },
+              {
+                "id": 2445,
+                "type": "out",
+                "name": "built",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 56,
+                "y": 40
+              }
+            }
+          },
+          {
+            "type": "net-request",
+            "title": "That station’s readings",
+            "id": 2446,
+            "config": {
+              "url": "",
+              "method": "GET",
+              "every": 0,
+              "title": "That station’s readings"
+            },
+            "sockets": [
+              {
+                "id": 2447,
+                "type": "in",
+                "name": "when"
+              },
+              {
+                "id": 2448,
+                "type": "in",
+                "name": "url",
+                "format": "string"
+              },
+              {
+                "id": 2449,
+                "type": "out",
+                "format": "data"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 70,
+                "y": 42
+              }
+            }
+          },
+          {
+            "type": "data-pick",
+            "title": "breakdown",
+            "id": 2450,
+            "config": {
+              "shape": "stack",
+              "labels": "labels",
+              "values": "values",
+              "title": "name",
+              "merge": "^(.*?) (?:non-)?native$"
+            },
+            "sockets": [
+              {
+                "id": 2451,
+                "type": "in",
+                "format": "data"
+              },
+              {
+                "id": 2452,
+                "type": "out",
+                "format": "stack"
+              },
+              {
+                "id": 2453,
+                "type": "in",
+                "name": "top",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 86,
+                "y": 48
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "breakdown",
+            "id": 2412,
+            "config": {
+              "name": "breakdown",
+              "kind": "string",
+              "value": "series.types.countries"
+            },
+            "sockets": [
+              {
+                "id": 2413,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 8,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "region",
+            "id": 2414,
+            "config": {
+              "name": "region",
+              "kind": "string",
+              "value": "regions.1.id"
+            },
+            "sockets": [
+              {
+                "id": 2415,
+                "type": "out",
+                "format": "string"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 28,
+                "y": 84
+              }
+            }
+          },
+          {
+            "type": "flow-param",
+            "title": "top",
+            "id": 2416,
+            "config": {
+              "name": "top",
+              "kind": "number",
+              "value": 12
+            },
+            "sockets": [
+              {
+                "id": 2417,
+                "type": "out",
+                "format": "number"
+              }
+            ],
+            "ui": {
+              "position": {
+                "x": 48,
+                "y": 84
+              }
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": 2454,
+            "from": 3500,
+            "to": 2418,
+            "out": 3510,
+            "in": 2419
+          },
+          {
+            "id": 2455,
+            "from": 3500,
+            "to": 2421,
+            "out": 3511,
+            "in": 2422
+          },
+          {
+            "id": 2456,
+            "from": 3500,
+            "to": 2424,
+            "out": 3511,
+            "in": 2425
+          },
+          {
+            "id": 2457,
+            "from": 3500,
+            "to": 2427,
+            "out": 3511,
+            "in": 2428
+          },
+          {
+            "id": 2458,
+            "from": 3500,
+            "to": 2430,
+            "out": 3512,
+            "in": 2431
+          },
+          {
+            "id": 2459,
+            "from": 2412,
+            "to": 2427,
+            "out": 2413,
+            "in": 2433
+          },
+          {
+            "id": 2460,
+            "from": 2414,
+            "to": 2430,
+            "out": 2415,
+            "in": 2434
+          },
+          {
+            "id": 2461,
+            "from": 2416,
+            "to": 2450,
+            "out": 2417,
+            "in": 2453
+          },
+          {
+            "id": 2462,
+            "from": 2421,
+            "to": 2435,
+            "out": 2423,
+            "in": 2436
+          },
+          {
+            "id": 2463,
+            "from": 2430,
+            "to": 2435,
+            "out": 2432,
+            "in": 2437
+          },
+          {
+            "id": 2464,
+            "from": 2424,
+            "to": 2435,
+            "out": 2426,
+            "in": 2438
+          },
+          {
+            "id": 2465,
+            "from": 2427,
+            "to": 2435,
+            "out": 2429,
+            "in": 2441
+          },
+          {
+            "id": 2466,
+            "from": 2418,
+            "to": 2435,
+            "out": 2420,
+            "in": 2439
+          },
+          {
+            "id": 2467,
+            "from": 3500,
+            "to": 2435,
+            "out": 3513,
+            "in": 2440
+          },
+          {
+            "id": 2468,
+            "from": 2435,
+            "to": 2443,
+            "out": 2442,
+            "in": 2444
+          },
+          {
+            "id": 2469,
+            "from": 2443,
+            "to": 2446,
+            "out": 2445,
+            "in": 2448
+          },
+          {
+            "id": 2470,
+            "from": 2446,
+            "to": 2450,
+            "out": 2449,
+            "in": 2451
+          },
+          {
+            "id": 2471,
+            "from": 2450,
+            "to": 3500,
+            "out": 2452,
+            "in": 3501
+          }
+        ]
+      },
+      {
+        "type": "graph-plot",
+        "title": "One station, by sector",
+        "id": 1100,
+        "config": {
+          "style": "bars"
+        },
+        "sockets": [
+          {
+            "id": 1110,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "stack"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 75,
+            "y": 20
+          }
+        }
+      },
+      {
+        "type": "graph-plot",
+        "title": "The same station, by country",
+        "id": 1300,
+        "config": {
+          "style": "bars"
+        },
+        "sockets": [
+          {
+            "id": 1310,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "stack"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 75,
+            "y": 52
+          }
+        }
+      },
+      {
+        "type": "graph-plot",
+        "title": "One European station, by sector",
+        "id": 1200,
+        "config": {
+          "style": "bars"
+        },
+        "sockets": [
+          {
+            "id": 1210,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "stack"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 88,
+            "y": 20
+          }
+        }
+      },
+      {
+        "type": "graph-plot",
+        "title": "The same European station, by country",
+        "id": 1400,
+        "config": {
+          "style": "bars"
+        },
+        "sockets": [
+          {
+            "id": 1410,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "stack"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 88,
+            "y": 52
+          }
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": 1020,
+        "from": 600,
+        "to": 2000,
+        "out": 610,
+        "in": 2010
+      },
+      {
+        "id": 1021,
+        "from": 600,
+        "to": 630,
+        "out": 610,
+        "in": 631
+      },
+      {
+        "id": 1023,
+        "from": 630,
+        "to": 2000,
+        "out": 632,
+        "in": 2011
+      },
+      {
+        "id": 1002,
+        "from": 2000,
+        "to": 500,
+        "out": 2003,
+        "in": 510
+      },
+      {
+        "id": 1003,
+        "from": 2000,
+        "to": 500,
+        "out": 2004,
+        "in": 511
+      },
+      {
+        "id": 1004,
+        "from": 500,
+        "to": 3200,
+        "out": 512,
+        "in": 3210
+      },
+      {
+        "id": 1030,
+        "from": 630,
+        "to": 3200,
+        "out": 632,
+        "in": 3211
+      },
+      {
+        "id": 1006,
+        "from": 3200,
+        "to": 300,
+        "out": 3201,
+        "in": 310
+      },
+      {
+        "id": 1005,
+        "from": 2000,
+        "to": 300,
+        "out": 2001,
+        "in": 312
+      },
+      {
+        "id": 1008,
+        "from": 2000,
+        "to": 700,
+        "out": 2002,
+        "in": 712
+      },
+      {
+        "id": 1014,
+        "from": 2000,
+        "to": 3300,
+        "out": 2005,
+        "in": 3310
+      },
+      {
+        "id": 1032,
+        "from": 630,
+        "to": 3300,
+        "out": 632,
+        "in": 3311
+      },
+      {
+        "id": 1007,
+        "from": 3300,
+        "to": 700,
+        "out": 3301,
+        "in": 710
+      },
+      {
+        "id": 1009,
+        "from": 300,
+        "to": 3000,
+        "out": 313,
+        "in": 3010
+      },
+      {
+        "id": 1010,
+        "from": 500,
+        "to": 3000,
+        "out": 512,
+        "in": 3011
+      },
+      {
+        "id": 1011,
+        "from": 600,
+        "to": 3000,
+        "out": 610,
+        "in": 3012
+      },
+      {
+        "id": 1012,
+        "from": 630,
+        "to": 3000,
+        "out": 632,
+        "in": 3013
+      },
+      {
+        "id": 1013,
+        "from": 3000,
+        "to": 1100,
+        "out": 3001,
+        "in": 1110
+      },
+      {
+        "id": 1033,
+        "from": 300,
+        "to": 3400,
+        "out": 313,
+        "in": 3410
+      },
+      {
+        "id": 1034,
+        "from": 500,
+        "to": 3400,
+        "out": 512,
+        "in": 3411
+      },
+      {
+        "id": 1035,
+        "from": 600,
+        "to": 3400,
+        "out": 610,
+        "in": 3412
+      },
+      {
+        "id": 1036,
+        "from": 630,
+        "to": 3400,
+        "out": 632,
+        "in": 3413
+      },
+      {
+        "id": 1037,
+        "from": 3400,
+        "to": 1300,
+        "out": 3401,
+        "in": 1310
+      },
+      {
+        "id": 1015,
+        "from": 700,
+        "to": 3100,
+        "out": 713,
+        "in": 3110
+      },
+      {
+        "id": 1016,
+        "from": 2000,
+        "to": 3100,
+        "out": 2005,
+        "in": 3111
+      },
+      {
+        "id": 1017,
+        "from": 600,
+        "to": 3100,
+        "out": 610,
+        "in": 3112
+      },
+      {
+        "id": 1018,
+        "from": 630,
+        "to": 3100,
+        "out": 632,
+        "in": 3113
+      },
+      {
+        "id": 1019,
+        "from": 3100,
+        "to": 1200,
+        "out": 3101,
+        "in": 1210
+      },
+      {
+        "id": 1038,
+        "from": 700,
+        "to": 3500,
+        "out": 713,
+        "in": 3510
+      },
+      {
+        "id": 1039,
+        "from": 2000,
+        "to": 3500,
+        "out": 2005,
+        "in": 3511
+      },
+      {
+        "id": 1040,
+        "from": 600,
+        "to": 3500,
+        "out": 610,
+        "in": 3512
+      },
+      {
+        "id": 1041,
+        "from": 630,
+        "to": 3500,
+        "out": 632,
+        "in": 3513
+      },
+      {
+        "id": 1042,
+        "from": 3500,
+        "to": 1400,
+        "out": 3501,
+        "in": 1410
+      }
+    ]
+  }
+}

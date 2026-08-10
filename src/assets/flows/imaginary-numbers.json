@@ -1,0 +1,816 @@
+{
+  "version": 5,
+  "flow": {
+    "id": 1,
+    "type": "flow",
+    "title": "demo",
+    "config": {
+      "seedVersion": 27
+    },
+    "document": {
+      "title": "Imaginary numbers make a circle",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "An imaginary number sounds like something that does not exist. It exists, and it does one specific job: it lets numbers turn. This page builds that up from nothing, and ends at a result you probably met in school without being told where it came from — the cosine and the sine.\n\nEvery figure below is a live node of this flow, computing while you read. The pink numbers are inputs you can change: click one and type, or drag it sideways. The figures react immediately."
+        },
+        {
+          "type": "node",
+          "nodeId": 1000,
+          "float": "right",
+          "width": "300px",
+          "caption": "The formula this page is heading for"
+        },
+        {
+          "type": "heading",
+          "text": "Why the number line is not enough",
+          "level": 2
+        },
+        {
+          "type": "text",
+          "text": "Ordinary numbers — $1$, $2$, $-3$, $0.5$ — all sit on a line. Each one is a certain distance left or right of zero. Multiplying by a positive number slides you along that line; multiplying by $-1$ flips you to the other side of zero.\n\nNow ask a question no number on that line can answer: which number, multiplied by itself, gives $-1$? A positive times itself is positive. A negative times itself is also positive. Nothing on that line works.\n\nSo define one. Call it $i$, and give it the property that was missing:\n\n$$i \\cdot i = -1$$\n\nYou may have seen this written as $i = \\sqrt{-1}$. It comes to the same thing, but $i^2 = -1$ is the safer way to put it. Think of $\\sqrt{9}$: it means $3$ and not $-3$, even though both square to $9$ — the rule is to take the positive one. For $-1$ that rule has nothing to grab. Both $i$ and $-i$ square to $-1$, and neither of them is the positive one, so the square-root sign has no way to choose.\n\nNow watch what that one line does on its own. Start at $1$ and keep multiplying by $i$:\n\n$$1 \\to i \\to -1 \\to -i \\to 1$$\n\nFour multiplications, and you are exactly back where you started. Ordinary numbers never do that: keep multiplying by $2$ and you run away, by $\\tfrac12$ and you sink towards zero. Multiplying by $i$ does neither.\n\nTwo of those four values sit on the line: $1$ and $-1$. The other two cannot, because nothing on the line squares to $-1$. So draw a second axis through zero, at right angles to the first, and plot $i$ on it one unit up — $-i$ lands one unit down."
+        },
+        {
+          "type": "node",
+          "nodeId": 1500,
+          "float": "none",
+          "width": "320px",
+          "caption": "The four powers of i, walked one per step"
+        },
+        {
+          "type": "text",
+          "text": "There they are. The horizontal axis carries the ordinary part of a number, called the **real** part; the vertical axis carries the **imaginary** part. Every number is $a + b\\,i$: $a$ along the real axis, $b$ along the imaginary one. That flat space is the complex plane, and it is what every figure on this page is drawn on — the axes marked `re` and `im`.\n\nThe walk is live: the arm points at the value it is on, and it steps every {{1400:interval}} milliseconds — set that lower and it speeds up. Right, up, left, down: each multiplication by $i$ moves a quarter of the way round, and that is the shift this whole page rests on. Multiplication no longer only stretches. It stretches *and* turns."
+        },
+        {
+          "type": "heading",
+          "text": "Turning without stopping",
+          "level": 2
+        },
+        {
+          "type": "node",
+          "nodeId": 1200,
+          "float": "right",
+          "caption": "A point going round, and the four quarter turns it passes through"
+        },
+        {
+          "type": "text",
+          "text": "Four separate quarter turns give you four points, not a circle. A circle needs the turning to be continuous.\n\nContinuous change is what $e^x$ is for: it grows at a rate equal to its own current value, and that growth points in the direction it already has.\n\nPut $i$ in the exponent, and every bit of that growth gets rotated a quarter turn before it is applied — so it pushes sideways instead of outward. A sideways push cannot move you further from zero or closer to it. It can only change your direction. The distance from zero therefore stays $1$ forever, and all that is left is rotation:\n\n$$e^{i\\,x}$$\n\nThe figure beside this text is that function, computed live: a dot travels the circle a small step at a time, while the four values from the last section stay marked on it — they sit exactly on this circle, and the arm still jumps between them a quarter at a time. That is the difference this section is about, in one picture. Note that $x$ is not measured in degrees: it is the distance travelled along the circle, and one full lap is $2\\pi \\approx 6.28$. That is why this run stops at {{1000:x.to}} — a little past one lap, so the circle closes.\n\nSet that number to $3$ and you see only the part of the circle actually travelled: an arc instead of a closed loop. Put it back to $6.3$ and it closes again."
+        },
+        {
+          "type": "heading",
+          "text": "Cosine and sine are the two coordinates",
+          "level": 2
+        },
+        {
+          "type": "node",
+          "nodeId": 1300,
+          "float": "left",
+          "caption": "The same walk, seen from the side"
+        },
+        {
+          "type": "text",
+          "text": "The moving point always has two coordinates: how far right it is, and how far up. Take each one on its own and plot it against $x$, the distance travelled. The horizontal coordinate moves out, back, and out again. The vertical one rises and falls. Both draw waves — and the point itself never wobbled; it only went round.\n\nThose two waves already have names. The horizontal coordinate is the cosine; the vertical coordinate is the sine:\n\n$$e^{i\\,x} = \\cos x + i\\,\\sin x$$\n\nThis is Euler’s formula. It is not an extra fact to memorise — it is the same motion, written in coordinates. The circle above and the two waves beside this paragraph are produced by one node in the flow: a single set of numbers, drawn two ways.\n\nNow change the speed. The formula is really $e^{i\\,b\\,x}$, where $b$ is how fast the point goes round; at the moment $b =$ {{1000:params.b}}. Set it to $2$, but predict the result first. The circle does not change at all: same radius, same path, simply travelled twice over. The waves do change — twice as many cycles fit in the same width. Faster rotation means a shorter wavelength, which for a sound wave means a higher pitch.\n\nSo the sine is not a fact about triangles that has to be looked up in a table. It is the vertical coordinate of a point going round a circle."
+        },
+        {
+          "type": "heading",
+          "text": "Bonus: turning while shrinking",
+          "level": 2
+        },
+        {
+          "type": "node",
+          "nodeId": 900,
+          "float": "right",
+          "caption": "Turning and shrinking at once — a spiral"
+        },
+        {
+          "type": "text",
+          "text": "One more knob, and it costs nothing new. The flow holds a second formula, $e^{(b\\,i - a)\\,x}$. The $b\\,i$ part turns, exactly as above. The $-a$ part shrinks the distance from the middle as $x$ grows. Turning while shrinking traces a spiral, drawn beside this text.\n\nHow fast it shrinks is $a =$ {{400:params.a}}. Set it to $0$ and the shrinking stops — the spiral becomes the circle from the previous section. It was the same motion all along, with one extra effect switched on."
+        },
+        {
+          "type": "heading",
+          "text": "Bonus: one rule, asked of every point",
+          "level": 2
+        },
+        {
+          "type": "text",
+          "text": "Everything above was one motion. This last part is one **rule**, repeated — and it needs nothing that has not already been said.\n\nTake a number $c$ somewhere in the plane. Start at zero, and keep applying the same step:\n\n$$z \\to z^2 + c$$\n\nSquaring is the part you already know: a quarter turn squared is a half turn, so squaring **doubles the angle**, and it squares the distance from zero. That second half matters more than it looks. Inside the circle of radius one, squaring pulls a point towards zero; outside it, squaring throws the point away, further every time. Adding $c$ then nudges it sideways.\n\nBetween those two pulls, exactly one of two things happens. The walk settles down — into a point, or a loop it repeats forever — or it gets far enough out that squaring wins and it never comes back. There is no third case, and the dividing line is sharp: once the distance passes $2$, it is gone."
+        },
+        {
+          "type": "node",
+          "nodeId": 2000,
+          "float": "left",
+          "width": "320px",
+          "caption": "The walk for one c, step by step"
+        },
+        {
+          "type": "text",
+          "text": "The figure beside this text is that walk, drawn on the same plane as everything else on this page. It starts at zero, and each dot is one application of the rule. For this $c$ it spirals inwards and stops moving — the walk has found a point that the rule sends back to itself.\n\nNow move $c$ and watch it break. It starts at $c =$ {{1900:c.re}} $+$ {{1900:c.im}}$\\,i$ — raise the first number to $0.4$ and the spiral stops being a spiral: three or four dots, each further out than the last, and the walk is gone. Put it back to $-0.5$ and it settles again.\n\nSo each $c$ in the plane gets one of two answers, and there is nothing in between. Colour the plane by that answer — black where the walk stays, lighter the sooner it left — and you get this:"
+        },
+        {
+          "type": "node",
+          "nodeId": 1800,
+          "float": "none",
+          "width": "320px",
+          "caption": "Black: every c whose walk stays. Press one to follow it."
+        },
+        {
+          "type": "text",
+          "text": "That is the Mandelbrot set, and it is worth being clear about what it is not. It is not a drawing of a formula, and nobody chose its shape. Every point of that black region is a $c$ whose walk stays put; every point outside is one whose walk ran away. The shape is the answer, not the question.\n\nThe two figures are wired together: press a point in the picture and the walk beside it is that point’s walk — the press takes over from the two numbers above, until you type one of them again. Press deep inside the black and the walk settles. Press well outside and it is gone in a few steps. Press *just* on the edge and it does neither for a long time — which is what the edge is.\n\nAnd that edge is where it stops being ordinary. Look closer at it and it does not smooth out, the way a circle does. There is always more of it, at every scale, and it never repeats and never settles down."
+        },
+        {
+          "type": "node",
+          "nodeId": 1700,
+          "float": "right",
+          "caption": "Places people gave names to",
+          "pin": false
+        },
+        {
+          "type": "text",
+          "text": "The list beside this text is a few places worth going, and the picture above follows it — it is a node in the flow like everything else, and what it sends is where to look. Start at *the whole set*, then pick one.\n\n**Seahorse Valley** sits in the notch between the big shape and the circle to its left, magnified about five hundred times. **Elephant Valley** is the notch on the other side. Neither was designed; both are what the rule does there.\n\nThe last entry is the one to end on. Eight hundred times smaller than the first picture, in a place with no particular claim to fame, the whole shape is there again — its own big body, its own circle beside it, its own valleys. Nothing put it there and nothing copied it. It is the same rule, and the same question, asked at a scale where the numbers differ in the fourth decimal.\n\nAll of it from $z \\to z^2 + c$, which is one multiplication and one addition — and the multiplication is the quarter turn from the first section, done twice."
+        },
+        {
+          "type": "text",
+          "text": "In short: multiplying by $i$ is a quarter turn, turning needs a second dimension, and $e^{i\\,x}$ is what turning without stopping looks like. Cosine and sine are nothing more than the two coordinates of that motion.\n\nEvery figure here is a node of one flow, and this page and that graph are two readings of the same JSON. {{!flow:Show me the flow}}"
+        }
+      ]
+    },
+    "sockets": [],
+    "children": [
+      {
+        "type": "math-formula",
+        "title": "Damped wave",
+        "id": 400,
+        "config": {
+          "expr": "e^((b*i - a)*x)",
+          "params": {
+            "a": 0.3,
+            "b": 4
+          },
+          "x": {
+            "from": 0,
+            "to": 8,
+            "step": 0.02
+          }
+        },
+        "sockets": [
+          {
+            "id": 410,
+            "type": "out",
+            "format": "function"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 2,
+            "y": 4
+          }
+        }
+      },
+      {
+        "type": "math-derivative",
+        "title": "Derivative",
+        "id": 500,
+        "sockets": [
+          {
+            "id": 510,
+            "type": "in",
+            "format": "function"
+          },
+          {
+            "id": 511,
+            "type": "out",
+            "format": "function"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 26,
+            "y": 4
+          }
+        }
+      },
+      {
+        "type": "math-sampler",
+        "title": "Sampler",
+        "id": 600,
+        "config": {
+          "mode": "sweep"
+        },
+        "sockets": [
+          {
+            "id": 610,
+            "type": "in",
+            "format": "function"
+          },
+          {
+            "id": 611,
+            "type": "out",
+            "format": "point"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 2,
+            "y": 22
+          }
+        }
+      },
+      {
+        "type": "math-sampler",
+        "title": "Sampler f′",
+        "id": 700,
+        "config": {
+          "mode": "sweep"
+        },
+        "sockets": [
+          {
+            "id": 710,
+            "type": "in",
+            "format": "function"
+          },
+          {
+            "id": 711,
+            "type": "out",
+            "format": "point"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 26,
+            "y": 22
+          }
+        }
+      },
+      {
+        "type": "graph-plot",
+        "title": "Wave",
+        "id": 200,
+        "config": {
+          "style": "line"
+        },
+        "sockets": [
+          {
+            "id": 210,
+            "type": "in",
+            "formats": [
+              "number",
+              "point"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 2,
+            "y": 42
+          }
+        }
+      },
+      {
+        "type": "graph-plot",
+        "title": "Slope",
+        "id": 800,
+        "config": {
+          "style": "line"
+        },
+        "sockets": [
+          {
+            "id": 810,
+            "type": "in",
+            "formats": [
+              "number",
+              "point"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 26,
+            "y": 42
+          }
+        }
+      },
+      {
+        "type": "graph-plane",
+        "title": "Complex plane",
+        "id": 900,
+        "sockets": [
+          {
+            "id": 910,
+            "type": "in",
+            "formats": [
+              "number",
+              "point"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 2,
+            "y": 64
+          }
+        }
+      },
+      {
+        "type": "math-formula",
+        "title": "Unit circle",
+        "id": 1000,
+        "config": {
+          "expr": "e^(i*b*x)",
+          "params": {
+            "b": 1
+          },
+          "x": {
+            "from": 0,
+            "to": 6.3,
+            "step": 0.02
+          }
+        },
+        "sockets": [
+          {
+            "id": 1010,
+            "type": "out",
+            "format": "function"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 50,
+            "y": 4
+          }
+        }
+      },
+      {
+        "type": "math-sampler",
+        "title": "Sampler circle",
+        "id": 1100,
+        "config": {
+          "mode": "sweep"
+        },
+        "sockets": [
+          {
+            "id": 1110,
+            "type": "in",
+            "format": "function"
+          },
+          {
+            "id": 1111,
+            "type": "out",
+            "format": "point"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 50,
+            "y": 22
+          }
+        }
+      },
+      {
+        "type": "graph-plane",
+        "title": "Unit circle",
+        "id": 1200,
+        "sockets": [
+          {
+            "id": 1210,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "marks"
+            ]
+          },
+          {
+            "id": 1211,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "marks"
+            ]
+          },
+          {
+            "id": 1212,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "marks"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 50,
+            "y": 42
+          }
+        }
+      },
+      {
+        "type": "math-points",
+        "title": "The four powers of i",
+        "id": 1400,
+        "config": {
+          "points": [
+            {
+              "re": 1,
+              "im": 0,
+              "label": "1"
+            },
+            {
+              "re": 0,
+              "im": 1,
+              "label": "i"
+            },
+            {
+              "re": -1,
+              "im": 0,
+              "label": "−1"
+            },
+            {
+              "re": 0,
+              "im": -1,
+              "label": "−i"
+            }
+          ],
+          "interval": 900
+        },
+        "sockets": [
+          {
+            "id": 1410,
+            "type": "out",
+            "format": "marks"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 76,
+            "y": 4
+          }
+        }
+      },
+      {
+        "type": "graph-plane",
+        "title": "Four powers of i",
+        "id": 1500,
+        "sockets": [
+          {
+            "id": 1510,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "marks"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 76,
+            "y": 22
+          }
+        }
+      },
+      {
+        "type": "math-sampler",
+        "title": "Walker",
+        "id": 1600,
+        "config": {
+          "mode": "point",
+          "step": 0.05,
+          "interval": 40,
+          "touched": {
+            "step": true
+          }
+        },
+        "sockets": [
+          {
+            "id": 1610,
+            "type": "in",
+            "format": "function"
+          },
+          {
+            "id": 1611,
+            "type": "out",
+            "format": "point"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 64,
+            "y": 22
+          }
+        }
+      },
+      {
+        "type": "graph-plot",
+        "title": "Shadows",
+        "id": 1300,
+        "config": {
+          "style": "line"
+        },
+        "sockets": [
+          {
+            "id": 1310,
+            "type": "in",
+            "formats": [
+              "number",
+              "point"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 50,
+            "y": 64
+          }
+        }
+      },
+      {
+        "type": "graph-viewpoints",
+        "title": "Where to look",
+        "id": 1700,
+        "config": {
+          "which": 0,
+          "places": [
+            {
+              "name": "— the whole set",
+              "re": -0.6,
+              "im": 0,
+              "span": 3.2
+            },
+            {
+              "name": "Seahorse Valley",
+              "re": -0.7453,
+              "im": 0.1127,
+              "span": 0.0065
+            },
+            {
+              "name": "Elephant Valley",
+              "re": 0.275,
+              "im": 0.0075,
+              "span": 0.01
+            },
+            {
+              "name": "A smaller copy of itself",
+              "re": -0.235125,
+              "im": 0.827215,
+              "span": 0.004
+            }
+          ]
+        },
+        "sockets": [
+          {
+            "id": 1710,
+            "type": "out",
+            "format": "region"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 2,
+            "y": 86
+          }
+        }
+      },
+      {
+        "type": "math-mandelbrot",
+        "title": "Asking every point",
+        "id": 1750,
+        "config": {
+          "view": {
+            "re": -0.6,
+            "im": 0,
+            "span": 3.2
+          },
+          "iterations": 200,
+          "resolution": 400
+        },
+        "sockets": [
+          {
+            "id": 1810,
+            "type": "in",
+            "formats": [
+              "region"
+            ]
+          },
+          {
+            "id": 1751,
+            "type": "out",
+            "format": "field"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 12,
+            "y": 84
+          }
+        }
+      },
+      {
+        "type": "graph-field",
+        "title": "The Mandelbrot set",
+        "id": 1800,
+        "config": {
+          "scale": "log"
+        },
+        "sockets": [
+          {
+            "id": 1812,
+            "type": "in",
+            "formats": [
+              "field"
+            ]
+          },
+          {
+            "id": 1811,
+            "type": "out",
+            "format": "complex"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 26,
+            "y": 84
+          }
+        }
+      },
+      {
+        "type": "math-iterate",
+        "title": "z² + c",
+        "id": 1900,
+        "config": {
+          "c": {
+            "re": -0.5,
+            "im": 0.5
+          },
+          "steps": 40,
+          "escape": 2,
+          "interval": 220
+        },
+        "sockets": [
+          {
+            "id": 1910,
+            "type": "in",
+            "formats": [
+              "complex"
+            ]
+          },
+          {
+            "id": 1911,
+            "type": "out",
+            "format": "marks"
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 44,
+            "y": 86
+          }
+        }
+      },
+      {
+        "type": "graph-plane",
+        "title": "The orbit",
+        "id": 2000,
+        "sockets": [
+          {
+            "id": 2010,
+            "type": "in",
+            "formats": [
+              "number",
+              "point",
+              "marks"
+            ]
+          }
+        ],
+        "ui": {
+          "position": {
+            "x": 60,
+            "y": 84
+          }
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": 1002,
+        "from": 400,
+        "to": 500,
+        "out": 410,
+        "in": 510
+      },
+      {
+        "id": 1003,
+        "from": 400,
+        "to": 600,
+        "out": 410,
+        "in": 610
+      },
+      {
+        "id": 1004,
+        "from": 500,
+        "to": 700,
+        "out": 511,
+        "in": 710
+      },
+      {
+        "id": 1005,
+        "from": 600,
+        "to": 200,
+        "out": 611,
+        "in": 210
+      },
+      {
+        "id": 1007,
+        "from": 600,
+        "to": 900,
+        "out": 611,
+        "in": 910
+      },
+      {
+        "id": 1006,
+        "from": 700,
+        "to": 800,
+        "out": 711,
+        "in": 810
+      },
+      {
+        "id": 1008,
+        "from": 1000,
+        "to": 1100,
+        "out": 1010,
+        "in": 1110
+      },
+      {
+        "id": 1009,
+        "from": 1100,
+        "to": 1200,
+        "out": 1111,
+        "in": 1210
+      },
+      {
+        "id": 1011,
+        "from": 1100,
+        "to": 1300,
+        "out": 1111,
+        "in": 1310
+      },
+      {
+        "id": 1012,
+        "from": 1400,
+        "to": 1500,
+        "out": 1410,
+        "in": 1510
+      },
+      {
+        "id": 1013,
+        "from": 1400,
+        "to": 1200,
+        "out": 1410,
+        "in": 1211
+      },
+      {
+        "id": 1014,
+        "from": 1000,
+        "to": 1600,
+        "out": 1010,
+        "in": 1610
+      },
+      {
+        "id": 1015,
+        "from": 1600,
+        "to": 1200,
+        "out": 1611,
+        "in": 1212
+      },
+      {
+        "id": 1016,
+        "from": 1700,
+        "to": 1750,
+        "out": 1710,
+        "in": 1810
+      },
+      {
+        "id": 1020,
+        "from": 1750,
+        "to": 1800,
+        "out": 1751,
+        "in": 1812
+      },
+      {
+        "id": 1017,
+        "from": 1800,
+        "to": 1900,
+        "out": 1811,
+        "in": 1910
+      },
+      {
+        "id": 1018,
+        "from": 1900,
+        "to": 2000,
+        "out": 1911,
+        "in": 2010
+      }
+    ]
+  }
+}
