@@ -2686,6 +2686,32 @@ test('a long press on a node opens its settings', async ({ page }) => {
 });
 
 /**
+ * Panning the whole flow keeps the selection; a click on empty canvas clears
+ * it. Deselection is a click too — a drag of the background is just a look
+ * around, and the highlight should survive it.
+ */
+test('panning the flow keeps the selection, a background click clears it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const source = await nodeCentre(page, 0);
+
+  await page.mouse.click(source.x, source.y);
+  expect((await selectedIds(page)).length).toBe(1);
+
+  // Pan from empty canvas — the selection rides along.
+  await page.mouse.move(20, 300);
+  await page.mouse.down();
+  await page.mouse.move(140, 360, { steps: 8 });
+  await page.mouse.up();
+  expect((await selectedIds(page)).length).toBe(1);
+
+  // A click on empty canvas clears it.
+  await page.mouse.click(20, 300);
+  expect(await selectedIds(page)).toEqual([]);
+});
+
+/**
  * Selection is a click, not a drag. Dragging a node moves it and leaves the
  * selection — and so the flow highlight — alone.
  */

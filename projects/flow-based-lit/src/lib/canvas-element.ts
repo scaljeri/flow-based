@@ -481,6 +481,8 @@ export class FbFlowCanvasElement extends LitElement {
   private unsubscribe?: () => void;
   private panPointerId: number | null = null;
   private panFrom: FbPosition | null = null;
+  /** Whether the current background press has actually panned; a click has not. */
+  private panMoved = false;
 
   /**
    * Every pointer currently down on this surface, by id.
@@ -871,10 +873,12 @@ export class FbFlowCanvasElement extends LitElement {
       return;
     }
 
-    this.editor.clearSelection();
-
+    // Selection is a click, not a drag — for the background too. Clearing it
+    // waits for the pointer to come up WITHOUT panning; a pan of the whole
+    // flow leaves the selection, and its highlight, where they were.
     this.panPointerId = event.pointerId;
     this.panFrom = { x: event.clientX, y: event.clientY };
+    this.panMoved = false;
 
     // Hold still long enough and this press draws a frame instead of panning.
     // Only when the registry HAS frames; a host without the type keeps the
@@ -959,6 +963,7 @@ export class FbFlowCanvasElement extends LitElement {
       return;
     }
 
+    this.panMoved = true;
     this.editor.viewport.panBy(event.clientX - this.panFrom.x, event.clientY - this.panFrom.y);
     this.panFrom = { x: event.clientX, y: event.clientY };
   };
@@ -994,8 +999,15 @@ export class FbFlowCanvasElement extends LitElement {
       this.requestUpdate();
     }
 
+    // A background press that never panned is a click on empty canvas — that
+    // is what clears the selection. A pan does not.
+    if (this.panPointerId !== null && !this.panMoved && !this.marqueeFrom) {
+      this.editor.clearSelection();
+    }
+
     this.panPointerId = null;
     this.panFrom = null;
+    this.panMoved = false;
 
     if (this.marqueeFrom) {
       this.marqueeFrom = null;
