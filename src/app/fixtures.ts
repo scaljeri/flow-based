@@ -835,9 +835,11 @@ function reads(title: string, path: string, position: { x: number; y: number }) 
       title,
       id,
       config: { shape: 'text', a: path },
+      // `name` present-but-undefined, so a wired-override socket ('path',
+      // 'top') can be pushed later without the array's type refusing it.
       sockets: [
-        { id: nextId(), type: 'in', format: 'data' },
-        { id: nextId(), type: 'out', format: 'string' },
+        { id: nextId(), type: 'in', name: undefined as string | undefined, format: 'data' },
+        { id: nextId(), type: 'out', name: undefined as string | undefined, format: 'string' },
       ],
       ui: { position },
     },
@@ -882,9 +884,10 @@ function shapes(title: string, config: Record<string, unknown>, format: string, 
       title,
       id,
       config,
+      // Same present-but-undefined `name` trick as reads(), same reason.
       sockets: [
-        { id: nextId(), type: 'in', format: 'data' },
-        { id: nextId(), type: 'out', format },
+        { id: nextId(), type: 'in', name: undefined as string | undefined, format: 'data' },
+        { id: nextId(), type: 'out', name: undefined as string | undefined, format },
       ],
       ui: { position },
     },
@@ -1074,7 +1077,13 @@ function topasSources() {
  * file rather than a word: every network publishes `series.types`, and what
  * that maps to — `sectoren`, `countries` — is the publisher's spelling, not
  * ours. Two instances pointed at two of those keys are two questions about
- * the same click, which is the only difference between them.
+ * the same click.
+ *
+ * The three knobs — breakdown, region, top — are flow-param CHILDREN rather
+ * than differences in the machinery. Their wires override the picks' typed
+ * defaults (the wired-path convention), the subflow's settings panel lists
+ * them, and the four instances of this subflow are four sets of values on
+ * one definition — which is what a subflow taking parameters was for.
  */
 function stationReadings(
   flowId: number,
@@ -1085,6 +1094,25 @@ function stationReadings(
 ) {
   const inn = { place: flowId + 10, network: flowId + 11, config: flowId + 12, pollutant: flowId + 13 };
   const out = { readings: flowId + 1 };
+
+  /** One parameter: a named value the outside can set without entering. */
+  const param = (name: string, kind: 'number' | 'string', value: number | string, x: number) => {
+    const node = {
+      type: 'flow-param',
+      title: name,
+      id: nextId(),
+      config: { name, kind, value },
+      sockets: [{ id: nextId(), type: 'out', format: kind }],
+      ui: { position: { x, y: 84 } },
+    };
+
+    return { node, id: node.id, out: node.sockets[0].id };
+  };
+
+  const pBreakdown = param('breakdown', 'string', typePath, 8);
+  const pRegion = param('region', 'string', regionPath, 28);
+  // Wired 0 keeps every band — the same "no cap" the absent config key meant.
+  const pTop = param('top', 'number', top, 48);
 
   const code = shapes('station code', { shape: 'text', a: 'places.0.ref' }, 'string', { x: 10, y: 8 });
 
@@ -1100,8 +1128,15 @@ function stationReadings(
    */
   const seriesPath = reads('series path', 'series.path', { x: 10, y: 28 });
   const networkId = reads('network id', 'network', { x: 10, y: 40 });
-  const seriesType = reads('breakdown', typePath, { x: 10, y: 52 });
-  const regionId = reads('region', regionPath, { x: 10, y: 66 });
+  // Typed defaults; the flow-params' wires override them per instance.
+  const seriesType = reads('breakdown', 'series.types.sectors', { x: 10, y: 52 });
+  const regionId = reads('region', 'regions.0.id', { x: 10, y: 66 });
+
+  const seriesTypePath = nextId();
+  const regionIdPath = nextId();
+
+  seriesType.node.sockets.push({ id: seriesTypePath, type: 'in', name: 'path', format: 'string' });
+  regionId.node.sockets.push({ id: regionIdPath, type: 'in', name: 'path', format: 'string' });
 
   const file = builds(
     'series file',
@@ -1122,13 +1157,17 @@ function stationReadings(
     {
       shape: 'stack', labels: 'labels', values: 'values', title: 'name',
       merge: '^(.*?) (?:non-)?native$',
-      // Only where the file names every possible contributor rather than the
-      // ones that contributed — see the European country breakdown.
-      ...(top ? { top } : {}),
+      // The cap arrives on the `top` wire from its flow-param — only the
+      // European country breakdown, which names every possible contributor,
+      // sets it above zero.
     },
     'stack',
     { x: 86, y: 48 },
   );
+
+  const pointsTop = nextId();
+
+  points.node.sockets.push({ id: pointsTop, type: 'in', name: 'top', format: 'number' });
 
   const wire = (from: { id: number }, out_: number, to: { id: number }, in_: number) =>
     ({ id: nextId(), from: from.id, to: to.id, out: out_, in: in_ });
@@ -1152,6 +1191,7 @@ function stationReadings(
     children: [
       code.node, seriesPath.node, networkId.node, seriesType.node, regionId.node,
       file.node, url.node, get.node, points.node,
+      pBreakdown.node, pRegion.node, pTop.node,
     ],
     connections: [
       fromOutside(inn.place, code, code.in),
@@ -1159,6 +1199,11 @@ function stationReadings(
       fromOutside(inn.network, networkId, networkId.in),
       fromOutside(inn.network, seriesType, seriesType.in),
       fromOutside(inn.config, regionId, regionId.in),
+
+      // The parameters, into the picks they steer.
+      wire(pBreakdown, pBreakdown.out, seriesType, seriesTypePath),
+      wire(pRegion, pRegion.out, regionId, regionIdPath),
+      wire(pTop, pTop.out, points, pointsTop),
 
       // Six parts, six sources, and not one of them typed here.
       wire(seriesPath, seriesPath.out, file, file.socket('pattern')),
@@ -1259,7 +1304,7 @@ export const tno = () => ({
   id: 1,
   type: 'flow',
   title: 'tno',
-  config: { seedVersion: 37 },
+  config: { seedVersion: 38 },
   /*
    * The same flow, read as an article.
    *

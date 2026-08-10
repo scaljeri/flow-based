@@ -140,7 +140,39 @@ export class PickWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
+  /*
+   * A path (or a cap) that arrived rather than one that was typed.
+   *
+   * The same convention the filter's `value` input follows: a decision in a
+   * flow is data, and typed into this node it is a second copy of that
+   * decision. Wired, it overrides the config WITHOUT being saved — which is
+   * what lets a flow-param inside a subflow parameterise the pick, and four
+   * copies of one subflow become four values on one definition.
+   */
+  private wiredPath?: string;
+  private wiredTop?: number;
+
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
+    if (socket.name === 'path') {
+      this.subscriptions[connection.id] = stream.subscribe(value => {
+        this.wiredPath = value === null || value === undefined ? undefined : String(this.unwrap(value));
+        this.emit();
+      });
+
+      return;
+    }
+
+    if (socket.name === 'top') {
+      this.subscriptions[connection.id] = stream.subscribe(value => {
+        const numeric = Number(this.unwrap(value));
+
+        this.wiredTop = Number.isNaN(numeric) ? undefined : numeric;
+        this.emit();
+      });
+
+      return;
+    }
+
     this.subscriptions[connection.id] = stream.subscribe(value => {
       this.latest = value;
       this.emit();
@@ -285,12 +317,16 @@ export class PickWorker implements FbNodeWorker {
     }
 
     if (this.shape === 'value' || this.shape === 'text') {
-      const value = this.config.a ? readConfigValue(source, this.config.a) : source;
+      // Wired beats typed — see `wiredPath`. The one-value shapes only: the
+      // other shapes spend `a` on coordinates, and a path arriving there has
+      // no single key to mean.
+      const path = this.wiredPath ?? this.config.a;
+      const value = path ? readConfigValue(source, path) : source;
 
       this.count = value === undefined ? 0 : 1;
 
       if (value === undefined) {
-        throw new Error(`Nothing at "${this.config.a}"`);
+        throw new Error(`Nothing at "${path}"`);
       }
 
       this.preview = String(value);
@@ -311,7 +347,7 @@ export class PickWorker implements FbNodeWorker {
       const asNumber = Number(value);
 
       if (Number.isNaN(asNumber) && typeof value !== 'number') {
-        throw new Error(`"${this.config.a}" is not a number: ${JSON.stringify(value)?.slice(0, 40)}`);
+        throw new Error(`"${path}" is not a number: ${JSON.stringify(value)?.slice(0, 40)}`);
       }
 
       return asNumber;
@@ -478,7 +514,8 @@ export class PickWorker implements FbNodeWorker {
   private keepTop(
     stack: { labels: string[]; rows: (number[] | null)[] },
   ): { labels: string[]; rows: (number[] | null)[] } {
-    const top = Math.floor(this.config.top ?? 0);
+    // Wired beats typed — see `wiredTop`.
+    const top = Math.floor(this.wiredTop ?? this.config.top ?? 0);
 
     if (top < 1 || stack.labels.length <= top) {
       return stack;
