@@ -16,10 +16,11 @@ behind individual decisions belong in the code comments and in `docs/`.
 | Engine | `projects/flow-based-core` | Framework-free: the flow graph (`flow.ts`), save/load and migrations (`serialization.ts`, `FB_FLOW_FORMAT_VERSION`), the inline prose parser (`inline.ts`). |
 | Shell | `projects/flow-based-lit` | Web components on core alone — canvas, nodes, connections, the document renderer (`document-element.ts`). No Angular. |
 | Angular wrapper | `projects/flow-based` | Hosts the shell; owns the module and format registry (`module-registry.ts`). Never duplicate what the shell already does. |
+| Standard palette | `projects/flow-based-basics` | The set every editor starts with — value, clock/trigger/gate, tap, script, stats, meter, the state cells, the subflow and its flow-param. A host spreads `BASICS_TYPES` into its registry; not a lazily loaded module. |
 | Node modules | `projects/flow-based-{math,graphs,network,data}` | Lazily loaded chunks, registered via `src/app/modules.service.ts`. |
 | Demo | `src/app` | The application, with its seeded flows in `src/app/fixtures.ts`. |
 
-Build order is core → lit → flow-based → modules; `npm run build:lib` encodes
+Build order is core → lit → flow-based → basics → modules; `npm run build:lib` encodes
 it. End-to-end tests use two servers: port 4200 serves the Angular demo
 (`e2e/smoke.spec.ts`), port 4400 the lit harness (`e2e/lit-shell.spec.ts`).
 
