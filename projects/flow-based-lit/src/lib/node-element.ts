@@ -104,8 +104,8 @@ export class FbNodeElement extends LitElement {
      * only its neighbourhood takes these.
      */
     :host([flow='up']) .box {
-      border-color: var(--fb-flow-up, #4aa3ff);
-      box-shadow: 0 0 0 2px var(--fb-flow-up, #4aa3ff);
+      border-color: var(--fb-flow-up, #22d3ee);
+      box-shadow: 0 0 0 2px var(--fb-flow-up, #22d3ee);
     }
 
     :host([flow='down']) .box {

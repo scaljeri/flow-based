@@ -135,7 +135,7 @@ export class FbConnectionsElement extends LitElement {
      * sits inside a tagged CSS template literal.)
      */
     path.connection.flow-up {
-      stroke: var(--fb-flow-up, #4aa3ff);
+      stroke: var(--fb-flow-up, #22d3ee);
       stroke-width: 4px;
     }
 
