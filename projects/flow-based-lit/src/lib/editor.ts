@@ -835,6 +835,19 @@ export class FbEditor {
     return value;
   }
 
+  /**
+   * Whether the highlight is worth dimming the rest of the graph for.
+   *
+   * Only when the focus actually has a path — up or down non-empty. Selecting
+   * an isolated node, or a frame (which has no wires), lights nothing, and
+   * fading the whole graph around it would be noise, not focus.
+   */
+  get flowDimActive(): boolean {
+    const highlight = this.flowHighlight;
+
+    return !!highlight && (highlight.up.size > 0 || highlight.down.size > 0);
+  }
+
   /** Which side of the highlight a node is on, if any. */
   nodeFlow(id: number): 'focus' | 'up' | 'down' | null {
     const highlight = this.flowHighlight;

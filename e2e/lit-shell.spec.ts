@@ -2807,6 +2807,18 @@ test('selecting a node highlights what feeds it and what it feeds', async ({ pag
   expect(await flowOf('Source')).toBe('focus');
   await expect.poll(async () => (await wireClasses()).filter(c => c?.includes('flow-down')).length).toBe(2);
 
+  // Select the Sink: Source and Scope are off its path and fade back.
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.select(sink.id!);
+  });
+
+  await expect.poll(() => flowOf('Scope')).toBe('dim');
+  expect(await flowOf('Source')).toBe('up');
+  // The Source→Scope wire, on neither path, fades too.
+  await expect.poll(async () => (await wireClasses()).some(c => c?.includes('flow-dim'))).toBe(true);
+
   // Clearing the selection clears the highlight.
   await page.evaluate(() => window.fbEditor.clearSelection());
   await expect.poll(() => flowOf('Sink')).toBeNull();

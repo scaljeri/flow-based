@@ -144,6 +144,11 @@ export class FbConnectionsElement extends LitElement {
       stroke-width: 4px;
     }
 
+    /* Off the lit path: faded back with the nodes it joins. */
+    path.connection.flow-dim {
+      opacity: 0.2;
+    }
+
     /*
      * Being held, and about to go.
      *
@@ -446,8 +451,9 @@ export class FbConnectionsElement extends LitElement {
       // Whether this line is being held. Without it `guard` sees an unchanged
       // key and skips the very re-render that turns the line red.
       + `${this.arming?.id === connection.id},`
-      // And which side of the flow highlight it is on — a select recolours it.
-      + `${this.editor.connectionFlow(connection)}`
+      // And which side of the flow highlight it is on — a select recolours it,
+      // and off-path lines fade, so both states belong in the key.
+      + `${this.editor.connectionFlow(connection)},${this.editor.flowDimActive}`
       /*
        * A line with an end on the boundary also moves with the VIEWPORT: its
        * screen-pinned end is pulled back through zoom and pan (boundaryAt), so
@@ -503,7 +509,7 @@ export class FbConnectionsElement extends LitElement {
         presentation attribute sits below every CSS rule, so the red in the
         stylesheet wins on its own and there is no second place to keep in step.
       -->
-      <path class="connection ${arming ? 'arming' : ''} ${flow ? `flow-${flow}` : ''}"
+      <path class="connection ${arming ? 'arming' : ''} ${flow ? `flow-${flow}` : (this.editor.flowDimActive ? 'flow-dim' : '')}"
             d=${route.d}
             stroke=${`url(#${id})`}></path>
       <path class="arrow" d="M0 5 L 5 0 L0 -5z" transform=${route.arrow}></path>

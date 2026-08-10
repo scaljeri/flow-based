@@ -113,6 +113,11 @@ export class FbNodeElement extends LitElement {
       box-shadow: 0 0 0 2px var(--fb-flow-down, #ffb454);
     }
 
+    /* Off the path, while a path is lit: faded, so the path is what reads. */
+    :host([flow='dim']) {
+      opacity: 0.3;
+    }
+
     /* Full: the node has the editor surface to itself. */
     :host([view='full']) {
       --fb-socket-size: 42px;
@@ -697,6 +702,9 @@ export class FbNodeElement extends LitElement {
 
     if (flow) {
       this.setAttribute('flow', flow);
+    } else if (this.editor.flowDimActive) {
+      // On a lit path but not on it: fade back, so the path stands out.
+      this.setAttribute('flow', 'dim');
     } else {
       this.removeAttribute('flow');
     }
