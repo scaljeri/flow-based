@@ -2,6 +2,9 @@ import { FbNodeTypes } from '@scaljeri/flow-based';
 import { FbModule } from '@scaljeri/flow-based';
 import { OperatorWorker, SumWorker } from './operator.worker';
 import { OperatorSmallComponent } from './operator-small.component';
+import { RangeWorker } from './range.worker';
+import { RangeSmallComponent } from './range-small.component';
+import { RangeSettingsComponent } from './range-settings.component';
 import { FormulaWorker } from './formula.worker';
 import { FormulaSmallComponent } from './formula-small.component';
 import { FormulaSettingsComponent } from './formula-settings.component';
@@ -122,6 +125,25 @@ export const MATH_MODULE: FbModule = {
     // Divide says nothing at b = 0: Infinity on a wire poisons every plot
     // downstream, silence holds the last honest value. See OperatorWorker.
     'math-divide': operator('Divide', '÷', (a, b) => b === 0 ? undefined : a / b),
+
+    /*
+     * The commonest glue there is: a slider's 0..100 rarely matches a
+     * formula's domain. See RangeWorker.
+     */
+    'math-range': {
+      component: { small: RangeSmallComponent },
+      settingsComponent: RangeSettingsComponent,
+      settings: {
+        title: 'Range',
+        group: GROUP,
+        config: { fromA: 0, fromB: 1, toA: 0, toB: 100, clamp: true },
+        sockets: [
+          { type: 'in', format: 'number' },
+          { type: 'out', format: 'number' },
+        ],
+      },
+      worker: RangeWorker,
+    },
 
     /*
      * A producer: it emits a FUNCTION, not numbers. Its whole configuration is
