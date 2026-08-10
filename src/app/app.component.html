@@ -21,6 +21,16 @@ showing this app's cockpit.
     <mat-icon>menu</mat-icon>
   </button>
 
+  <!--
+  Add sits by the hamburger, at the near edge: on the canvas it is the thing
+  reached for most, so it lives beside the menu rather than across the bar. It
+  belongs to the canvas — in document mode it would put a node on a surface the
+  reader cannot see — so it is gone while the document is up.
+  -->
+  @if (!showDoc) {
+    <button type="button" mat-button (click)="openModal()" class="add">Add</button>
+  }
+
   <span class="title">Flow based programming</span>
 
   <!--
@@ -35,21 +45,8 @@ showing this app's cockpit.
     </button>
   }
 
-  <!--
-  Add belongs to the canvas: in document mode it would put a node on a surface
-  the reader cannot see. So the right-hand button follows what is on screen —
-  Add while editing the graph, Edit while reading the page, Save and Cancel
-  while writing it.
-  -->
-  <!--
-  A flow loaded from a URL lives only in memory. Once it is changed, Save
-  offers it a home on the shelf — shown only then, because a flow with a home
-  already autosaves and one unchanged has nothing to keep.
-  -->
-  @if (!showDoc && dirty) {
-    <button type="button" mat-button class="save-flow" (click)="saveToShelf()">Save</button>
-  }
-
+  <!-- While the document is up, the right-hand buttons drive it: Edit to write
+       it, Save and Cancel while writing. -->
   @if (showDoc) {
     @if (editingDoc) {
       <button type="button" mat-button class="doc-cancel" (click)="cancelDoc()">Cancel</button>
@@ -57,8 +54,15 @@ showing this app's cockpit.
     } @else {
       <button type="button" mat-button class="doc-edit" (click)="editDoc()">Edit</button>
     }
-  } @else {
-    <button type="button" mat-button (click)="openModal()" class="add">Add</button>
+  }
+
+  <!--
+  Save, all the way to the right. A flow loaded from a URL lives only in memory;
+  once it is changed, this lands it on the shelf. Shown only then — a flow with a
+  home already autosaves, and one unchanged has nothing to keep.
+  -->
+  @if (!showDoc && dirty) {
+    <button type="button" mat-button class="save-flow" (click)="saveToShelf()">Save</button>
   }
 
   <mat-menu #overflowMenu="matMenu">
