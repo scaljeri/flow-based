@@ -1170,21 +1170,16 @@ export class FbNodeElement extends LitElement {
     }
 
     /*
-     * Select before dragging, so a drag moves what the user can see is selected.
-     * A plain press on an already-selected node keeps the selection, which is
-     * what makes dragging a group work — replacing it would drag one node out of
-     * its own group.
+     * Selection is a CLICK, not a press — it moves to onPointerUp, so a drag
+     * of a node and a pinch that starts on one no longer light up the path
+     * around it. A frame is the exception: carrying its contents needs them
+     * selected DURING the drag, so a frame still selects on press.
      */
     const id = this.state.id!;
 
-    if (event.shiftKey) {
-      this.editor.select(id, true);
-    } else if (this.state.type === 'frame') {
-      // A frame is picked up WITH what lies on it — containment is
-      // membership, and the members light up so you see what moves along.
+    if (this.state.type === 'frame' && !event.shiftKey) {
+      // Containment is membership: the members come along, and light up.
       this.editor.selectFrameWithContents(id);
-    } else if (!this.editor.isSelected(id)) {
-      this.editor.select(id);
     }
 
     this.dragPointerId = event.pointerId;
@@ -1354,6 +1349,16 @@ export class FbNodeElement extends LitElement {
      */
     if (!this.dragMoved && event.type === 'pointerup') {
       this.editor.cancelPending();
+
+      /*
+       * A clean click SELECTS — which is what lights the path around a node.
+       * On the up, never the down, so a drag or a pinch (which sets pinchActive
+       * and cancels this node's gesture) does not. A frame already selected
+       * itself with its contents on press; shift toggles rather than replaces.
+       */
+      if (!this.editor.pinchActive && this.state?.id !== undefined && this.state.type !== 'frame') {
+        this.editor.select(this.state.id, event.shiftKey);
+      }
 
       for (const listener of [...this.clickListeners]) {
         listener(event);

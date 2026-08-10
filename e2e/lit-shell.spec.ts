@@ -2686,6 +2686,34 @@ test('a long press on a node opens its settings', async ({ page }) => {
 });
 
 /**
+ * Selection is a click, not a drag. Dragging a node moves it and leaves the
+ * selection — and so the flow highlight — alone.
+ */
+test('dragging a node does not select it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const source = await nodeCentre(page, 0);
+
+  // Press, move well past the slop, release — a drag, not a click.
+  await page.mouse.move(source.x, source.y);
+  await page.mouse.down();
+  await page.mouse.move(source.x + 60, source.y + 40, { steps: 8 });
+  await page.mouse.up();
+
+  // Nothing selected, nothing highlighted.
+  expect(await selectedIds(page)).toEqual([]);
+  expect(await page.evaluate(() => [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+    .some(n => n.hasAttribute('flow')))).toBe(false);
+
+  // A plain click, though, does select.
+  const moved = await nodeCentre(page, 0);
+
+  await page.mouse.click(moved.x, moved.y);
+  expect((await selectedIds(page)).length).toBe(1);
+});
+
+/**
  * Selecting a node lights the path through it: upstream one colour,
  * downstream another, the wires too.
  *
