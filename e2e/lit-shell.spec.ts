@@ -2438,6 +2438,114 @@ test('a wire dropped on empty canvas offers the types it can land on, wired on c
 });
 
 /**
+ * Hold still on empty canvas, and the press becomes a pencil.
+ *
+ * Drag and a rectangle grows, everything it catches lights up — the same
+ * selection the marquee paints — and letting go makes a frame node of
+ * exactly that size. Movement within the hold turns it back into the pan
+ * it would have been.
+ */
+test('a long press on empty canvas draws a frame around what it catches', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const nodesBefore = await nodeCount(page);
+
+  // A spot above the Source, so dragging down-right will swallow it.
+  const source = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const r = node.getBoundingClientRect();
+
+    return { id: (node as unknown as { state: { id: number } }).state.id, left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  });
+
+  await page.mouse.move(source.left - 60, source.top - 60);
+  await page.mouse.down();
+
+  // The hold: no travel until the pencil arrives.
+  await page.waitForTimeout(650);
+
+  await page.mouse.move(source.right + 40, source.bottom + 40, { steps: 6 });
+
+  // What the rectangle caught lights up while it is still being drawn.
+  expect(await page.evaluate(() => [...window.fbEditor.selection])).toContain(source.id);
+
+  await page.mouse.up();
+
+  const made = await page.evaluate(() => {
+    const frame = window.fbEditor.children.find(n => (n as unknown as { type?: string }).type === 'frame') as
+      unknown as { ui?: { view?: string; size?: { width: number; height: number } } } | undefined;
+
+    return frame ? { view: frame.ui?.view, size: frame.ui?.size } : null;
+  });
+
+  await expect.poll(() => nodeCount(page)).toBe(nodesBefore + 1);
+  expect(made?.view).toBe('normal');
+  expect(made!.size!.width).toBeGreaterThan(24);
+  expect(made!.size!.height).toBeGreaterThan(24);
+});
+
+/**
+ * Dragging a frame carries the nodes lying on it.
+ *
+ * Containment is membership: no stored list, the nodes on the frame are the
+ * nodes it groups, decided at the moment it is picked up — and they light up
+ * as the selection, so what is about to move along is visible first.
+ */
+test('dragging a frame carries the nodes on it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  // A frame laid around the Source, by hand.
+  const before = await page.evaluate(() => {
+    const editor = window.fbEditor as unknown as {
+      addNode(type: string, at?: { x: number; y: number }): { id: number; ui: { view?: string; size?: { width: number; height: number } } };
+      children: { title?: string; id: number; ui?: { position?: { x: number; y: number } } }[];
+    };
+    const source = editor.children.find(n => n.title === 'Source')!;
+    const at = source.ui!.position!;
+    const frame = editor.addNode('frame', { x: at.x - 4, y: at.y - 6 });
+
+    frame.ui.view = 'normal';
+    frame.ui.size = { width: 300, height: 220 };
+
+    return { sourceId: source.id, frameId: frame.id, source: { ...at } };
+  });
+
+  // Let it render at its size, then pick the frame up by its edge.
+  await page.waitForTimeout(200);
+
+  const grip = await page.evaluate(id => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === id)!;
+    const r = box.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + 8 };
+  }, before.frameId);
+
+  await page.mouse.move(grip.x, grip.y);
+  await page.mouse.down();
+  await page.mouse.move(grip.x + 80, grip.y + 60, { steps: 6 });
+
+  // Mid-drag, the member is selected — that is the mechanism AND the signal.
+  expect(await page.evaluate(() => [...window.fbEditor.selection])).toContain(before.sourceId);
+
+  await page.mouse.up();
+
+  const after = await page.evaluate(id => {
+    const node = (window.fbEditor.children as { id: number; ui?: { position?: { x: number; y: number } } }[])
+      .find(n => n.id === id)!;
+
+    return { ...node.ui!.position! };
+  }, before.sourceId);
+
+  // The source travelled WITH the frame.
+  expect(after.x).toBeGreaterThan(before.source.x + 1);
+  expect(after.y).toBeGreaterThan(before.source.y + 1);
+});
+
+/**
  * A TAP on the loose end opens the picker — and it stays open.
  *
  * Opening happens on pointerup, and the browser then synthesises a click at

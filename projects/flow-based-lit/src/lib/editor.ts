@@ -891,6 +891,34 @@ export class FbEditor {
   }
 
   /** Move every selected node, in plane percentages. Used by a multi-node drag. */
+  /**
+   * A frame and everything lying on it, as the selection.
+   *
+   * Containment IS membership: a frame stores no member list — the nodes on
+   * it are the nodes it groups, decided by geometry at the moment it is
+   * picked up. Selecting the lot is what makes dragging the frame drag its
+   * contents, because the multi-selection drag already moves every selected
+   * node; it also LIGHTS UP the members, so what a frame is about to take
+   * with it is visible before it moves.
+   */
+  selectFrameWithContents(frameId: number): void {
+    const frame = this.nodeById(frameId);
+    const plane = this.viewport.planeSize;
+
+    if (!frame || !plane.width || !plane.height) {
+      this.select(frameId);
+
+      return;
+    }
+
+    const origin = this.geometry.nodeOrigin(frame, plane);
+    const size = this.geometry.getNodeSize(frameId) ?? { width: 0, height: 0 };
+
+    this.selectWithin({ x: origin.x, y: origin.y, width: size.width, height: size.height });
+    this.selection.add(frameId);
+    this.changes.emit({ kind: 'selection' });
+  }
+
   moveSelectionBy(dx: number, dy: number): void {
     for (const node of this.selectedNodes()) {
       const position = node.ui?.position ?? { x: 0, y: 0 };

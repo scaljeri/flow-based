@@ -358,6 +358,15 @@ export class FbFlowCanvasElement extends LitElement {
       z-index: 40;
     }
 
+    /* The frame being drawn: it already looks like the frame it will become. */
+    .frame-draft {
+      border: 1.5px dashed rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+      pointer-events: none;
+      position: absolute;
+      z-index: 40;
+    }
+
     /*
      * The picker: a modal dialog, not a box at the drop point.
      *
@@ -503,6 +512,23 @@ export class FbFlowCanvasElement extends LitElement {
   /** What is typed into the picker's search; cleared when it closes. */
   private pickerQuery = '';
 
+  /*
+   * The draw-a-frame gesture: hold still on empty canvas, and the press
+   * becomes a pencil — drag and a rectangle grows, everything it catches
+   * lights up, and letting go makes it a frame node of exactly that size.
+   * Armed on every plain background press; movement within the hold turns it
+   * back into the pan it would have been.
+   */
+  private framePress: { pointerId: number; client: FbPosition; timer: number } | null = null;
+  private frameDraft: { from: FbPosition; rect: { x: number; y: number; width: number; height: number } } | null = null;
+
+  private cancelFramePress(): void {
+    if (this.framePress) {
+      clearTimeout(this.framePress.timer);
+      this.framePress = null;
+    }
+  }
+
   /** Where the current gesture STARTED, when that was the picker's backdrop. */
   private pickerPressedAt: { x: number; y: number } | null = null;
   private marqueeAdditive = false;
@@ -575,6 +601,8 @@ export class FbFlowCanvasElement extends LitElement {
     this.panFrom = null;
     this.marqueeFrom = null;
     this.marquee = null;
+    this.cancelFramePress();
+    this.frameDraft = null;
 
     if (this.editor) {
       this.editor.pinchActive = false;
@@ -838,11 +866,57 @@ export class FbFlowCanvasElement extends LitElement {
 
     this.panPointerId = event.pointerId;
     this.panFrom = { x: event.clientX, y: event.clientY };
+
+    // Hold still long enough and this press draws a frame instead of panning.
+    // Only when the registry HAS frames; a host without the type keeps the
+    // plain pan and never notices.
+    if (this.editor.types['frame']) {
+      const client = { x: event.clientX, y: event.clientY };
+      const from = this.editor.viewport.toPlane(this.toLocal(event));
+
+      this.framePress = {
+        pointerId: event.pointerId,
+        client,
+        timer: window.setTimeout(() => {
+          this.framePress = null;
+          // The pan this press was going to be is over; the pencil takes it.
+          this.panPointerId = null;
+          this.panFrom = null;
+          this.frameDraft = { from, rect: { ...from, width: 0, height: 0 } };
+          this.requestUpdate();
+        }, 500),
+      };
+    }
   };
 
   private onPointerMove = (event: PointerEvent): void => {
     if (this.editor.pending) {
       this.editor.setPointer(this.editor.viewport.toPlane(this.toLocal(event)));
+    }
+
+    // Travel during the hold means this was a pan after all.
+    if (this.framePress && event.pointerId === this.framePress.pointerId
+      && Math.hypot(event.clientX - this.framePress.client.x, event.clientY - this.framePress.client.y) > 6) {
+      this.cancelFramePress();
+    }
+
+    if (this.frameDraft) {
+      const to = this.editor.viewport.toPlane(this.toLocal(event));
+      const { from } = this.frameDraft;
+
+      this.frameDraft.rect = {
+        x: Math.min(from.x, to.x),
+        y: Math.min(from.y, to.y),
+        width: Math.abs(to.x - from.x),
+        height: Math.abs(to.y - from.y),
+      };
+
+      // Live, like the marquee: what the frame is about to group lights up
+      // while there is still time to change its edges.
+      this.editor.selectWithin(this.frameDraft.rect, false);
+      this.requestUpdate();
+
+      return;
     }
 
     if (this.panPointerId === null || event.pointerId !== this.panPointerId) {
@@ -881,6 +955,37 @@ export class FbFlowCanvasElement extends LitElement {
   };
 
   private onPointerUp = (): void => {
+    this.cancelFramePress();
+
+    if (this.frameDraft) {
+      const { rect } = this.frameDraft;
+
+      this.frameDraft = null;
+
+      /*
+       * Anything smaller than the shell's own node floor was a held press
+       * that never became a drawing — creating a frame the size of a crumb
+       * from it would be a surprise, not a gesture.
+       */
+      if (rect.width >= 24 && rect.height >= 24) {
+        const plane = this.editor.viewport.planeSize;
+        const node = this.editor.addNode('frame', {
+          x: (rect.x / plane.width) * 100,
+          y: (rect.y / plane.height) * 100,
+        });
+
+        if (node) {
+          // NORMAL from birth: that is the view the shell applies a stored
+          // size in, and the drawn rectangle IS the size.
+          node.ui!.view = 'normal';
+          node.ui!.size = { width: rect.width, height: rect.height };
+        }
+      }
+
+      this.editor.clearSelection();
+      this.requestUpdate();
+    }
+
     this.panPointerId = null;
     this.panFrom = null;
 
@@ -1232,6 +1337,11 @@ export class FbFlowCanvasElement extends LitElement {
           ? html`<div
               class="marquee"
               style=${`left:${this.marquee.x}px;top:${this.marquee.y}px;width:${this.marquee.width}px;height:${this.marquee.height}px`}></div>`
+          : nothing}
+        ${this.frameDraft
+          ? html`<div
+              class="frame-draft"
+              style=${`left:${this.frameDraft.rect.x}px;top:${this.frameDraft.rect.y}px;width:${this.frameDraft.rect.width}px;height:${this.frameDraft.rect.height}px`}></div>`
           : nothing}
         <fb-connections .editor=${this.editor}></fb-connections>
 

@@ -1144,6 +1144,10 @@ export class FbNodeElement extends LitElement {
 
     if (event.shiftKey) {
       this.editor.select(id, true);
+    } else if (this.state.type === 'frame') {
+      // A frame is picked up WITH what lies on it — containment is
+      // membership, and the members light up so you see what moves along.
+      this.editor.selectFrameWithContents(id);
     } else if (!this.editor.isSelected(id)) {
       this.editor.select(id);
     }

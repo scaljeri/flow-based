@@ -142,6 +142,22 @@ const types: FbNodeTypes<FbNodeMount> = {
     settings: { title: 'React', sockets: [{ type: 'in' }, { type: 'out' }] },
   },
   /*
+   * The frame the long-press gesture draws — the canvas looks this type up
+   * by name, and a registry without it simply has no gesture.
+   */
+  frame: {
+    component: (host: HTMLElement) => {
+      const box = document.createElement('div');
+
+      box.style.cssText = 'width:100%;height:100%;min-width:120px;min-height:80px;box-sizing:border-box;'
+        + 'border:1.5px dashed rgba(255,255,255,0.45);border-radius:10px';
+      host.appendChild(box);
+
+      return { destroy: () => box.remove() };
+    },
+    settings: { title: 'Frame', resizable: true, sockets: [], addableSockets: 'none' },
+  },
+  /*
    * The dot a double-clicked wire bends around — the editor's insertReroute
    * looks this type up by name, and a registry without it has no reroutes.
    */
