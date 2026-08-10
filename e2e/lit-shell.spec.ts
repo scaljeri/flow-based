@@ -207,6 +207,8 @@ declare global {
       children: import('@scaljeri/flow-based-core').FbNodeState[];
       connections: import('@scaljeri/flow-based-core').FbConnection[];
       selection: Set<number>;
+      select(id: number, additive?: boolean): void;
+      clearSelection(): void;
     };
   }
 }
@@ -2681,6 +2683,59 @@ test('a long press on a node opens its settings', async ({ page }) => {
   await page.mouse.up();
 
   await expect.poll(panelOpen).toBe(true);
+});
+
+/**
+ * Selecting a node lights the path through it: upstream one colour,
+ * downstream another, the wires too.
+ *
+ * The harness graph is Source → Sink and Source → Scope. Select the Sink
+ * and its Source is upstream; select the Source and both the things it
+ * feeds are downstream. A reader follows a value back or forward by colour
+ * instead of by eye.
+ */
+test('selecting a node highlights what feeds it and what it feeds', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const flowOf = (title: string) => page.evaluate(t => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === t)!;
+
+    return node.getAttribute('flow');
+  }, title);
+
+  const wireClasses = () => page.evaluate(() => [...document.querySelector('fb-flow-canvas')!.shadowRoot!
+    .querySelector('fb-connections')!.shadowRoot!
+    .querySelectorAll('path.connection')].map(p => p.getAttribute('class')));
+
+  // Select the Sink: the Source that feeds it is upstream.
+  await page.evaluate(() => {
+    const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
+
+    window.fbEditor.select(sink.id!);
+  });
+
+  await expect.poll(() => flowOf('Source')).toBe('up');
+  expect(await flowOf('Sink')).toBe('focus');
+  // The wire Source→Sink is upstream; Source→Scope touches neither and stays plain.
+  await expect.poll(async () => (await wireClasses()).some(c => c?.includes('flow-up'))).toBe(true);
+
+  // Select the Source: everything it feeds is downstream.
+  await page.evaluate(() => {
+    const source = window.fbEditor.children.find(n => n.title === 'Source')!;
+
+    window.fbEditor.select(source.id!);
+  });
+
+  await expect.poll(() => flowOf('Sink')).toBe('down');
+  expect(await flowOf('Scope')).toBe('down');
+  expect(await flowOf('Source')).toBe('focus');
+  await expect.poll(async () => (await wireClasses()).filter(c => c?.includes('flow-down')).length).toBe(2);
+
+  // Clearing the selection clears the highlight.
+  await page.evaluate(() => window.fbEditor.clearSelection());
+  await expect.poll(() => flowOf('Sink')).toBeNull();
 });
 
 /**

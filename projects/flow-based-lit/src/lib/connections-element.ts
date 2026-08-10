@@ -128,6 +128,23 @@ export class FbConnectionsElement extends LitElement {
     }
 
     /*
+     * On the highlighted path. A CSS stroke beats the gradient attribute, so
+     * the wire takes the flow colour of its side; upstream cool, downstream
+     * warm, matching the nodes. Declared before the arming rule, so a deletion
+     * in progress still overrides it in red. (No backticks here: this comment
+     * sits inside a tagged CSS template literal.)
+     */
+    path.connection.flow-up {
+      stroke: var(--fb-flow-up, #4aa3ff);
+      stroke-width: 4px;
+    }
+
+    path.connection.flow-down {
+      stroke: var(--fb-flow-down, #ffb454);
+      stroke-width: 4px;
+    }
+
+    /*
      * Being held, and about to go.
      *
      * The width is animated over exactly the press it takes, so the line is its
@@ -209,8 +226,14 @@ export class FbConnectionsElement extends LitElement {
       if (change.kind === 'geometry' || change.kind === 'connections'
         || change.kind === 'sockets' || change.kind === 'structure'
         || change.kind === 'interaction' || change.kind === 'pointer'
-        || change.kind === 'viewport') {
+        || change.kind === 'viewport' || change.kind === 'selection') {
         this.requestUpdate();
+      }
+
+      // Selecting a node repaints the path around it — which wire is upstream
+      // and which is downstream is baked into each curve's key.
+      if (change.kind === 'selection') {
+        this.keyCache.clear();
       }
 
       if (change.kind === 'viewport') {
@@ -422,7 +445,9 @@ export class FbConnectionsElement extends LitElement {
       + `${from.sockets?.length},${to.sockets?.length},${this.editor.routing},`
       // Whether this line is being held. Without it `guard` sees an unchanged
       // key and skips the very re-render that turns the line red.
-      + `${this.arming?.id === connection.id}`
+      + `${this.arming?.id === connection.id},`
+      // And which side of the flow highlight it is on — a select recolours it.
+      + `${this.editor.connectionFlow(connection)}`
       /*
        * A line with an end on the boundary also moves with the VIEWPORT: its
        * screen-pinned end is pulled back through zoom and pan (boundaryAt), so
@@ -447,6 +472,7 @@ export class FbConnectionsElement extends LitElement {
     const route = this.route(ends.start, ends.end, ends.from, ends.to);
     const id = `fb-grad-${connection.id}`;
     const arming = this.arming?.id === connection.id;
+    const flow = this.editor.connectionFlow(connection);
 
     /*
      * The hit path comes FIRST and the curve straight after it, because the
@@ -477,7 +503,7 @@ export class FbConnectionsElement extends LitElement {
         presentation attribute sits below every CSS rule, so the red in the
         stylesheet wins on its own and there is no second place to keep in step.
       -->
-      <path class="connection ${arming ? 'arming' : ''}"
+      <path class="connection ${arming ? 'arming' : ''} ${flow ? `flow-${flow}` : ''}"
             d=${route.d}
             stroke=${`url(#${id})`}></path>
       <path class="arrow" d="M0 5 L 5 0 L0 -5z" transform=${route.arrow}></path>

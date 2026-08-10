@@ -97,6 +97,22 @@ export class FbNodeElement extends LitElement {
       box-shadow: 0 0 0 2px var(--fb-selected-color, #bada55);
     }
 
+    /*
+     * The flow highlight: what feeds the selected node, and what it feeds.
+     * Upstream is cool, downstream is warm — the colours read as "comes from
+     * behind" and "goes on ahead". The selected node keeps its own green;
+     * only its neighbourhood takes these.
+     */
+    :host([flow='up']) .box {
+      border-color: var(--fb-flow-up, #4aa3ff);
+      box-shadow: 0 0 0 2px var(--fb-flow-up, #4aa3ff);
+    }
+
+    :host([flow='down']) .box {
+      border-color: var(--fb-flow-down, #ffb454);
+      box-shadow: 0 0 0 2px var(--fb-flow-down, #ffb454);
+    }
+
     /* Full: the node has the editor surface to itself. */
     :host([view='full']) {
       --fb-socket-size: 42px;
@@ -668,6 +684,22 @@ export class FbNodeElement extends LitElement {
     if (this.state?.id !== undefined) {
       this.toggleAttribute('selected', this.editor.isSelected(this.state.id));
     }
+
+    this.applyFlowHighlight();
+  }
+
+  /**
+   * Which side of the flow highlight this node is on — set as an attribute,
+   * not a re-render, so a selection change repaints without rebuilding markup.
+   */
+  private applyFlowHighlight(): void {
+    const flow = this.state?.id === undefined ? null : this.editor.nodeFlow(this.state.id);
+
+    if (flow) {
+      this.setAttribute('flow', flow);
+    } else {
+      this.removeAttribute('flow');
+    }
   }
 
   /**
@@ -685,6 +717,12 @@ export class FbNodeElement extends LitElement {
       case 'formats':
       case 'interaction':
         this.requestUpdate();
+        break;
+
+      case 'connections':
+        // The path may have changed shape without this node's markup changing;
+        // its highlight side can flip even when nothing else about it does.
+        this.applyFlowHighlight();
         break;
 
       case 'selection':

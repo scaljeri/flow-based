@@ -46,6 +46,15 @@ import {
  * degrading linearly. A node cares about its own sockets and its own size; it does
  * not care that a different node moved.
  */
+/** The single selected node and everything up- and downstream of it. */
+export interface FbFlowHighlight {
+  focus: number;
+  /** Node ids that feed the focus, transitively. */
+  up: Set<number>;
+  /** Node ids the focus feeds, transitively. */
+  down: Set<number>;
+}
+
 export interface FbEditorChange {
   kind:
     | 'structure'
@@ -791,6 +800,115 @@ export class FbEditor {
 
   isSelected(id: number): boolean {
     return this.selection.has(id);
+  }
+
+  /* ----------------------------------------------------------------------
+     The flow highlight
+     ----------------------------------------------------------------------
+     Select ONE node and the graph shows what reaches it and what it reaches:
+     everything upstream in one colour, everything downstream in another, the
+     connections between them too. A reader following a value back to where it
+     came from, or forward to what it feeds, no longer traces the wires by eye.
+     ---------------------------------------------------------------------- */
+
+  private highlightCache: { sig: string; value: FbFlowHighlight | null } | null = null;
+
+  /**
+   * The upstream/downstream sets for the single selected node, or null.
+   *
+   * Cached on a cheap signature — the selected ids and the connection count —
+   * so it survives a drag (positions move, membership does not) but recomputes
+   * the moment the selection or the wiring changes.
+   */
+  get flowHighlight(): FbFlowHighlight | null {
+    const sel = [...this.selection].sort((a, b) => a - b);
+    const sig = `${sel.join(',')}|${this.state?.connections?.length ?? 0}`;
+
+    if (this.highlightCache?.sig === sig) {
+      return this.highlightCache.value;
+    }
+
+    const value = sel.length === 1 ? this.computeHighlight(sel[0]) : null;
+
+    this.highlightCache = { sig, value };
+
+    return value;
+  }
+
+  /** Which side of the highlight a node is on, if any. */
+  nodeFlow(id: number): 'focus' | 'up' | 'down' | null {
+    const highlight = this.flowHighlight;
+
+    if (!highlight) {
+      return null;
+    }
+
+    if (id === highlight.focus) {
+      return 'focus';
+    }
+
+    // Upstream wins a tie: in a cycle a node is both, and "what feeds this"
+    // is the question a reader following a value backwards is asking.
+    if (highlight.up.has(id)) {
+      return 'up';
+    }
+
+    return highlight.down.has(id) ? 'down' : null;
+  }
+
+  /** Whether a connection lies on the upstream or downstream path. */
+  connectionFlow(connection: FbConnection): 'up' | 'down' | null {
+    const highlight = this.flowHighlight;
+
+    if (!highlight) {
+      return null;
+    }
+
+    const { focus, up, down } = highlight;
+
+    if (up.has(connection.from) && (up.has(connection.to) || connection.to === focus)) {
+      return 'up';
+    }
+
+    if (down.has(connection.to) && (down.has(connection.from) || connection.from === focus)) {
+      return 'down';
+    }
+
+    return null;
+  }
+
+  private computeHighlight(focus: number): FbFlowHighlight {
+    const connections = this.state?.connections ?? [];
+    // Adjacency both ways, built once per (re)compute.
+    const feeds = new Map<number, number[]>();
+    const fedBy = new Map<number, number[]>();
+
+    for (const c of connections) {
+      (fedBy.get(c.to) ?? fedBy.set(c.to, []).get(c.to)!).push(c.from);
+      (feeds.get(c.from) ?? feeds.set(c.from, []).get(c.from)!).push(c.to);
+    }
+
+    // Breadth-first over the directed graph, stopping at what is already seen —
+    // which is also what keeps a cycle from walking forever.
+    const walk = (start: number, next: Map<number, number[]>): Set<number> => {
+      const seen = new Set<number>();
+      const queue = [...(next.get(start) ?? [])];
+
+      while (queue.length) {
+        const id = queue.shift()!;
+
+        if (seen.has(id)) {
+          continue;
+        }
+
+        seen.add(id);
+        queue.push(...(next.get(id) ?? []));
+      }
+
+      return seen;
+    };
+
+    return { focus, up: walk(focus, fedBy), down: walk(focus, feeds) };
   }
 
   /** Select a node. `additive` toggles it and leaves the rest alone. */
