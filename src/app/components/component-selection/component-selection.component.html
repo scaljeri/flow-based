@@ -47,6 +47,9 @@
         </button>
       </header>
       <p>{{helpText(helpFor)}}</p>
+      @if (hasConfig(helpFor)) {
+        <p class="how">Long press the node to open its settings.</p>
+      }
     </div>
   </div>
 }

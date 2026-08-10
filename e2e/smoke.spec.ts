@@ -3764,9 +3764,19 @@ test('the Add palette info button explains a node without adding it', async ({ p
 
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('passing through');
+  // Tap has no settings, so no gesture hint.
+  await expect(dialog.locator('.how')).toHaveCount(0);
 
   // Nothing was added — the info press did not select.
   expect(await page.locator('fb-node-box').count()).toBe(before);
+
+  // A node WITH settings ends its explanation with how to open them.
+  await palette.locator('.help-dialog button[aria-label="Close"]').click();
+  await expect(dialog).toBeHidden();
+
+  await palette.locator('input[type="search"]').fill('random');
+  await palette.locator('.row', { hasText: 'Random number' }).locator('button.info').click();
+  await expect(dialog.locator('.how')).toContainText('Long press');
 });
 
 /**

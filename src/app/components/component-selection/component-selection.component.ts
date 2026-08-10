@@ -39,6 +39,11 @@ export class ComponentSelectionComponent implements OnInit {
     return this.flowTypes[key].settings.help ?? 'No explanation written for this node yet.';
   }
 
+  /** Whether this type has settings of its own, worth telling a reader how to reach. */
+  hasConfig(key: string): boolean {
+    return !!this.flowTypes[key].settingsComponent;
+  }
+
   /** The `i`: show the node's explanation without adding it. */
   onInfo(key: string, event: Event): void {
     // Not a selection: the press must not fall through to the row's Add.

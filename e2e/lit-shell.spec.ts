@@ -2593,6 +2593,52 @@ test('the settings panel info button explains the node', async ({ page }) => {
 
     return dialog?.open ? dialog.querySelector('p')?.textContent ?? null : null;
   })).toContain('emits numbers');
+
+  // Source has no settings, so no "how to configure" hint.
+  expect(await page.evaluate(() => {
+    const s = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!
+      .shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+
+    return !!s.querySelector('.help-dialog p.how');
+  })).toBe(false);
+});
+
+/**
+ * A node WITH settings tells you how to reach them, from the info dialog.
+ *
+ * The gear is gone, so the `i` earns its keep: for a node that has config,
+ * it ends with the gesture — long press — that opens it. Scope carries its
+ * own settings (a wave-colour picker), so its explanation says so.
+ */
+test('the info dialog says how to open the settings of a node that has them', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Scope')! as unknown as
+      { configOpen: boolean; requestUpdate(): void };
+
+    box.configOpen = true;
+    box.requestUpdate();
+  });
+
+  await page.evaluate(() => {
+    const s = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Scope')!
+      .shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+
+    (s.querySelector('button.info') as HTMLButtonElement).click();
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const s = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Scope')!
+      .shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+
+    return s.querySelector('.help-dialog p.how')?.textContent?.trim() ?? null;
+  })).toContain('Long press');
 });
 
 /**

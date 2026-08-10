@@ -155,3 +155,11 @@ mat-toolbar {
   margin: 4px 0 0;
   white-space: pre-line;
 }
+
+/* The gesture that opens the settings — set apart from the prose. */
+.help-dialog p.how {
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.55);
+  margin-top: 12px;
+  padding-top: 10px;
+}

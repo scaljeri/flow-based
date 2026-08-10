@@ -318,6 +318,14 @@ export class FbNodeSettingsElement extends LitElement {
       white-space: pre-line;
     }
 
+    /* The gesture that opens the settings — a hint, set apart from the prose. */
+    .help-dialog p.how {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      margin-top: 10px;
+      opacity: 0.6;
+      padding-top: 8px;
+    }
+
     .socket-editor header {
       align-items: center;
       display: flex;
@@ -718,6 +726,9 @@ export class FbNodeSettingsElement extends LitElement {
                   @click=${() => { this.helpOpen = false; }}>×</button>
         </header>
         <p>${this.helpText || 'No explanation written for this node yet.'}</p>
+        ${this.mountOwn
+          ? html`<p class="how">Long press the node to open its settings.</p>`
+          : nothing}
       </dialog>
     `;
   }
