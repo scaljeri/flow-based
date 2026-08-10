@@ -64,10 +64,25 @@ export function angularNodeMount(
        */
       mountSettings: settingsComponent
         ? (settingsHost: HTMLElement) => {
+          /*
+           * Into a child of the panel's slot, NOT the slot itself.
+           *
+           * `destroy()` removes the element Angular was handed as its host —
+           * and the slot is the shell's, a static `.own` div in a Lit
+           * template. Destroying a component mounted straight onto it ripped
+           * that div out of the shadow DOM, and Lit, still holding the
+           * detached node, never drew it again: the panel opened once with
+           * its settings and every reopen after was empty. A wrapper Angular
+           * may take with it leaves the shell's div untouched.
+           */
+          const wrapper = document.createElement('div');
+
+          settingsHost.appendChild(wrapper);
+
           const settings = createComponent(settingsComponent, {
             environmentInjector,
             elementInjector,
-            hostElement: settingsHost,
+            hostElement: wrapper,
           });
 
           appRef.attachView(settings.hostView);
@@ -75,6 +90,7 @@ export function angularNodeMount(
           return () => {
             appRef.detachView(settings.hostView);
             settings.destroy();
+            wrapper.remove();
           };
         }
         : undefined,

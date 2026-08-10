@@ -3681,6 +3681,59 @@ test('hovering a demo wire shows the value that last crossed it', async ({ page 
 });
 
 /**
+ * A type's own settings survive being closed and reopened.
+ *
+ * The Angular adapter mounted the settings component straight onto the
+ * shell's `.own` div, and destroy() removes the element it was handed — so
+ * the first close ripped that div out of the Lit template and every reopen
+ * came up empty. The frame is the node that exposed it (config-only, opened
+ * a lot); every settingsComponent shares the fix.
+ */
+test('a node type\'s own settings reappear on every reopen', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const id = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const frame = editor.addNode('frame', { x: 30, y: 30 });
+
+    frame.ui.size = { width: 260, height: 200 };
+
+    return frame.id as number;
+  });
+
+  const ownHasName = () => page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)! as unknown as
+      { configOpen: boolean; requestUpdate(): void; shadowRoot: ShadowRoot };
+
+    box.configOpen = true;
+    box.requestUpdate();
+
+    return new Promise<boolean>(resolve => setTimeout(() => {
+      const own = box.shadowRoot.querySelector('fb-node-settings')?.shadowRoot?.querySelector('.own');
+
+      resolve(!!own?.textContent?.includes('Name'));
+    }, 300));
+  }, id);
+
+  const close = () => page.evaluate(nodeId => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === nodeId)! as unknown as
+      { configOpen: boolean; requestUpdate(): void };
+
+    box.configOpen = false;
+    box.requestUpdate();
+  }, id);
+
+  expect(await ownHasName()).toBe(true);
+  await close();
+  await page.waitForTimeout(200);
+  // The reopen that used to come up empty.
+  expect(await ownHasName()).toBe(true);
+});
+
+/**
  * The author's margin: a note carries prose, a frame sits behind what it
  * groups.
  *
