@@ -147,9 +147,13 @@ const types: FbNodeTypes<FbNodeMount> = {
    */
   reroute: {
     component: (host: HTMLElement) => {
+      // A ring with a core, filling the shell's size floor — the 10px dot it
+      // replaced was smaller than its own sockets.
       const dot = document.createElement('div');
 
-      dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.65)';
+      dot.style.cssText = 'width:24px;height:24px;box-sizing:border-box;border-radius:50%;'
+        + 'border:2px solid rgba(255,255,255,0.45);display:grid;place-items:center';
+      dot.innerHTML = '<div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.75)"></div>';
       host.appendChild(dot);
 
       return { destroy: () => dot.remove() };
