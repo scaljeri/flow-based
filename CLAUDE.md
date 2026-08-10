@@ -17,7 +17,7 @@ behind individual decisions belong in the code comments and in `docs/`.
 | Shell | `projects/flow-based-lit` | Web components on core alone — canvas, nodes, connections, the document renderer (`document-element.ts`). No Angular. |
 | Angular wrapper | `projects/flow-based` | Hosts the shell; owns the module and format registry (`module-registry.ts`). Never duplicate what the shell already does. |
 | Standard palette | `projects/flow-based-basics` | The set every editor starts with — value, clock/trigger/gate, tap, script, stats, meter, the state cells, the subflow and its flow-param. A host spreads `BASICS_TYPES` into its registry; not a lazily loaded module. |
-| Node modules | `projects/flow-based-{math,graphs,network,data}` | Lazily loaded chunks, registered via `src/app/modules.service.ts`. |
+| Node modules | `projects/flow-based-{math,complex,graphs,network,data}` | Lazily loaded chunks, registered via `src/app/modules.service.ts`. `complex` is the imaginary-numbers article's machinery — the proof that one subject's nodes ship as a module a flow asks for. |
 | Demo | `src/app` | The application, with its seeded flows in `src/app/fixtures.ts`. |
 
 Build order is core → lit → flow-based → basics → modules; `npm run build:lib` encodes

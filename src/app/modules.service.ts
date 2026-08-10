@@ -86,6 +86,7 @@ interface FbStoredModules {
  */
 const LOADERS: Record<string, () => Promise<FbModule>> = {
   math: () => import('@scaljeri/flow-based-math').then(m => m.MATH_MODULE),
+  complex: () => import('@scaljeri/flow-based-complex').then(m => m.COMPLEX_MODULE),
   graphs: () => import('@scaljeri/flow-based-graphs').then(m => m.GRAPHS_MODULE),
   network: () => import('@scaljeri/flow-based-network').then(m => m.NETWORK_MODULE),
   data: () => import('@scaljeri/flow-based-data').then(m => m.DATA_MODULE),
@@ -250,6 +251,12 @@ export class ModulesService {
       prefix: 'math',
       title: 'Mathematics',
       description: 'Operators, a formula editor with live notation, and derivatives.',
+    },
+    {
+      id: 'complex',
+      prefix: 'complex',
+      title: 'Complex numbers',
+      description: 'The plane behind the imaginary-numbers article: labelled points, the z²+c iteration, the Mandelbrot field and its viewpoints.',
     },
     {
       id: 'graphs',

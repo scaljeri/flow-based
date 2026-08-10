@@ -7,7 +7,7 @@
     "ng": "ng",
     "start": "npm run build:lib && node scripts/stamp-version.mjs && ng serve",
     "build": "npm run build:lib",
-    "build:lib": "npm run build:lit && ng build @scaljeri/flow-based && ng build @scaljeri/flow-based-basics && ng build @scaljeri/flow-based-math && ng build @scaljeri/flow-based-graphs && ng build @scaljeri/flow-based-network && ng build @scaljeri/flow-based-data",
+    "build:lib": "npm run build:lit && ng build @scaljeri/flow-based && ng build @scaljeri/flow-based-basics && ng build @scaljeri/flow-based-math && ng build @scaljeri/flow-based-complex && ng build @scaljeri/flow-based-graphs && ng build @scaljeri/flow-based-network && ng build @scaljeri/flow-based-data",
     "build:math": "ng build @scaljeri/flow-based-math",
     "build:graphs": "ng build @scaljeri/flow-based-graphs",
     "build:demo": "npm run build:lib && node scripts/stamp-version.mjs && ng build flow-based-demo && node scripts/build-playground.mjs",

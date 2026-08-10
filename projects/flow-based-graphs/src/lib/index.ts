@@ -21,8 +21,6 @@ import { FieldSmallComponent } from './field-small.component';
 import { FieldNormalComponent } from './field-normal.component';
 import { FieldFullComponent } from './field-full.component';
 import { FieldSettingsComponent } from './field-settings.component';
-import { ViewpointsWorker } from './viewpoints.worker';
-import { ViewpointsSmallComponent } from './viewpoints-small.component';
 
 /**
  * The Graphs module: ways of LOOKING at streams.
@@ -283,20 +281,5 @@ export const GRAPHS_MODULE: FbModule = {
       worker: FieldPlotWorker,
     },
 
-    /*
-     * Named places in the plane, the way Places names them on the earth — and
-     * a separate node for the same reason: where to look is data, and data on
-     * a wire is visible without opening a panel.
-     */
-    'graph-viewpoints': {
-      component: { small: ViewpointsSmallComponent },
-      settings: {
-        title: 'Viewpoints',
-        group: 'Graphs',
-        config: { which: 0 },
-        sockets: [{ type: 'out', format: 'region' }],
-      },
-      worker: ViewpointsWorker,
-    },
   },
 };

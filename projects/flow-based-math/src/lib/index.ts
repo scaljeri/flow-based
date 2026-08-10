@@ -12,15 +12,6 @@ import { DerivativeWorker } from './derivative.worker';
 import { DerivativeSmallComponent } from './derivative-small.component';
 import { DerivativeSettingsComponent } from './derivative-settings.component';
 import { SamplerWorker } from './sampler.worker';
-import { PointsWorker } from './points.worker';
-import { IterateSettingsComponent } from './iterate-settings.component';
-import { IterateSmallComponent } from './iterate-small.component';
-import { IterateWorker } from './iterate.worker';
-import { MandelbrotSettingsComponent } from './mandelbrot-settings.component';
-import { MandelbrotSmallComponent } from './mandelbrot-small.component';
-import { MandelbrotWorker } from './mandelbrot.worker';
-import { PointsSmallComponent } from './points-small.component';
-import { PointsSettingsComponent } from './points-settings.component';
 import { SamplerSmallComponent } from './sampler-small.component';
 import { SamplerSettingsComponent } from './sampler-settings.component';
 
@@ -75,27 +66,6 @@ export const MATH_MODULE: FbModule = {
     { name: 'number', description: 'A plain numeric value', color: '#025d04' },
     { name: 'function', description: 'A symbolic function of x', color: '#c77d0a' },
     { name: 'point', description: 'A sampled coordinate: [x, y, ...]', color: '#9988cf' },
-    { name: 'complex', description: 'A complex number: {re, im}', color: '#2aa7a0' },
-    {
-      name: 'marks',
-      description: 'A labelled set of complex points, with one of them current',
-      color: '#d081b8',
-    },
-    /*
-     * Both declared by Graphs too, with the same descriptions, so the two
-     * modules SHARE them — which is what lets a region chosen on one side
-     * reach a computation on the other, and the field come back.
-     */
-    {
-      name: 'region',
-      description: 'A square of the complex plane: {re, im, span}',
-      color: '#7f8fd8',
-    },
-    {
-      name: 'field',
-      description: 'A value per cell over a rectangle: {field: {rows, cols, values, x, y}}',
-      color: '#b07fd8',
-    },
   ],
 
   types: {
@@ -196,86 +166,5 @@ export const MATH_MODULE: FbModule = {
       worker: SamplerWorker,
     },
 
-    /*
-     * Values somebody chose in advance, read out one per tick.
-     *
-     * The random generator makes numbers out of nothing, which demonstrates a
-     * stream and explains nothing. This walks a list you wrote down, and each
-     * entry carries the name it goes by — which is what turns a plot into a
-     * diagram: four dots mean little, four dots labelled 1, i, -1 and -i are
-     * an argument.
-     */
-    'math-points': {
-      component: { small: PointsSmallComponent },
-      settingsComponent: PointsSettingsComponent,
-      settings: {
-        title: 'Points',
-        group: GROUP,
-        config: {
-          points: [
-            { re: 1, im: 0, label: '1' },
-            { re: 0, im: 1, label: 'i' },
-            { re: -1, im: 0, label: '-1' },
-            { re: 0, im: -1, label: '-i' },
-          ],
-          interval: 900,
-        },
-        sockets: [{ type: 'out', format: 'marks' }],
-      },
-      worker: PointsWorker,
-    },
-
-    /*
-     * The one node here with a memory.
-     *
-     * `z → z² + c` cannot be a formula, because a formula has no previous
-     * value, and it cannot be a sampler, because a sampler sweeps a range
-     * rather than following where it was taken. Iteration is a third thing,
-     * and the Mandelbrot set is the only question it asks: for which `c` does
-     * this stay put?
-     */
-    'math-iterate': {
-      component: { small: IterateSmallComponent },
-      settingsComponent: IterateSettingsComponent,
-      settings: {
-        title: 'Iterate z² + c',
-        group: GROUP,
-        config: { c: { re: -0.5, im: 0.5 }, steps: 40, escape: 2, interval: 300 },
-        sockets: [
-          // A c from elsewhere overrides the config's — a picture of the set
-          // can then say which orbit to walk.
-          { type: 'in', formats: ['complex'] },
-          // The same shape a set of points travels as: the plane draws it
-          // without being taught anything new.
-          { type: 'out', format: 'marks' },
-        ],
-      },
-      worker: IterateWorker,
-    },
-
-    /*
-     * The same rule as Iterate, asked of a whole square at once.
-     *
-     * Iterate follows one `c` and shows the walk; this asks every point of a
-     * rectangle how long its walk takes to escape and hands back the answers
-     * as a field. It draws nothing — a field plot does that — which is the
-     * split that took this out of the Graphs module: computing where the
-     * numbers are is mathematics, and colouring them is a picture.
-     */
-    'math-mandelbrot': {
-      component: { small: MandelbrotSmallComponent },
-      settingsComponent: MandelbrotSettingsComponent,
-      settings: {
-        title: 'Mandelbrot',
-        group: GROUP,
-        config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200, resolution: 400 },
-        sockets: [
-          // Where to look, when something else decides that.
-          { type: 'in', formats: ['region'] },
-          { type: 'out', format: 'field' },
-        ],
-      },
-      worker: MandelbrotWorker,
-    },
   },
 };

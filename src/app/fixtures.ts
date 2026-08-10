@@ -78,7 +78,7 @@ export const basic = {
  * make those functions data for two time-series plots and the complex plane,
  * and a second chain draws the pure circle e^(i·b·x) and, off the same
  * sampler, its two coordinates as waves — that pair is what the document is
- * for. It needs the math and graphs modules, which the app enables before
+ * for. It needs the math, complex and graphs modules, which the app enables before
  * loading it.
  *
  * A function, because ids must be fresh per creation — the demo can be

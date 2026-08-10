@@ -6,4 +6,3 @@ export * from './lib/region';
 export * from './lib/field';
 export * from './lib/field.worker';
 export * from './lib/field-view';
-export * from './lib/viewpoints.worker';

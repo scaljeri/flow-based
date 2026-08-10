@@ -1,6 +1,6 @@
 import { FbNodeWorker, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject } from 'rxjs';
-import { Region } from './region';
+import { Region } from './mandelbrot.worker';
 
 /** A place worth looking at, and what it is called. */
 export interface Viewpoint extends Region {

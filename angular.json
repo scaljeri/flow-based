@@ -389,6 +389,35 @@
           }
         }
       }
+    },
+    "@scaljeri/flow-based-complex": {
+      "projectType": "library",
+      "root": "projects/flow-based-complex",
+      "sourceRoot": "projects/flow-based-complex/src",
+      "prefix": "fb",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-complex/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-complex/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-complex/**/*.ts",
+              "projects/flow-based-complex/**/*.html"
+            ]
+          }
+        }
+      }
     }
   }
 }

@@ -283,6 +283,7 @@ export class AppComponent implements OnInit, AfterViewInit {
      */
     await Promise.all([
       this.modules.enable('math'),
+      this.modules.enable('complex'),
       this.modules.enable('graphs'),
       this.modules.enable('network'),
       this.modules.enable('data'),

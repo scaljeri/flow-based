@@ -1,0 +1,21 @@
+{
+  "name": "@scaljeri/flow-based-complex",
+  "version": "0.1.0",
+  "description": "Complex-number dynamics for @scaljeri/flow-based: labelled points on the complex plane, the z²+c iteration, the Mandelbrot field and its named viewpoints — the machinery behind the imaginary-numbers article",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scaljeri/flow-based"
+  },
+  "keywords": ["angular", "flow-based-programming", "fbp", "mandelbrot", "complex-numbers"],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "rxjs": "^7.4.0",
+    "@scaljeri/flow-based": "^0.1.0"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  }
+}

@@ -27,6 +27,9 @@
       "@scaljeri/flow-based-math": [
         "./dist/flow-based-math"
       ],
+      "@scaljeri/flow-based-complex": [
+        "./dist/flow-based-complex"
+      ],
       "@scaljeri/flow-based-graphs": [
         "./dist/flow-based-graphs"
       ],
