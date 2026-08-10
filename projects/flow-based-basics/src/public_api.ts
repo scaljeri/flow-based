@@ -11,6 +11,7 @@ export * from './lib/value.worker';
 export * from './lib/clock.worker';
 export * from './lib/trigger.worker';
 export * from './lib/gate.worker';
+export * from './lib/state.workers';
 export * from './lib/meter.node';
 export * from './lib/subflow.component';
 export * from './lib/subflow-settings.component';

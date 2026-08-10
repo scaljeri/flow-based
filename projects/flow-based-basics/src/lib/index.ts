@@ -26,6 +26,8 @@ import { TRIGGER_SETTINGS, TriggerWorker } from './trigger.worker';
 import { GATE_SETTINGS, GateWorker } from './gate.worker';
 import { ClockSmallComponent, GateSmallComponent, TriggerSmallComponent } from './moment-small.components';
 import { ClockSettingsComponent, TriggerSettingsComponent } from './moment-settings.components';
+import { ACCUMULATOR_SETTINGS, AccumulatorWorker, DELAY_SETTINGS, DelayWorker, HOLD_SETTINGS, HoldWorker } from './state.workers';
+import { AccumulatorSmallComponent, DelaySmallComponent, HoldSmallComponent } from './state-small.components';
 
 /**
  * The standard palette: the set every editor starts with.
@@ -76,6 +78,28 @@ export const BASICS_TYPES: FbNodeTypes = {
     component: { small: GateSmallComponent },
     settings: GATE_SETTINGS,
     worker: GateWorker,
+  },
+
+  /*
+   * The state primitives: explicit memory cells, driven by moments. Without
+   * them state hides inside script nodes where a reader cannot see it.
+   */
+  'hold': {
+    component: { small: HoldSmallComponent },
+    settings: HOLD_SETTINGS,
+    worker: HoldWorker,
+  },
+
+  'accumulator': {
+    component: { small: AccumulatorSmallComponent },
+    settings: ACCUMULATOR_SETTINGS,
+    worker: AccumulatorWorker,
+  },
+
+  'unit-delay': {
+    component: { small: DelaySmallComponent },
+    settings: DELAY_SETTINGS,
+    worker: DelayWorker,
   },
 
   /*
