@@ -2288,6 +2288,154 @@ test('the loose end of a connection can be picked up and dropped on a socket', a
 });
 
 /**
+ * A double-clicked wire bends around a reroute dot.
+ *
+ * Past ten nodes the wires cross the things they connect; every mature
+ * editor grew reroutes independently. The dot is an ordinary node, so the
+ * split is one connection becoming two and undo takes the whole insertion
+ * out in one step.
+ */
+test('double-clicking a wire pins a reroute dot into it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = (await connectionPaths(page)).length;
+  const nodesBefore = await nodeCount(page);
+
+  const spot = await page.evaluate(() => {
+    const path = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector<SVGPathElement>('path.hit')!;
+    const half = path.getPointAtLength(path.getTotalLength() / 2);
+    const at = new DOMPoint(half.x, half.y).matrixTransform(path.getScreenCTM()!);
+
+    return { x: at.x, y: at.y };
+  });
+
+  await page.mouse.dblclick(spot.x, spot.y);
+
+  await expect.poll(() => nodeCount(page)).toBe(nodesBefore + 1);
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
+
+  // One undo takes the whole insertion out — dot and both half-wires.
+  await page.locator('#undo').click();
+  await expect.poll(() => nodeCount(page)).toBe(nodesBefore);
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before);
+});
+
+/**
+ * Hovering a wire shows what last crossed it.
+ *
+ * Inspection without wiring a tap in: the engine remembers the latest value
+ * per input, and the editor answers a hover with it. A snapshot, not a feed
+ * — a graph nobody points at pays nothing.
+ */
+test('hovering a wire shows what last crossed it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  // A point ON the curve, translated to screen coordinates through the
+  // path's own matrix — the bounding box centre of a curve is usually air.
+  const spot = await page.evaluate(() => {
+    const path = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector<SVGPathElement>('path.hit')!;
+    const half = path.getPointAtLength(path.getTotalLength() / 2);
+    const at = new DOMPoint(half.x, half.y).matrixTransform(path.getScreenCTM()!);
+
+    return { x: at.x, y: at.y };
+  });
+
+  await page.mouse.move(spot.x, spot.y);
+
+  const peek = () => page.evaluate(() => document.querySelector('fb-flow-canvas')!.shadowRoot!
+    .querySelector('fb-connections')!.shadowRoot!
+    .querySelector('.peek')?.textContent?.trim() ?? null);
+
+  // The harness source ticks numbers; either one crossed already or the wire
+  // says so honestly.
+  await expect.poll(peek).toMatch(/^(-?\d|nothing yet)/);
+
+  // Leaving takes the reading with it.
+  await page.mouse.move(spot.x, spot.y - 200);
+  await expect.poll(peek).toBeNull();
+});
+
+/**
+ * A wire released on empty canvas asks "land where?".
+ *
+ * The picker lists exactly the types whose input takes what the wire
+ * carries, and the chosen one arrives pre-connected where the wire was
+ * dropped — the modern insertion gesture (tldraw, Blender, Unreal), and a
+ * lesson in the type system disguised as a shortcut.
+ */
+test('a wire dropped on empty canvas offers the types it can land on, wired on choice', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = (await connectionPaths(page)).length;
+  const nodesBefore = await nodeCount(page);
+
+  const start = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const r = node.shadowRoot!.querySelector('.socket-out')!.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  // Arm from the source, pick the loose end up, drop it on empty canvas.
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.mouse.move(start.x + 80, start.y + 80);
+
+  const grip = await page.evaluate(() => {
+    const circle = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector('circle.pending-handle')!;
+    const r = circle.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.move(grip.x, grip.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 160, start.y + 140, { steps: 8 });
+  await page.mouse.up();
+
+  const picker = () => page.evaluate(() => {
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+    const box = root.querySelector('.picker');
+
+    return box
+      ? [...box.querySelectorAll('li button .title')].map(t => t.textContent!.trim())
+      : null;
+  });
+
+  // Number-taking types are offered; the source itself — nothing to take
+  // with — is not.
+  await expect.poll(picker).not.toBeNull();
+
+  const offered = await picker();
+
+  expect(offered).toEqual(expect.arrayContaining(['Sink', 'Scope']));
+  expect(offered).not.toContain('Source');
+
+  await page.evaluate(() => {
+    const root = document.querySelector('fb-flow-canvas')!.shadowRoot!;
+
+    [...root.querySelectorAll<HTMLButtonElement>('.picker li button')]
+      .find(b => b.textContent!.includes('Sink'))!.click();
+  });
+
+  // The node exists, the wire landed, the question is gone.
+  await expect.poll(() => nodeCount(page)).toBe(nodesBefore + 1);
+  await expect.poll(async () => (await connectionPaths(page)).length).toBe(before + 1);
+  expect(await picker()).toBeNull();
+});
+
+/**
  * Fan is the rule on both sides (2026-08-09).
  *
  * An output copies its stream to every consumer, and wires fanning INTO an

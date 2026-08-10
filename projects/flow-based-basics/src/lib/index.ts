@@ -29,6 +29,9 @@ import { ClockSettingsComponent, TriggerSettingsComponent } from './moment-setti
 import { ACCUMULATOR_SETTINGS, AccumulatorWorker, DELAY_SETTINGS, DelayWorker, HOLD_SETTINGS, HoldWorker } from './state.workers';
 import { AccumulatorSmallComponent, DelaySmallComponent, HoldSmallComponent } from './state-small.components';
 import { FlowParamSettingsComponent } from './flow-param-settings.component';
+import { REROUTE_SETTINGS, RerouteWorker } from './reroute.worker';
+import { RerouteSmallComponent } from './reroute-small.component';
+import { FRAME_SETTINGS, FrameSmallComponent, NOTE_SETTINGS, NoteSmallComponent } from './annotation.components';
 
 /**
  * The standard palette: the set every editor starts with.
@@ -159,6 +162,32 @@ export const BASICS_TYPES: FbNodeTypes = {
     },
     settings: { ...SCRIPT_SETTINGS, resizable: true },
     worker: ScriptWorker,
+  },
+
+  /*
+   * The author's margin: a note says why, a frame says what belongs
+   * together — visual only, no boundary, no sockets. The flow's DOCUMENT is
+   * the reader's register; these are for whoever edits the graph.
+   */
+  'note': {
+    component: { small: NoteSmallComponent },
+    settings: NOTE_SETTINGS,
+  },
+
+  'frame': {
+    component: { small: FrameSmallComponent },
+    settings: FRAME_SETTINGS,
+  },
+
+  /*
+   * A bend in a wire. Placed by double-clicking a connection — see the
+   * editor's insertReroute — never really from the palette, but registered
+   * like anything else so the machinery stays ordinary.
+   */
+  'reroute': {
+    component: { small: RerouteSmallComponent },
+    settings: REROUTE_SETTINGS,
+    worker: RerouteWorker,
   },
 
   /*

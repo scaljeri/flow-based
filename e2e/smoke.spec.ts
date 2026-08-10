@@ -3616,6 +3616,43 @@ test('a pick offers every shape, and shows only the chosen shape\'s fields', asy
 });
 
 /**
+ * The author's margin: a note carries prose, a frame sits behind what it
+ * groups.
+ *
+ * Both are visual only — no sockets, no worker — because flows are read
+ * more than run. The frame's z-order is the load-bearing half: a big frame
+ * added last would otherwise swallow every press meant for the nodes on it.
+ */
+test('a note holds its text, and a frame stays behind the nodes it groups', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+
+    editor.addNode('note');
+    editor.addNode('frame');
+  });
+
+  const boxes = () => page.evaluate(() => {
+    const all = [...document.querySelectorAll('fb-flow-canvas fb-node-box')];
+    const of = (type: string) => all.find(n => (n as unknown as { state?: { type?: string } }).state?.type === type);
+    const note = of('note');
+    const frame = of('frame');
+
+    return {
+      noteText: note?.querySelector('textarea')?.value ?? null,
+      frameZ: frame ? getComputedStyle(frame).zIndex : null,
+      nodeZ: all[0] ? getComputedStyle(all[0]).zIndex : null,
+    };
+  });
+
+  await expect.poll(async () => (await boxes()).noteText).toContain('Say why');
+  expect((await boxes()).frameZ).toBe('0');
+  expect(Number((await boxes()).nodeZ)).toBeGreaterThan(0);
+});
+
+/**
  * A pressed socket says what it is.
  *
  * A socket is a dot on the edge of a box, and pressing one starts a

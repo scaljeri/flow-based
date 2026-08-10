@@ -358,6 +358,70 @@ export class FbFlowCanvasElement extends LitElement {
       z-index: 40;
     }
 
+    /* The on-canvas picker: a question, floated where the wire was dropped. */
+    .picker {
+      background: var(--fb-node-background, rgba(0, 0, 0, 0.95));
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      color: #fff;
+      font: 12px system-ui, sans-serif;
+      padding: 8px;
+      position: absolute;
+      width: 200px;
+      z-index: 60;
+    }
+
+    .picker input {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      box-sizing: border-box;
+      color: #fff;
+      font: inherit;
+      margin-bottom: 6px;
+      padding: 4px 6px;
+      width: 100%;
+    }
+
+    .picker ul {
+      list-style: none;
+      margin: 0;
+      max-height: 180px;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .picker li button {
+      align-items: baseline;
+      background: none;
+      border: 0;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      font: inherit;
+      gap: 6px;
+      justify-content: space-between;
+      padding: 4px 6px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .picker li button:hover,
+    .picker li button:focus-visible {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .picker .group {
+      opacity: 0.5;
+    }
+
+    .picker .none {
+      opacity: 0.55;
+      padding: 4px 6px;
+    }
+
     /* Nothing behind a node that has taken the surface. */
     .plane[data-full='true'] > fb-connections,
     .plane[data-full='true'] ::slotted(fb-node-box:not([view='full'])) {
@@ -408,6 +472,12 @@ export class FbFlowCanvasElement extends LitElement {
   /** Marquee, in plane coordinates, while a box-select is being dragged. */
   private marqueeFrom: FbPosition | null = null;
   private marquee: { x: number; y: number; width: number; height: number } | null = null;
+
+  /** What is typed into the on-canvas picker; cleared when it closes. */
+  private pickerQuery = '';
+
+  /** Whether the picker was open at the last render, for the focus-once below. */
+  private pickerWasOpen = false;
   private marqueeAdditive = false;
 
   override connectedCallback(): void {
@@ -544,6 +614,19 @@ export class FbFlowCanvasElement extends LitElement {
     if (this.editor?.flow) {
       this.renderNodes();
     }
+
+    /*
+     * Focus the picker's search ONCE per opening, so the reader can type
+     * straight away — and only once, or every redraw would steal the caret
+     * back from wherever it had legitimately gone.
+     */
+    const pickerOpen = !!this.editor?.picker;
+
+    if (pickerOpen && !this.pickerWasOpen) {
+      this.renderRoot.querySelector<HTMLInputElement>('.picker input')?.focus();
+    }
+
+    this.pickerWasOpen = pickerOpen;
 
     this.tickNote();
   }
@@ -690,6 +773,15 @@ export class FbFlowCanvasElement extends LitElement {
   };
 
   private onPointerDown = (event: PointerEvent): void => {
+    // A press beside an open picker answers the picker — dismissed — and
+    // nothing else: turning it into a pan would move the surface under a
+    // question the user was still reading.
+    if (this.editor.picker) {
+      this.editor.closePicker();
+
+      return;
+    }
+
     // Reaching here means the press missed every node and socket — they stop
     // propagation — so it is a background press.
     this.editor.cancelPending();
@@ -1116,6 +1208,65 @@ export class FbFlowCanvasElement extends LitElement {
         <fb-connections .editor=${this.editor}></fb-connections>
 
         <slot></slot>
+
+        ${this.renderPicker()}
+      </div>
+    `;
+  }
+
+  /**
+   * The on-canvas picker: a wire released on empty canvas asks "land where?"
+   * and this is the answer — a searchable list of exactly the types whose
+   * input takes what the wire carries, inserted pre-connected on choice.
+   */
+  private renderPicker() {
+    const at = this.editor.picker;
+
+    if (!at) {
+      this.pickerQuery = '';
+
+      return nothing;
+    }
+
+    const query = this.pickerQuery.toLowerCase();
+    const candidates = this.editor.pickerCandidates()
+      .filter(c => !query
+        || c.title.toLowerCase().includes(query)
+        || c.type.toLowerCase().includes(query)
+        || (c.group ?? '').toLowerCase().includes(query));
+
+    return html`
+      <div class="picker" style=${`left:${at.x}px;top:${at.y}px`}
+           @pointerdown=${(e: Event) => e.stopPropagation()}>
+        <input
+          type="text"
+          placeholder="land on…"
+          .value=${this.pickerQuery}
+          @input=${(e: Event) => {
+            this.pickerQuery = (e.target as HTMLInputElement).value;
+            this.requestUpdate();
+          }}
+          @keydown=${(e: KeyboardEvent) => {
+            e.stopPropagation();
+
+            if (e.key === 'Escape') {
+              this.editor.closePicker();
+            } else if (e.key === 'Enter' && candidates.length) {
+              this.editor.completeWithNew(candidates[0].type);
+            }
+          }}>
+
+        <ul>
+          ${candidates.map(c => html`
+            <li>
+              <button type="button" @click=${() => this.editor.completeWithNew(c.type)}>
+                <span class="title">${c.title}</span>
+                ${c.group ? html`<span class="group">${c.group}</span>` : nothing}
+              </button>
+            </li>
+          `)}
+          ${candidates.length ? nothing : html`<li class="none">nothing takes this type</li>`}
+        </ul>
       </div>
     `;
   }

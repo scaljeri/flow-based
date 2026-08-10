@@ -48,6 +48,28 @@ export class FbConnectionsElement extends LitElement {
       position: absolute;
     }
 
+    /*
+     * The wire's reading, floated beside the pointer. What last crossed the
+     * hovered connection — inspection without wiring a tap in, which is how
+     * half the taps in a debugged flow used to earn their place.
+     */
+    .peek {
+      background: rgba(0, 0, 0, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      color: #fff;
+      font: 11px system-ui, sans-serif;
+      max-width: 260px;
+      overflow: hidden;
+      padding: 3px 8px;
+      pointer-events: none;
+      position: absolute;
+      text-overflow: ellipsis;
+      transform: translate(10px, -24px);
+      white-space: nowrap;
+      z-index: 50;
+    }
+
     svg {
       height: 100%;
       /*
@@ -238,7 +260,37 @@ export class FbConnectionsElement extends LitElement {
         )}
         ${this.renderPending()}
       </svg>
+      ${this.peek
+        ? html`<div class="peek" style=${`left:${this.peek.x}px;top:${this.peek.y}px`}>${this.peek.text}</div>`
+        : nothing}
     `;
+  }
+
+  /** The hovered wire's reading; null when nothing is hovered. */
+  private peek: { x: number; y: number; text: string } | null = null;
+
+  /*
+   * A snapshot at hover, not a live feed: subscribing per hover would be a
+   * second consumer on the wire, and a value that changes under the pointer
+   * is readable again by leaving and coming back. Hover-only, so a graph
+   * nobody points at pays nothing — the drag-cost guarantee stays intact.
+   */
+  private onLineEnter(event: PointerEvent, connection: FbConnection): void {
+    if (this.editor.pending || connection.in === undefined) {
+      return;
+    }
+
+    const at = this.toPlane(event);
+
+    this.peek = { x: at.x, y: at.y, text: peekLabel(this.editor.flow.lastValueAt(connection.in)) };
+    this.requestUpdate();
+  }
+
+  private onLineLeave(): void {
+    if (this.peek) {
+      this.peek = null;
+      this.requestUpdate();
+    }
   }
 
   /**
@@ -346,7 +398,15 @@ export class FbConnectionsElement extends LitElement {
       </defs>
       <path class="hit"
             d=${route.d}
-            @pointerdown=${(e: PointerEvent) => this.onLinePress(e, connection)}></path>
+            @pointerdown=${(e: PointerEvent) => this.onLinePress(e, connection)}
+            @pointerenter=${(e: PointerEvent) => this.onLineEnter(e, connection)}
+            @pointerleave=${() => this.onLineLeave()}
+            @dblclick=${(e: MouseEvent) => {
+              // A double-click on the wire pins a reroute dot right there.
+              e.stopPropagation();
+              this.onLineLeave();
+              this.editor.insertReroute(connection, this.toPlane(e));
+            }}></path>
       <!--
         The gradient stays on the attribute even while arming: an SVG
         presentation attribute sits below every CSS rule, so the red in the
@@ -512,6 +572,11 @@ export class FbConnectionsElement extends LitElement {
 
     if (target) {
       this.editor.socketClicked(target.socket, target.nodeId);
+    } else if (this.editor.pending) {
+      // Empty canvas is not a miss, it is a question: the picker opens with
+      // exactly the types this wire could land on, and the chosen one
+      // arrives pre-connected right here.
+      this.editor.openPicker(this.toPlane(event));
     }
   };
 
@@ -789,5 +854,41 @@ customElements.define('fb-connections', FbConnectionsElement);
 declare global {
   interface HTMLElementTagNameMap {
     'fb-connections': FbConnectionsElement;
+  }
+}
+
+/** One line for whatever crossed a wire: enough to recognise, never a download. */
+function peekLabel(value: unknown): string {
+  if (value === undefined) {
+    return 'nothing yet';
+  }
+
+  if (value === null) {
+    return 'null';
+  }
+
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? String(value) : value.toFixed(4);
+  }
+
+  if (typeof value === 'string') {
+    return value.length > 60 ? `${value.slice(0, 60)}…` : value;
+  }
+
+  if (typeof value === 'boolean') {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `array (${value.length})`;
+  }
+
+  try {
+    const text = JSON.stringify(value) ?? 'object';
+
+    return text.length > 60 ? `${text.slice(0, 60)}…` : text;
+  } catch {
+    // A value that refers to itself has no JSON; its name is still true.
+    return 'object';
   }
 }

@@ -141,6 +141,21 @@ const types: FbNodeTypes<FbNodeMount> = {
     component: reactNode,
     settings: { title: 'React', sockets: [{ type: 'in' }, { type: 'out' }] },
   },
+  /*
+   * The dot a double-clicked wire bends around — the editor's insertReroute
+   * looks this type up by name, and a registry without it has no reroutes.
+   */
+  reroute: {
+    component: (host: HTMLElement) => {
+      const dot = document.createElement('div');
+
+      dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.65)';
+      host.appendChild(dot);
+
+      return { destroy: () => dot.remove() };
+    },
+    settings: { title: 'Reroute', sockets: [{ type: 'in' }, { type: 'out' }] },
+  },
 };
 
 const editor = new FbEditor({

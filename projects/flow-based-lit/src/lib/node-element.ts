@@ -82,6 +82,15 @@ export class FbNodeElement extends LitElement {
       z-index: 2;
     }
 
+    /*
+     * A frame ANNOTATES a cluster and must sit behind it: same layer as the
+     * wires, below every node it draws a border around. Without this a big
+     * frame added last would swallow every press meant for the nodes on it.
+     */
+    :host([type='frame']) {
+      z-index: 0;
+    }
+
     :host([dragging]) {
       z-index: 5;
     }
@@ -487,10 +496,19 @@ export class FbNodeElement extends LitElement {
 
     .socket.is-accepting {
       background-color: var(--fb-accept-color, #bada55);
+      box-shadow: 0 0 0 3px rgba(186, 218, 85, 0.25);
     }
 
+    /*
+     * Dead, not alarmed. While a wire is being drawn every socket is one of
+     * three things — the one you left from, a place it can land, or not a
+     * candidate at all — and painting the third group red made the whole
+     * canvas shout. Fading them says the same thing calmly, and what remains
+     * bright IS the answer to "where can this go".
+     */
     .socket.is-rejecting {
-      background-color: var(--fb-reject-color, #f06);
+      filter: grayscale(1);
+      opacity: 0.25;
       pointer-events: none;
     }
 
@@ -577,6 +595,10 @@ export class FbNodeElement extends LitElement {
     this.applySize();
     this.applySelected();
     this.setAttribute('view', this.view);
+    // The TYPE, for styles that treat one kind of node differently — the
+    // frame sits behind everything it annotates, and only a selector can
+    // put it there.
+    this.setAttribute('type', this.state?.type ?? '');
     this.notifyView();
     this.drawWires();
   }

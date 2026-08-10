@@ -1011,7 +1011,7 @@ export class FbEditor {
     };
   }
 
-  addNode(type: string): FbNodeState | undefined {
+  addNode(type: string, at?: FbPosition): FbNodeState | undefined {
     const entry = this.types[type];
 
     if (!entry) {
@@ -1025,7 +1025,9 @@ export class FbEditor {
       type,
       title: settings.title,
       id: this.ids.create(),
-      ui: { position: this.placeForNewNode() },
+      // `at` is the picker saying "where the wire was dropped" — in the same
+      // percentages every stored position uses.
+      ui: { position: at ?? this.placeForNewNode() },
       config: settings.config === undefined ? undefined : structuredClone(settings.config),
       sockets: (settings.sockets ?? []).map(s => ({ ...s, id: this.ids.create() })),
       ...(settings.isFlow ? { children: [], connections: [] } : {}),
@@ -1139,6 +1141,191 @@ export class FbEditor {
     }
 
     this.cancelPending();
+  }
+
+  /**
+   * Split a connection around a reroute dot, where the wire was double-
+   * clicked.
+   *
+   * Every mature editor grew these independently (Blender, Unreal, Rete,
+   * ComfyUI) because past ten nodes the wires start crossing the things they
+   * connect. The dot is an ordinary NODE of the registered type `reroute` —
+   * a passthrough the palette ships — so dragging, deleting, undo and
+   * serialisation all come for free; a host without the type simply has no
+   * reroutes, and the double-click does nothing.
+   *
+   * One history capture (inside addNode), everything after it uncaptured on
+   * purpose: undo takes the whole insertion out in one step instead of
+   * leaving a dot with half its wires.
+   */
+  insertReroute(connection: FbConnection, at: FbPosition): FbNodeState | undefined {
+    const plane = this.viewport.planeSize;
+
+    if (!this.types['reroute'] || !plane.width || !plane.height) {
+      return undefined;
+    }
+
+    const clampPct = (value: number) => Math.max(0, Math.min(96, value));
+    const node = this.addNode('reroute', {
+      x: clampPct((at.x / plane.width) * 100 - 1),
+      y: clampPct((at.y / plane.height) * 100 - 2),
+    });
+
+    const inn = node?.sockets?.find(socket => socket.type === 'in');
+    const out = node?.sockets?.find(socket => socket.type === 'out');
+
+    if (!node || !inn || !out) {
+      return undefined;
+    }
+
+    this.flow.removeConnection(connection, this.state);
+    this.flow.addConnection(this.state, {
+      id: this.ids.create(),
+      from: connection.from,
+      to: node.id!,
+      out: connection.out,
+      in: inn.id,
+    });
+    this.flow.addConnection(this.state, {
+      id: this.ids.create(),
+      from: node.id!,
+      to: connection.to,
+      out: out.id,
+      in: connection.in,
+    });
+
+    return node;
+  }
+
+  /* ----------------------------------------------------------------------
+     The on-canvas picker
+     ----------------------------------------------------------------------
+     Release a wire on empty canvas and a searchable list appears of exactly
+     the node types that wire could land on — chosen, the node arrives
+     pre-connected where the wire was dropped. The modern insertion gesture
+     (tldraw's workflow kit, Blender's add-search, Unreal's context menu),
+     and it teaches the type system in passing: the list IS the answer to
+     "what accepts a function".
+     ---------------------------------------------------------------------- */
+
+  /** Where the picker sits, in plane pixels; null when closed. */
+  picker: FbPosition | null = null;
+
+  openPicker(point: FbPosition): void {
+    if (!this.pending) {
+      return;
+    }
+
+    this.picker = point;
+    this.changes.emit({ kind: 'interaction' });
+  }
+
+  closePicker(): void {
+    this.picker = null;
+    // The wire the picker was holding goes with it — a pending line anchored
+    // to a dismissed question would dangle until the next unrelated click.
+    this.cancelPending();
+  }
+
+  /** The types the pending wire could land on, sorted by group then name. */
+  pickerCandidates(): { type: string; title: string; group?: string }[] {
+    const pending = this.pending;
+
+    if (!pending) {
+      return [];
+    }
+
+    const found: { type: string; title: string; group?: string }[] = [];
+
+    for (const [type, entry] of Object.entries(this.types)) {
+      if (this.pickerTarget(type)) {
+        found.push({
+          type,
+          title: entry.settings.title ?? type,
+          group: entry.settings.group,
+        });
+      }
+    }
+
+    return found.sort((a, b) =>
+      (a.group ?? '').localeCompare(b.group ?? '') || a.title.localeCompare(b.title));
+  }
+
+  /** The picker's choice: the node, placed where the wire was dropped, wired. */
+  completeWithNew(type: string): FbNodeState | undefined {
+    const pending = this.pending;
+    const at = this.picker;
+    const plane = this.viewport.planeSize;
+
+    if (!pending || !at || !plane.width || !plane.height) {
+      this.closePicker();
+
+      return undefined;
+    }
+
+    const clampPct = (value: number) => Math.max(0, Math.min(88, value));
+    const node = this.addNode(type, {
+      x: clampPct((at.x / plane.width) * 100),
+      y: clampPct((at.y / plane.height) * 100),
+    });
+
+    this.picker = null;
+
+    if (!node) {
+      this.cancelPending();
+
+      return undefined;
+    }
+
+    /*
+     * Re-armed on purpose: every 'structure' change cancels the pending
+     * connection (a node added from the TOOLBAR must not wire itself to
+     * whatever was armed), and addNode above is exactly such a change. Here
+     * the wire IS the gesture — the picker only exists because one was
+     * dropped — so it survives its own node's arrival.
+     */
+    this.pending = pending;
+
+    const target = this.pickerTarget(type, node);
+
+    if (target) {
+      // The second click of the ordinary gesture — build, wire, disarm.
+      this.socketClicked(target, node.id!);
+    } else {
+      this.cancelPending();
+    }
+
+    return node;
+  }
+
+  /**
+   * The socket the pending wire would land on, on a type or a made node.
+   *
+   * The same directional question `accepts` asks — the OUT side offers, the
+   * IN side demands — against a type's declared sockets, which is all a node
+   * that does not exist yet has.
+   */
+  private pickerTarget(type: string, node?: FbNodeState): FbSocket | undefined {
+    const pending = this.pending;
+
+    if (!pending) {
+      return undefined;
+    }
+
+    const sockets = node?.sockets ?? this.types[type]?.settings.sockets ?? [];
+    const pendingType = this.effectiveType(pending.socket, pending.nodeId);
+
+    return sockets.find(socket => {
+      if (socket.type === pendingType) {
+        return false;
+      }
+
+      const [offer, demand] = pendingType === 'out'
+        ? [pending.socket, socket]
+        : [socket, pending.socket];
+
+      return formatsCompatible(offer, demand, this.assignable);
+    });
   }
 
   cancelPending(): void {

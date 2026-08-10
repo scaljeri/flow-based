@@ -32,6 +32,8 @@ interface InputBridge {
    *  same one back, because workers key their subscriptions by it. */
   connection: FbConnection;
   wires: FbKeyValues<Subscription>;
+  /** What last crossed into this socket, for the editor's wire inspection. */
+  latest?: unknown;
 }
 
 /**
@@ -844,7 +846,22 @@ export class Flow {
     this.outFan[outSocket.id!] = (this.outFan[outSocket.id!] ?? 0) + 1;
 
     bridge.wires[connection.id] = fromWorker.getStream(outSocket)
-      .subscribe(value => bridge.subject.next(this.copyForFanOut(outSocket.id!, value)));
+      .subscribe(value => {
+        const delivered = this.copyForFanOut(outSocket.id!, value);
+
+        bridge.latest = delivered;
+        bridge.subject.next(delivered);
+      });
+  }
+
+  /**
+   * What last crossed into a socket — the editor's answer to a reader
+   * hovering a wire. Undefined both before anything crossed and for a socket
+   * nothing feeds; the two are indistinguishable on purpose, because the
+   * honest display for both is "nothing yet".
+   */
+  lastValueAt(socketId: number): unknown {
+    return this.inputBridges[socketId]?.latest;
   }
 
   /**
