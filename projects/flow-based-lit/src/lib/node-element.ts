@@ -1170,10 +1170,29 @@ export class FbNodeElement extends LitElement {
       this.style.zIndex = String(this.editor.nextZ());
     }
 
+    /*
+     * A frame has no header to reach its settings by — a long press IS its
+     * config button. Cancelled by travel (that press was a drag of the frame
+     * and its contents) and by release (that was a click).
+     */
+    if (this.state.type === 'frame') {
+      clearTimeout(this.framePressTimer);
+      this.framePressTimer = window.setTimeout(() => {
+        if (!this.dragMoved && this.dragPointerId !== null) {
+          this.endDrag();
+          this.editor.history.discard();
+          this.configOpen = true;
+          this.requestUpdate();
+        }
+      }, 500);
+    }
+
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
     window.addEventListener('pointercancel', this.onPointerUp);
   };
+
+  private framePressTimer?: number;
 
   /**
    * Content that owns the pointer owns the wheel.
@@ -1237,6 +1256,8 @@ export class FbNodeElement extends LitElement {
     }
 
     this.dragMoved = true;
+    // Travel turns the frame's long press back into the drag it became.
+    clearTimeout(this.framePressTimer);
     this.toggleAttribute('dragging', true);
 
     const plane = this.editor.viewport.planeSize;
@@ -1315,13 +1336,17 @@ export class FbNodeElement extends LitElement {
      ---------------------------------------------------------------------- */
 
   private resizableNow(): boolean {
-    return this.view === 'normal'
+    return (this.view === 'normal' || this.state?.type === 'frame')
       && this.editor?.types[this.state?.type]?.settings?.resizable === true;
   }
 
   /** Reflect the user-given size; everywhere else the content decides. */
   private applySize(): void {
-    const size = this.view === 'normal' && this.state ? sizeOf(this.state) : undefined;
+    // A frame has ONE form and its size IS that form — drawn at whatever
+    // rectangle was given, in the only view it has.
+    const size = (this.view === 'normal' || this.state?.type === 'frame') && this.state
+      ? sizeOf(this.state)
+      : undefined;
 
     if (size) {
       this.style.width = `${size.width}px`;
@@ -1405,6 +1430,7 @@ export class FbNodeElement extends LitElement {
   };
 
   private endDrag(): void {
+    clearTimeout(this.framePressTimer);
     this.dragPointerId = null;
     this.dragFrom = null;
     this.dragOrigin = null;
@@ -1501,7 +1527,9 @@ export class FbNodeElement extends LitElement {
   private renderHeader() {
     const current = this.view;
 
-    if (current === 'small') {
+    // A frame is what it is: no views to step between, so no header to do
+    // it with — its config opens on a long press instead.
+    if (current === 'small' || this.state?.type === 'frame') {
       return nothing;
     }
 

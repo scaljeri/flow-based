@@ -175,12 +175,12 @@ export const BASICS_TYPES: FbNodeTypes = {
   },
 
   /*
-   * The same drawing at small and normal: a frame's open form is just a
-   * bigger border, and NORMAL is where the shell applies a stored ui.size —
-   * which the draw-a-frame gesture sets to whatever rectangle was drawn.
+   * A frame is what it is: one drawing, no views to step between, no header
+   * — the shell knows the type, applies its stored size in its only form,
+   * and opens its config on a long press.
    */
   'frame': {
-    component: { small: FrameSmallComponent, normal: FrameSmallComponent },
+    component: { small: FrameSmallComponent },
     settings: FRAME_SETTINGS,
   },
 

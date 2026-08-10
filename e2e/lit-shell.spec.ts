@@ -2481,9 +2481,71 @@ test('a long press on empty canvas draws a frame around what it catches', async 
   });
 
   await expect.poll(() => nodeCount(page)).toBe(nodesBefore + 1);
-  expect(made?.view).toBe('normal');
+  // No view — a frame has one form, and the rectangle IS its size.
+  expect(made?.view).toBeUndefined();
   expect(made!.size!.width).toBeGreaterThan(24);
   expect(made!.size!.height).toBeGreaterThan(24);
+});
+
+/**
+ * A frame is what it is: no header, no view buttons — and a long press on
+ * it opens its config, because there is no other way in and none needed.
+ */
+test('a frame has no header, and a long press opens its config', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const frameId = await page.evaluate(() => {
+    const editor = window.fbEditor as unknown as {
+      addNode(type: string, at?: { x: number; y: number }): { id: number; ui: { size?: { width: number; height: number } } };
+    };
+    const frame = editor.addNode('frame', { x: 40, y: 40 });
+
+    frame.ui.size = { width: 220, height: 160 };
+
+    return frame.id;
+  });
+
+  await page.waitForTimeout(200);
+
+  const parts = await page.evaluate(id => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === id)!;
+    const rect = box.getBoundingClientRect();
+
+    return {
+      header: !!box.shadowRoot!.querySelector('.head'),
+      grip: !!box.shadowRoot!.querySelector('.resize-grip'),
+      width: Math.round(rect.width),
+      // The left BORDER, mid-height: the frame's middle belongs to the nodes
+      // that lie on it (a frame is behind them), so the frame itself is
+      // pressed on its edge — clear of both the nodes and the resize grip.
+      x: rect.left + 3,
+      y: rect.top + rect.height / 2,
+    };
+  }, frameId);
+
+  // One form: the stored size applies, the grip is there, the chrome is not.
+  expect(parts.header).toBe(false);
+  expect(parts.grip).toBe(true);
+  expect(parts.width).toBeGreaterThan(200);
+
+  // Hold still on the frame: the press becomes its config.
+  await page.mouse.move(parts.x, parts.y);
+  await page.mouse.down();
+  await page.waitForTimeout(650);
+  await page.mouse.up();
+
+  const panelOpen = await page.evaluate(id => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { id?: number } }).state?.id === id)!;
+    const dialog = box.shadowRoot!.querySelector('fb-node-settings')?.shadowRoot
+      ?.querySelector<HTMLDialogElement>('dialog.config');
+
+    return !!dialog?.open;
+  }, frameId);
+
+  expect(panelOpen).toBe(true);
 });
 
 /**
@@ -2507,7 +2569,6 @@ test('dragging a frame carries the nodes on it', async ({ page }) => {
     const at = source.ui!.position!;
     const frame = editor.addNode('frame', { x: at.x - 4, y: at.y - 6 });
 
-    frame.ui.view = 'normal';
     frame.ui.size = { width: 300, height: 220 };
 
     return { sourceId: source.id, frameId: frame.id, source: { ...at } };

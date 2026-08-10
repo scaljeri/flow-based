@@ -975,9 +975,8 @@ export class FbFlowCanvasElement extends LitElement {
         });
 
         if (node) {
-          // NORMAL from birth: that is the view the shell applies a stored
-          // size in, and the drawn rectangle IS the size.
-          node.ui!.view = 'normal';
+          // The drawn rectangle IS the frame — a frame has one form, and
+          // the shell applies its stored size in it.
           node.ui!.size = { width: rect.width, height: rect.height };
         }
       }
