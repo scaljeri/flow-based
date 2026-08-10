@@ -1,11 +1,24 @@
 import { Component, inject } from '@angular/core';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+
 import { FbStoredFlow, FlowStoreService } from '../../flow-store.service';
 
 /** What the dialog resolves to; the app owns the actual switching. */
 export type FbFlowsAction =
   | { kind: 'open'; id: string }
-  | { kind: 'new'; title: string };
+  | { kind: 'new'; title: string }
+  | { kind: 'load'; url: string }
+  | { kind: 'save'; title: string };
+
+/**
+ * How the dialog was opened. In `save` mode it is the "where does this land?"
+ * question the Save button raises for a flow that has no home yet, so the name
+ * field is primed and the load-from-URL field is out of the way.
+ */
+export interface FbFlowsData {
+  mode?: 'save';
+  title?: string;
+}
 
 /**
  * The saved flows: open one, start a new one, drop one.
@@ -19,9 +32,13 @@ export type FbFlowsAction =
   standalone: false,
   selector: 'fb-flows-dialog',
   template: `
-    <h2 mat-dialog-title>Flows</h2>
+    <h2 mat-dialog-title>{{saveMode ? 'Save flow' : 'Flows'}}</h2>
 
     <mat-dialog-content>
+      @if (saveMode) {
+        <p class="prompt">This flow is only in memory. Give it a name to keep it here.</p>
+      }
+
       <ul>
         @for (flow of flows; track flow.id) {
           <li>
@@ -44,9 +61,23 @@ export type FbFlowsAction =
       </ul>
 
       <form class="new" (submit)="onNew($event)">
-        <input type="text" placeholder="Name for a new flow" [(ngModel)]="name" name="name">
-        <button type="submit" mat-stroked-button [disabled]="!name.trim()">New flow</button>
+        <input type="text" [placeholder]="saveMode ? 'Name for this flow' : 'Name for a new flow'"
+               [(ngModel)]="name" name="name">
+        <button type="submit" mat-stroked-button [disabled]="!name.trim()">
+          {{saveMode ? 'Save' : 'New flow'}}
+        </button>
       </form>
+
+      <!--
+      Loading from a URL is a browsing act, not a saving one: hidden in save
+      mode, where the only question is where the flow in hand should land.
+      -->
+      @if (!saveMode) {
+        <form class="from-url" (submit)="onLoadUrl($event)">
+          <input type="url" placeholder="Load from a URL" [(ngModel)]="url" name="url">
+          <button type="submit" mat-stroked-button [disabled]="!url.trim()">Load</button>
+        </form>
+      }
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
@@ -120,12 +151,25 @@ export type FbFlowsAction =
       opacity: 0.6;
     }
 
-    .new {
+    .prompt {
+      margin: 0 0 12px;
+      opacity: 0.75;
+    }
+
+    .new,
+    .from-url {
       display: flex;
       gap: 8px;
     }
 
-    .new input {
+    .from-url {
+      border-top: 1px solid rgba(127, 127, 127, 0.2);
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+
+    .new input,
+    .from-url input {
       border: 1px solid rgba(127, 127, 127, 0.4);
       border-radius: 6px;
       flex: 1;
@@ -137,20 +181,34 @@ export type FbFlowsAction =
 export class FlowsDialogComponent {
   private readonly store = inject(FlowStoreService);
   private readonly ref = inject(MatDialogRef<FlowsDialogComponent, FbFlowsAction>);
+  private readonly data = inject<FbFlowsData | null>(MAT_DIALOG_DATA, { optional: true });
 
   flows: FbStoredFlow[] = this.store.list();
   currentId = this.store.currentId();
-  name = '';
+  readonly saveMode = this.data?.mode === 'save';
+  name = this.saveMode ? (this.data?.title ?? '') : '';
+  url = '';
 
   onOpen(flow: FbStoredFlow): void {
     this.ref.close({ kind: 'open', id: flow.id });
   }
 
+  /** The name form: a home for the flow in hand (save mode) or a fresh one. */
   onNew(event: Event): void {
     event.preventDefault();
 
     if (this.name.trim()) {
-      this.ref.close({ kind: 'new', title: this.name.trim() });
+      this.ref.close(this.saveMode
+        ? { kind: 'save', title: this.name.trim() }
+        : { kind: 'new', title: this.name.trim() });
+    }
+  }
+
+  onLoadUrl(event: Event): void {
+    event.preventDefault();
+
+    if (this.url.trim()) {
+      this.ref.close({ kind: 'load', url: this.url.trim() });
     }
   }
 

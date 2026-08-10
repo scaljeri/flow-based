@@ -6,7 +6,7 @@ import { ModulesDialogComponent } from './components/modules/modules-dialog.comp
 import { ModulesService } from './modules.service';
 import { APP_VERSION } from './version';
 import { FlowStoreService } from './flow-store.service';
-import { FbFlowsAction, FlowsDialogComponent } from './components/flows/flows-dialog.component';
+import { FbFlowsAction, FbFlowsData, FlowsDialogComponent } from './components/flows/flows-dialog.component';
 import {
   FbHistoryService,
   FbNodeState,
@@ -50,6 +50,28 @@ export class AppComponent implements OnInit, AfterViewInit {
   showDoc = false;
   flow: FbNodeState = data.basic as FbNodeState;
   loadError: string | null = null;
+
+  /**
+   * The flow on screen came from a URL: kept so the address bar can show it and
+   * the share link can carry it, which is the whole point — a flow you cannot
+   * point someone at is a flow you cannot share.
+   */
+  private currentSourceUrl: string | null = null;
+
+  /**
+   * A URL-loaded flow has no home on the shelf, so its changes cannot autosave
+   * anywhere. `dirty` raises the Save button instead; it can only ever be true
+   * while `currentFlowId` is null, because a flow with a home autosaves.
+   */
+  dirty = false;
+
+  /**
+   * The flow exactly as it was fetched, serialised. A programmatic load rebuilds
+   * the graph and that rebuild emits change events — comparing against this
+   * snapshot tells a real edit from the echo of loading, so the Save button
+   * appears when the person changes something, not when the flow arrives.
+   */
+  private loadedJson: string | null = null;
 
   /**
    * Embed mode: the article alone, with the app's chrome gone.
@@ -260,6 +282,39 @@ export class AppComponent implements OnInit, AfterViewInit {
      */
     this.store.remove('pollution-seed');
 
+    /*
+     * A link into the app can name a flow to open: `?flow=<url>`. It wins over
+     * the stored "current" pointer — someone following a shared link means to
+     * see that flow, not whatever this browser had open last. A local copy that
+     * already mirrors the URL is preferred over re-fetching, so a reload does
+     * not throw away edits the person saved (findBySourceUrl).
+     */
+    const fromUrl = new URLSearchParams(window.location.search).get('flow');
+
+    if (fromUrl) {
+      const localId = this.store.findBySourceUrl(fromUrl);
+      const local = localId ? this.store.load(localId) : null;
+
+      if (localId && local) {
+        await this.modules.enableFor(local);
+        this.zone.run(() => {
+          this.currentFlowId = localId;
+          this.currentSourceUrl = fromUrl;
+          this.store.setCurrent(localId);
+          this.flow = local;
+          this.cdr.detectChanges();
+        });
+
+        return;
+      }
+
+      if (await this.loadFromUrl(fromUrl)) {
+        return;
+      }
+      // The fetch failed; loadError is showing. Fall through to the usual flow
+      // so the app still opens on something rather than a blank canvas.
+    }
+
     const id = this.store.currentId();
     const saved = id ? this.store.load(id) : null;
 
@@ -303,6 +358,71 @@ export class AppComponent implements OnInit, AfterViewInit {
     });
   }
 
+  /**
+   * Fetch a flow from anywhere and show it — in memory, not on the shelf.
+   *
+   * A flow can come from any address, not only this site's, so the fetch is a
+   * plain cross-origin request: the source must allow it (CORS), exactly as the
+   * Request node's targets must. On failure the reason is surfaced rather than
+   * swallowed. Modules are registered before the flow is drawn — the same rule
+   * a file load follows — and enableFor's guard keeps an unseen module off.
+   */
+  async loadFromUrl(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const restored = deserializeFlowFromJson(await response.text());
+
+      await this.modules.enableFor(restored);
+
+      this.zone.run(() => {
+        this.history.clear();
+        this.currentFlowId = null;        // in memory: it has no home yet
+        this.currentSourceUrl = url;
+        this.dirty = false;
+        this.flow = restored;
+        this.loadedJson = serializeFlowToJson(restored);
+        this.loadError = null;
+        this.reflectUrl();
+        this.cdr.detectChanges();
+      });
+
+      return true;
+    } catch (err) {
+      this.zone.run(() => {
+        this.loadError = `${url} — ${(err as Error).message}`;
+        this.cdr.detectChanges();
+      });
+
+      return false;
+    }
+  }
+
+  /**
+   * Keep the address bar in step with where the flow came from.
+   *
+   * `?flow=<url>` when the flow has a source, gone when it does not, and
+   * `embed` (or anything else already there) left untouched. replaceState, not
+   * push: opening a flow is not a page the back button should have to walk.
+   */
+  private reflectUrl(): void {
+    const params = new URLSearchParams(window.location.search);
+
+    if (this.currentSourceUrl) {
+      params.set('flow', this.currentSourceUrl);
+    } else {
+      params.delete('flow');
+    }
+
+    const query = params.toString();
+
+    window.history.replaceState(null, '', `${location.pathname}${query ? '?' + query : ''}`);
+  }
+
   /** Write a shipped flow to the shelf when it is absent or out of date. */
   private seed(id: string, fixture: FbNodeState): void {
     const version = (flow?: FbNodeState) => (flow as { config?: { seedVersion?: number } })?.config?.seedVersion;
@@ -332,8 +452,19 @@ export class AppComponent implements OnInit, AfterViewInit {
         return;
       }
 
-      clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => this.persist(), 600);
+      // A flow with a home autosaves. One without — loaded from a URL — has
+      // nowhere to autosave to, so a genuine edit raises the Save button. The
+      // content check is what stops the load's own rebuild from tripping it.
+      if (this.currentFlowId) {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => this.persist(), 600);
+      } else if (!this.dirty && this.loadedJson !== null
+                 && serializeFlowToJson(this.flow) !== this.loadedJson) {
+        this.zone.run(() => {
+          this.dirty = true;
+          this.cdr.detectChanges();
+        });
+      }
     });
   }
 
@@ -351,43 +482,89 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   openFlows(): void {
     // Written first, so the list the dialog shows includes the newest state.
+    // A homeless flow has nowhere to write, so persist() no-ops — deliberate.
     this.persist();
 
     this.dialog.open(FlowsDialogComponent, { width: '360px' })
-      .afterClosed().subscribe((action?: FbFlowsAction) => {
-        if (!action) {
-          return;
-        }
+      .afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
+  }
 
-        if (action.kind === 'open') {
-          const flow = this.store.load(action.id);
+  /**
+   * The Save button on a URL-loaded flow: it has no home, so where it lands is
+   * not obvious — the Flows dialog asks. In save mode the name field is primed
+   * and the answer is a `save` action.
+   */
+  saveToShelf(): void {
+    this.dialog.open(FlowsDialogComponent, {
+      width: '360px',
+      data: { mode: 'save', title: this.flow.title } as FbFlowsData,
+    }).afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
+  }
 
-          if (flow) {
-            /*
-             * Modules first, then the flow: a flow shown before its types are
-             * registered draws every one of its nodes as an empty box, and
-             * the engine gives them no workers at all.
-             */
-            void this.modules.enableFor(flow).then(() => this.zone.run(() => {
-              this.currentFlowId = action.id;
-              this.store.setCurrent(action.id);
-              this.history.clear();
-              this.flow = flow;
-              this.cdr.detectChanges();
-            }));
-          }
-        } else {
-          const flow: FbNodeState = {
-            type: 'flow', title: action.title, sockets: [], children: [], connections: [],
-          } as FbNodeState;
+  private onFlowsAction(action?: FbFlowsAction): void {
+    if (!action) {
+      return;
+    }
 
+    if (action.kind === 'open') {
+      const flow = this.store.load(action.id);
+
+      if (flow) {
+        /*
+         * Modules first, then the flow: a flow shown before its types are
+         * registered draws every one of its nodes as an empty box, and
+         * the engine gives them no workers at all.
+         */
+        void this.modules.enableFor(flow).then(() => this.zone.run(() => {
+          this.currentFlowId = action.id;
+          // A stored flow may remember where it came from — restore the link.
+          this.currentSourceUrl = this.store.sourceUrlOf(action.id) ?? null;
+          this.dirty = false;
+          this.loadedJson = null;
+          this.store.setCurrent(action.id);
           this.history.clear();
           this.flow = flow;
-          this.currentFlowId = this.store.create(flow);
-        }
+          this.reflectUrl();
+          this.cdr.detectChanges();
+        }));
+      }
 
-        this.cdr.detectChanges();
-      });
+      return;
+    }
+
+    if (action.kind === 'load') {
+      void this.loadFromUrl(action.url);
+
+      return;
+    }
+
+    if (action.kind === 'save') {
+      // The in-memory flow gets a home, under the name just chosen, and keeps
+      // its source so its share link still points where it came from. It now
+      // has an id, so from here it autosaves like any other.
+      this.flow = { ...this.flow, title: action.title };
+      this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
+      this.dirty = false;
+      this.loadedJson = null;
+      this.reflectUrl();
+      this.cdr.detectChanges();
+
+      return;
+    }
+
+    // 'new': an empty flow of its own, with no source.
+    const flow: FbNodeState = {
+      type: 'flow', title: action.title, sockets: [], children: [], connections: [],
+    } as FbNodeState;
+
+    this.history.clear();
+    this.flow = flow;
+    this.currentSourceUrl = null;
+    this.dirty = false;
+    this.loadedJson = null;
+    this.currentFlowId = this.store.create(flow);
+    this.reflectUrl();
+    this.cdr.detectChanges();
   }
 
   /* ----------------------------------------------------------------------
@@ -596,7 +773,19 @@ export class AppComponent implements OnInit, AfterViewInit {
    * src, while markup only works in the one place that accepts markup.
    */
   async copyShareLink(): Promise<void> {
-    const url = `${location.origin}${location.pathname}?embed=doc`;
+    // The document renders from the flow, so a shared article must carry where
+    // the flow came from: `?flow=<url>` when it has a source, alongside embed.
+    // Without it a URL-loaded flow's article would open on whatever the reader
+    // had — or on nothing.
+    const params = new URLSearchParams();
+
+    if (this.currentSourceUrl) {
+      params.set('flow', this.currentSourceUrl);
+    }
+
+    params.set('embed', 'doc');
+
+    const url = `${location.origin}${location.pathname}?${params.toString()}`;
 
     try {
       await navigator.clipboard.writeText(url);

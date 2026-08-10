@@ -971,8 +971,10 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
   const dialog = page.locator('fb-flows-dialog');
   await expect(dialog).toBeVisible();
 
-  await dialog.locator('input').fill('Scratch');
-  await dialog.locator('button[type=submit]').click();
+  // The naming form specifically: the dialog also carries a Load-from-URL form
+  // now, so a bare `input` would match two.
+  await dialog.locator('form.new input').fill('Scratch');
+  await dialog.locator('form.new button[type=submit]').click();
 
   await expect
     .poll(() => page.evaluate(() =>
@@ -4854,4 +4856,73 @@ test('a figure can decline the top of the screen', async ({ page }) => {
   // first count on its own.
   expect(positions.filter(position => position === 'sticky').length).toBeGreaterThan(3);
   expect(positions.filter(position => position === 'relative')).toHaveLength(1);
+});
+
+/**
+ * A flow can be opened from any address, and that address stays in the app's
+ * URL so the flow — and its document — can be shared. A URL-loaded flow lives
+ * only in memory: it earns a home on the shelf only once it is changed and
+ * Saved. This walks the whole path, because every hop is where it could break:
+ * the ?flow= boot, the fetch of a cross-origin flow, the address bar keeping
+ * the source, and the Save button that a mere reload could not offer.
+ */
+test('a flow opened from a URL keeps that URL, and Saves into the shelf', async ({ page }) => {
+  // A real flow to serve: whatever the app already draws, in its own envelope.
+  await page.goto('/');
+  await waitUntilReady(page);
+  await menuAction(page, 'json');
+  const envelope = (await page.locator('article.flow-as-json pre').textContent()) ?? '';
+  expect(envelope.length).toBeGreaterThan(10);
+
+  // Served from somewhere that is NOT this site, to prove "anywhere" — and with
+  // the CORS header such a fetch requires, the same demand the Request node makes.
+  const source = 'https://flows.example/shared.json';
+
+  await page.route(source, route => route.fulfill({
+    contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*' },
+    body: envelope,
+  }));
+
+  // Open it by address. The boot fetches it, registers its modules, draws it.
+  await page.goto(`/?flow=${encodeURIComponent(source)}`);
+  await waitUntilReady(page);
+  await expect(page.locator('fb-node-box').first()).toBeVisible();
+  expect(await page.locator('fb-node-box').count()).toBeGreaterThan(1);
+  await expect(page.locator('p.load-error')).toHaveCount(0);
+
+  // The address bar carries the source — that is what makes the link shareable.
+  expect(page.url()).toContain(`flow=${encodeURIComponent(source)}`);
+
+  // In memory, unchanged: no Save button yet, because there is nothing to keep.
+  await expect(page.locator('mat-toolbar button.save-flow')).toHaveCount(0);
+
+  // Change it — add a node — and Save appears, because a URL flow has no home
+  // to autosave into.
+  const before = await page.locator('fb-node-box').count();
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await expect(palette).toBeVisible();
+  const search = palette.locator('input[type="search"]');
+  await search.fill('stat');
+  await expect(palette.locator('button.item')).toHaveCount(1);
+  await search.press('Enter');
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).toBeVisible();
+
+  // Save asks where it should land, because for a homeless flow it is not
+  // obvious: the Flows dialog, in its naming mode.
+  await save.click();
+  const dialog = page.locator('fb-flows-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.locator('form.new input[name="name"]').fill('Shared, kept');
+  await dialog.locator('form.new button[type="submit"]').click();
+
+  // It has a home now: the dialog closes, the Save button is gone, and the
+  // source URL is still there, so its share link still points home.
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('mat-toolbar button.save-flow')).toHaveCount(0);
+  expect(page.url()).toContain(`flow=${encodeURIComponent(source)}`);
 });

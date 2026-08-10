@@ -41,6 +41,15 @@ showing this app's cockpit.
   Add while editing the graph, Edit while reading the page, Save and Cancel
   while writing it.
   -->
+  <!--
+  A flow loaded from a URL lives only in memory. Once it is changed, Save
+  offers it a home on the shelf — shown only then, because a flow with a home
+  already autosaves and one unchanged has nothing to keep.
+  -->
+  @if (!showDoc && dirty) {
+    <button type="button" mat-button class="save-flow" (click)="saveToShelf()">Save</button>
+  }
+
   @if (showDoc) {
     @if (editingDoc) {
       <button type="button" mat-button class="doc-cancel" (click)="cancelDoc()">Cancel</button>

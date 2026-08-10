@@ -5,6 +5,14 @@ export interface FbStoredFlow {
   id: string;
   title: string;
   updated: number;
+
+  /**
+   * Where this copy was fetched from, if it came from a URL rather than being
+   * made here. App-local metadata, deliberately NOT in the flow's JSON: it says
+   * "this shelf entry mirrors that address", which is true of the copy, not of
+   * the flow — a downloaded file opened elsewhere is not that URL.
+   */
+  sourceUrl?: string;
 }
 
 const INDEX_KEY = 'fb-flows';
@@ -55,24 +63,45 @@ export class FlowStoreService {
     }
   }
 
-  /** Write a flow's current state; called by the autosave, so it must be cheap. */
-  save(id: string, flow: FbNodeState): void {
+  /**
+   * Write a flow's current state; called by the autosave, so it must be cheap.
+   *
+   * `sourceUrl` left undefined preserves whatever the entry already had — the
+   * autosave passes nothing, and a saved-from-a-URL flow must not lose its
+   * origin on the next keystroke.
+   */
+  save(id: string, flow: FbNodeState, sourceUrl?: string): void {
     try {
       localStorage.setItem(FLOW_PREFIX + id, serializeFlowToJson(flow));
-      this.touch(id, flow.title ?? 'Untitled');
+      this.touch(id, flow.title ?? 'Untitled', sourceUrl);
     } catch {
       // Quota. The flow on screen is unharmed; the next save tries again.
     }
   }
 
-  /** Register a new flow and make it current. */
-  create(flow: FbNodeState): string {
+  /** Register a new flow and make it current; remembers a source if given. */
+  create(flow: FbNodeState, sourceUrl?: string): string {
     const id = `f${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
 
-    this.save(id, flow);
+    this.save(id, flow, sourceUrl);
     this.setCurrent(id);
 
     return id;
+  }
+
+  /** The address a stored flow was fetched from, if any. */
+  sourceUrlOf(id: string): string | undefined {
+    return this.list().find(f => f.id === id)?.sourceUrl;
+  }
+
+  /**
+   * The id of a stored flow that mirrors this URL, if one exists.
+   *
+   * Opening `?flow=X` prefers a local copy that remembers X over re-fetching:
+   * a reload would otherwise throw away edits the person had already saved.
+   */
+  findBySourceUrl(url: string): string | null {
+    return this.list().find(f => f.sourceUrl === url)?.id ?? null;
   }
 
   remove(id: string): void {
@@ -84,9 +113,13 @@ export class FlowStoreService {
     }
   }
 
-  private touch(id: string, title: string): void {
+  private touch(id: string, title: string, sourceUrl?: string): void {
+    const prior = this.list().find(f => f.id === id);
     const rest = this.list().filter(f => f.id !== id);
+    // undefined = keep the prior origin (the autosave path); a string sets it.
+    const source = sourceUrl ?? prior?.sourceUrl;
+    const entry: FbStoredFlow = { id, title, updated: Date.now(), ...(source ? { sourceUrl: source } : {}) };
 
-    localStorage.setItem(INDEX_KEY, JSON.stringify([{ id, title, updated: Date.now() }, ...rest]));
+    localStorage.setItem(INDEX_KEY, JSON.stringify([entry, ...rest]));
   }
 }
