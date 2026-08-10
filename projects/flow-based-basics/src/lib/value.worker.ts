@@ -2,6 +2,13 @@ import { FbNodeSettings, FbNodeWorker, FbSocket, writeConfigValue } from '@scalj
 import { Observable, ReplaySubject } from 'rxjs';
 
 export interface ValueConfig {
+  /**
+   * The parameter's name, when this value IS one: a named value inside a
+   * subflow is that subflow's parameter, reachable from outside as
+   * `params.<name>` — see the engine's FlowWorker. A plain value node on a
+   * canvas needs no name.
+   */
+  name?: string;
   /** What travels: a number or a piece of text. */
   kind?: 'number' | 'string';
   value?: number | string;
@@ -95,7 +102,8 @@ export class ValueWorker implements FbNodeWorker {
   }
 
   get label(): string {
-    return this.config.label ?? '';
+    // A parameter's name is its label unless the author says otherwise.
+    return this.config.label || this.config.name || '';
   }
 
   set(value: number | string): void {

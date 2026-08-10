@@ -28,6 +28,7 @@ import { ClockSmallComponent, GateSmallComponent, TriggerSmallComponent } from '
 import { ClockSettingsComponent, TriggerSettingsComponent } from './moment-settings.components';
 import { ACCUMULATOR_SETTINGS, AccumulatorWorker, DELAY_SETTINGS, DelayWorker, HOLD_SETTINGS, HoldWorker } from './state.workers';
 import { AccumulatorSmallComponent, DelaySmallComponent, HoldSmallComponent } from './state-small.components';
+import { FlowParamSettingsComponent } from './flow-param-settings.component';
 
 /**
  * The standard palette: the set every editor starts with.
@@ -158,6 +159,25 @@ export const BASICS_TYPES: FbNodeTypes = {
     },
     settings: { ...SCRIPT_SETTINGS, resizable: true },
     worker: ScriptWorker,
+  },
+
+  /*
+   * A named value INSIDE a subflow is that subflow's parameter — Morrison's
+   * IIP applied to composites. The engine routes `params.<name>` on the
+   * subflow to the child with that name, the subflow's settings panel lists
+   * them, and a document pill can drive `{{subflowId:params.top}}`. This is
+   * what turns "four hand-edited copies of one subflow" into "four
+   * instances, one value different per copy".
+   */
+  'flow-param': {
+    component: { small: ValueSmallComponent },
+    settingsComponent: FlowParamSettingsComponent,
+    settings: {
+      title: 'Parameter',
+      config: { name: 'param', kind: 'number', value: 0 },
+      sockets: [{ type: 'out', format: 'number' }],
+    },
+    worker: ValueWorker,
   },
 
   /*

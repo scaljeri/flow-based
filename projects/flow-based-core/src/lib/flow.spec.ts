@@ -392,6 +392,41 @@ describe('fan-out: every consumer owns its packet', () => {
   });
 });
 
+describe('subflow parameters (params.<name>)', () => {
+  it('routes a write on the subflow to the named child\'s worker', () => {
+    /*
+     * Why this matters: a subflow could not take a parameter, so each
+     * variant was a full copy — the tno fixture holds four stationReadings
+     * differing in one string. A NAMED child that accepts config writes IS
+     * a parameter of its subflow; the engine routes, type-agnostically.
+     */
+    class ParamWorker extends RecordingWorker {
+      writes: [string, unknown][] = [];
+
+      setConfigValue(path: string, value: unknown) {
+        this.writes.push([path, value]);
+      }
+    }
+
+    const types = { ...flowTypes(), param: { worker: ParamWorker, settings: { isFlow: false, title: 'Param', config: {}, sockets: [] } } };
+    const child: any = { id: 20, type: 'param', config: { name: 'top' }, sockets: [] };
+    const other: any = { id: 30, type: 'param', config: { name: 'anders' }, sockets: [] };
+    const sub: any = { id: 10, type: 'flow', sockets: [], children: [child, other], connections: [] };
+    const root: any = { id: 1, type: 'flow', sockets: [], children: [sub], connections: [] };
+
+    const flow = new Flow(types as any).initialize(root);
+
+    flow.getWorker(10)!.setConfigValue!('params.top', 12);
+
+    expect((flow.getWorker(20) as any as ParamWorker).writes).toEqual([['value', 12]]);
+    expect((flow.getWorker(30) as any as ParamWorker).writes).toEqual([]);
+
+    // A path that is not a parameter of anything is ignored, not guessed at.
+    flow.getWorker(10)!.setConfigValue!('params.bestaatniet', 1);
+    expect((flow.getWorker(20) as any as ParamWorker).writes).toHaveLength(1);
+  });
+});
+
 describe('Flow.removeNode', () => {
   it('removes the node from its parent children', () => {
     const { root, a } = flatFixture();

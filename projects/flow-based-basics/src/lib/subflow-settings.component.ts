@@ -34,6 +34,28 @@ import { FbNodeState, NodeService } from '@scaljeri/flow-based';
       The chosen node is drawn at its own smallest size — the picture it shows
       when it is one node among many.
     </p>
+
+    <!--
+      The subflow's parameters: its flow-param children, editable from OUT
+      here without entering the graph. Written through the subflow's worker
+      (params.<name>), so the running param re-emits — a bare config write
+      would persist and change nothing on the wires.
+    -->
+    @if (params.length) {
+      <div class="params">
+        <span class="heading">Parameters</span>
+
+        @for (param of params; track param.id) {
+          <label class="field">
+            <span>{{name(param)}}</span>
+            <input [type]="kind(param) === 'number' ? 'number' : 'text'"
+                   autocomplete="off" spellcheck="false"
+                   [value]="value(param)"
+                   (change)="onParam(param, $event)">
+          </label>
+        }
+      </div>
+    }
   `,
   styles: [`
     :host {
@@ -73,6 +95,30 @@ import { FbNodeState, NodeService } from '@scaljeri/flow-based';
       margin: 0;
       opacity: 0.65;
     }
+
+    .params {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+      padding-top: 10px;
+    }
+
+    .heading {
+      opacity: 0.8;
+    }
+
+    .params input {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      box-sizing: border-box;
+      color: #fff;
+      font: inherit;
+      padding: 6px 8px;
+      width: 100%;
+    }
   `]
 })
 export class SubflowSettingsComponent {
@@ -87,6 +133,36 @@ export class SubflowSettingsComponent {
     const chosen = (this.service.state.config as { preview?: number } | undefined)?.preview;
 
     return typeof chosen === 'number' ? String(chosen) : '';
+  }
+
+  get params(): FbNodeState[] {
+    return this.children.filter(child => child.type === 'flow-param');
+  }
+
+  name(param: FbNodeState): string {
+    return (param.config as { name?: string } | undefined)?.name || param.title || 'param';
+  }
+
+  kind(param: FbNodeState): string {
+    return (param.config as { kind?: string } | undefined)?.kind === 'string' ? 'string' : 'number';
+  }
+
+  value(param: FbNodeState): string {
+    const value = (param.config as { value?: unknown } | undefined)?.value;
+
+    return value === undefined || value === null ? '' : String(value);
+  }
+
+  onParam(param: FbNodeState, event: Event): void {
+    const raw = (event.target as HTMLInputElement).value;
+    const value = this.kind(param) === 'number' ? Number(raw) : raw;
+
+    if (typeof value === 'number' && Number.isNaN(value)) {
+      return;
+    }
+
+    this.service.worker?.setConfigValue?.(`params.${this.name(param)}`, value);
+    this.cdr.detectChanges();
   }
 
   onPreview(event: Event): void {

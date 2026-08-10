@@ -795,7 +795,7 @@ export class Flow {
     if (worker) {
       this.workers[id] = new worker(state.config, state.sockets);
     } else if (this.flowTypes[state.type].settings.isFlow) {
-      this.workers[id] = new FlowWorker(state);
+      this.workers[id] = new FlowWorker(state, childId => this.workers[childId]);
     }
   }
 

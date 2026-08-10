@@ -5,7 +5,40 @@ export class FlowWorker implements FbNodeWorker {
   private subjects: { [key: number]: Subject<any> } = {};
   private subscriptions: { [key: number]: Subscription } = {};
 
-  constructor(private state: FbNodeState) {
+  constructor(
+    private state: FbNodeState,
+    /** How this worker reaches its CHILDREN's workers — the Flow owns them all. */
+    private readonly workerOf?: (id: number) => FbNodeWorker | undefined,
+  ) {
+  }
+
+  /**
+   * A subflow's parameters, written from outside.
+   *
+   * `params.<name>` routes to the direct child whose config carries that
+   * `name` and whose worker accepts config writes — type-agnostic on
+   * purpose: a NAMED child that takes setConfigValue IS a parameter of its
+   * subflow, whatever module it came from. This is what lets one subflow be
+   * copied four times with one value different per copy, instead of four
+   * hand-edited variants (the stationReadings contortion), and lets a
+   * document pill drive `{{subflowId:params.top}}`.
+   */
+  setConfigValue(path: string, value: unknown): void {
+    const match = /^params\.(.+)$/.exec(path);
+
+    if (!match || !this.workerOf) {
+      return;
+    }
+
+    const name = match[1];
+
+    for (const child of this.state.children ?? []) {
+      if ((child.config as { name?: string } | undefined)?.name === name) {
+        const worker = this.workerOf(child.id!);
+
+        worker?.setConfigValue?.('value', value);
+      }
+    }
   }
 
   setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
