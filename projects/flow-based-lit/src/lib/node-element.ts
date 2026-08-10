@@ -1255,11 +1255,12 @@ export class FbNodeElement extends LitElement {
 
     this.applyPosition();
     /*
-     * Positions feed socket geometry, so the lines have to follow. Emitted
-     * without a node id: this is a position change, not a size change, so nodes
-     * ignore it and only the connection layer redraws.
+     * Positions feed socket geometry, so the lines have to follow. A MOVED
+     * emit: still without a payload id — this is a position change, not a
+     * size change, so nodes ignore it — but the connection layer learns which
+     * node's curves to re-key, instead of re-keying the whole graph per frame.
      */
-    this.editor.geometry.changes.emit(undefined);
+    this.editor.geometry.emitMoved(this.state.id!);
   };
 
   private onPointerUp = (event: PointerEvent): void => {

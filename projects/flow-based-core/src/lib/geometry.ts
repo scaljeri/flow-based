@@ -73,7 +73,28 @@ export class FbGeometry {
    */
   readonly changes = new FbEmitter<number | undefined>();
 
+  /**
+   * The single node a position-only emit is about, readable DURING that emit.
+   *
+   * The payload above already means two things — a node id is "this node's
+   * SIZE changed" (the node re-renders, its sockets move), undefined is
+   * "positions moved" (nodes ignore it, curves follow). A one-node drag is a
+   * third thing: positions moved, but of ONE known node — and the connection
+   * layer can then re-key just that node's curves instead of all of them,
+   * which is the difference between a drag costing O(moved) and O(graph).
+   * A side channel rather than a payload change, so every existing consumer
+   * keeps its meaning.
+   */
+  movedNodeId?: number;
+
   constructor(readonly layout: FbSocketLayout = FB_DEFAULT_SOCKET_LAYOUT) {}
+
+  /** A position-only change of one known node; see `movedNodeId`. */
+  emitMoved(nodeId: number): void {
+    this.movedNodeId = nodeId;
+    this.changes.emit(undefined);
+    this.movedNodeId = undefined;
+  }
 
   /** Report a node's rendered size. Called from a ResizeObserver. */
   setNodeSize(nodeId: number, size: FbNodeBox): void {

@@ -200,6 +200,8 @@ export class FbConnectionsElement extends LitElement {
     // A new editor is a new graph; nothing cached about the old one holds.
     this.socketIndex.clear();
     this.nodeSigs.clear();
+    this.keyCache.clear();
+    this.touching = undefined;
     this.unsubscribe?.();
     this.unsubscribe = this.editor?.changes.subscribe((change: FbEditorChange) => {
       // Anything that can move a line. Not 'history' or 'formats' on their own —
@@ -212,8 +214,22 @@ export class FbConnectionsElement extends LitElement {
       }
 
       if (change.kind === 'viewport') {
-        // The plane moved under any cached measurement of it.
+        // The plane moved under any cached measurement of it — and under
+        // every memoised key, which bakes the plane size in.
         this.planeRect = null;
+        this.keyCache.clear();
+      }
+
+      if (change.kind === 'geometry') {
+        // A size change names its node in the payload; a one-node drag names
+        // it in the side channel; a bulk move names nothing and clears all.
+        const moved = change.nodeId ?? this.editor.geometry.movedNodeId;
+
+        if (moved !== undefined) {
+          this.invalidateNode(moved);
+        } else {
+          this.keyCache.clear();
+        }
       }
 
       // Only these change which sockets exist or where they sit; a drag frame
@@ -222,12 +238,49 @@ export class FbConnectionsElement extends LitElement {
       if (change.kind === 'structure' || change.kind === 'connections' || change.kind === 'sockets') {
         this.socketIndex.clear();
         this.nodeSigs.clear();
+        this.keyCache.clear();
+        this.touching = undefined;
       }
     });
   }
 
   /** Socket lookup for the frame being rendered; see socketColour. */
   private socketIndex = new Map<number, FbSocket>();
+
+  /*
+   * The memoised geometry key per CONNECTION, invalidated by the node that
+   * moved. geometryKey walks positions, sizes, sides and both nodes' socket
+   * signatures — cheap once, but it ran for every connection on every drag
+   * frame, which made a drag cost exactly linear in the graph: the ratio the
+   * perf test guards sat permanently on its bound of four. A one-node drag
+   * announces WHICH node moved, so every curve that does not touch it can
+   * reuse yesterday's string. Multi-selection moves announce nothing and
+   * clear the lot — correctness first, and dragging four hundred selected
+   * nodes is not the case the guarantee is about.
+   */
+  private keyCache = new Map<number, string>();
+
+  /** connection ids per node id, for targeted invalidation; rebuilt lazily. */
+  private touching?: Map<number, number[]>;
+
+  private invalidateNode(nodeId: number): void {
+    if (!this.touching) {
+      this.touching = new Map();
+
+      for (const connection of this.editor.connections) {
+        for (const end of [connection.from, connection.to]) {
+          const list = this.touching.get(end) ?? [];
+
+          list.push(connection.id);
+          this.touching.set(end, list);
+        }
+      }
+    }
+
+    for (const id of this.touching.get(nodeId) ?? []) {
+      this.keyCache.delete(id);
+    }
+  }
 
   /**
    * One socket-layout signature per NODE per render, memoised because
@@ -256,7 +309,7 @@ export class FbConnectionsElement extends LitElement {
         ${repeat(
           this.editor.connections,
           connection => connection.id,
-          connection => guard([this.geometryKey(connection)], () => this.renderConnection(connection)),
+          connection => guard([this.cachedKey(connection)], () => this.renderConnection(connection)),
         )}
         ${this.renderPending()}
       </svg>
@@ -291,6 +344,18 @@ export class FbConnectionsElement extends LitElement {
       this.peek = null;
       this.requestUpdate();
     }
+  }
+
+  /** The memoised key, computed only for curves whose node actually moved. */
+  private cachedKey(connection: FbConnection): string {
+    let key = this.keyCache.get(connection.id);
+
+    if (key === undefined) {
+      key = this.geometryKey(connection);
+      this.keyCache.set(connection.id, key);
+    }
+
+    return key;
   }
 
   /**
@@ -634,6 +699,10 @@ export class FbConnectionsElement extends LitElement {
 
     const id = connection.id;
 
+    // Arming is part of this curve's memoised key; a stale entry would keep
+    // the guard from the very re-render that turns the line red.
+    this.keyCache.delete(id);
+
     this.arming = {
       id,
       pointerId: event.pointerId,
@@ -681,6 +750,8 @@ export class FbConnectionsElement extends LitElement {
     }
 
     clearTimeout(this.arming.timer);
+    // The un-arming is a key change too — the red has to come OFF.
+    this.keyCache.delete(this.arming.id);
     this.arming = undefined;
 
     window.removeEventListener('pointermove', this.onArmingMove);

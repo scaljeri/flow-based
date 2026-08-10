@@ -331,7 +331,9 @@ async function dragCost(page: Page, nodes: number): Promise<{
     // measured and is a large share of a 20-frame sample.
     for (let i = 0; i < 10; i++) {
       editor.children[0].ui!.position!.x += 0.02;
-      editor.geometry.changes.emit(undefined);
+      // What a real one-node drag calls: a moved-emit, so nodes ignore it and
+      // the connection layer re-keys only this node's curves.
+      editor.geometry.emitMoved(editor.children[0].id);
       await conn.updateComplete;
     }
 
@@ -351,7 +353,7 @@ async function dragCost(page: Page, nodes: number): Promise<{
 
       for (let i = 0; i < FRAMES; i++) {
         editor.children[0].ui!.position!.x += 0.02;
-        editor.geometry.changes.emit(undefined);
+        editor.geometry.emitMoved(editor.children[0].id);
         await conn.updateComplete;
       }
 
