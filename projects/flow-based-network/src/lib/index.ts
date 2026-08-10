@@ -3,6 +3,9 @@ import { fbAny } from '@scaljeri/flow-based-core';
 import { RequestWorker } from './request.worker';
 import { RequestSmallComponent } from './request-small.component';
 import { RequestSettingsComponent } from './request-settings.component';
+import { WEBSOCKET_SETTINGS, WebSocketWorker } from './websocket.worker';
+import { WebSocketSmallComponent } from './websocket-small.component';
+import { WebSocketSettingsComponent } from './websocket-settings.component';
 
 /**
  * The Network module: data that arrives on somebody else's schedule.
@@ -54,6 +57,20 @@ export const NETWORK_MODULE: FbModule = {
         ],
       },
       worker: RequestWorker,
+    },
+
+    /*
+     * The request's standing sibling: a connection that stays open, for data
+     * that arrives on the server's schedule rather than being asked for.
+     * (There is no UDP node and cannot be — a browser has no raw sockets;
+     * WebTransport datagrams would be the nearest thing, behind an HTTP/3
+     * server.)
+     */
+    'net-websocket': {
+      component: { small: WebSocketSmallComponent },
+      settingsComponent: WebSocketSettingsComponent,
+      settings: WEBSOCKET_SETTINGS,
+      worker: WebSocketWorker,
     },
   },
 };
