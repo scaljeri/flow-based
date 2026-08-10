@@ -338,6 +338,60 @@ describe('fan-in: wires into one input interleave', () => {
   });
 });
 
+describe('fan-out: every consumer owns its packet', () => {
+  function fannedFixture() {
+    const source: any = { id: 10, type: 'source', sockets: [{ id: 100, type: 'out', format: 'data' }] };
+    const a: any = { id: 20, type: 'sink', sockets: [{ id: 200, type: 'in', format: 'data' }] };
+    const b: any = { id: 30, type: 'sink', sockets: [{ id: 300, type: 'in', format: 'data' }] };
+    const root: any = {
+      id: 1, type: 'flow', sockets: [], children: [source, a, b],
+      connections: [
+        { id: 1000, from: 10, to: 20, out: 100, in: 200 },
+        { id: 1001, from: 10, to: 30, out: 100, in: 300 },
+      ],
+    };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    return {
+      flow,
+      root,
+      source: flow.getWorker(10) as any as RecordingWorker,
+      a: flow.getWorker(20) as any as RecordingWorker,
+      b: flow.getWorker(30) as any as RecordingWorker,
+    };
+  }
+
+  it('two consumers of one output do not share a mutable object', () => {
+    /*
+     * The shared-state bug class FBP exists to eliminate: a consumer that
+     * sorts the list it was handed re-orders the same list inside the node
+     * beside it. Fanned out, every packet has one owner.
+     */
+    const { source, a, b } = fannedFixture();
+
+    source.subject.next({ list: [3, 1, 2] });
+
+    (a.received[0] as { list: number[] }).list.sort();
+
+    expect((b.received[0] as { list: number[] }).list).toEqual([3, 1, 2]);
+  });
+
+  it('a single consumer keeps identity — the common case pays nothing', () => {
+    const { flow, root, b } = fannedFixture();
+
+    // Cut the fan back to one wire; what remains sees the very object.
+    flow.removeConnection(root.connections[0], root);
+
+    const packet = { list: [1] };
+    const { source } = { source: flow.getWorker(10) as any as RecordingWorker };
+
+    source.subject.next(packet);
+
+    expect(b.received[0]).toBe(packet);
+  });
+});
+
 describe('Flow.removeNode', () => {
   it('removes the node from its parent children', () => {
     const { root, a } = flatFixture();

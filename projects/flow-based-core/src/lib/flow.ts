@@ -56,6 +56,8 @@ export class Flow {
   private connections: FbKeyValues<NodeConnection> = {};
   private sockets: FbKeyValues<number> = {};
   private inputBridges: FbKeyValues<InputBridge> = {};
+  /** How many wires leave each output socket — the fan-out width. */
+  private outFan: FbKeyValues<number> = {};
   private propagationReport: FbPropagationReport | null = null;
 
   /**
@@ -839,8 +841,36 @@ export class Flow {
       toWorker.setStream(bridge.subject.asObservable(), inSocket, connection);
     }
 
+    this.outFan[outSocket.id!] = (this.outFan[outSocket.id!] ?? 0) + 1;
+
     bridge.wires[connection.id] = fromWorker.getStream(outSocket)
-      .subscribe(value => bridge.subject.next(value));
+      .subscribe(value => bridge.subject.next(this.copyForFanOut(outSocket.id!, value)));
+  }
+
+  /**
+   * Fan-out means COPY.
+   *
+   * Two consumers sharing one mutable object on a wire is the shared-state
+   * bug class flow-based programming exists to eliminate: a plot that sorts
+   * the list it was handed re-orders the same list inside the map beside it.
+   * Classical FBP gives every information packet one owner; at these data
+   * sizes structuredClone buys that guarantee for pennies — and only when
+   * the output actually fans (one consumer keeps identity, so the common
+   * case pays nothing).
+   */
+  private copyForFanOut(outSocketId: number, value: unknown): unknown {
+    if ((this.outFan[outSocketId] ?? 0) < 2 || value === null || typeof value !== 'object') {
+      return value;
+    }
+
+    try {
+      return structuredClone(value);
+    } catch {
+      // Not cloneable means something executable is travelling, which the
+      // contract already forbids. Shared beats lost; the upstream node is
+      // the thing to fix.
+      return value;
+    }
   }
 
   /**
@@ -855,6 +885,10 @@ export class Flow {
       // No bridge was ever built — one end had no worker (an unknown type,
       // or a connection removed before any stream was set through it).
       return;
+    }
+
+    if (bridge.wires[connection.id] && connection.out !== undefined && this.outFan[connection.out]) {
+      this.outFan[connection.out]--;
     }
 
     bridge.wires[connection.id]?.unsubscribe();
