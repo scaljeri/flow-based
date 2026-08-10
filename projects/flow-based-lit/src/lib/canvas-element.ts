@@ -485,6 +485,9 @@ export class FbFlowCanvasElement extends LitElement {
 
   /** What is typed into the picker's search; cleared when it closes. */
   private pickerQuery = '';
+
+  /** Whether the current gesture STARTED on the picker's backdrop; see @click. */
+  private pickerPressedBackdrop = false;
   private marqueeAdditive = false;
 
   override connectedCallback(): void {
@@ -1252,12 +1255,24 @@ export class FbFlowCanvasElement extends LitElement {
             this.editor.closePicker();
           }
         }}
+        @pointerdown=${(e: PointerEvent) => {
+          this.pickerPressedBackdrop = e.target === e.currentTarget;
+        }}
         @click=${(e: MouseEvent) => {
-          // A press on the backdrop is a press on the dialog element itself;
-          // anything inside hits a child instead.
-          if (e.target === e.currentTarget) {
+          /*
+           * Backdrop dismissal needs the WHOLE gesture on the backdrop, not
+           * just the click. A tap on the pending handle opens this dialog on
+           * pointerup, and the browser then synthesises a click at the same
+           * spot — which lands on the backdrop that has just appeared over
+           * it. Judged by the click alone, the picker closed in the same
+           * gesture that opened it; the pointerdown check tells the two
+           * apart, because that press happened before the dialog existed.
+           */
+          if (e.target === e.currentTarget && this.pickerPressedBackdrop) {
             this.editor.closePicker();
           }
+
+          this.pickerPressedBackdrop = false;
         }}>
         <input
           type="text"

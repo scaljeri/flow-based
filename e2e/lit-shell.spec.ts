@@ -2436,6 +2436,66 @@ test('a wire dropped on empty canvas offers the types it can land on, wired on c
 });
 
 /**
+ * A TAP on the loose end opens the picker — and it stays open.
+ *
+ * Opening happens on pointerup, and the browser then synthesises a click at
+ * the same spot, which lands on the backdrop that has just appeared over
+ * it. Judged by the click alone the picker closed in the very gesture that
+ * opened it — created on touch-down, gone on touch-end, which is exactly
+ * how the bug read on a phone.
+ */
+test('tapping the loose end opens the picker, and the same tap does not close it', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const start = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!;
+    const r = node.shadowRoot!.querySelector('.socket-out')!.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.mouse.move(start.x + 70, start.y + 70);
+
+  const grip = await page.evaluate(() => {
+    const circle = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections')!.shadowRoot!
+      .querySelector('circle.pending-handle')!;
+    const r = circle.getBoundingClientRect();
+
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
+  // A tap: down and up on the same spot, no drag between them.
+  await page.mouse.move(grip.x, grip.y);
+  await page.mouse.down();
+  await page.mouse.up();
+
+  const pickerOpen = () => page.evaluate(() => {
+    const dialog = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector<HTMLDialogElement>('dialog.picker');
+
+    return !!dialog?.open;
+  });
+
+  await expect.poll(pickerOpen).toBe(true);
+
+  // Still open once the synthesised click has come and gone.
+  await page.waitForTimeout(400);
+  expect(await pickerOpen()).toBe(true);
+
+  // A deliberate backdrop press still dismisses — down AND up on it.
+  const size = page.viewportSize()!;
+
+  await page.mouse.click(size.width - 10, size.height - 10);
+  await expect.poll(pickerOpen).toBe(false);
+});
+
+/**
  * The picker stays on screen wherever the wire is dropped.
  *
  * It used to sit at the drop position in plane coordinates — where the NODE
