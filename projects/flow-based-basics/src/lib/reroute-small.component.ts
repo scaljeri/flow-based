@@ -1,37 +1,42 @@
 import { Component } from '@angular/core';
 
 /**
- * A ring with a core: the wire's bend, drawn big enough to grab.
+ * A junction with the config glyph in it, big enough to grab.
  *
- * It was a 10px dot, which floated invisibly inside the shell's 24px floor —
- * smaller than its own sockets, and on a phone smaller than any finger. The
- * drawing now fills the floor, and reads as what it is: a junction.
+ * It was a bare 10px dot, then a 24px ring — still smaller than its own two
+ * sockets, which sit on its left and right edges and nearly touched. At
+ * 40px the sockets have room, and the app's own config mark (the one the
+ * header's settings button wears) says this dot is a node like any other,
+ * not a stray speck.
  */
 @Component({
   standalone: true,
   selector: 'fb-reroute-small',
-  template: '',
+  template: `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M3 7h18M3 12h18M3 17h18" />
+      <circle cx="8" cy="7" r="2" fill="currentColor" />
+      <circle cx="16" cy="12" r="2" fill="currentColor" />
+      <circle cx="10" cy="17" r="2" fill="currentColor" />
+    </svg>
+  `,
   styles: [`
     :host {
-      border: 2px solid rgba(255, 255, 255, 0.45);
+      align-items: center;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.35);
       border-radius: 50%;
       box-sizing: border-box;
-      display: block;
-      height: 24px;
-      position: relative;
-      width: 24px;
+      color: rgba(255, 255, 255, 0.7);
+      display: flex;
+      height: 40px;
+      justify-content: center;
+      width: 40px;
     }
 
-    :host::after {
-      background: rgba(255, 255, 255, 0.75);
-      border-radius: 50%;
-      content: '';
-      height: 8px;
-      left: 50%;
-      position: absolute;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 8px;
+    svg {
+      height: 18px;
+      width: 18px;
     }
   `]
 })
