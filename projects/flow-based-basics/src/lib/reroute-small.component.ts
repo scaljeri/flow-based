@@ -3,9 +3,9 @@ import { Component } from '@angular/core';
 /**
  * A junction with the config glyph in it, big enough to grab.
  *
- * It was a bare 10px dot, then a 24px ring — still smaller than its own two
+ * It was a bare 10px dot, then a 24px ring, then 40px — still smaller than its own two
  * sockets, which sit on its left and right edges and nearly touched. At
- * 40px the sockets have room, and the app's own config mark (the one the
+ * 60px the sockets have room, and the app's own config mark (the one the
  * header's settings button wears) says this dot is a node like any other,
  * not a stray speck.
  */
@@ -29,14 +29,14 @@ import { Component } from '@angular/core';
       box-sizing: border-box;
       color: rgba(255, 255, 255, 0.7);
       display: flex;
-      height: 40px;
+      height: 60px;
       justify-content: center;
-      width: 40px;
+      width: 60px;
     }
 
     svg {
-      height: 18px;
-      width: 18px;
+      height: 28px;
+      width: 28px;
     }
   `]
 })
