@@ -36,3 +36,85 @@ describe('PickWorker wired overrides', () => {
     expect(config.a).toBe('series.types.sectors');
   });
 });
+
+describe('PickWorker shapes', () => {
+  const feed = (worker: PickWorker, value: unknown) => {
+    const source = new Subject<unknown>();
+
+    worker.setStream(source, data, wire(1));
+    source.next(value);
+  };
+
+  it('geo: a list becomes places, reading the fields it was told', () => {
+    const worker = new PickWorker({
+      shape: 'geo', list: 'stations', a: 'lat', b: 'lon', label: 'name', ref: 'code',
+    });
+    const seen: unknown[] = [];
+
+    worker.getStream().subscribe(value => seen.push(value));
+    feed(worker, {
+      stations: [
+        { lat: 52.4, lon: 4.9, name: 'Adam', code: 'S1' },
+        { lat: 51.9, lon: 4.5, name: 'Rdam', code: 'S2' },
+      ],
+    });
+
+    expect(seen.at(-1)).toMatchObject({
+      places: [
+        { lat: 52.4, lon: 4.9, label: 'Adam', ref: 'S1' },
+        { lat: 51.9, lon: 4.5, label: 'Rdam', ref: 'S2' },
+      ],
+    });
+  });
+
+  it('grid: named parts become a raster with its bounds ordered', () => {
+    const worker = new PickWorker({ shape: 'grid', values: 'values', lat: 'lat', lon: 'lon', dims: 'shape' });
+    const seen: { grid?: { rows: number; cols: number; latMin: number; latMax: number; values: unknown[] } }[] = [];
+
+    worker.getStream().subscribe(value => seen.push(value as typeof seen[number]));
+    feed(worker, { values: [1, 2, 3, 4], lat: [54, 50], lon: [3, 8], shape: [2, 2] });
+
+    const grid = seen.at(-1)!.grid!;
+
+    expect(grid.rows).toBe(2);
+    expect(grid.cols).toBe(2);
+    // Bounds come out ordered whichever way the file wrote them.
+    expect(grid.latMin).toBe(50);
+    expect(grid.latMax).toBe(54);
+    expect(grid.values).toEqual([1, 2, 3, 4]);
+  });
+
+  it('stack: labels and rows, with the merge pattern folding pairs', () => {
+    // The European files split every sector by (non-)native — thirty-six
+    // labels for eighteen sources. The pattern folds each pair under its
+    // first group.
+    const worker = new PickWorker({
+      shape: 'stack', labels: 'labels', values: 'values',
+      merge: '^(.*?) (?:non-)?native$',
+    });
+    const seen: { stack?: { labels: string[]; rows: (number[] | null)[] } }[] = [];
+
+    worker.getStream().subscribe(value => seen.push(value as typeof seen[number]));
+    feed(worker, {
+      labels: ['industry native', 'industry non-native', 'traffic native'],
+      values: [[1, 2, 3]],
+    });
+
+    const stack = seen.at(-1)!.stack!;
+
+    expect(stack.labels).toEqual(['industry', 'traffic']);
+    expect(stack.rows).toEqual([[3, 3]]);
+  });
+
+  it('value: a JSON field holding the string "3" travels as the number 3', () => {
+    // The adding node trusts the socket's type rather than checking — "3"
+    // down a number wire once answered 34.
+    const worker = new PickWorker({ shape: 'value', a: 'count' });
+    const seen: unknown[] = [];
+
+    worker.getStream().subscribe(value => seen.push(value));
+    feed(worker, { count: '3' });
+
+    expect(seen.at(-1)).toBe(3);
+  });
+});

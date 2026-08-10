@@ -12,7 +12,7 @@
     "build:graphs": "ng build @scaljeri/flow-based-graphs",
     "build:demo": "npm run build:lib && node scripts/stamp-version.mjs && ng build flow-based-demo && node scripts/build-playground.mjs",
     "watch:lib": "ng build @scaljeri/flow-based --watch --configuration development",
-    "test": "ng test @scaljeri/flow-based-core && ng test @scaljeri/flow-based-math && ng test @scaljeri/flow-based-data && ng test @scaljeri/flow-based-network && ng test @scaljeri/flow-based && ng test @scaljeri/flow-based-basics && ng test flow-based-demo",
+    "test": "ng test @scaljeri/flow-based-core && ng test @scaljeri/flow-based-math && ng test @scaljeri/flow-based-complex && ng test @scaljeri/flow-based-graphs && ng test @scaljeri/flow-based-data && ng test @scaljeri/flow-based-network && ng test @scaljeri/flow-based && ng test @scaljeri/flow-based-basics && ng test flow-based-demo",
     "test:lib": "ng test @scaljeri/flow-based",
     "lint": "ng lint",
     "check:docs": "node scripts/check-doc-examples.mjs",

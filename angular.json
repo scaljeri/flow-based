@@ -288,6 +288,12 @@
               "projects/flow-based-graphs/**/*.html"
             ]
           }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-graphs/tsconfig.spec.json"
+          }
         }
       }
     },
@@ -421,6 +427,12 @@
               "projects/flow-based-complex/**/*.ts",
               "projects/flow-based-complex/**/*.html"
             ]
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-complex/tsconfig.spec.json"
           }
         }
       }
