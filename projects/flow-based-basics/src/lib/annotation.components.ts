@@ -27,7 +27,7 @@ export const NOTE_SETTINGS: FbNodeSettings = {
 
 export const FRAME_SETTINGS: FbNodeSettings = {
   title: 'Frame',
-  config: { label: 'These belong together' },
+  config: { label: 'These belong together', description: '' },
   resizable: true,
   sockets: [],
   addableSockets: 'none',
@@ -86,19 +86,24 @@ export class NoteSmallComponent {
   }
 }
 
-/** The frame's border and its label; the shell keeps it behind the nodes. */
+/**
+ * The frame's border and its label, drawn to be READ.
+ *
+ * Not editable in place: a frame is set through its config panel (a long
+ * press opens it), the same as everything else about it. The label used to
+ * be a live `<input>` in the drawing, which made the annotation the one
+ * thing on the canvas you edited by typing on it rather than in the panel —
+ * an inconsistency, and a press-trap over the very surface used to move the
+ * frame. Now it is text. The optional description sits under it, smaller.
+ */
 @Component({
   standalone: true,
   selector: 'fb-frame-small',
   template: `
-    <input
-      type="text"
-      autocomplete="off"
-      spellcheck="false"
-      [value]="label"
-      (change)="onLabel($event)"
-      (keydown)="$event.stopPropagation()"
-      (pointerdown)="$event.stopPropagation()">
+    <div class="label">{{label}}</div>
+    @if (description) {
+      <div class="description">{{description}}</div>
+    }
   `,
   styles: [`
     :host {
@@ -109,34 +114,98 @@ export class NoteSmallComponent {
       height: 100%;
       min-height: 120px;
       min-width: 180px;
+      padding: 6px 10px;
     }
 
-    input {
-      background: none;
-      border: 0;
+    .label {
       color: rgba(255, 255, 255, 0.6);
       font: 12px system-ui, sans-serif;
-      padding: 6px 10px;
-      width: calc(100% - 20px);
     }
 
-    input:focus {
-      color: #fff;
-      outline: none;
+    .description {
+      color: rgba(255, 255, 255, 0.4);
+      font: 11px system-ui, sans-serif;
+      margin-top: 2px;
     }
   `]
 })
 export class FrameSmallComponent {
   private readonly service = inject(NodeService);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   get label(): string {
     return (this.service.state.config as { label?: string } | undefined)?.label ?? '';
   }
 
-  onLabel(event: Event): void {
-    ((this.service.state.config ??= {}) as { label?: string }).label =
-      (event.target as HTMLInputElement).value;
+  get description(): string {
+    return (this.service.state.config as { description?: string } | undefined)?.description ?? '';
+  }
+}
+
+/** A frame's name and its optional description — the only way to set them. */
+@Component({
+  standalone: true,
+  selector: 'fb-frame-settings',
+  template: `
+    <label class="field">
+      <span class="label">Name</span>
+      <input type="text" autocomplete="off" spellcheck="false"
+             [value]="read('label')" placeholder="These belong together"
+             (change)="write('label', $event)">
+    </label>
+
+    <label class="field">
+      <span class="label">Description — optional</span>
+      <textarea rows="2" spellcheck="false"
+                [value]="read('description')" placeholder="what they have in common"
+                (change)="write('description', $event)"></textarea>
+    </label>
+  `,
+  styles: [`
+    :host {
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      font: 12px system-ui, sans-serif;
+      gap: 8px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .label {
+      opacity: 0.8;
+    }
+
+    input,
+    textarea {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      box-sizing: border-box;
+      color: #fff;
+      font: inherit;
+      padding: 6px 8px;
+      resize: vertical;
+      width: 100%;
+    }
+  `]
+})
+export class FrameSettingsComponent {
+  private readonly service = inject(NodeService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  read(key: 'label' | 'description'): string {
+    return (this.service.state.config as Record<string, string> | undefined)?.[key] ?? '';
+  }
+
+  write(key: 'label' | 'description', event: Event): void {
+    ((this.service.state.config ??= {}) as Record<string, string>)[key] =
+      (event.target as HTMLInputElement | HTMLTextAreaElement).value;
+    // The drawing reads from config; the shell has to be told to look again.
+    this.service.refresh();
     this.cdr.detectChanges();
   }
 }

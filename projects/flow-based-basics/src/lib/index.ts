@@ -31,7 +31,7 @@ import { AccumulatorSmallComponent, DelaySmallComponent, HoldSmallComponent } fr
 import { FlowParamSettingsComponent } from './flow-param-settings.component';
 import { REROUTE_SETTINGS, RerouteWorker } from './reroute.worker';
 import { RerouteSmallComponent } from './reroute-small.component';
-import { FRAME_SETTINGS, FrameSmallComponent, NOTE_SETTINGS, NoteSmallComponent } from './annotation.components';
+import { FRAME_SETTINGS, FrameSettingsComponent, FrameSmallComponent, NOTE_SETTINGS, NoteSmallComponent } from './annotation.components';
 
 /**
  * The standard palette: the set every editor starts with.
@@ -181,6 +181,7 @@ export const BASICS_TYPES: FbNodeTypes = {
    */
   'frame': {
     component: { small: FrameSmallComponent },
+    settingsComponent: FrameSettingsComponent,
     settings: FRAME_SETTINGS,
   },
 

@@ -3707,12 +3707,17 @@ test('a note holds its text, and a frame stays behind the nodes it groups', asyn
 
     return {
       noteText: note?.querySelector('textarea')?.value ?? null,
+      // The frame's label is READ, not typed: text, not an input.
+      frameLabel: frame?.querySelector('.label')?.textContent?.trim() ?? null,
+      frameInputs: frame?.querySelectorAll('input, textarea').length ?? -1,
       frameZ: frame ? getComputedStyle(frame).zIndex : null,
       nodeZ: all[0] ? getComputedStyle(all[0]).zIndex : null,
     };
   });
 
   await expect.poll(async () => (await boxes()).noteText).toContain('Say why');
+  expect((await boxes()).frameLabel).toContain('belong together');
+  expect((await boxes()).frameInputs).toBe(0);
   expect((await boxes()).frameZ).toBe('0');
   expect(Number((await boxes()).nodeZ)).toBeGreaterThan(0);
 
