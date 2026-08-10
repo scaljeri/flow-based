@@ -2488,6 +2488,44 @@ test('a long press on empty canvas draws a frame around what it catches', async 
 });
 
 /**
+ * A pinch never leaves a frame behind.
+ *
+ * The draw-a-frame gesture is a held press on empty canvas; a two-finger
+ * zoom starts with exactly such a press, so a pinch that begins slowly used
+ * to let the timer fire and a frame appear mid-zoom. The second finger
+ * cancels it.
+ */
+test('a two-finger pinch does not create a frame', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const before = await nodeCount(page);
+  const surface = canvas(page);
+
+  // First finger down on empty canvas — this is what arms the frame timer.
+  await surface.dispatchEvent('pointerdown', {
+    pointerId: 1, pointerType: 'touch', isPrimary: true, clientX: 120, clientY: 300, button: 0,
+  });
+
+  // A beat, but less than the 500ms hold, then the second finger arrives.
+  await page.waitForTimeout(150);
+  await surface.dispatchEvent('pointerdown', {
+    pointerId: 2, pointerType: 'touch', isPrimary: false, clientX: 320, clientY: 300, button: 0,
+  });
+
+  // Now hold past the timer, pinch outward, and lift.
+  await page.waitForTimeout(500);
+  await page.mouse.up().catch(() => undefined);
+  await surface.dispatchEvent('pointerup', { pointerId: 1, pointerType: 'touch', clientX: 120, clientY: 300 });
+  await surface.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'touch', clientX: 320, clientY: 300 });
+
+  // No frame, and no draft rectangle left on screen.
+  expect(await nodeCount(page)).toBe(before);
+  expect(await page.evaluate(() => !!document.querySelector('fb-flow-canvas')!.shadowRoot!
+    .querySelector('.frame-draft'))).toBe(false);
+});
+
+/**
  * A frame is what it is: no header, no view buttons — and a long press on
  * it opens its config, because there is no other way in and none needed.
  */

@@ -746,6 +746,15 @@ export class FbFlowCanvasElement extends LitElement {
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
     if (this.pointers.size === 2) {
+      /*
+       * A second finger means a pinch, never a frame. The first finger armed
+       * the draw-a-frame timer (a held press on empty canvas), and a pinch
+       * that starts slowly would let it fire — a frame appearing mid-zoom. A
+       * draft already begun is abandoned too, in case the timer beat the
+       * second finger to it.
+       */
+      this.cancelFramePress();
+      this.frameDraft = null;
       this.rebaselinePinch();
     }
   };
