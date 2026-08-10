@@ -102,7 +102,11 @@ const canvasNode: FbNodeMount = (host, { api }) => {
 const types: FbNodeTypes<FbNodeMount> = {
   source: {
     component: boxNode('#3f51b5', 'Source'),
-    settings: { title: 'Source', sockets: [{ type: 'out', format: 'number' }] },
+    settings: {
+      title: 'Source',
+      help: 'A test source that emits numbers.',
+      sockets: [{ type: 'out', format: 'number' }],
+    },
   },
   sink: {
     /*

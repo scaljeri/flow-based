@@ -7,6 +7,7 @@ export interface GateConfig {
 
 export const GATE_SETTINGS: FbNodeSettings = {
   title: 'Gate',
+  help: 'Passes what arrives, or holds it. Wire a 0 into \'open\' to close it, non-zero to open; with a clock on \'open\' it becomes a figure\'s play/stop. Reopening emits what arrived while it was shut, so you see NOW rather than the past.',
   config: { open: true },
   sockets: [
     // Untyped, like the tap: a gate carries whatever is on the wire.

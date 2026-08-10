@@ -15,6 +15,7 @@ export interface TriggerConfig {
 
 export const TRIGGER_SETTINGS: FbNodeSettings = {
   title: 'Trigger',
+  help: 'A press, on the canvas. Each press sends a rising count on the wire — \'do it now\' for whatever is downstream. Give it an action name and a document button {{!name:Label}} fires it too, so an article can drive the graph.',
   config: { label: 'Go', action: '' },
   sockets: [{ type: 'out', format: 'number' }],
 };

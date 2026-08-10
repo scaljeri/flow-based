@@ -20,7 +20,11 @@
         <h3 class="group">{{group.name}}</h3>
 
         @for (key of group.keys; track key) {
-          <button type="button" class="item" (click)="onSelection(key)">{{title(key)}}</button>
+          <div class="row">
+            <button type="button" class="item" (click)="onSelection(key)">{{title(key)}}</button>
+            <button type="button" class="info" aria-label="What this node does"
+                    (click)="onInfo(key, $event)">i</button>
+          </div>
         }
       </section>
     }
@@ -30,3 +34,19 @@
     }
   </div>
 </section>
+
+@if (helpFor) {
+  <div class="help-backdrop" role="button" tabindex="0" aria-label="Close explanation"
+       (click)="helpFor = null" (keydown.escape)="helpFor = null" (keydown.enter)="helpFor = null">
+    <div class="help-dialog" role="dialog" (click)="$event.stopPropagation()"
+         (keydown)="$event.stopPropagation()">
+      <header>
+        <strong>{{title(helpFor)}}</strong>
+        <button type="button" mat-icon-button aria-label="Close" (click)="helpFor = null">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+      <p>{{helpText(helpFor)}}</p>
+    </div>
+  </div>
+}

@@ -3734,6 +3734,37 @@ test('a node type\'s own settings reappear on every reopen', async ({ page }) =>
 });
 
 /**
+ * The Add palette's `i` explains a node without adding it.
+ *
+ * Each row is a name to add and an info mark beside it; the mark opens the
+ * node's help, and — crucially — does NOT fall through to the Add the row
+ * would otherwise do.
+ */
+test('the Add palette info button explains a node without adding it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const before = await page.locator('fb-node-box').count();
+
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+
+  await expect(palette).toBeVisible();
+  await palette.locator('input[type="search"]').fill('tap');
+
+  // The info mark on the Tap row.
+  await palette.locator('.row', { hasText: 'Tap' }).locator('button.info').click();
+
+  const dialog = page.locator('.cdk-overlay-container fb-component-selection .help-dialog');
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('passing through');
+
+  // Nothing was added — the info press did not select.
+  expect(await page.locator('fb-node-box').count()).toBe(before);
+});
+
+/**
  * The author's margin: a note carries prose, a frame sits behind what it
  * groups.
  *

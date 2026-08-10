@@ -19,6 +19,7 @@ import { FbNodeSettings, NodeService } from '@scaljeri/flow-based';
  */
 export const NOTE_SETTINGS: FbNodeSettings = {
   title: 'Note',
+  help: 'A margin note for whoever edits the flow — prose that explains, next to the thing it explains. It computes nothing and has no sockets; the document view is for the reader, this is for the author.',
   config: { text: 'Say why, not what.' },
   resizable: true,
   sockets: [],
@@ -27,6 +28,7 @@ export const NOTE_SETTINGS: FbNodeSettings = {
 
 export const FRAME_SETTINGS: FbNodeSettings = {
   title: 'Frame',
+  help: 'A labelled box around a cluster of nodes — draw one with a long press on empty canvas, drag it to carry its contents. Visual only, no boundary and no sockets, unlike a subflow. Its name and description are set through its config.',
   config: { label: 'These belong together', description: '' },
   resizable: true,
   sockets: [],

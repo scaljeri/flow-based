@@ -2488,6 +2488,57 @@ test('a long press on empty canvas draws a frame around what it catches', async 
 });
 
 /**
+ * The settings panel's `i` explains the node.
+ *
+ * Every node carries a help sentence in its type; the panel's info mark
+ * opens it as a second modal, so a reader who opened a node and forgot what
+ * it does has an answer one press away.
+ */
+test('the settings panel info button explains the node', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  // Open the Source node's settings.
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')! as unknown as
+      { configOpen: boolean; requestUpdate(): void };
+
+    box.configOpen = true;
+    box.requestUpdate();
+  });
+
+  const settings = () => page.evaluate(() => document.querySelector('fb-flow-canvas')!.shadowRoot!
+    .querySelector('fb-node-box')!.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!);
+
+  // Press the info mark.
+  await expect.poll(() => page.evaluate(() => {
+    const s = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!
+      .shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+
+    return !!s.querySelector('button.info');
+  })).toBe(true);
+
+  await page.evaluate(() => {
+    const s = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!
+      .shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+
+    (s.querySelector('button.info') as HTMLButtonElement).click();
+  });
+
+  await expect.poll(() => page.evaluate(() => {
+    const s = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { title?: string } }).state?.title === 'Source')!
+      .shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!;
+    const dialog = s.querySelector<HTMLDialogElement>('dialog.help-dialog');
+
+    return dialog?.open ? dialog.querySelector('p')?.textContent ?? null : null;
+  })).toContain('emits numbers');
+});
+
+/**
  * A pinch never leaves a frame behind.
  *
  * The draw-a-frame gesture is a held press on empty canvas; a two-finger

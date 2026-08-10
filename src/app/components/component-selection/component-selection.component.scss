@@ -73,17 +73,27 @@ mat-toolbar {
   z-index: 1;
 }
 
+/* The type's name and its `i`, on one row. */
+.row {
+  align-items: stretch;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  display: flex;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
 .item {
   background: none;
   border: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
   color: rgba(0, 0, 0, 0.85);
   cursor: pointer;
   display: block;
+  flex: 1;
   font: 14px system-ui, sans-serif;
   padding: 11px 16px 11px 24px;
   text-align: left;
-  width: 100%;
 }
 
 .item:hover,
@@ -91,6 +101,57 @@ mat-toolbar {
   background: rgba(63, 81, 181, 0.08);
 }
 
-.item:last-child {
-  border-bottom: none;
+/* The info mark: a lettered circle, distinct from the Add it sits beside. */
+.info {
+  align-items: center;
+  align-self: center;
+  background: none;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  color: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  display: inline-flex;
+  font: italic 600 13px 'Times New Roman', serif;
+  height: 24px;
+  justify-content: center;
+  margin: 0 14px 0 4px;
+  width: 24px;
+}
+
+.info:hover,
+.info:focus-visible {
+  background: rgba(63, 81, 181, 0.1);
+}
+
+.help-backdrop {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 10;
+}
+
+.help-dialog {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  color: rgba(0, 0, 0, 0.85);
+  max-width: 90vw;
+  padding: 8px 20px 20px;
+  width: 360px;
+}
+
+.help-dialog header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.help-dialog p {
+  line-height: 1.55;
+  margin: 4px 0 0;
+  white-space: pre-line;
 }

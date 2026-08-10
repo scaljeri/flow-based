@@ -30,6 +30,7 @@ export interface ValueConfig {
 
 export const VALUE_SETTINGS: FbNodeSettings = {
   title: 'Value',
+  help: 'A constant with a handle on it — a number (with a slider) or a piece of text. The reader\'s knob: any input downstream becomes tunable, and a document pill can drive it. What a computation depends on, shown on the canvas.',
   config: { kind: 'number', value: 0, min: 0, max: 100, step: 1, label: '' },
   sockets: [{ type: 'out', format: 'number' }],
 };

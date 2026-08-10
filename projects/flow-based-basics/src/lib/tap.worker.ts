@@ -3,6 +3,7 @@ import { Observable, Subject, Subscription } from 'rxjs';
 
 export const TAP_SETTINGS: FbNodeSettings = {
   title: 'Tap',
+  help: 'A window onto a wire: it shows the last values passing through and passes them on untouched. Inspection without changing what it inspects.',
   config: {expanded: false},
   /*
    * Because what arrives here is not always a number. A station list or a grid

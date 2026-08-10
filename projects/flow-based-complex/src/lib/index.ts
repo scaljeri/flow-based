@@ -65,6 +65,7 @@ export const COMPLEX_MODULE: FbModule = {
       settingsComponent: PointsSettingsComponent,
       settings: {
         title: 'Points',
+        help: 'Walks a hand-written list of labelled complex points, one per tick — the whole set travels each time with the current one marked. Four dots labelled 1, i, -1, -i are an argument, not decoration.',
         group: GROUP,
         config: {
           points: [
@@ -94,6 +95,7 @@ export const COMPLEX_MODULE: FbModule = {
       settingsComponent: IterateSettingsComponent,
       settings: {
         title: 'Iterate z² + c',
+        help: 'Follows z → z² + c from a starting point and shows the orbit — does it settle, or fly off? Wire a c in to walk the orbit for a point pressed on the set. Emits the same \'marks\' a points node does.',
         group: GROUP,
         config: { c: { re: -0.5, im: 0.5 }, steps: 40, escape: 2, interval: 300 },
         sockets: [
@@ -121,6 +123,7 @@ export const COMPLEX_MODULE: FbModule = {
       settingsComponent: MandelbrotSettingsComponent,
       settings: {
         title: 'Mandelbrot',
+        help: 'Asks the z²+c question of every point in a square at once, and hands back how long each took to escape as a field. It draws nothing itself — a field plot colours the answers.',
         group: GROUP,
         config: { view: { re: -0.6, im: 0, span: 3.2 }, iterations: 200, resolution: 400 },
         sockets: [
@@ -141,6 +144,7 @@ export const COMPLEX_MODULE: FbModule = {
       component: { small: ViewpointsSmallComponent },
       settings: {
         title: 'Viewpoints',
+        help: 'A list of named places in the complex plane — landmarks to jump to. Emits the chosen one as a region; a document pill can step through them. Where to look, as data on a wire.',
         group: GROUP,
         config: { which: 0 },
         sockets: [{ type: 'out', format: 'region' }],

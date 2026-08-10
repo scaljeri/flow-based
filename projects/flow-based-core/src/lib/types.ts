@@ -180,6 +180,14 @@ export type FbNodeWorkerCtor = new (config?: any, sockets?: FbSocket[]) => FbNod
 export interface FbNodeSettings {
   title: string;
   /**
+   * What this node is FOR, in a sentence or three — shown behind the `i` in
+   * the palette and the settings panel. Plain prose, no markup: it is read
+   * by whoever is deciding whether this is the node they want, and by
+   * whoever opened one and forgot. Absent means the `i` still appears and
+   * says only what the type is called.
+   */
+  help?: string;
+  /**
    * Which palette group this type is listed under. Absent means the general
    * list. A group is presentation — nothing in the engine reads it — but it
    * lives here because the palette's only knowledge of a type IS its settings.

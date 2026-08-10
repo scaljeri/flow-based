@@ -151,6 +151,7 @@ export const GRAPHS_MODULE: FbModule = {
       settingsComponent: PlotSettingsComponent,
       settings: {
         title: 'Plot',
+        help: 'A Cartesian graph over time or over x. Each input socket is its own LAYER, drawn in socket order — a curve with its marked points on top, two functions side by side. Add sockets for more layers.',
         group: 'Graphs',
         // The normal view grows with a corner grip; the plot fills what it gets.
         resizable: true,
@@ -187,6 +188,7 @@ export const GRAPHS_MODULE: FbModule = {
       },
       settings: {
         title: 'Plane',
+        help: 'An equal-scale plane with axes through zero — for trajectories and marked positions where the shape matters, like an orbit on the complex plane. One layer per input socket.',
         group: 'Graphs',
         resizable: true,
         // Trajectories, and named positions: the same plane draws both.
@@ -207,6 +209,7 @@ export const GRAPHS_MODULE: FbModule = {
       settingsComponent: PlacesSettingsComponent,
       settings: {
         title: 'Places',
+        help: 'Walks a hand-written list of geographic places, one per tick, for a map to draw. The map\'s counterpart to the Points node.',
         group: 'Graphs',
         config: {
           places: [
@@ -237,6 +240,7 @@ export const GRAPHS_MODULE: FbModule = {
       settingsComponent: MapSettingsComponent,
       settings: {
         title: 'Map',
+        help: 'A Leaflet map that draws whatever geographic data reaches it — places or a raster — and reports the place last pressed. Real coordinates, real tiles.',
         group: 'Graphs',
         resizable: true,
         config: { track: true, follow: true },

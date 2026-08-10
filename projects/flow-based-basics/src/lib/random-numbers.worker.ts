@@ -3,6 +3,7 @@ import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_SETTINGS: FbNodeSettings = {
   title: 'Random number generator',
+  help: 'A generator: a new random number every interval, between the start and end you set. The simplest possible source — for demonstrating a stream when the numbers themselves do not matter.',
   /*
    * Behaviour only. The sliders' BOUNDS (0–100, 100–10000ms) used to live
    * here too, which put the settings panel's furniture in every saved flow —

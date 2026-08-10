@@ -3,6 +3,7 @@ import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export const REROUTE_SETTINGS: FbNodeSettings = {
   title: 'Reroute',
+  help: 'A bend in a wire. Double-click a connection to drop one in; it carries whatever the wire carried, untouched, and lets you route a line around a crowded graph. Delete it and the wire straightens.',
   config: {},
   // Untyped on both sides: a dot carries whatever the wire it split carried,
   // and the engine's format negotiation settles the types straight through.

@@ -3,6 +3,7 @@ import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 
 export const SCRIPT_SETTINGS: FbNodeSettings = {
   title: 'JavaScript',
+  help: 'The escape hatch: behaviour you write, in JavaScript, when no other node fits. Your code gets each value, an emit() to send on, and a state object kept between runs. It compiles as you type.',
   config: {
     source: [
       '// Runs for every value that arrives.',

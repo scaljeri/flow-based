@@ -40,6 +40,7 @@ abstract class StateWorker implements FbNodeWorker {
 
 export const HOLD_SETTINGS: FbNodeSettings = {
   title: 'Hold',
+  help: 'Freezes a value on demand. Any moment on \'hold\' latches whatever is flowing now, and holds it until the next latch — \'keep this reading, change the parameter, compare\'.',
   config: {},
   sockets: [
     { type: 'in' },
@@ -94,6 +95,7 @@ export interface AccumulatorConfig {
 
 export const ACCUMULATOR_SETTINGS: FbNodeSettings = {
   title: 'Accumulator',
+  help: 'Adds up what passes through — a running sum, or a count of arrivals. A moment on \'reset\' starts over. The bridge from per-tick values to an evolving quantity.',
   config: { mode: 'sum' },
   sockets: [
     { type: 'in', format: 'number' },
@@ -151,6 +153,7 @@ export class AccumulatorWorker extends StateWorker {
 
 export const DELAY_SETTINGS: FbNodeSettings = {
   title: 'Unit delay',
+  help: 'Emits the PREVIOUS value, one step behind — advanced only by a moment on \'step\'. This is the one legal way to close a feedback loop: clocked, a cycle takes one visible step per tick instead of running away.',
   config: {},
   sockets: [
     { type: 'in' },

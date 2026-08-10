@@ -79,6 +79,7 @@ export const MATH_MODULE: FbModule = {
       component: { small: OperatorSmallComponent },
       settings: {
         title: 'Add',
+        help: 'Adds its inputs — as many as you wire in. The n-ary sum: two number streams or ten, over the latest value of each.',
         group: GROUP,
         config: { symbol: '+' },
         sockets: [
@@ -105,6 +106,7 @@ export const MATH_MODULE: FbModule = {
       settingsComponent: RangeSettingsComponent,
       settings: {
         title: 'Range',
+        help: 'Maps a number from one interval onto another — a slider\'s 0..100 into a plot\'s domain, a value into a colour ramp. The commonest glue in a viz, without reaching for a script.',
         group: GROUP,
         config: { fromA: 0, fromB: 1, toA: 0, toB: 100, clamp: true },
         sockets: [
@@ -124,6 +126,7 @@ export const MATH_MODULE: FbModule = {
       settingsComponent: FormulaSettingsComponent,
       settings: {
         title: 'Formula',
+        help: 'Writes a function of x — the orange wire carries the FUNCTION itself, expression and notation, not numbers. Free symbols become tunable parameters. A sampler turns it into points to plot.',
         group: GROUP,
         config: { expr: 'x^2' },
         sockets: [{ type: 'out', format: 'function' }],
@@ -136,6 +139,7 @@ export const MATH_MODULE: FbModule = {
       settingsComponent: DerivativeSettingsComponent,
       settings: {
         title: 'Derivative',
+        help: 'Differentiates the incoming function symbolically: d/dx, in and out as functions. Wire a formula in, get its slope as another function.',
         group: GROUP,
         sockets: [
           { type: 'in', format: 'function' },
@@ -155,6 +159,7 @@ export const MATH_MODULE: FbModule = {
       settingsComponent: SamplerSettingsComponent,
       settings: {
         title: 'Sampler',
+        help: 'Turns a function into data: f(x) swept over a range. \'Point\' mode walks one [x,y] per tick for an animation; \'sweep\' hands back the whole curve at once. This is what a time-series plot drinks.',
         group: GROUP,
         config: { from: 0, to: 10, step: 0.1, interval: 50, mode: 'point' },
         sockets: [

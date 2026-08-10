@@ -209,6 +209,7 @@ export const BASICS_TYPES: FbNodeTypes = {
     settingsComponent: FlowParamSettingsComponent,
     settings: {
       title: 'Parameter',
+      help: 'A named value INSIDE a subflow — the subflow\'s knob. The container lists it as a config field, so one subflow can be reused with a different value per copy, set from the outside without opening it up. A document pill can drive it too.',
       config: { name: 'param', kind: 'number', value: 0 },
       sockets: [{ type: 'out', format: 'number' }],
     },
@@ -225,7 +226,11 @@ export const BASICS_TYPES: FbNodeTypes = {
   'flow': {
     component: SubflowComponent,
     settingsComponent: SubflowSettingsComponent,
-    settings: { title: 'Subflow', isFlow: true },
+    settings: {
+      title: 'Subflow',
+      help: 'A graph inside a node — a flow of its own, with boundary sockets for what goes in and comes out. Fold a cluster into one box to keep the top level readable; double-click to go inside. It can wear one of its children\'s faces, or draw a small map of itself.',
+      isFlow: true,
+    },
   },
 
   /*

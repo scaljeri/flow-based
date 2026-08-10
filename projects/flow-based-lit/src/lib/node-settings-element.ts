@@ -38,7 +38,18 @@ export class FbNodeSettingsElement extends LitElement {
     mountOwn: { attribute: false },
     deletable: { type: Boolean },
     open: { type: Boolean, reflect: true },
+    helpOpen: { state: true },
   };
+
+  /**
+   * Whether the node's explanation is showing; a second modal over the panel.
+   *
+   * `declare`, NOT a `= false` field: an initialised class field shadows the
+   * reactive accessor Lit installs on the prototype (the useDefineForClass-
+   * Fields trap), and setting it then never schedules a render — the dialog
+   * would never open. Absent reads as falsy, which is the closed state.
+   */
+  declare helpOpen: boolean;
 
   static override styles = css`
     /*
@@ -253,6 +264,58 @@ export class FbNodeSettingsElement extends LitElement {
       font-size: 16px;
       line-height: 1;
       padding: 2px 6px;
+    }
+
+    /* The info mark: a lettered circle, so it reads as "explain", not "close". */
+    .config header button.info {
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 50%;
+      display: inline-flex;
+      font: italic 600 13px 'Times New Roman', serif;
+      height: 22px;
+      justify-content: center;
+      min-height: 0;
+      min-width: 0;
+      padding: 0;
+      width: 22px;
+    }
+
+    .help-dialog {
+      background: var(--fb-node-background, rgba(0, 0, 0, 0.95));
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 10px;
+      color: #fff;
+      font: 13px system-ui, sans-serif;
+      max-width: 90vw;
+      padding: 16px;
+      width: 320px;
+    }
+
+    .help-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .help-dialog header {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .help-dialog header button {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .help-dialog p {
+      line-height: 1.5;
+      margin: 0;
+      opacity: 0.85;
+      white-space: pre-line;
     }
 
     .socket-editor header {
@@ -626,10 +689,53 @@ export class FbNodeSettingsElement extends LitElement {
     return this.editor?.types?.[type]?.settings?.title ?? type;
   }
 
+  /** The type's own explanation, or nothing written for it yet. */
+  private get helpText(): string {
+    const type = this.state?.type ?? '';
+
+    return this.editor?.types?.[type]?.settings?.help ?? '';
+  }
+
+  /**
+   * The node's explanation, as a second modal over the panel.
+   *
+   * A dialog rather than an inline block, for the same reason the panel is
+   * one: it stacks in the top layer above everything, and Escape closes this
+   * inner one before the panel it sits on.
+   */
+  private renderHelp() {
+    if (!this.helpOpen) {
+      return nothing;
+    }
+
+    return html`
+      <dialog class="help-dialog"
+              @keydown=${(e: Event) => e.stopPropagation()}
+              @close=${() => { this.helpOpen = false; }}>
+        <header>
+          <strong>${this.kindName}</strong>
+          <button type="button" title="Close" aria-label="Close"
+                  @click=${() => { this.helpOpen = false; }}>×</button>
+        </header>
+        <p>${this.helpText || 'No explanation written for this node yet.'}</p>
+      </dialog>
+    `;
+  }
+
   protected override updated(_changed: PropertyValues<this>): void {
     this.syncDialog();
     this.syncSocketDialog();
+    this.syncHelpDialog();
     this.mountOwnSettings();
+  }
+
+  /** The same showModal() dance, for the node's explanation. */
+  private syncHelpDialog(): void {
+    const dialog = this.renderRoot.querySelector<HTMLDialogElement>('dialog.help-dialog');
+
+    if (this.helpOpen && dialog && !dialog.open) {
+      dialog.showModal();
+    }
   }
 
   /** The same showModal() dance as the panel, for the socket's own dialog. */
@@ -740,9 +846,14 @@ export class FbNodeSettingsElement extends LitElement {
           <span class="kind">
             ${this.kindName}<span class="raw">${this.state?.type ?? ''}</span>
           </span>
+          <button type="button" class="info" title="What this node does"
+                  aria-label="What this node does"
+                  @click=${() => { this.helpOpen = true; }}>i</button>
           <button type="button" title="Close" aria-label="Close"
                   @click=${() => this.close()}>×</button>
         </header>
+
+        ${this.renderHelp()}
 
         <!--
           Autofocused, so the panel opens ready to be typed into. It matters most

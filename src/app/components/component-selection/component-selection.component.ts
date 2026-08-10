@@ -21,6 +21,8 @@ export class ComponentSelectionComponent implements OnInit {
 
   groups: PaletteGroup[] = [];
   query = '';
+  /** The type whose explanation is showing, or null when none is. */
+  helpFor: string | null = null;
 
   ngOnInit() {
     this.rebuild();
@@ -30,6 +32,18 @@ export class ComponentSelectionComponent implements OnInit {
 
   title(key: string): string {
     return this.flowTypes[key].settings.title;
+  }
+
+  /** The type's explanation, or a note that none is written. */
+  helpText(key: string): string {
+    return this.flowTypes[key].settings.help ?? 'No explanation written for this node yet.';
+  }
+
+  /** The `i`: show the node's explanation without adding it. */
+  onInfo(key: string, event: Event): void {
+    // Not a selection: the press must not fall through to the row's Add.
+    event.stopPropagation();
+    this.helpFor = key;
   }
 
   /** Matches the visible title as well as the registry key (e.g. 'random-numbers'). */

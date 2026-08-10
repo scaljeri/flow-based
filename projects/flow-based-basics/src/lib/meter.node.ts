@@ -4,6 +4,7 @@ import { TapWorker } from './tap.worker';
 
 export const METER_SETTINGS: FbNodeSettings = {
   title: 'Meter',
+  help: 'A reading against a range, drawn as a needle. Point it at any number stream; set the range in its settings. Framework-free — the demonstration node for writing your own.',
   // The range is config, not a constant: a meter that can only read 0–100
   // teaches the wrong lesson from the one node whose job is showing how a
   // node is written — a node's numbers come from its config.

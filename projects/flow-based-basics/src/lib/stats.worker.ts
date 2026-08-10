@@ -4,6 +4,7 @@ import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './gauss';
 
 export const STATS_SETTINGS: FbNodeSettings = {
   title: 'Statistics',
+  help: 'Running min, max, average and a histogram over a stream of numbers, with a fitted bell curve. Two number outputs carry the min and max on.',
   config: { columnWidth: 1 },
   sockets: [
     {

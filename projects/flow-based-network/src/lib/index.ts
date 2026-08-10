@@ -43,6 +43,7 @@ export const NETWORK_MODULE: FbModule = {
       settingsComponent: RequestSettingsComponent,
       settings: {
         title: 'Request',
+        help: 'Fetches from a URL — once, or every interval, or whenever a moment arrives on \'when\'. Wire the \'url\' in to compute it from other data. What comes back travels as {meta, value}; a failure travels too, as null, so downstream clears rather than lies.',
         group: 'Network',
         config: { url: '', method: 'GET', every: 0 },
         sockets: [

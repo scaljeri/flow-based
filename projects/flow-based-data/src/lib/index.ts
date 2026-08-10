@@ -96,6 +96,7 @@ export const DATA_MODULE: FbModule = {
       settingsComponent: PickSettingsComponent,
       settings: {
         title: 'Pick',
+        help: 'Reshapes what arrived into one thing: places for a map, points for a plot, a raster, a stack of bands, or a single value. Reads the paths you name out of a fetched file. The workhorse of turning a source into something drawable.',
         group: 'Data',
         config: { shape: 'geo', list: 'list', a: 'lat', b: 'lon', label: 'name', limit: 500 },
         sockets: [
@@ -136,6 +137,7 @@ export const DATA_MODULE: FbModule = {
       settingsComponent: TemplateSettingsComponent,
       settings: {
         title: 'Template',
+        help: 'Builds a string from a pattern and named inputs — a URL out of a config\'s path and the pieces that fill it. A placeholder {region} is filled by the socket named \'region\'; it stays silent until every hole is filled.',
         group: 'Data',
         config: { pattern: '' },
         sockets: [
@@ -162,6 +164,7 @@ export const DATA_MODULE: FbModule = {
       settingsComponent: ChoiceSettingsComponent,
       settings: {
         title: 'Choice',
+        help: 'Picks one option out of a list a source published, by number. The list is data, so the choices are — a document pill drives which one. 1 is the first, 0 is none.',
         group: 'Data',
         // which is 1-based, 0 = none — data-switch's convention, since 2026-08-09.
         config: { list: '', label: '', value: '', as: 'text', which: 1 },
@@ -190,6 +193,7 @@ export const DATA_MODULE: FbModule = {
       component: { small: FieldsSmallComponent },
       settings: {
         title: 'Fields',
+        help: 'Reads SEVERAL values out of one arrival at once — each output socket\'s NAME is the path it reads. One node instead of a fan of picks over the same file. Scalars only.',
         group: 'Data',
         config: {},
         sockets: [
@@ -211,6 +215,7 @@ export const DATA_MODULE: FbModule = {
       settingsComponent: JoinSettingsComponent,
       settings: {
         title: 'Join',
+        help: 'Aligns two lists by a shared key — model beside measurement per station, two series on one axis. Matched rows merge, the right side annotating the left; \'left\' keeps the unmatched. Shows how many of the left found a partner.',
         group: 'Data',
         config: { pathA: '', pathB: '', how: 'inner' },
         sockets: [
@@ -227,6 +232,7 @@ export const DATA_MODULE: FbModule = {
       settingsComponent: FilterSettingsComponent,
       settings: {
         title: 'Filter',
+        help: 'Keeps the items of a list that pass a rule, drops the rest — and states the rule rather than the answer, so it stays right when the data grows. Wire the value to test for in from elsewhere.',
         group: 'Data',
         config: { list: '', path: '', test: 'oneOf', value: '' },
         sockets: [
@@ -249,6 +255,7 @@ export const DATA_MODULE: FbModule = {
       settingsComponent: SwitchSettingsComponent,
       settings: {
         title: 'Switch',
+        help: 'Passes ONE of several input streams — or none. \'At most one\' made a shape in the graph rather than a discipline. None sends the empty form of whatever it carries, so downstream clears honestly.',
         group: 'Data',
         config: { which: 1 },
         sockets: [

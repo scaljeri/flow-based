@@ -9,6 +9,7 @@ export interface ClockConfig {
 
 export const CLOCK_SETTINGS: FbNodeSettings = {
   title: 'Clock',
+  help: 'A metronome for the graph. It emits a rising tick at its interval, so anything animated can hang off one clock. Wire a 0 into \'run\' to pause it; anything non-zero runs it. A moment is a packet here — the tick travels as an ordinary number.',
   config: { interval: 1000, running: true },
   sockets: [
     // 0 pauses, anything else runs. Wired, it overrides the config without
