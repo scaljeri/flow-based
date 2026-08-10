@@ -80,7 +80,18 @@ export interface FbFlowsData {
       }
     </mat-dialog-content>
 
-    <mat-dialog-actions align="end">
+    <mat-dialog-actions>
+      <!--
+      A browser that saw an earlier version of the app carries the flows it
+      seeded then — the old demo and tno on the shelf. Reset wipes the local
+      flows so the next load lands on the shipped default, the way a fresh
+      browser does. Only in browse mode: it is not an answer to "where do I
+      save this?".
+      -->
+      @if (!saveMode) {
+        <button type="button" mat-button class="reset" (click)="onReset()">Reset local flows</button>
+      }
+      <span class="spacer"></span>
       <button type="button" mat-button mat-dialog-close>Close</button>
     </mat-dialog-actions>
   `,
@@ -176,6 +187,14 @@ export interface FbFlowsData {
       min-width: 0;
       padding: 8px 10px;
     }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .reset {
+      opacity: 0.7;
+    }
   `]
 })
 export class FlowsDialogComponent {
@@ -215,6 +234,22 @@ export class FlowsDialogComponent {
   onDelete(flow: FbStoredFlow): void {
     this.store.remove(flow.id);
     this.flows = this.store.list();
+  }
+
+  /**
+   * Wipe the local flows and reload onto the shipped default.
+   *
+   * Confirmed first: this throws away anything the person made here, not only
+   * the old seeds. A reload is the simplest way to reach a clean start — the
+   * app's boot does the rest, exactly as it does for a fresh browser.
+   */
+  onReset(): void {
+    if (!confirm('Remove all locally stored flows and reload? This cannot be undone.')) {
+      return;
+    }
+
+    this.store.reset();
+    location.reload();
   }
 
   when(flow: FbStoredFlow): string {

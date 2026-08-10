@@ -67,4 +67,19 @@ describe('FlowStoreService source URL', () => {
     expect(store.sourceUrlOf(id)).toBeUndefined();
     expect(store.findBySourceUrl('https://example.com/f.json')).toBeNull();
   });
+
+  // Reset clears every flow key so a reload lands on the shipped default, but
+  // must not touch a browser's module choices — which modules you trust is not
+  // a flow, and wiping them would re-ask on every reset.
+  it('reset clears the flows but leaves fb-modules alone', () => {
+    store.create(aFlow('One'));
+    store.create(aFlow('Two'));
+    localStorage.setItem('fb-modules', '{"version":2,"enabled":["math"],"urls":[]}');
+
+    store.reset();
+
+    expect(store.list()).toEqual([]);
+    expect(store.currentId()).toBeNull();
+    expect(localStorage.getItem('fb-modules')).toBe('{"version":2,"enabled":["math"],"urls":[]}');
+  });
 });

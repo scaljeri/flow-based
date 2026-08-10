@@ -113,6 +113,31 @@ export class FlowStoreService {
     }
   }
 
+  /**
+   * Wipe every stored flow, the index and the current pointer.
+   *
+   * For a browser carrying flows a previous version of the app seeded — the
+   * old demo/tno on the shelf, and `current` pointing at one — so a reload
+   * lands on the shipped default again, the way a fresh browser does. Module
+   * choices (`fb-modules`) are left alone: which modules you trust is not a
+   * flow, and re-enabling them is not the point of a reset.
+   */
+  reset(): void {
+    const keys: string[] = [];
+
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+
+      // Covers the index (`fb-flows`), the pointer (`fb-flow-current`) and every
+      // `fb-flow-<id>` — all start with `fb-flow`.
+      if (key?.startsWith('fb-flow')) {
+        keys.push(key);
+      }
+    }
+
+    keys.forEach(key => localStorage.removeItem(key));
+  }
+
   private touch(id: string, title: string, sourceUrl?: string): void {
     const prior = this.list().find(f => f.id === id);
     const rest = this.list().filter(f => f.id !== id);
