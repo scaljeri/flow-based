@@ -12,11 +12,17 @@ import { FbNodeSettings, NodeService } from '@scaljeri/flow-based';
  * have to pay for encapsulation.
  */
 
+/*
+ * `addableSockets: 'none'` on both: an annotation computes nothing, so a
+ * socket on one is a socket that lies — drawable, connectable, and forever
+ * silent. The panel's + in/+ out buttons stay away entirely.
+ */
 export const NOTE_SETTINGS: FbNodeSettings = {
   title: 'Note',
   config: { text: 'Say why, not what.' },
   resizable: true,
   sockets: [],
+  addableSockets: 'none',
 };
 
 export const FRAME_SETTINGS: FbNodeSettings = {
@@ -24,6 +30,7 @@ export const FRAME_SETTINGS: FbNodeSettings = {
   config: { label: 'These belong together' },
   resizable: true,
   sockets: [],
+  addableSockets: 'none',
 };
 
 /** The note's prose, edited where it stands. */

@@ -3650,6 +3650,20 @@ test('a note holds its text, and a frame stays behind the nodes it groups', asyn
   await expect.poll(async () => (await boxes()).noteText).toContain('Say why');
   expect((await boxes()).frameZ).toBe('0');
   expect(Number((await boxes()).nodeZ)).toBeGreaterThan(0);
+
+  // An annotation computes nothing, so it may grow no sockets: one there
+  // would be drawable, connectable, and forever silent.
+  const addable = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const of = (type: string) => editor.state.children.find((n: any) => n.type === type);
+
+    return {
+      note: editor.canAddSocket(of('note').id, 'in') || editor.canAddSocket(of('note').id, 'out'),
+      frame: editor.canAddSocket(of('frame').id, 'in') || editor.canAddSocket(of('frame').id, 'out'),
+    };
+  });
+
+  expect(addable).toEqual({ note: false, frame: false });
 });
 
 /**
