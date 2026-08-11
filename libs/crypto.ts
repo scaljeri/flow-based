@@ -575,28 +575,29 @@ const STYLE = `
   color: #fff;
   display: flex;
   flex-direction: column;
-  font: 12px system-ui, sans-serif;
-  gap: 2px;
-  padding: 8px 14px;
-  min-width: 96px;
+  font: 14px system-ui, sans-serif;
+  gap: 4px;
+  padding: 14px 20px;
+  min-width: 140px;
 }
-.crypto-value { color: #f7931a; font-size: 18px; font-weight: 600; white-space: nowrap; }
-.crypto-sub { opacity: 0.6; text-align: center; }
+.crypto-value { color: #f7931a; font-size: 26px; font-weight: 600; white-space: nowrap; }
+.crypto-sub { font-size: 13px; opacity: 0.6; text-align: center; }
+.crypto-bool { font-size: 24px; }
 .crypto-bool.is-true { color: #22c55e; }
 .crypto-bool.is-false { color: #ef4444; }
-.crypto-field { display: flex; flex-direction: column; font-size: 12px; gap: 4px; margin-bottom: 8px; }
+.crypto-field { display: flex; flex-direction: column; font-size: 13px; gap: 4px; margin-bottom: 8px; }
 .crypto-field input { padding: 6px 8px; }
-.crypto-light { flex-direction: row; gap: 8px; }
+.crypto-light { flex-direction: row; gap: 12px; padding: 16px 22px; }
 .crypto-dot {
   border-radius: 50%;
-  height: 16px;
-  width: 16px;
+  height: 24px;
+  width: 24px;
   background: #555;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15) inset;
 }
-.crypto-dot.is-on { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
-.crypto-dot.is-off { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
-.crypto-label { font-size: 14px; letter-spacing: 0.04em; }
+.crypto-dot.is-on { background: #22c55e; box-shadow: 0 0 12px #22c55e; }
+.crypto-dot.is-off { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.6); }
+.crypto-label { font-size: 18px; letter-spacing: 0.04em; }
 `;
 
 if (typeof document !== 'undefined' && !document.getElementById('crypto-style')) {

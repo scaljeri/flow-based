@@ -357,8 +357,21 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   private async loadShowcase(): Promise<boolean> {
     try {
-      const url = new URL(AppComponent.SHOWCASE, location.href).href;
-      const response = await fetch(url);
+      /*
+       * Cache-buster tied to the build hash, so every deploy serves a fresh
+       * showcase and, crucially, a fresh LIB. Found the hard way on a phone:
+       * the flow updated (it declared new indicator nodes) but the browser
+       * kept the previous `crypto.js`, which had no such types — so the bands
+       * drew as empty boxes and never reached the plot. A module is imported,
+       * not fetched, so its cache mode cannot be set; the query is the lever.
+       */
+      const bust = `v=${encodeURIComponent(this.version.split(' ')[0])}`;
+
+      const url = new URL(AppComponent.SHOWCASE, location.href);
+
+      url.search = bust;
+
+      const response = await fetch(url.href);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -368,12 +381,16 @@ export class AppComponent implements OnInit, AfterViewInit {
 
       // Our own libs first (trusted, same-origin), then the built-in modules the
       // flow's types name by prefix — both before it is drawn, or its nodes
-      // arrive as empty boxes with no workers.
+      // arrive as empty boxes with no workers. The lib URL is busted too, and
+      // the flow's own entry rewritten to match, so addFromUrl and enableFor
+      // agree on one id rather than registering the module twice.
       for (const lib of (flow.config?.modules ?? []) as { url: string }[]) {
-        const href = new URL(lib.url, location.href).href;
+        const abs = new URL(lib.url, location.href);
 
-        if (new URL(href).origin === location.origin) {
-          await this.modules.addFromUrl(href);
+        if (abs.origin === location.origin) {
+          abs.search = abs.search ? `${abs.search}&${bust}` : bust;
+          lib.url = abs.href;
+          await this.modules.addFromUrl(abs.href);
         }
       }
 
