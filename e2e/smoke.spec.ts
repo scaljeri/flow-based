@@ -1068,24 +1068,32 @@ test('a fresh browser opens the crypto showcase, its lib loaded by URL', async (
     .poll(() => page.evaluate(() =>
       (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
         ?.editor?.state?.title), { timeout: 15_000 })
-    .toBe('Bitcoin, a month');
+    .toBe('Bitcoin');
 
   await expect(page.locator('p.load-error')).toHaveCount(0);
 
-  // The lib registered: a crypto-* type is on the canvas, and only the
-  // URL-loaded lib provides it. Empty boxes would mean the lib never loaded.
+  // The lib registered: its indicator types are on the canvas, and only the
+  // URL-loaded lib provides them. Empty boxes would mean the lib never loaded.
   const types = await page.evaluate(() =>
     [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .map(n => (n as unknown as { state?: { type?: string } }).state?.type));
-  expect(types).toContain('crypto-prices');
-  expect(types).toContain('crypto-sma');
+  for (const type of ['crypto-prices', 'crypto-sma', 'crypto-bands', 'crypto-gate', 'crypto-light']) {
+    expect(types).toContain(type);
+  }
 
-  // And the data flowed: the plot buffered the month of prices its source sent.
+  // And the data flowed all the way through: the plot buffered the price series
+  // its source sent, and the gate resolved to a boolean the signal can light.
   const points = await page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as
       { editor?: { flow?: { getWorker(id: number): { buffer?: { points: number[][] } } } } })
       ?.editor?.flow?.getWorker(900)?.buffer?.points?.length ?? 0);
-  expect(points).toBeGreaterThan(20);
+  expect(points).toBeGreaterThan(200);
+
+  const signal = await page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as
+      { editor?: { flow?: { getWorker(id: number): { state?: boolean } } } })
+      ?.editor?.flow?.getWorker(500)?.state);
+  expect(typeof signal).toBe('boolean');
 });
 
 /**
