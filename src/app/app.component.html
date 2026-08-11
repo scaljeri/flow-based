@@ -55,13 +55,13 @@ showing this app's cockpit.
       <mat-icon>add</mat-icon>
     </button>
 
-    @if (canSave) {
-      <button type="button" mat-icon-button class="save-flow" [class.has-changes]="dirty"
-        (click)="saveToShelf()" aria-label="Save flow"
-        [matTooltip]="dirty ? 'Unsaved changes — save to the shelf' : 'No changes yet'">
-        <mat-icon>save</mat-icon>
-      </button>
-    }
+    <!-- Always here, so it never flashes and vanishes: a dot when there are
+         unsaved changes, and clicking always says what it did. -->
+    <button type="button" mat-icon-button class="save-flow" [class.has-changes]="dirty"
+      (click)="saveToShelf()" aria-label="Save flow"
+      [matTooltip]="dirty ? 'Unsaved changes — save' : 'Save'">
+      <mat-icon>save</mat-icon>
+    </button>
   }
 
   <mat-menu #overflowMenu="matMenu">

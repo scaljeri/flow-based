@@ -5204,10 +5204,15 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
   await dialog.locator('form.new input[name="name"]').fill('Shared, kept');
   await dialog.locator('form.new button[type="submit"]').click();
 
-  // It has a home now: the dialog closes, the Save button is gone, and the
-  // source URL is still there, so its share link still points home.
+  // It has a home now: the dialog closes; Save is still there (it stays, so it
+  // never flashes and vanishes) but shows no unsaved-changes dot, and clicking
+  // it saves the homed flow rather than opening the dialog again. The source URL
+  // is still there, so its share link still points home.
   await expect(dialog).toHaveCount(0);
-  await expect(page.locator('mat-toolbar button.save-flow')).toHaveCount(0);
+  await expect(save).toBeVisible();
+  await expect(save).not.toHaveClass(/has-changes/);
+  await save.click();
+  await expect(page.locator('.share-notice')).toContainText('Saved');
   expect(page.url()).toContain(`flow=${encodeURIComponent(source)}`);
 });
 

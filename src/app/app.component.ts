@@ -704,23 +704,33 @@ export class AppComponent implements OnInit, AfterViewInit {
       .afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
   }
 
-  /** Whether Save applies: a flow that lives only in memory can be kept. */
-  get canSave(): boolean {
-    return !this.currentFlowId;
+  /** Show a plain message in the notice bar (no link, no choice). */
+  private notify(message: string): void {
+    this.shareChoosing = false;
+    this.shareLink = null;
+    this.shareNotice = message;
+    this.cdr.detectChanges();
   }
 
   /**
-   * The Save button on a URL-loaded flow: it has no home, so where it lands is
-   * not obvious — the Flows dialog asks. In save mode the name field is primed
-   * and the answer is a `save` action. Nothing changed yet? Say so rather than
-   * open a dialog to save a copy identical to the file it came from.
+   * The Save button. What it does depends on where the flow lives.
+   *
+   * A flow with a home on the shelf autosaves; Save writes it NOW and confirms,
+   * so the button is not a lie by omission. A flow that lives only in memory has
+   * no home — Save opens the Flows dialog to give it one, unless nothing has
+   * changed, in which case it says so rather than saving a copy identical to the
+   * file it came from.
    */
   saveToShelf(): void {
+    if (this.currentFlowId) {
+      this.persist();
+      this.notify('Saved.');
+
+      return;
+    }
+
     if (!this.dirty) {
-      this.shareChoosing = false;
-      this.shareLink = null;
-      this.shareNotice = 'No changes yet — nothing to save.';
-      this.cdr.detectChanges();
+      this.notify('No changes yet — nothing to save.');
 
       return;
     }
