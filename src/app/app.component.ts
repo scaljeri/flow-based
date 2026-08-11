@@ -704,12 +704,27 @@ export class AppComponent implements OnInit, AfterViewInit {
       .afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
   }
 
+  /** Whether Save applies: a flow that lives only in memory can be kept. */
+  get canSave(): boolean {
+    return !this.currentFlowId;
+  }
+
   /**
    * The Save button on a URL-loaded flow: it has no home, so where it lands is
    * not obvious — the Flows dialog asks. In save mode the name field is primed
-   * and the answer is a `save` action.
+   * and the answer is a `save` action. Nothing changed yet? Say so rather than
+   * open a dialog to save a copy identical to the file it came from.
    */
   saveToShelf(): void {
+    if (!this.dirty) {
+      this.shareChoosing = false;
+      this.shareLink = null;
+      this.shareNotice = 'No changes yet — nothing to save.';
+      this.cdr.detectChanges();
+
+      return;
+    }
+
     this.dialog.open(FlowsDialogComponent, {
       width: '360px',
       data: { mode: 'save', title: this.flow.title } as FbFlowsData,

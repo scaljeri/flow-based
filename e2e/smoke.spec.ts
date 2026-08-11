@@ -5138,11 +5138,16 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
   // The address bar carries the source — that is what makes the link shareable.
   expect(page.url()).toContain(`flow=${encodeURIComponent(source)}`);
 
-  // In memory, unchanged: no Save button yet, because there is nothing to keep.
-  await expect(page.locator('mat-toolbar button.save-flow')).toHaveCount(0);
+  // In memory: Save is there, but shows nothing to keep, and clicking it says so.
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).toBeVisible();
+  await expect(save).not.toHaveClass(/has-changes/);
+  await save.click();
+  await expect(page.locator('.share-notice')).toContainText('No changes yet');
+  await page.locator('.share-notice button.dismiss').click();
 
-  // Change it — add a node — and Save appears, because a URL flow has no home
-  // to autosave into.
+  // Change it — add a node — and Save shows it has changes, because a URL flow
+  // has no home to autosave into.
   const before = await page.locator('fb-node-box').count();
   await page.locator('mat-toolbar button.add').click();
   const palette = page.locator('.cdk-overlay-container fb-component-selection');
@@ -5153,8 +5158,7 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
   await search.press('Enter');
   await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
 
-  const save = page.locator('mat-toolbar button.save-flow');
-  await expect(save).toBeVisible();
+  await expect(save).toHaveClass(/has-changes/);
 
   // Save asks where it should land, because for a homeless flow it is not
   // obvious: the Flows dialog, in its naming mode.

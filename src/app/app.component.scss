@@ -63,18 +63,48 @@ mat-toolbar {
    * white. The toolbar override only reaches components that read
    * container-text-color, and this is not one of them.
    */
-  .overflow {
+  .overflow,
+  .add,
+  .save-flow {
     --mat-icon-button-icon-color: currentcolor;
 
     color: var(--mat-sys-on-primary, #fff);
   }
+
+  /*
+   * Save says whether there is anything to keep. Muted with nothing to save; at
+   * full strength with a dot when there are unsaved changes — the "you have
+   * changes" tell the person asked for.
+   */
+  .save-flow {
+    opacity: 0.55;
+    position: relative;
+  }
+
+  .save-flow.has-changes {
+    opacity: 1;
+  }
+
+  .save-flow.has-changes::after {
+    background: var(--mat-sys-tertiary, #7ad67a);
+    border-radius: 50%;
+    content: '';
+    height: 9px;
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    width: 9px;
+  }
 }
 
-/* Narrow enough that the title is the first thing worth losing: it is also the
-   document title, so nothing is actually lost. */
+/*
+ * On a phone the title is hidden — but kept in the layout (visibility, not
+ * display), so its flex space still holds Add and Save at the right edge
+ * instead of letting them collapse back against the menu.
+ */
 @media (max-width: 420px) {
   mat-toolbar .title {
-    display: none;
+    visibility: hidden;
   }
 }
 

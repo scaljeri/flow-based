@@ -21,16 +21,8 @@ showing this app's cockpit.
     <mat-icon>menu</mat-icon>
   </button>
 
-  <!--
-  Add sits by the hamburger, at the near edge: on the canvas it is the thing
-  reached for most, so it lives beside the menu rather than across the bar. It
-  belongs to the canvas — in document mode it would put a node on a surface the
-  reader cannot see — so it is gone while the document is up.
-  -->
-  @if (!showDoc) {
-    <button type="button" mat-button (click)="openModal()" class="add">Add</button>
-  }
-
+  <!-- The title takes the middle and, on a phone where it is hidden, still holds
+       the space open so Add and Save stay at the right edge. -->
   <span class="title">Flow based programming</span>
 
   <!--
@@ -45,8 +37,12 @@ showing this app's cockpit.
     </button>
   }
 
-  <!-- While the document is up, the right-hand buttons drive it: Edit to write
-       it, Save and Cancel while writing. -->
+  <!--
+  The right edge. While the document is up its buttons drive it; on the canvas,
+  Add (a node) and Save (this flow to the shelf) — both icons, Save the furthest
+  right. Save is on the canvas whenever the flow lives only in memory: its badge
+  says whether there is anything to keep, and clicking it with nothing says so.
+  -->
   @if (showDoc) {
     @if (editingDoc) {
       <button type="button" mat-button class="doc-cancel" (click)="cancelDoc()">Cancel</button>
@@ -54,15 +50,18 @@ showing this app's cockpit.
     } @else {
       <button type="button" mat-button class="doc-edit" (click)="editDoc()">Edit</button>
     }
-  }
+  } @else {
+    <button type="button" mat-icon-button class="add" (click)="openModal()" aria-label="Add a node">
+      <mat-icon>add</mat-icon>
+    </button>
 
-  <!--
-  Save, all the way to the right. A flow loaded from a URL lives only in memory;
-  once it is changed, this lands it on the shelf. Shown only then — a flow with a
-  home already autosaves, and one unchanged has nothing to keep.
-  -->
-  @if (!showDoc && dirty) {
-    <button type="button" mat-button class="save-flow" (click)="saveToShelf()">Save</button>
+    @if (canSave) {
+      <button type="button" mat-icon-button class="save-flow" [class.has-changes]="dirty"
+        (click)="saveToShelf()" aria-label="Save flow"
+        [matTooltip]="dirty ? 'Unsaved changes — save to the shelf' : 'No changes yet'">
+        <mat-icon>save</mat-icon>
+      </button>
+    }
   }
 
   <mat-menu #overflowMenu="matMenu">
