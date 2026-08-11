@@ -5,7 +5,7 @@
     "type": "flow",
     "title": "Bitcoin",
     "config": {
-      "seedVersion": 2,
+      "seedVersion": 3,
       "modules": [
         {
           "url": "assets/modules/crypto.js",
@@ -1222,7 +1222,10 @@
               299,
               63970
             ]
-          ]
+          ],
+          "endpoint": "https://api.coinbase.com/v2/prices/BTC-USD/spot",
+          "path": "data.amount",
+          "refresh": 30
         },
         "sockets": [
           {

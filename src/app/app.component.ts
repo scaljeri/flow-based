@@ -894,7 +894,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.zone.run(() => {
         this.shareChoosing = true;
         this.shareLink = null;
-        this.shareNotice = 'You’ve changed this flow since it loaded. Share the published version (without your changes), or your version packed into the link — which can grow long.';
+        this.shareNotice = 'You changed this flow since it loaded. Which version do you want to share?';
         this.cdr.detectChanges();
       });
 

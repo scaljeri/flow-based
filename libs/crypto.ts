@@ -58,6 +58,15 @@ function money(value: number | undefined): string {
 interface PricesConfig {
   symbol?: string;
   series?: Series;
+  /** Seconds between live price pulls; 0 (or absent) stands still. */
+  refresh?: number;
+  /**
+   * Where to pull the live price from, and where the price sits in the reply —
+   * both in the FLOW, never here, because the address is the case's, not the
+   * module's. For Coinbase spot: url `.../prices/BTC-USD/spot`, path `data.amount`.
+   */
+  endpoint?: string;
+  path?: string;
 }
 
 class PricesWorker implements FbNodeWorker {
@@ -65,25 +74,84 @@ class PricesWorker implements FbNodeWorker {
   // the source emits once and would otherwise be talking to an empty room.
   private readonly subject = new ReplaySubject<Series>(1);
   private readonly ticks = new ReplaySubject<void>(1);
+  // A working copy: live pulls move its last point, the embedded history stays.
+  private readonly data: Series;
+  private timer?: ReturnType<typeof setInterval>;
 
   constructor(private readonly config: PricesConfig = {}) {
-    this.subject.next(this.config.series ?? []);
+    this.data = (config.series ?? []).map(point => [point[0], point[1]]);
+    this.subject.next(this.data);
     this.ticks.next();
+    this.start();
   }
 
   get changes(): Observable<void> { return this.ticks.asObservable(); }
   get symbol(): string { return this.config.symbol ?? 'series'; }
+  get refresh(): number { return Math.max(0, Math.floor(this.config.refresh ?? 0)); }
+  get live(): boolean { return this.refresh > 0 && !!this.config.endpoint; }
 
   get last(): number | undefined {
-    const series = this.config.series;
-
-    return series?.[series.length - 1]?.[1];
+    return this.data[this.data.length - 1]?.[1];
   }
 
-  destroy(): void { this.subject.complete(); this.ticks.complete(); }
+  destroy(): void {
+    clearInterval(this.timer);
+    this.subject.complete();
+    this.ticks.complete();
+  }
+
   getStream(): Observable<Series> { return this.subject.asObservable(); }
   setStream(): void { /* a source has no inputs */ }
   removeStream(): void { /* a source has no inputs */ }
+
+  setConfigValue(path: string, value: unknown): void {
+    if (path === 'refresh') {
+      this.config.refresh = Number(value);
+      this.start();
+    }
+  }
+
+  private start(): void {
+    clearInterval(this.timer);
+    this.timer = undefined;
+
+    if (!this.live) {
+      this.ticks.next();
+
+      return;
+    }
+
+    // A floor of 5s: a chart is not a trading terminal, and the price sits on
+    // somebody else's public endpoint. Pull once now, then on the interval.
+    void this.pull();
+    this.timer = setInterval(() => void this.pull(), Math.max(5000, this.refresh * 1000));
+    this.ticks.next();
+  }
+
+  /** Move the last point to the current price — the newest bar, still forming. */
+  private async pull(): Promise<void> {
+    const { endpoint, path } = this.config;
+
+    if (!endpoint || !this.data.length) {
+      return;
+    }
+
+    try {
+      const reply = await fetch(endpoint).then(r => r.json());
+      const price = Number(path ? path.split('.').reduce((o: unknown, key) =>
+        (o as Record<string, unknown> | undefined)?.[key], reply) : reply);
+
+      if (Number.isFinite(price)) {
+        const last = this.data[this.data.length - 1];
+
+        this.data[this.data.length - 1] = [last[0], price];
+        this.subject.next(this.data);
+        this.ticks.next();
+      }
+    } catch {
+      // A missed pull is not an error worth showing — the last price stands.
+    }
+  }
 }
 
 /* --------------------------------------------------------------------- sma */
@@ -479,11 +547,25 @@ function numberField(label: string, get: () => number, set: (n: number) => void,
 
 const pricesNode: FbNodeMount = (host, { api }) => {
   const worker = api.worker as PricesWorker | undefined;
-
-  return valueNode(host, (value, sub) => {
+  const view = valueNode(host, (value, sub) => {
     value.textContent = money(worker?.last);
-    sub.textContent = worker?.symbol ?? '';
+    // A live source says so: the symbol wears a pulsing dot while it refreshes.
+    sub.innerHTML = worker?.live
+      ? `<span class="crypto-live"></span>${worker.symbol}`
+      : (worker?.symbol ?? '');
   }, worker?.changes);
+
+  return {
+    ...view,
+    mountSettings(panel: HTMLElement) {
+      const field = numberField('Live refresh (seconds, 0 = off)', () => worker?.refresh ?? 0,
+        n => worker?.setConfigValue('refresh', n), 0);
+
+      panel.appendChild(field);
+
+      return () => field.remove();
+    },
+  };
 };
 
 const smaNode: FbNodeMount = (host, { api }) => {
@@ -598,6 +680,16 @@ const STYLE = `
 .crypto-dot.is-on { background: #22c55e; box-shadow: 0 0 12px #22c55e; }
 .crypto-dot.is-off { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.6); }
 .crypto-label { font-size: 18px; letter-spacing: 0.04em; }
+.crypto-live {
+  background: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  margin-right: 6px;
+  width: 8px;
+  animation: crypto-pulse 1.6s ease-in-out infinite;
+}
+@keyframes crypto-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 `;
 
 if (typeof document !== 'undefined' && !document.getElementById('crypto-style')) {
@@ -623,7 +715,7 @@ export default {
         group: 'Crypto',
         config: { symbol: 'BTC-USD', series: [] },
         sockets: [{ type: 'out', format: 'point' }],
-        help: 'A price series carried in the flow itself: each reading is [period, price]. It emits the whole series at once, for a plot to draw as one line and the indicators to read.',
+        help: 'A price series carried in the flow itself: each reading is [period, price]. It emits the whole series at once, for a plot to draw and the indicators to read. Set a live refresh (seconds) and it pulls the current price from the flow\'s endpoint on that interval, moving the newest point — so the average, bands and signal read the live price.',
       },
       worker: PricesWorker,
     },

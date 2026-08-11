@@ -157,16 +157,23 @@ showing this app's cockpit.
 }
 
 @if (shareNotice) {
-  <p class="share-notice" role="status">
-    <span class="text">{{shareNotice}}</span>
-    @if (shareChoosing) {
-      <button type="button" class="choice" (click)="shareAddress()">Published version</button>
-      <button type="button" class="choice" (click)="shareMyVersion()">My version (may be long)</button>
-    } @else if (shareLink) {
-      <button type="button" class="copy" (click)="recopy()">Copy link</button>
+  <div class="share-notice" role="status">
+    <div class="head">
+      <span class="text">{{shareNotice}}</span>
+      <button type="button" class="dismiss" (click)="dismissNotice()" aria-label="Dismiss">✕</button>
+    </div>
+
+    @if (shareChoosing || shareLink) {
+      <div class="actions">
+        @if (shareChoosing) {
+          <button type="button" class="choice" (click)="shareAddress()">Published version</button>
+          <button type="button" class="choice" (click)="shareMyVersion()">My version (may be long)</button>
+        } @else if (shareLink) {
+          <button type="button" class="copy" (click)="recopy()">Copy link</button>
+        }
+      </div>
     }
-    <button type="button" class="dismiss" (click)="dismissNotice()" aria-label="Dismiss">✕</button>
-  </p>
+  </div>
 }
 
 <main>

@@ -207,33 +207,45 @@ main {
 }
 
 .share-notice {
-  align-items: center;
   background-color: var(--mat-sys-secondary-container, #dbe1ff);
   color: var(--mat-sys-on-secondary-container, #001945);
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   margin: 0;
-  padding: 8px 16px;
+  padding: 10px 16px;
+
+  .head {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+  }
 
   .text {
     flex: 1;
   }
 
+  // The buttons sit on their OWN row and wrap, so a narrow screen stacks them
+  // instead of shoving them off the edge (and squeezing the message to a strip).
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
   .copy,
   .choice {
     background: var(--mat-sys-on-secondary-container, #001945);
-    border: none;
+    border: 1px solid transparent;
     border-radius: 6px;
     color: var(--mat-sys-secondary-container, #dbe1ff);
     cursor: pointer;
-    flex: 0 0 auto;
-    padding: 6px 14px;
-    white-space: nowrap;
+    padding: 8px 16px;
   }
 
   .choice {
     background: none;
-    border: 1px solid currentcolor;
+    border-color: currentcolor;
     color: inherit;
   }
 
@@ -243,7 +255,7 @@ main {
     color: inherit;
     cursor: pointer;
     flex: 0 0 auto;
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1;
     opacity: 0.7;
     padding: 4px;

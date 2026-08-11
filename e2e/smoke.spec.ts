@@ -142,6 +142,15 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/basemaps.cartocdn.com/**', route =>
     route.fulfill({ contentType: 'image/png', body: TILE }));
 
+  // The crypto showcase pulls a live price from Coinbase on load. Stubbed with a
+  // fixed reply (and the CORS header its cross-origin fetch needs), so no test
+  // reaches out to a real exchange — measured value, and a slow one.
+  await page.route('**/api.coinbase.com/**', route => route.fulfill({
+    contentType: 'application/json',
+    headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify({ data: { amount: '99999.99', base: 'BTC', currency: 'USD' } }),
+  }));
+
   /*
    * Put the two articles on the shelf the way the app used to seed them, and
    * enable every built-in module — the old fresh-browser default the tests were
@@ -1101,10 +1110,43 @@ test('a fresh browser opens the crypto showcase, its lib loaded by URL', async (
   // notice confirms a plain copy, and the link points at the hosted file.
   await page.locator('mat-toolbar button.overflow').click();
   await page.locator('.cdk-overlay-container button.share-flow').click();
-  await expect(page.locator('p.share-notice')).toContainText('Link copied');
+  await expect(page.locator('.share-notice')).toContainText('Link copied');
   const link = await page.evaluate(() => navigator.clipboard.readText());
   expect(link).toContain('flow=assets%2Fflows%2Fcrypto.json');
   expect(link).not.toContain('flowdata=');
+});
+
+/**
+ * The price source pulls a live price and the whole chain reads it.
+ *
+ * The demo's prices node has a live refresh and an endpoint in the flow; on load
+ * it fetches the current price (stubbed here) and moves its newest point to it,
+ * so the average, the bands and the buy signal all read the live value — not
+ * just the node's own readout. This is the "realtime" the flow promises.
+ */
+test('the price source pulls a live price that reaches the whole chain', async ({ page }) => {
+  await page.goto('/?fbnoseed');
+  await expect
+    .poll(() => page.evaluate(() =>
+      (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+        ?.editor?.state?.title), { timeout: 15_000 })
+    .toBe('Bitcoin');
+
+  const workerLast = (id: number) => page.evaluate(nodeId =>
+    (document.querySelector('fb-flow-canvas') as unknown as
+      { editor?: { flow?: { getWorker(n: number): { buffer?: { points: number[][] } } } } })
+      ?.editor?.flow?.getWorker(nodeId)?.buffer?.points?.at(-1)?.[1], id);
+
+  // The stubbed live price is 99999.99; the prices node moved its last point to
+  // it. The plot's price layer (socket order: price is first) carries it through.
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as
+      { editor?: { flow?: { getWorker(n: number): { last?: number } } } })
+      ?.editor?.flow?.getWorker(100)?.last), { timeout: 15_000 })
+    .toBeCloseTo(99999.99, 1);
+
+  // And it flowed on: the plot's first layer ends on the live price.
+  await expect.poll(() => workerLast(900)).toBeCloseTo(99999.99, 1);
 });
 
 /**
@@ -5084,7 +5126,7 @@ test('a local flow shares as a self-contained link that opens elsewhere', async 
   // Share it. The flow has no home, so the link carries it, and the notice says so.
   await page.locator('mat-toolbar button.overflow').click();
   await page.locator('.cdk-overlay-container button.share-flow').click();
-  await expect(page.locator('p.share-notice')).toContainText('packed into the link');
+  await expect(page.locator('.share-notice')).toContainText('packed into the link');
 
   const link = await page.evaluate(() => navigator.clipboard.readText());
   expect(link).toContain('?flowdata=');
@@ -5129,7 +5171,7 @@ test('a changed hosted flow offers the published address or the edited version',
   await palette.locator('button.item').first().click();
   await page.waitForTimeout(300);
 
-  const notice = page.locator('p.share-notice');
+  const notice = page.locator('.share-notice');
 
   const openShare = async () => {
     await page.locator('mat-toolbar button.overflow').click();
