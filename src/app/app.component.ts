@@ -122,6 +122,9 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   restoredWorking = false;
 
+  /** Discarding a draft and reloading: block every save until the page goes. */
+  private discarding = false;
+
   /**
    * The notice is asking which version to share, not reporting one.
    *
@@ -509,6 +512,10 @@ export class AppComponent implements OnInit, AfterViewInit {
    * lingers.
    */
   discardWorking(): void {
+    // `discarding` blocks every save until the reload: the flow is still
+    // settling, so a pending debounce (or the unload flush) would otherwise
+    // write the very draft we are throwing away straight back.
+    this.discarding = true;
     this.store.clearWorking();
     location.reload();
   }
@@ -549,6 +556,51 @@ export class AppComponent implements OnInit, AfterViewInit {
     const query = params.toString();
 
     window.history.replaceState(null, '', `${location.pathname}${query ? '?' + query : ''}`);
+  }
+
+  /**
+   * Leaving with unsaved changes: keep them, and warn.
+   *
+   * The debounce that writes the working copy may not have fired yet, so flush
+   * it NOW (localStorage is synchronous, which is why this works in an unload
+   * handler) — then coming back really does find the changes. The browser will
+   * not show a custom message here (it shows its own generic "changes may not be
+   * saved", for security), so the prompt is only a reminder; the flush above is
+   * what makes the reassurance true. Only when there ARE unsaved changes: a
+   * homed flow autosaves and a clean demo has nothing to warn about.
+   */
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    this.flushPending();
+
+    if (this.dirty && !this.discarding) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  }
+
+  // pagehide fires where beforeunload does not always (a phone discarding the
+  // tab), and only needs to save — the last line of defence for the draft.
+  @HostListener('window:pagehide')
+  onPageHide(): void {
+    this.flushPending();
+  }
+
+  /** Write any debounced save right now, before the page goes. */
+  private flushPending(): void {
+    clearTimeout(this.saveTimer);
+    clearTimeout(this.workingTimer);
+
+    if (this.discarding) {
+      return;
+    }
+
+    if (this.currentFlowId) {
+      this.persist();
+    } else if (this.dirty && this.currentSourceUrl) {
+      this.modules.stamp(this.flow);
+      this.store.saveWorking(this.currentSourceUrl, this.flow);
+    }
   }
 
   /**
@@ -609,7 +661,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   /** Keep the loaded flow's unsaved state, debounced, so a reload restores it. */
   private saveWorkingSoon(): void {
-    if (!this.currentSourceUrl) {
+    if (this.discarding || !this.currentSourceUrl) {
       return;   // only a flow with an address can be matched on the way back in
     }
 
