@@ -836,16 +836,16 @@ export class FbEditor {
   }
 
   /**
-   * Whether the highlight is worth dimming the rest of the graph for.
+   * Whether to dim the rest of the graph around the focus.
    *
-   * Only when the focus actually has a path — up or down non-empty. Selecting
-   * an isolated node, or a frame (which has no wires), lights nothing, and
-   * fading the whole graph around it would be noise, not focus.
+   * Whenever ONE node is selected — which `flowHighlight` already restricts to
+   * (a frame or a multi-select is null). It used to require a path (up or down
+   * non-empty), but a freshly added node has none and still needs to be found:
+   * selecting it and fading everything else is exactly how it is found. A single
+   * selected node, connected or not, is a focus.
    */
   get flowDimActive(): boolean {
-    const highlight = this.flowHighlight;
-
-    return !!highlight && (highlight.up.size > 0 || highlight.down.size > 0);
+    return !!this.flowHighlight;
   }
 
   /** Which side of the highlight a node is on, if any. */
@@ -1149,24 +1149,29 @@ export class FbEditor {
 
   private placeForNewNode(): FbPosition {
     const plane = this.viewport.planeSize;
+    const view = this.viewport.viewSize;
 
-    if (!plane.width || !plane.height) {
+    if (!plane.width || !plane.height || !view.width) {
       return { x: 10, y: 10 };
     }
 
-    // The viewport shows the plane through the pan/zoom transform; the local
-    // centre of the visible surface maps back to plane pixels, and positions
-    // are stored as percentages of the plane.
-    const centre = this.viewport.toPlane({ x: plane.width / 2, y: plane.height / 2 });
-    // A real cascade: each next node lands a readable step down-right, wrapping
-    // after eight — 3% looked like a pile, this reads as a stack of cards.
-    const step = (this.newNodeCount++ % 8) * 5;
+    /*
+     * Under the Add button: the TOP of the visible surface, toward its right
+     * edge, so a new node is in view the moment the picker closes rather than
+     * lost somewhere in the plane — the old centre-of-view landing still put it
+     * behind whatever the person was looking at. Pulled in from the right by a
+     * node's width so the whole box shows, and cascaded down a step so
+     * consecutive adds do not stack.
+     */
+    const step = (this.newNodeCount++ % 6) * 26;
+    const local = { x: Math.max(view.width * 0.35, view.width - 240), y: 92 + step };
+    const at = this.viewport.toPlane(local);
 
     const clampPct = (value: number) => Math.max(0, Math.min(88, value));
 
     return {
-      x: clampPct((centre.x / plane.width) * 100 - 16 + step),
-      y: clampPct((centre.y / plane.height) * 100 - 14 + step),
+      x: clampPct((at.x / plane.width) * 100),
+      y: clampPct((at.y / plane.height) * 100),
     };
   }
 
@@ -1208,6 +1213,10 @@ export class FbEditor {
     if (settings.isFlow && node.id !== undefined) {
       this.enter(node.id);
       this.requestSettings();
+    } else if (node.id !== undefined) {
+      // Select it, so it lights up and the rest of the graph fades back — a new
+      // node with no wires is otherwise easy to lose among the ones that have.
+      this.select(node.id);
     }
 
     return node;

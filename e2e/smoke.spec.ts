@@ -315,6 +315,42 @@ test('filters the node palette and adds the match with Enter', async ({ page }) 
 });
 
 /**
+ * An added node is easy to find: selected, with the rest faded, up in view.
+ *
+ * A new node used to land at the centre of the plane — often behind whatever the
+ * person was looking at — and unselected, one box among many. Now it comes in
+ * selected (so it lights and the graph dims around it) and near the top, under
+ * the Add button, so it is on screen the moment the picker closes.
+ */
+test('an added node is selected, fades the rest, and lands up in view', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const before = await page.locator('fb-node-box').count();
+
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+
+  const added = await page.evaluate(() => {
+    const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
+    const ids: number[] = [...editor.selection];
+    const node = editor.state.children.find((n: any) => ids.includes(n.id));
+
+    return { selected: ids.length, dim: editor.flowDimActive, type: node?.type, y: node?.ui?.position?.y };
+  });
+
+  // Exactly the new node is selected, and the graph dims around it.
+  expect(added.selected).toBe(1);
+  expect(added.type).toBe('note');
+  expect(added.dim).toBe(true);
+  // It landed in the top of the plane, under the Add button.
+  expect(added.y).toBeLessThan(45);
+});
+
+/**
  * Zoom and pan, checking the invariant that actually matters: every connection
  * path must START exactly on a socket centre, measured in the SVG's own
  * coordinate space, at every zoom level.
