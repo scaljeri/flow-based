@@ -1150,6 +1150,41 @@ test('the price source pulls a live price that reaches the whole chain', async (
 });
 
 /**
+ * A change to the demo survives a reload.
+ *
+ * The demo lives in memory, not on the shelf, but its edits are kept as a
+ * working copy — so coming back does not reset it and lose your extra node or
+ * your live refresh. Boot restores that copy over re-fetching the file, and
+ * Save still stands, because the changes are not on the shelf.
+ */
+test('a changed demo is kept across a reload', async ({ page }) => {
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/?fbnoseed');
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+  await page.waitForTimeout(900);   // let the baseline settle
+
+  const before = await page.locator('fb-node-box').count();
+
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+  await page.waitForTimeout(900);   // let the working copy be written (debounced)
+
+  await page.reload();
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+
+  // The added node is still there — restored from the working copy, not the file.
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+  // And it is still unsaved, so Save stands.
+  await expect(page.locator('mat-toolbar button.save-flow')).toBeVisible();
+});
+
+/**
  * The sampler is the bridge between vocabularies: a FUNCTION in, POINTS out —
  * a sample without its x is half a fact. f(x) = x^2 swept from 0 in steps of
  * 0.1 must produce [0,0], [0.1,0.01], [0.2,0.04]; and in sweep mode, the

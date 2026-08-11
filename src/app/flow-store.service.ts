@@ -18,6 +18,14 @@ export interface FbStoredFlow {
 const INDEX_KEY = 'fb-flows';
 const CURRENT_KEY = 'fb-flow-current';
 const FLOW_PREFIX = 'fb-flow-';
+const WORKING_KEY = 'fb-flow-working';
+
+/** The unsaved state of a loaded flow, kept so a reload does not lose it. */
+export interface FbWorkingFlow {
+  /** The address the flow was loaded from — how boot knows it belongs here. */
+  sourceUrl: string;
+  flow: FbNodeState;
+}
 
 /**
  * Flows in localStorage, so a reload costs nothing.
@@ -87,6 +95,44 @@ export class FlowStoreService {
     this.setCurrent(id);
 
     return id;
+  }
+
+  /**
+   * The working copy: the current, UNSAVED state of a loaded flow.
+   *
+   * A flow opened from a URL (the demo, a shared link) lives in memory and is
+   * not on the shelf — but its changes should survive a reload all the same, so
+   * you do not come back to find the demo reset and your live-refresh, your
+   * extra node, gone. This is that draft: one slot, the last loaded flow that
+   * was touched, keyed by where it came from so boot only restores it over the
+   * SAME flow. Saving it to the shelf, or opening another, clears it.
+   */
+  saveWorking(sourceUrl: string, flow: FbNodeState): void {
+    try {
+      localStorage.setItem(WORKING_KEY, JSON.stringify({ sourceUrl, flow: serializeFlowToJson(flow) }));
+    } catch {
+      // Quota. The flow on screen is unharmed; the next change tries again.
+    }
+  }
+
+  loadWorking(): FbWorkingFlow | null {
+    try {
+      const raw = localStorage.getItem(WORKING_KEY);
+
+      if (!raw) {
+        return null;
+      }
+
+      const parsed = JSON.parse(raw) as { sourceUrl: string; flow: string };
+
+      return { sourceUrl: parsed.sourceUrl, flow: deserializeFlowFromJson(parsed.flow) };
+    } catch {
+      return null;
+    }
+  }
+
+  clearWorking(): void {
+    localStorage.removeItem(WORKING_KEY);
   }
 
   /** The address a stored flow was fetched from, if any. */

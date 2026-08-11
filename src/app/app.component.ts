@@ -312,6 +312,12 @@ export class AppComponent implements OnInit, AfterViewInit {
     const fromUrl = params.get('flow');
 
     if (fromUrl) {
+      // Unsaved changes to this very flow win over both a saved copy and the
+      // file: coming back should land you where you left off.
+      if (await this.tryWorking(fromUrl)) {
+        return;
+      }
+
       const localId = this.store.findBySourceUrl(fromUrl);
       const local = localId ? this.store.load(localId) : null;
 
@@ -360,6 +366,10 @@ export class AppComponent implements OnInit, AfterViewInit {
      * lib is unreachable (offline, a broken deploy), the small starter stands
      * in rather than a blank canvas.
      */
+    if (await this.tryWorking(AppComponent.SHOWCASE)) {
+      return;   // your changed demo, kept from last time
+    }
+
     if (await this.loadFromUrl(AppComponent.SHOWCASE)) {
       return;
     }
@@ -447,6 +457,37 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
   }
 
+  /**
+   * Restore the unsaved working copy, if there is one for this address.
+   *
+   * The demo (and any URL-loaded flow) lives in memory; its changes are kept as
+   * a working copy so a reload does not reset them. Shown dirty — it has changes
+   * that are not on the shelf — so Save still offers to keep it there.
+   */
+  private async tryWorking(sourceUrl: string): Promise<boolean> {
+    const working = this.store.loadWorking();
+
+    if (!working || working.sourceUrl !== sourceUrl) {
+      return false;
+    }
+
+    await this.modules.enableFor(working.flow);
+
+    this.zone.run(() => {
+      this.history.clear();
+      this.currentFlowId = null;
+      this.currentSourceUrl = working.sourceUrl;
+      this.flow = working.flow;
+      this.dirty = true;
+      this.loadedJson = serializeFlowToJson(working.flow);
+      this.loadError = null;
+      this.reflectUrl();
+      this.cdr.detectChanges();
+    });
+
+    return true;
+  }
+
   /** Show a freshly loaded flow, in memory; `source` is its URL, or null. */
   private applyLoadedFlow(flow: FbNodeState, source: string | null): void {
     this.zone.run(() => {
@@ -505,33 +546,57 @@ export class AppComponent implements OnInit, AfterViewInit {
       }
 
       // A flow with a home autosaves. One without — loaded from a URL — has
-      // nowhere to autosave to, so a genuine edit raises the Save button.
+      // nowhere to autosave to, so a genuine edit raises the Save button AND is
+      // kept as a working copy, so a reload does not lose it.
       if (this.currentFlowId) {
         clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this.persist(), 600);
-      } else if (!this.dirty) {
-        /*
-         * Until the baseline is set, a change is the LOAD settling, not an edit.
-         * Loading a flow makes the engine write into it — format propagation
-         * resolves socket formats, a plot records its view — and comparing the
-         * on-screen flow to the file it came from would call all of that a
-         * change, so the demo showed Save (and offered to share "your version")
-         * before anyone touched it. The baseline is taken once those settle;
-         * only a change AFTER it is the person's.
-         */
-        if (this.loadedJson === null) {
-          this.captureBaselineSoon();
-        } else if (serializeFlowToJson(this.flow) !== this.loadedJson) {
+
+        return;
+      }
+
+      /*
+       * Until the baseline is set, a change is the LOAD settling, not an edit.
+       * Loading a flow makes the engine write into it — format propagation
+       * resolves socket formats, a plot records its view — and comparing the
+       * on-screen flow to the file it came from would call all of that a change,
+       * so the demo showed Save (and offered to share "your version") before
+       * anyone touched it. The baseline is taken once those settle; only a
+       * change AFTER it is the person's.
+       */
+      if (this.loadedJson === null) {
+        this.captureBaselineSoon();
+      } else if (serializeFlowToJson(this.flow) !== this.loadedJson) {
+        if (!this.dirty) {
           this.zone.run(() => {
             this.dirty = true;
             this.cdr.detectChanges();
           });
         }
+
+        this.saveWorkingSoon();
       }
     });
   }
 
   private baselineTimer?: ReturnType<typeof setTimeout>;
+  private workingTimer?: ReturnType<typeof setTimeout>;
+
+  /** Keep the loaded flow's unsaved state, debounced, so a reload restores it. */
+  private saveWorkingSoon(): void {
+    if (!this.currentSourceUrl) {
+      return;   // only a flow with an address can be matched on the way back in
+    }
+
+    clearTimeout(this.workingTimer);
+    this.workingTimer = setTimeout(() => {
+      if (this.currentSourceUrl && !this.currentFlowId) {
+        // Carry the module URLs it needs, the same as a download or a save.
+        this.modules.stamp(this.flow);
+        this.store.saveWorking(this.currentSourceUrl, this.flow);
+      }
+    }, 600);
+  }
 
   /** Capture the "unchanged" baseline once a freshly loaded flow stops settling. */
   private captureBaselineSoon(): void {
@@ -578,6 +643,9 @@ export class AppComponent implements OnInit, AfterViewInit {
     if (!action) {
       return;
     }
+
+    // Leaving the in-memory flow behind — its working copy no longer applies.
+    this.store.clearWorking();
 
     if (action.kind === 'open') {
       const flow = this.store.load(action.id);
