@@ -116,6 +116,16 @@ export class AppComponent implements OnInit, AfterViewInit {
   shareLink: string | null = null;
 
   /**
+   * The notice is asking which version to share, not reporting one.
+   *
+   * Only when a flow HAS a home on the web but has been changed since: the
+   * address shares what is published (without the change), packing shares what
+   * is on screen (but the link can grow long). Neither is the obvious one, so
+   * the person picks.
+   */
+  shareChoosing = false;
+
+  /**
    * Whether the document is being written rather than read.
    *
    * The document element owns the draft; this only says which mode it is in,
@@ -445,7 +455,9 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.currentSourceUrl = source;
       this.dirty = false;
       this.flow = flow;
-      this.loadedJson = serializeFlowToJson(flow);
+      // Baseline once the load settles, not now — see startAutosave.
+      this.loadedJson = null;
+      this.captureBaselineSoon();
       this.loadError = null;
       this.reflectUrl();
       this.cdr.detectChanges();
@@ -493,19 +505,40 @@ export class AppComponent implements OnInit, AfterViewInit {
       }
 
       // A flow with a home autosaves. One without — loaded from a URL — has
-      // nowhere to autosave to, so a genuine edit raises the Save button. The
-      // content check is what stops the load's own rebuild from tripping it.
+      // nowhere to autosave to, so a genuine edit raises the Save button.
       if (this.currentFlowId) {
         clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this.persist(), 600);
-      } else if (!this.dirty && this.loadedJson !== null
-                 && serializeFlowToJson(this.flow) !== this.loadedJson) {
-        this.zone.run(() => {
-          this.dirty = true;
-          this.cdr.detectChanges();
-        });
+      } else if (!this.dirty) {
+        /*
+         * Until the baseline is set, a change is the LOAD settling, not an edit.
+         * Loading a flow makes the engine write into it — format propagation
+         * resolves socket formats, a plot records its view — and comparing the
+         * on-screen flow to the file it came from would call all of that a
+         * change, so the demo showed Save (and offered to share "your version")
+         * before anyone touched it. The baseline is taken once those settle;
+         * only a change AFTER it is the person's.
+         */
+        if (this.loadedJson === null) {
+          this.captureBaselineSoon();
+        } else if (serializeFlowToJson(this.flow) !== this.loadedJson) {
+          this.zone.run(() => {
+            this.dirty = true;
+            this.cdr.detectChanges();
+          });
+        }
       }
     });
+  }
+
+  private baselineTimer?: ReturnType<typeof setTimeout>;
+
+  /** Capture the "unchanged" baseline once a freshly loaded flow stops settling. */
+  private captureBaselineSoon(): void {
+    clearTimeout(this.baselineTimer);
+    this.baselineTimer = setTimeout(() => {
+      this.loadedJson = serializeFlowToJson(this.flow);
+    }, 600);
   }
 
   private persist(): void {
@@ -817,7 +850,9 @@ export class AppComponent implements OnInit, AfterViewInit {
     // and a plain `await` before writeText spends the click's permission, so the
     // copy fails (found on a phone, and headless: the button never said copied).
     // A ClipboardItem fed a promise keeps the gesture alive until the URL is ready.
-    this.copyAsync(this.buildShareUrl(true).then(({ url, embedded, tooBig }) => {
+    // A changed flow packs (carry the edits) even when it has an address, so a
+    // shared article shows what is on screen, not the published version.
+    this.copyAsync(this.buildShareUrl(true, !this.currentSourceUrl || this.dirty).then(({ url, embedded, tooBig }) => {
       this.zone.run(() => {
         this.shareLink = tooBig ? null : url;
 
@@ -852,14 +887,42 @@ export class AppComponent implements OnInit, AfterViewInit {
    * and points at Download instead of handing over a link that will not open.
    */
   shareFlow(): void {
-    this.copyAsync(this.buildShareUrl(false).then(({ url, embedded, tooBig }) => {
+    // A flow from the web that has been changed since could be shared two ways,
+    // and neither is obviously right — so ask. Otherwise there is one sensible
+    // link: the address if it has one, the packed flow if it does not.
+    if (this.currentSourceUrl && this.dirty) {
       this.zone.run(() => {
+        this.shareChoosing = true;
+        this.shareLink = null;
+        this.shareNotice = 'You’ve changed this flow since it loaded. Share the published version (without your changes), or your version packed into the link — which can grow long.';
+        this.cdr.detectChanges();
+      });
+
+      return;
+    }
+
+    this.doShareFlow(!this.currentSourceUrl);
+  }
+
+  /** The choice buttons on the notice. */
+  shareAddress(): void {
+    this.doShareFlow(false);
+  }
+
+  shareMyVersion(): void {
+    this.doShareFlow(true);
+  }
+
+  private doShareFlow(forceData: boolean): void {
+    this.copyAsync(this.buildShareUrl(false, forceData).then(({ url, embedded, tooBig }) => {
+      this.zone.run(() => {
+        this.shareChoosing = false;
         this.shareLink = tooBig ? null : url;
         this.shareNotice = tooBig
           ? this.tooBigNotice(url, 'Download it (Download JSON) and share the file instead.')
           : embedded
-            ? 'This flow is only on your device, so the whole flow is packed into the link. Anyone who opens it gets the flow, no server needed.'
-            : 'Link copied.';
+            ? 'Your version is packed into the link — anyone who opens it gets exactly this, no server needed. A packed link can grow long, so it may be too big to share where a plain address would fit.'
+            : 'Link copied — the published version, without your local changes.';
         this.cdr.detectChanges();
       });
 
@@ -908,6 +971,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   dismissNotice(): void {
     this.shareNotice = null;
     this.shareLink = null;
+    this.shareChoosing = false;
   }
 
   /**
@@ -916,11 +980,11 @@ export class AppComponent implements OnInit, AfterViewInit {
    * does not — the flow deflated into the link. `embed=doc` on top for the
    * article view. `tooBig` is measured against what a static host will serve.
    */
-  private async buildShareUrl(embedDoc: boolean): Promise<{ url: string; embedded: boolean; tooBig: boolean }> {
+  private async buildShareUrl(embedDoc: boolean, forceData = false): Promise<{ url: string; embedded: boolean; tooBig: boolean }> {
     const parts: string[] = [];
     let embedded = false;
 
-    if (this.currentSourceUrl) {
+    if (this.currentSourceUrl && !forceData) {
       parts.push(`flow=${encodeURIComponent(this.currentSourceUrl)}`);
     } else {
       // A packed flow travels alone, so it must carry the URLs of any modules it

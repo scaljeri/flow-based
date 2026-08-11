@@ -219,7 +219,8 @@ main {
     flex: 1;
   }
 
-  .copy {
+  .copy,
+  .choice {
     background: var(--mat-sys-on-secondary-container, #001945);
     border: none;
     border-radius: 6px;
@@ -228,6 +229,12 @@ main {
     flex: 0 0 auto;
     padding: 6px 14px;
     white-space: nowrap;
+  }
+
+  .choice {
+    background: none;
+    border: 1px solid currentcolor;
+    color: inherit;
   }
 
   .dismiss {

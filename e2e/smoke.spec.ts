@@ -5100,3 +5100,56 @@ test('a local flow shares as a self-contained link that opens elsewhere', async 
   await expect(rp.locator('p.load-error')).toHaveCount(0);
   await recipient.close();
 });
+
+/**
+ * A hosted flow, changed, offers BOTH share links.
+ *
+ * Its address still points at the PUBLISHED flow, so sharing that would drop
+ * the person's edits; packing carries the edits but the link can grow long.
+ * Neither is obviously right, so Share asks — and each choice produces the
+ * link it names.
+ */
+test('a changed hosted flow offers the published address or the edited version', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/?fbnoseed');
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+  // Let the load settle and the "unchanged" baseline set, so the edit below is
+  // read as a change rather than the flow still coming up.
+  await page.waitForTimeout(900);
+
+  // Change it — add a node — so it differs from the published flow at its URL.
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+  await page.waitForTimeout(300);
+
+  const notice = page.locator('p.share-notice');
+
+  const openShare = async () => {
+    await page.locator('mat-toolbar button.overflow').click();
+    await page.locator('.cdk-overlay-container button.share-flow').click();
+  };
+
+  // Share now asks which version — two choices, not a copied link.
+  await openShare();
+  await expect(notice).toContainText('changed this flow');
+  await expect(notice.locator('button.choice')).toHaveCount(2);
+
+  // My version → the flow packed into the link.
+  await notice.locator('button.choice', { hasText: 'My version' }).click();
+  await expect(notice).toContainText('packed into the link');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('flowdata=');
+
+  // Published version → the address, without the edit.
+  await openShare();
+  await notice.locator('button.choice', { hasText: 'Published version' }).click();
+  const address = await page.evaluate(() => navigator.clipboard.readText());
+  expect(address).toContain('flow=assets%2Fflows%2Fcrypto.json');
+  expect(address).not.toContain('flowdata=');
+});

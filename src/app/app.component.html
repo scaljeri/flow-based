@@ -159,7 +159,10 @@ showing this app's cockpit.
 @if (shareNotice) {
   <p class="share-notice" role="status">
     <span class="text">{{shareNotice}}</span>
-    @if (shareLink) {
+    @if (shareChoosing) {
+      <button type="button" class="choice" (click)="shareAddress()">Published version</button>
+      <button type="button" class="choice" (click)="shareMyVersion()">My version (may be long)</button>
+    } @else if (shareLink) {
       <button type="button" class="copy" (click)="recopy()">Copy link</button>
     }
     <button type="button" class="dismiss" (click)="dismissNotice()" aria-label="Dismiss">✕</button>
