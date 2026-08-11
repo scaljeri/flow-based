@@ -781,6 +781,12 @@ export class AppComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    if (action.kind === 'file') {
+      void this.loadFromFile(action.file);
+
+      return;
+    }
+
     if (action.kind === 'save') {
       // The in-memory flow gets a home, under the name just chosen, and keeps
       // its source so its share link still points where it came from. It now
@@ -830,34 +836,36 @@ export class AppComponent implements OnInit, AfterViewInit {
     URL.revokeObjectURL(url);
   }
 
-  async onLoad(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
+  /**
+   * Open a flow from a FILE — the third load source beside a URL and a link.
+   *
+   * A file has no address, so it loads in memory exactly like `?flowdata=`
+   * (`applyLoadedFlow(restored, null)`): the previous flow's home, source and
+   * baseline are all reset — before this it just set `this.flow`, so uploading a
+   * file while a SAVED flow was open let the next autosave write the file's
+   * content over that shelf entry (the fix the "must not overwrite" test guards).
+   * A file from a stranger speaks its own modules, so it goes through the same
+   * `enableFor` consent gate the URL and link loads do.
+   */
+  async loadFromFile(file: File): Promise<boolean> {
     try {
       const restored = deserializeFlowFromJson(await file.text());
 
-      /*
-       * A file from somebody else speaks whatever modules they had. Fetching
-       * them BEFORE the flow is shown is the same rule the stored flows
-       * follow: a document drawn before its types are registered is a screen
-       * of empty boxes with no workers behind them.
-       */
-      await this.modules.enableFor(restored);
+      // A file names itself only when the flow inside does not — a flow that has
+      // a title keeps it; "flow (3).json" is a filesystem artefact, not a name.
+      if (!restored.title) {
+        restored.title = file.name.replace(/\.json$/i, '');
+      }
 
-      this.history.capture(this.flow);
-      this.flow = restored;
-      this.loadError = null;
+      await this.modules.enableFor(restored);
+      this.applyLoadedFlow(restored, null);
+
+      return true;
     } catch (err) {
-      // Surfaced in the toolbar rather than only in the console.
-      this.loadError = (err as Error).message;
-    } finally {
-      // Allow re-selecting the same file.
-      input.value = '';
+      this.loadError = `${file.name} — ${(err as Error).message}`;
+      this.cdr.detectChanges();
+
+      return false;
     }
   }
 

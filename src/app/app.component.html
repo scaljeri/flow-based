@@ -112,10 +112,8 @@ showing this app's cockpit.
       <span>Download JSON</span>
     </button>
 
-    <button type="button" mat-menu-item class="load" (click)="fileInput.click()">
-      <mat-icon>upload</mat-icon>
-      <span>Load JSON</span>
-    </button>
+    <!-- Loading a file moved into the Flows dialog, beside Load-from-URL — one
+         place a flow comes from, not a second entry point to the same pipeline. -->
 
     <mat-divider></mat-divider>
 
@@ -145,9 +143,6 @@ showing this app's cockpit.
     <!-- Which build this phone is ACTUALLY showing; cache disputes end here. -->
     <div class="app-version">{{version}}</div>
   </mat-menu>
-
-  <input #fileInput type="file" accept="application/json,.json" class="file-input"
-    (change)="onLoad($event)" aria-label="Load a flow from a JSON file">
 </mat-toolbar>
 }
 

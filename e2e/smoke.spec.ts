@@ -5269,6 +5269,77 @@ test('a local flow shares as a self-contained link that opens elsewhere', async 
 });
 
 /**
+ * Loading a file while a saved flow is open must not overwrite that flow.
+ *
+ * A file has no home, so it loads in memory — the previous flow's shelf id is
+ * dropped. Before the fix, uploading over a homed flow left its id set, so the
+ * next autosave wrote the file's content over the stored flow. This pins that
+ * the stored copy is untouched and the uploaded one is homeless.
+ */
+test('loading a file while a saved flow is open does not overwrite it', async ({ page }) => {
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // The harness seeds the demo as the current, HOMED flow.
+  const beforeStored = await page.evaluate(() => localStorage.getItem('fb-flow-demo-seed'));
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  const dialog = page.locator('fb-flows-dialog');
+  await expect(dialog).toBeVisible();
+
+  const uploaded = JSON.stringify({
+    version: 5,
+    flow: { id: 1, type: 'flow', title: 'Uploaded thing', sockets: [], children: [{ type: 'note', title: 'N', id: 2, sockets: [] }], connections: [] },
+  });
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'up.json', mimeType: 'application/json', buffer: Buffer.from(uploaded) });
+
+  // The uploaded flow is on screen, in memory (Save stands, no changes dot).
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Uploaded thing');
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).toBeVisible();
+  await expect(save).not.toHaveClass(/has-changes/);
+
+  // Edit it, wait past the autosave debounce, and the stored demo is untouched.
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+  await page.waitForTimeout(900);
+
+  expect(await page.evaluate(() => localStorage.getItem('fb-flow-demo-seed'))).toBe(beforeStored);
+  await expect(save).toHaveClass(/has-changes/);
+});
+
+/**
+ * An uploaded flow with no title takes its file's name.
+ *
+ * A flow that names itself keeps its name; one that does not borrows the file's,
+ * so a saved-then-reloaded file is not a screen of "Untitled".
+ */
+test('an uploaded flow with no title takes its file name', async ({ page }) => {
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  const dialog = page.locator('fb-flows-dialog');
+
+  const noTitle = JSON.stringify({ version: 5, flow: { id: 1, type: 'flow', sockets: [], children: [{ type: 'note', title: 'N', id: 2, sockets: [] }], connections: [] } });
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'My sketch.json', mimeType: 'application/json', buffer: Buffer.from(noTitle) });
+
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('My sketch');
+});
+
+/**
  * A hosted flow, changed, offers BOTH share links.
  *
  * Its address still points at the PUBLISHED flow, so sharing that would drop

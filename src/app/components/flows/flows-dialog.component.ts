@@ -8,6 +8,7 @@ export type FbFlowsAction =
   | { kind: 'open'; id: string }
   | { kind: 'new'; title: string }
   | { kind: 'load'; url: string }
+  | { kind: 'file'; file: File }
   | { kind: 'save'; title: string };
 
 /**
@@ -77,6 +78,14 @@ export interface FbFlowsData {
           <input type="url" placeholder="Load from a URL" [(ngModel)]="url" name="url">
           <button type="submit" mat-stroked-button [disabled]="!url.trim()">Load</button>
         </form>
+
+        <!-- Loading lives in one place now: a URL above, a file here. The old
+             toolbar "Load JSON" is gone. -->
+        <button type="button" mat-stroked-button class="from-file" (click)="fileInput.click()">
+          Open a file…
+        </button>
+        <input #fileInput type="file" accept="application/json,.json" class="file-input"
+               (change)="onFile($event)" aria-label="Open a flow from a JSON file">
       }
     </mat-dialog-content>
 
@@ -179,6 +188,15 @@ export interface FbFlowsData {
       padding-top: 12px;
     }
 
+    .from-file {
+      margin-top: 8px;
+      width: 100%;
+    }
+
+    .file-input {
+      display: none;
+    }
+
     .new input,
     .from-url input {
       border: 1px solid rgba(127, 127, 127, 0.4);
@@ -228,6 +246,16 @@ export class FlowsDialogComponent {
 
     if (this.url.trim()) {
       this.ref.close({ kind: 'load', url: this.url.trim() });
+    }
+  }
+
+  onFile(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+
+    if (file) {
+      // Close carrying the File; the app reads it — the dialog goes away either
+      // way, so it does not open the file itself.
+      this.ref.close({ kind: 'file', file });
     }
   }
 
