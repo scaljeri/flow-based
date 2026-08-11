@@ -112,6 +112,9 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   shareNotice: string | null = null;
 
+  /** The link the notice is about, so its Copy button has something to copy. */
+  shareLink: string | null = null;
+
   /**
    * Whether the document is being written rather than read.
    *
@@ -339,15 +342,19 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     /*
-     * A fresh browser opens the default showcase — a flow file we ship, loaded
-     * like any other, which is the whole point: the app no longer bundles a
-     * demo, it opens one. If that or its lib is unreachable (offline, a broken
-     * deploy), the small starter stands in rather than a blank canvas.
+     * A fresh browser opens the default showcase — a flow file we ship. It is
+     * loaded through exactly the path a person's own `?flow=` link takes: the
+     * app just INJECTS that step. So it comes in with its source URL set, the
+     * address bar shows it, and sharing it points at that URL rather than
+     * packing it — the demo is a loaded flow, not a special case. If it or its
+     * lib is unreachable (offline, a broken deploy), the small starter stands
+     * in rather than a blank canvas.
      */
-    if (await this.loadShowcase()) {
+    if (await this.loadFromUrl(AppComponent.SHOWCASE)) {
       return;
     }
 
+    this.loadError = null;   // the fallback is not an error to shout about
     const starter = structuredClone(data.basic) as FbNodeState;
 
     await this.modules.enableFor(starter);
@@ -366,74 +373,8 @@ export class AppComponent implements OnInit, AfterViewInit {
     });
   }
 
-  /** Where the shipped showcase lives, relative to the app. */
+  /** Where the shipped showcase lives, relative to the app — the default open. */
   private static readonly SHOWCASE = 'assets/flows/crypto.json';
-
-  /**
-   * Open the shipped showcase — in memory, with its own libs loaded.
-   *
-   * The showcase is a flow WE ship, so its declared libs are ours: they load
-   * without the consent step a stranger's flow gets, but only when they are
-   * served from our own origin — a shipped flow pointing a `libs` entry at some
-   * other site is still a stranger's code and stays gated. Returns false on any
-   * failure so the caller can fall back rather than open on nothing.
-   */
-  private async loadShowcase(): Promise<boolean> {
-    try {
-      /*
-       * Cache-buster tied to the build hash, so every deploy serves a fresh
-       * showcase and, crucially, a fresh LIB. Found the hard way on a phone:
-       * the flow updated (it declared new indicator nodes) but the browser
-       * kept the previous `crypto.js`, which had no such types — so the bands
-       * drew as empty boxes and never reached the plot. A module is imported,
-       * not fetched, so its cache mode cannot be set; the query is the lever.
-       */
-      const bust = `v=${encodeURIComponent(this.version.split(' ')[0])}`;
-
-      const url = new URL(AppComponent.SHOWCASE, location.href);
-
-      url.search = bust;
-
-      const response = await fetch(url.href);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const flow = deserializeFlowFromJson(await response.text());
-
-      // Our own libs first (trusted, same-origin), then the built-in modules the
-      // flow's types name by prefix — both before it is drawn, or its nodes
-      // arrive as empty boxes with no workers. The lib URL is busted too, and
-      // the flow's own entry rewritten to match, so addFromUrl and enableFor
-      // agree on one id rather than registering the module twice.
-      for (const lib of (flow.config?.modules ?? []) as { url: string }[]) {
-        const abs = new URL(lib.url, location.href);
-
-        if (abs.origin === location.origin) {
-          abs.search = abs.search ? `${abs.search}&${bust}` : bust;
-          lib.url = abs.href;
-          await this.modules.addFromUrl(abs.href);
-        }
-      }
-
-      await this.modules.enableFor(flow);
-
-      this.zone.run(() => {
-        this.history.clear();
-        this.currentFlowId = null;      // the home page: in memory, no shelf entry
-        this.currentSourceUrl = null;   // and a clean address bar
-        this.dirty = false;
-        this.flow = flow;
-        this.loadedJson = serializeFlowToJson(flow);
-        this.cdr.detectChanges();
-      });
-
-      return true;
-    } catch {
-      return false;
-    }
-  }
 
   /**
    * Fetch a flow from anywhere and show it — in memory, not on the shelf.
@@ -878,6 +819,8 @@ export class AppComponent implements OnInit, AfterViewInit {
     // A ClipboardItem fed a promise keeps the gesture alive until the URL is ready.
     this.copyAsync(this.buildShareUrl(true).then(({ url, embedded, tooBig }) => {
       this.zone.run(() => {
+        this.shareLink = tooBig ? null : url;
+
         if (tooBig) {
           this.shareNotice = this.tooBigNotice(url, 'Host the flow’s file and share that address instead.');
         } else {
@@ -911,10 +854,11 @@ export class AppComponent implements OnInit, AfterViewInit {
   shareFlow(): void {
     this.copyAsync(this.buildShareUrl(false).then(({ url, embedded, tooBig }) => {
       this.zone.run(() => {
+        this.shareLink = tooBig ? null : url;
         this.shareNotice = tooBig
           ? this.tooBigNotice(url, 'Download it (Download JSON) and share the file instead.')
           : embedded
-            ? 'This flow is only on your device, so the whole flow is packed into the link — copied. Anyone who opens it gets the flow, no server needed.'
+            ? 'This flow is only on your device, so the whole flow is packed into the link. Anyone who opens it gets the flow, no server needed.'
             : 'Link copied.';
         this.cdr.detectChanges();
       });
@@ -947,9 +891,23 @@ export class AppComponent implements OnInit, AfterViewInit {
       }));
   }
 
+  /**
+   * Copy the shared link again, from the button on the notice.
+   *
+   * A fresh click, so `writeText` is synchronous within a live gesture and
+   * needs none of the ClipboardItem dance the first, async, copy did.
+   */
+  recopy(): void {
+    if (this.shareLink) {
+      void navigator.clipboard.writeText(this.shareLink)
+        .catch(() => window.prompt('Copy this link', this.shareLink!));
+    }
+  }
+
   /** The person read the share notice; take it down. */
   dismissNotice(): void {
     this.shareNotice = null;
+    this.shareLink = null;
   }
 
   /**

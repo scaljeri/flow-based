@@ -158,7 +158,10 @@ showing this app's cockpit.
 
 @if (shareNotice) {
   <p class="share-notice" role="status">
-    {{shareNotice}}
+    <span class="text">{{shareNotice}}</span>
+    @if (shareLink) {
+      <button type="button" class="copy" (click)="recopy()">Copy link</button>
+    }
     <button type="button" class="dismiss" (click)="dismissNotice()" aria-label="Dismiss">✕</button>
   </p>
 }

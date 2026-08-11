@@ -12,6 +12,7 @@ import {
 } from '@scaljeri/flow-based';
 import { FB_BASE_SHAPES, FbSocketColors } from '@scaljeri/flow-based-core';
 import { FB_SOCKET_PALETTE } from './fb-settings';
+import { APP_VERSION } from './version';
 
 export type { FbModule };
 
@@ -378,11 +379,21 @@ export class ModulesService {
         continue;
       }
 
-      const known = this.modules.find(info => info.id === `url:${href}`);
+      // A lib in OUR OWN module directory is ours: `assets/modules/` is where
+      // this build serves the libs it ships, and a stranger's flow cannot put a
+      // file there — pointing at it resolves to one of our files or a 404, never
+      // their code. So it loads without asking, cache-busted by the build so a
+      // stale copy cannot outlive a flow that needs a newer one. Anything else —
+      // any other same-origin path, any other origin — is gated below. Same-
+      // origin is NOT enough on its own: a flow could name `/whatever.js`, and
+      // trusting the origin would run it.
+      const own = this.isOwnLib(href);
+      const target = own ? this.withBuild(href) : href;
+      const known = this.modules.find(info => info.id === `url:${target}`);
 
       /*
        * A module this browser already has is loaded; one it has never seen is
-       * only LISTED.
+       * only LISTED — unless it is one of our own shipped libs, which loads.
        *
        * The difference is consent. Opening a document must not run code the
        * reader has not agreed to run — a flow is a file, files arrive by
@@ -394,6 +405,8 @@ export class ModulesService {
        */
       if (known) {
         await this.enable(known.id);
+      } else if (own) {
+        await this.addFromUrl(target);
       } else {
         this.remember({
           url: href,
@@ -569,6 +582,40 @@ export class ModulesService {
     } catch {
       throw new Error('That is not a URL');
     }
+  }
+
+  /**
+   * Whether a URL is one of the libs THIS build ships — same origin, and under
+   * the `assets/modules/` directory `build-libs.mjs` writes to.
+   *
+   * Same origin alone is not enough: a flow could declare `/anything.js` and the
+   * origin would vouch for a file we never put there. The directory is the line
+   * — a stranger cannot host under our `assets/modules/`, so a URL there is ours
+   * or a 404, never their code.
+   */
+  private isOwnLib(href: string): boolean {
+    try {
+      const url = new URL(href);
+
+      return url.origin === location.origin && url.pathname.includes('/assets/modules/');
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Tag one of our lib URLs with the build, so a redeploy fetches it fresh.
+   *
+   * A module is `import()`ed, whose cache mode cannot be set, so the query is
+   * the only lever — found on a phone that kept an old lib under a flow that
+   * needed a newer one. Only for OUR libs: a stranger's URL is left untouched.
+   */
+  private withBuild(href: string): string {
+    const url = new URL(href);
+
+    url.searchParams.set('v', APP_VERSION.split(' ')[0]);
+
+    return url.href;
   }
 
   /** List a fetched module without loading it. */

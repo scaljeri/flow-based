@@ -1061,7 +1061,8 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
  * what a new visitor sees. Named so a regression — a blank first visit, or a
  * lib that silently failed to load and left empty boxes — is caught.
  */
-test('a fresh browser opens the crypto showcase, its lib loaded by URL', async ({ page }) => {
+test('a fresh browser opens the crypto showcase, its lib loaded by URL', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/?fbnoseed');
 
   await expect
@@ -1094,6 +1095,16 @@ test('a fresh browser opens the crypto showcase, its lib loaded by URL', async (
       { editor?: { flow?: { getWorker(id: number): { state?: boolean } } } })
       ?.editor?.flow?.getWorker(500)?.state);
   expect(typeof signal).toBe('boolean');
+
+  // The demo is a LOADED flow — the app injected the same ?flow= step a person's
+  // link takes — so it is shared by its ADDRESS, not packed into the link. The
+  // notice confirms a plain copy, and the link points at the hosted file.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.share-flow').click();
+  await expect(page.locator('p.share-notice')).toContainText('Link copied');
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  expect(link).toContain('flow=assets%2Fflows%2Fcrypto.json');
+  expect(link).not.toContain('flowdata=');
 });
 
 /**
