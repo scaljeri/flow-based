@@ -6,6 +6,7 @@ import { ModulesDialogComponent } from './components/modules/modules-dialog.comp
 import { ModulesService } from './modules.service';
 import { APP_VERSION } from './version';
 import { FlowStoreService } from './flow-store.service';
+import { FbRemoteSaveError, RemoteFlowService } from './remote-flow.service';
 import { SHARE_URL_LIMIT, packJson, unpackJson } from './flow-link';
 import { FbFlowsAction, FbFlowsData, FlowsDialogComponent } from './components/flows/flows-dialog.component';
 import {
@@ -42,6 +43,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   private dialog = inject(MatDialog);
   private modules = inject(ModulesService);
   private store = inject(FlowStoreService);
+  private remote = inject(RemoteFlowService);
   private zone = inject(NgZone);
   private cdr = inject(ChangeDetectorRef);
 
@@ -73,6 +75,17 @@ export class AppComponent implements OnInit, AfterViewInit {
    * appears when the person changes something, not when the flow arrives.
    */
   private loadedJson: string | null = null;
+
+  /**
+   * A homed flow whose destination is a REMOTE endpoint has changes not yet
+   * pushed. Unlike `dirty` (which is for a homeless flow), this can be true while
+   * `currentFlowId` is set — a local autosave happened, the remote did not — and
+   * it puts the same "unsaved" dot on the Save button. Reset by a successful push.
+   */
+  remoteDirty = false;
+
+  /** The flow as last PUT to its endpoint, to tell a pushed state from a dirty one. */
+  private lastPushedJson: string | null = null;
 
   /**
    * Embed mode: the article alone, with the app's chrome gone.
@@ -629,6 +642,15 @@ export class AppComponent implements OnInit, AfterViewInit {
         clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this.persist(), 600);
 
+        // A remote-homed flow autosaves LOCALLY but not to its endpoint — that
+        // needs an explicit Save. Mark it so the Save button wears its dot.
+        if (!this.remoteDirty && this.store.destinationOf(this.currentFlowId).kind === 'remote') {
+          this.zone.run(() => {
+            this.remoteDirty = true;
+            this.cdr.detectChanges();
+          });
+        }
+
         return;
       }
 
@@ -723,8 +745,17 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   saveToShelf(): void {
     if (this.currentFlowId) {
+      // Local copy first, always — then, if this flow's home is a remote
+      // endpoint, push it there. The shelf is the safety net; the network is not.
       this.persist();
-      this.notify('Saved.');
+
+      const dest = this.store.destinationOf(this.currentFlowId);
+
+      if (dest.kind === 'remote') {
+        void this.pushRemote(dest.url);
+      } else {
+        this.notify('Saved.');
+      }
 
       return;
     }
@@ -735,10 +766,77 @@ export class AppComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    this.openSaveDialog();
+  }
+
+  /** "Save as…" — pick a name and, if wanted, an endpoint, from any state. */
+  saveAs(): void {
+    this.openSaveDialog();
+  }
+
+  private openSaveDialog(): void {
+    const dest = this.currentFlowId ? this.store.destinationOf(this.currentFlowId) : { kind: 'local' as const };
+
     this.dialog.open(FlowsDialogComponent, {
       width: '360px',
-      data: { mode: 'save', title: this.flow.title } as FbFlowsData,
+      data: {
+        mode: 'save',
+        title: this.flow.title,
+        endpoint: dest.kind === 'remote' ? dest.url : '',
+      } as FbFlowsData,
     }).afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
+  }
+
+  /**
+   * Push the flow to its remote endpoint.
+   *
+   * The local copy is already saved by the caller, so any failure loses nothing
+   * — the notice says so. The token comes from RemoteFlowService, never from the
+   * flow. On success the endpoint may hand back a canonical readable URL, which
+   * then becomes the flow's source so its share link points at the saved copy.
+   */
+  private async pushRemote(url: string): Promise<void> {
+    this.notify(`Saving to ${this.hostOf(url)}…`);
+
+    try {
+      this.modules.stamp(this.flow);
+      const json = serializeFlowToJson(this.flow);
+      const { canonicalUrl } = await this.remote.save(url, json);
+
+      this.zone.run(() => {
+        this.lastPushedJson = json;
+        this.remoteDirty = false;
+        this.shareNotice = `Saved to ${this.hostOf(url)}.`;
+        this.shareLink = null;
+        this.shareChoosing = false;
+
+        if (canonicalUrl) {
+          this.currentSourceUrl = canonicalUrl;
+          this.reflectUrl();
+        }
+
+        this.cdr.detectChanges();
+      });
+    } catch (err) {
+      this.zone.run(() => {
+        const auth = err instanceof FbRemoteSaveError && err.kind === 'auth';
+
+        this.shareNotice = auth
+          ? 'The endpoint rejected the token. Set a new one under “Save as…”. Your changes are kept on this device.'
+          : `Save failed — ${(err as Error).message} Your changes are kept on this device.`;
+        this.shareLink = null;
+        this.shareChoosing = false;
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
+  private hostOf(url: string): string {
+    try {
+      return new URL(url).host;
+    } catch {
+      return url;
+    }
   }
 
   private onFlowsAction(action?: FbFlowsAction): void {
@@ -788,15 +886,49 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     if (action.kind === 'save') {
-      // The in-memory flow gets a home, under the name just chosen, and keeps
-      // its source so its share link still points where it came from. It now
-      // has an id, so from here it autosaves like any other.
+      // Save HERE (local). A homeless flow gets a home under the chosen name; a
+      // homed one is renamed and pinned back to local (dropping any endpoint).
       this.flow = { ...this.flow, title: action.title };
-      this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
-      this.dirty = false;
-      this.loadedJson = null;
+
+      if (this.currentFlowId) {
+        this.store.setDestination(this.currentFlowId, null);
+        this.remoteDirty = false;
+        this.persist();
+        this.notify('Saved.');
+      } else {
+        this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
+        this.dirty = false;
+        this.loadedJson = null;
+      }
+
       this.reflectUrl();
       this.cdr.detectChanges();
+
+      return;
+    }
+
+    if (action.kind === 'save-remote') {
+      // Save to an endpoint. The token goes to RemoteFlowService (keyed by
+      // origin), NEVER onto the flow. The flow gets a local home too — the shelf
+      // is the safety net — and remembers the endpoint for later saves.
+      this.flow = { ...this.flow, title: action.title };
+
+      if (action.token) {
+        this.remote.setToken(action.endpoint, action.token);
+      }
+
+      if (this.currentFlowId) {
+        this.persist();
+      } else {
+        this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
+        this.dirty = false;
+        this.loadedJson = null;
+      }
+
+      this.store.setDestination(this.currentFlowId, action.endpoint);
+      this.reflectUrl();
+      this.cdr.detectChanges();
+      void this.pushRemote(action.endpoint);
 
       return;
     }

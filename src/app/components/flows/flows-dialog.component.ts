@@ -9,7 +9,8 @@ export type FbFlowsAction =
   | { kind: 'new'; title: string }
   | { kind: 'load'; url: string }
   | { kind: 'file'; file: File }
-  | { kind: 'save'; title: string };
+  | { kind: 'save'; title: string }
+  | { kind: 'save-remote'; title: string; endpoint: string; token: string };
 
 /**
  * How the dialog was opened. In `save` mode it is the "where does this land?"
@@ -19,6 +20,8 @@ export type FbFlowsAction =
 export interface FbFlowsData {
   mode?: 'save';
   title?: string;
+  /** An endpoint this flow already saves to, to prime the field in save mode. */
+  endpoint?: string;
 }
 
 /**
@@ -65,9 +68,24 @@ export interface FbFlowsData {
         <input type="text" [placeholder]="saveMode ? 'Name for this flow' : 'Name for a new flow'"
                [(ngModel)]="name" name="name">
         <button type="submit" mat-stroked-button [disabled]="!name.trim()">
-          {{saveMode ? 'Save' : 'New flow'}}
+          {{saveMode ? 'Save here' : 'New flow'}}
         </button>
       </form>
+
+      <!--
+      Save can go somewhere else than this device. An endpoint URL and a token
+      (kept in localStorage keyed by the endpoint's origin, never in the flow);
+      the flow remembers the endpoint so later saves go there without asking.
+      -->
+      @if (saveMode) {
+        <form class="to-endpoint" (submit)="onSaveRemote($event)">
+          <input type="url" placeholder="…or save to an endpoint (URL)" [(ngModel)]="endpoint" name="endpoint">
+          <input type="password" placeholder="Access token" [(ngModel)]="token" name="token">
+          <button type="submit" mat-stroked-button [disabled]="!name.trim() || !endpoint.trim()">
+            Save to endpoint
+          </button>
+        </form>
+      }
 
       <!--
       Loading from a URL is a browsing act, not a saving one: hidden in save
@@ -198,12 +216,26 @@ export interface FbFlowsData {
     }
 
     .new input,
-    .from-url input {
+    .from-url input,
+    .to-endpoint input {
       border: 1px solid rgba(127, 127, 127, 0.4);
       border-radius: 6px;
       flex: 1;
       min-width: 0;
       padding: 8px 10px;
+    }
+
+    .to-endpoint {
+      border-top: 1px solid rgba(127, 127, 127, 0.2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+
+    .to-endpoint input {
+      flex: 1 1 100%;
     }
 
     .spacer {
@@ -225,6 +257,8 @@ export class FlowsDialogComponent {
   readonly saveMode = this.data?.mode === 'save';
   name = this.saveMode ? (this.data?.title ?? '') : '';
   url = '';
+  endpoint = this.data?.endpoint ?? '';
+  token = '';
 
   onOpen(flow: FbStoredFlow): void {
     this.ref.close({ kind: 'open', id: flow.id });
@@ -256,6 +290,21 @@ export class FlowsDialogComponent {
       // Close carrying the File; the app reads it — the dialog goes away either
       // way, so it does not open the file itself.
       this.ref.close({ kind: 'file', file });
+    }
+  }
+
+  onSaveRemote(event: Event): void {
+    event.preventDefault();
+
+    if (this.name.trim() && this.endpoint.trim()) {
+      // The token may be blank if the origin already has one stored; the app
+      // decides whether that is enough.
+      this.ref.close({
+        kind: 'save-remote',
+        title: this.name.trim(),
+        endpoint: this.endpoint.trim(),
+        token: this.token,
+      });
     }
   }
 

@@ -57,9 +57,9 @@ showing this app's cockpit.
 
     <!-- Always here, so it never flashes and vanishes: a dot when there are
          unsaved changes, and clicking always says what it did. -->
-    <button type="button" mat-icon-button class="save-flow" [class.has-changes]="dirty"
+    <button type="button" mat-icon-button class="save-flow" [class.has-changes]="dirty || remoteDirty"
       (click)="saveToShelf()" aria-label="Save flow"
-      [matTooltip]="dirty ? 'Unsaved changes — save' : 'Save'">
+      [matTooltip]="(dirty || remoteDirty) ? 'Unsaved changes — save' : 'Save'">
       <mat-icon>save</mat-icon>
     </button>
   }
@@ -106,6 +106,12 @@ showing this app's cockpit.
     </button>
 
     <mat-divider></mat-divider>
+
+    <!-- Choose where this flow is saved: here, or a remote endpoint. -->
+    <button type="button" mat-menu-item class="save-as" (click)="saveAs()">
+      <mat-icon>save_as</mat-icon>
+      <span>Save as…</span>
+    </button>
 
     <button type="button" mat-menu-item class="save" (click)="save()">
       <mat-icon>download</mat-icon>

@@ -13,7 +13,20 @@ export interface FbStoredFlow {
    * the flow — a downloaded file opened elsewhere is not that URL.
    */
   sourceUrl?: string;
+
+  /**
+   * Where Save writes this flow, if not just here. A remote endpoint URL; absent
+   * means local-only. INDEPENDENT of sourceUrl — a flow loaded from A can be
+   * saved to B. Like sourceUrl, app-local metadata, never in the flow's JSON;
+   * the token that authorises it lives in RemoteFlowService, keyed by origin,
+   * never here (a shelf entry is not serialized to a shareable form, but the
+   * rule "credentials never near a flow" holds regardless).
+   */
+  endpoint?: string;
 }
+
+/** Where Save writes a flow: the local shelf, or a remote endpoint. */
+export type FbSaveDestination = { kind: 'local' } | { kind: 'remote'; url: string };
 
 const INDEX_KEY = 'fb-flows';
 const CURRENT_KEY = 'fb-flow-current';
@@ -184,12 +197,35 @@ export class FlowStoreService {
     keys.forEach(key => localStorage.removeItem(key));
   }
 
-  private touch(id: string, title: string, sourceUrl?: string): void {
+  /** Where Save writes a stored flow: a remote endpoint, or the local shelf. */
+  destinationOf(id: string): FbSaveDestination {
+    const url = this.list().find(f => f.id === id)?.endpoint;
+
+    return url ? { kind: 'remote', url } : { kind: 'local' };
+  }
+
+  /** Point a stored flow's saves at an endpoint, or (null) back at the shelf. */
+  setDestination(id: string, endpoint: string | null): void {
+    const flow = this.list().find(f => f.id === id);
+
+    if (flow) {
+      // Rewrite the entry, keeping title/sourceUrl, changing only the endpoint.
+      this.touch(id, flow.title, flow.sourceUrl, endpoint === null ? '' : endpoint);
+    }
+  }
+
+  private touch(id: string, title: string, sourceUrl?: string, endpoint?: string): void {
     const prior = this.list().find(f => f.id === id);
     const rest = this.list().filter(f => f.id !== id);
-    // undefined = keep the prior origin (the autosave path); a string sets it.
+    // undefined = keep the prior value (the autosave path); a string sets it, and
+    // the empty string clears it (used by setDestination to revert to local).
     const source = sourceUrl ?? prior?.sourceUrl;
-    const entry: FbStoredFlow = { id, title, updated: Date.now(), ...(source ? { sourceUrl: source } : {}) };
+    const dest = endpoint === undefined ? prior?.endpoint : (endpoint || undefined);
+    const entry: FbStoredFlow = {
+      id, title, updated: Date.now(),
+      ...(source ? { sourceUrl: source } : {}),
+      ...(dest ? { endpoint: dest } : {}),
+    };
 
     localStorage.setItem(INDEX_KEY, JSON.stringify([entry, ...rest]));
   }

@@ -5340,6 +5340,129 @@ test('an uploaded flow with no title takes its file name', async ({ page }) => {
 });
 
 /**
+ * A remote save carries the token in the header, never in the flow.
+ *
+ * This is the whole point of keeping the token in RemoteFlowService and out of
+ * the flow: the PUT authorises with a Bearer header, but the body — the flow
+ * JSON that also gets downloaded, shared and shelved — must never contain it.
+ * The endpoint is same-origin so the browser sends no preflight to intercept.
+ */
+test('a remote save sends a Bearer token but never writes it into the flow', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const origin = await page.evaluate(() => location.origin);
+  const endpoint = `${origin}/flows/mine`;
+  const TOKEN = 'sk-secret-should-never-leak';
+
+  let authHeader: string | undefined;
+  let sentBody: string | null = null;
+  await page.route('**/flows/mine', async route => {
+    authHeader = route.request().headers()['authorization'];
+    sentBody = route.request().postData();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+
+  // Save as… → the save dialog → the endpoint form.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.save-as').click();
+  const dialog = page.locator('fb-flows-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.locator('input[name=endpoint]').fill(endpoint);
+  await dialog.locator('input[name=token]').fill(TOKEN);
+  await dialog.locator('.to-endpoint button[type=submit]').click();
+
+  // The PUT arrives authorised, and its body is the flow — without the token.
+  await expect.poll(() => authHeader, { timeout: 10_000 }).toBe(`Bearer ${TOKEN}`);
+  expect(sentBody).not.toContain(TOKEN);
+
+  // The token is stored, keyed by origin — and the flow on the shelf, which
+  // shares the download's serialisation, does not carry it.
+  const leak = await page.evaluate(() => {
+    const tokens = localStorage.getItem('fb-save-tokens') ?? '';
+    const id = localStorage.getItem('fb-flow-current');
+    const stored = id ? (localStorage.getItem('fb-flow-' + id) ?? '') : '';
+    const index = localStorage.getItem('fb-flows') ?? '';
+    return { tokens, stored, index };
+  });
+  expect(leak.tokens).toContain('sk-secret-should-never-leak');
+  expect(leak.stored).not.toContain('sk-secret-should-never-leak');
+  // The endpoint is remembered as this flow's destination (app-local metadata).
+  expect(leak.index).toContain('/flows/mine');
+});
+
+/**
+ * A remote-homed flow keeps its endpoint across an autosave.
+ *
+ * The autosave writes locally and, being cheap, must not disturb the endpoint
+ * metadata — nor ever spill the token into the stored flow. Editing after a
+ * remote save leaves the destination intact and the flow still token-free.
+ */
+test('a remote-homed flow keeps its endpoint and stays token-free across an autosave', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const origin = await page.evaluate(() => location.origin);
+  const endpoint = `${origin}/flows/mine`;
+  await page.route('**/flows/mine', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.save-as').click();
+  const dialog = page.locator('fb-flows-dialog');
+  await dialog.locator('input[name=endpoint]').fill(endpoint);
+  await dialog.locator('input[name=token]').fill('tok-abc');
+  await dialog.locator('.to-endpoint button[type=submit]').click();
+  await expect(page.locator('.share-notice')).toBeVisible({ timeout: 10_000 });
+
+  // Edit and let the autosave debounce pass.
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+  await page.waitForTimeout(900);
+
+  const after = await page.evaluate(() => {
+    const id = localStorage.getItem('fb-flow-current');
+    const stored = id ? (localStorage.getItem('fb-flow-' + id) ?? '') : '';
+    const index = localStorage.getItem('fb-flows') ?? '';
+    return { stored, index };
+  });
+  expect(after.index).toContain('/flows/mine');
+  expect(after.stored).not.toContain('tok-abc');
+  // An unsaved remote push raises the Save dot — the local copy is saved, the
+  // endpoint is not, and the button says so.
+  await expect(page.locator('mat-toolbar button.save-flow')).toHaveClass(/has-changes/);
+});
+
+/**
+ * A rejected token is reported, and the changes are kept on the device.
+ *
+ * A 401/403 means the token is wrong or spent — the app says so and points at
+ * where to set a new one, but never loses the flow: the local save already ran.
+ */
+test('a 401 from the endpoint reports the rejected token and keeps changes', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  const origin = await page.evaluate(() => location.origin);
+  const endpoint = `${origin}/flows/mine`;
+  await page.route('**/flows/mine', route => route.fulfill({ status: 401, body: 'nope' }));
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.save-as').click();
+  const dialog = page.locator('fb-flows-dialog');
+  await dialog.locator('input[name=endpoint]').fill(endpoint);
+  await dialog.locator('input[name=token]').fill('stale-token');
+  await dialog.locator('.to-endpoint button[type=submit]').click();
+
+  const notice = page.locator('.share-notice');
+  await expect(notice).toContainText(/token/i, { timeout: 10_000 });
+  // Homed locally all the same — the flow is on the shelf, not lost.
+  const homed = await page.evaluate(() => !!localStorage.getItem('fb-flow-current'));
+  expect(homed).toBe(true);
+});
+
+/**
  * A hosted flow, changed, offers BOTH share links.
  *
  * Its address still points at the PUBLISHED flow, so sharing that would drop
