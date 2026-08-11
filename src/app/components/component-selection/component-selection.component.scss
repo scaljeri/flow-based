@@ -20,6 +20,18 @@ mat-toolbar,
 mat-toolbar {
   display: flex;
   justify-content: space-between;
+
+  /*
+   * An icon button does NOT inherit the toolbar's on-primary ink — it has its
+   * own token, which defaults to near-black — so the close X was a dark cross
+   * on the indigo bar, all but invisible. The same fix the main toolbar's
+   * hamburger needs.
+   */
+  .close {
+    --mat-icon-button-icon-color: currentcolor;
+
+    color: var(--mat-sys-on-primary, #fff);
+  }
 }
 
 .type-selection {
