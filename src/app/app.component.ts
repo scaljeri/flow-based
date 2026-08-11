@@ -6,6 +6,7 @@ import { ModulesDialogComponent } from './components/modules/modules-dialog.comp
 import { ModulesService } from './modules.service';
 import { APP_VERSION } from './version';
 import { FlowStoreService } from './flow-store.service';
+import { SHARE_URL_LIMIT, packJson, unpackJson } from './flow-link';
 import { FbFlowsAction, FbFlowsData, FlowsDialogComponent } from './components/flows/flows-dialog.component';
 import {
   FbHistoryService,
@@ -102,6 +103,14 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   /** Flipped briefly after a copy, so the share button can say it worked. */
   shareCopied = false;
+
+  /**
+   * What sharing had to tell the person — that the flow went INTO the link
+   * because it lives only here, or that it was too big to. Shown as a dismissible
+   * banner rather than swallowed: packing a whole flow into a URL is a thing the
+   * person should know they did.
+   */
+  shareNotice: string | null = null;
 
   /**
    * Whether the document is being written rather than read.
@@ -266,14 +275,28 @@ export class AppComponent implements OnInit, AfterViewInit {
      * browser opens the small starter below.
      */
 
+    const params = new URLSearchParams(window.location.search);
+
     /*
-     * A link into the app can name a flow to open: `?flow=<url>`. It wins over
-     * the stored "current" pointer — someone following a shared link means to
-     * see that flow, not whatever this browser had open last. A local copy that
-     * already mirrors the URL is preferred over re-fetching, so a reload does
-     * not throw away edits the person saved (findBySourceUrl).
+     * A link can carry the whole flow in it: `?flowdata=<packed>`, for a flow
+     * that lives only in a browser and so has no address to point at. It wins
+     * over everything — the link IS the flow. Same consent gate as any shared
+     * flow (loadFromData → enableFor).
      */
-    const fromUrl = new URLSearchParams(window.location.search).get('flow');
+    const fromData = params.get('flowdata');
+
+    if (fromData && await this.loadFromData(fromData)) {
+      return;
+    }
+
+    /*
+     * Or a link can NAME a flow to open: `?flow=<url>`. It wins over the stored
+     * "current" pointer — someone following a shared link means to see that
+     * flow, not whatever this browser had open last. A local copy that already
+     * mirrors the URL is preferred over re-fetching, so a reload does not throw
+     * away edits the person saved (findBySourceUrl).
+     */
+    const fromUrl = params.get('flow');
 
     if (fromUrl) {
       const localId = this.store.findBySourceUrl(fromUrl);
@@ -432,18 +455,8 @@ export class AppComponent implements OnInit, AfterViewInit {
       const restored = deserializeFlowFromJson(await response.text());
 
       await this.modules.enableFor(restored);
-
-      this.zone.run(() => {
-        this.history.clear();
-        this.currentFlowId = null;        // in memory: it has no home yet
-        this.currentSourceUrl = url;
-        this.dirty = false;
-        this.flow = restored;
-        this.loadedJson = serializeFlowToJson(restored);
-        this.loadError = null;
-        this.reflectUrl();
-        this.cdr.detectChanges();
-      });
+      // Its source is the URL, so the address bar and a re-share point at it.
+      this.applyLoadedFlow(restored, url);
 
       return true;
     } catch (err) {
@@ -454,6 +467,48 @@ export class AppComponent implements OnInit, AfterViewInit {
 
       return false;
     }
+  }
+
+  /**
+   * Open a flow carried whole in the link (`?flowdata=`), not fetched.
+   *
+   * A flow that lives only in a browser has no address to point at, so sharing
+   * it packs the flow itself into the URL. Unpacking is the reverse — and it
+   * goes through the SAME `enableFor` gate as any shared flow, so a stranger's
+   * `?flowdata=` that declares a module still cannot run it without consent. Its
+   * source is null: it came from the link, not from a place on the web.
+   */
+  private async loadFromData(data: string): Promise<boolean> {
+    try {
+      const restored = deserializeFlowFromJson(await unpackJson(data));
+
+      await this.modules.enableFor(restored);
+      this.applyLoadedFlow(restored, null);
+
+      return true;
+    } catch (err) {
+      this.zone.run(() => {
+        this.loadError = `link — ${(err as Error).message}`;
+        this.cdr.detectChanges();
+      });
+
+      return false;
+    }
+  }
+
+  /** Show a freshly loaded flow, in memory; `source` is its URL, or null. */
+  private applyLoadedFlow(flow: FbNodeState, source: string | null): void {
+    this.zone.run(() => {
+      this.history.clear();
+      this.currentFlowId = null;        // in memory: it has no home yet
+      this.currentSourceUrl = source;
+      this.dirty = false;
+      this.flow = flow;
+      this.loadedJson = serializeFlowToJson(flow);
+      this.loadError = null;
+      this.reflectUrl();
+      this.cdr.detectChanges();
+    });
   }
 
   /**
@@ -816,38 +871,116 @@ export class AppComponent implements OnInit, AfterViewInit {
    * pasted anywhere (chat, mail, address bar) AND dropped into an iframe's
    * src, while markup only works in the one place that accepts markup.
    */
-  async copyShareLink(): Promise<void> {
-    // The document renders from the flow, so a shared article must carry where
-    // the flow came from: `?flow=<url>` when it has a source, alongside embed.
-    // Without it a URL-loaded flow's article would open on whatever the reader
-    // had — or on nothing.
-    const params = new URLSearchParams();
+  copyShareLink(): void {
+    // Copy synchronously with a PENDING promise — packing a local flow is async,
+    // and a plain `await` before writeText spends the click's permission, so the
+    // copy fails (found on a phone, and headless: the button never said copied).
+    // A ClipboardItem fed a promise keeps the gesture alive until the URL is ready.
+    this.copyAsync(this.buildShareUrl(true).then(({ url, embedded, tooBig }) => {
+      this.zone.run(() => {
+        if (tooBig) {
+          this.shareNotice = this.tooBigNotice(url, 'Host the flow’s file and share that address instead.');
+        } else {
+          this.shareCopied = true;
+          // A local flow rode into the link — say so, as the flow share does.
+          this.shareNotice = embedded
+            ? 'This flow is only on your device, so the whole flow is packed into the link.'
+            : null;
+          setTimeout(() => {
+            this.shareCopied = false;
+            this.cdr.detectChanges();
+          }, 2000);
+        }
+
+        this.cdr.detectChanges();
+      });
+
+      return tooBig ? '' : url;
+    }));
+  }
+
+  /**
+   * Copy a link to the FLOW itself (the graph), from the menu.
+   *
+   * A flow with a home on the web is shared by its address; a flow that lives
+   * only in this browser has none, so the flow itself is packed into the link —
+   * and the person is told, because a URL that carries a whole flow is a
+   * different thing from one that points at a file. Too big to fit, it says so
+   * and points at Download instead of handing over a link that will not open.
+   */
+  shareFlow(): void {
+    this.copyAsync(this.buildShareUrl(false).then(({ url, embedded, tooBig }) => {
+      this.zone.run(() => {
+        this.shareNotice = tooBig
+          ? this.tooBigNotice(url, 'Download it (Download JSON) and share the file instead.')
+          : embedded
+            ? 'This flow is only on your device, so the whole flow is packed into the link — copied. Anyone who opens it gets the flow, no server needed.'
+            : 'Link copied.';
+        this.cdr.detectChanges();
+      });
+
+      return tooBig ? '' : url;
+    }));
+  }
+
+  private tooBigNotice(url: string, then: string): string {
+    return `This flow is ${Math.round(url.length / 1024)} KB — too big to carry in a link. ${then}`;
+  }
+
+  /**
+   * Write text that is still being computed to the clipboard.
+   *
+   * The clipboard needs the click's permission, which an `await` would have
+   * spent; `ClipboardItem` takes a PROMISE for its content, so the write is
+   * requested now and fulfilled when the text is ready. Falls back to a prompt
+   * where that API or the permission is missing — clunky, never silent.
+   */
+  private copyAsync(text: Promise<string>): void {
+    const blob = text.then(value => new Blob([value], { type: 'text/plain' }));
+
+    Promise.resolve()
+      .then(() => navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]))
+      .catch(() => text.then(value => {
+        if (value) {
+          window.prompt('Copy this link', value);
+        }
+      }));
+  }
+
+  /** The person read the share notice; take it down. */
+  dismissNotice(): void {
+    this.shareNotice = null;
+  }
+
+  /**
+   * Build the share link, and say whether the flow rode inside it and whether
+   * it fits. `?flow=<url>` when the flow has a home; `?flowdata=<packed>` when it
+   * does not — the flow deflated into the link. `embed=doc` on top for the
+   * article view. `tooBig` is measured against what a static host will serve.
+   */
+  private async buildShareUrl(embedDoc: boolean): Promise<{ url: string; embedded: boolean; tooBig: boolean }> {
+    const parts: string[] = [];
+    let embedded = false;
 
     if (this.currentSourceUrl) {
-      params.set('flow', this.currentSourceUrl);
+      parts.push(`flow=${encodeURIComponent(this.currentSourceUrl)}`);
+    } else {
+      // A packed flow travels alone, so it must carry the URLs of any modules it
+      // needs — the same reason Download stamps them. Minified, not pretty: this
+      // is bytes in a URL, and the indentation is what tips a middling flow over
+      // the length a host will serve.
+      this.modules.stamp(this.flow);
+      parts.push(`flowdata=${await packJson(serializeFlowToJson(this.flow, false))}`);
+      embedded = true;
     }
 
-    params.set('embed', 'doc');
-
-    const url = `${location.origin}${location.pathname}?${params.toString()}`;
-
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      // No clipboard permission (or no secure context): show the URL instead,
-      // which is clunky but never silently does nothing.
-      window.prompt('Copy this embed link', url);
-
-      return;
+    if (embedDoc) {
+      parts.push('embed=doc');
     }
 
-    this.shareCopied = true;
-    this.cdr.detectChanges();
+    const url = `${location.origin}${location.pathname}?${parts.join('&')}`;
 
-    setTimeout(() => {
-      this.shareCopied = false;
-      this.cdr.detectChanges();
-    }, 2000);
+    return { url, embedded, tooBig: url.length > SHARE_URL_LIMIT };
   }
 
   get flowJson(): string {

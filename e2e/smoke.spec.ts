@@ -1486,14 +1486,19 @@ test('the share button appears with the document and confirms the copy', async (
   await menuAction(page, 'doc');
   await menuAction(page, 'share');
 
-  // Reopened, the command confirms what it just did.
+  // Reopened, the command confirms what it just did. Packing a local flow is
+  // async, so the confirmation may lag the click by a tick — the assertion waits.
   await page.locator('mat-toolbar button.overflow').click();
   await expect(page.locator('.cdk-overlay-container button.share')).toContainText('Link copied');
   await page.keyboard.press('Escape');
 
   const copied = await page.evaluate(() => navigator.clipboard.readText());
 
-  expect(copied).toContain('?embed=doc');
+  // The seeded flow has no address of its own, so a shared article carries the
+  // flow itself — otherwise the reader's copy would open on the wrong flow, or
+  // none. embed=doc renders it as the article.
+  expect(copied).toContain('embed=doc');
+  expect(copied).toContain('flowdata=');
   expect(new URL(copied).pathname).toBe(new URL(page.url()).pathname);
 });
 
@@ -5031,4 +5036,56 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('mat-toolbar button.save-flow')).toHaveCount(0);
   expect(page.url()).toContain(`flow=${encodeURIComponent(source)}`);
+});
+
+/**
+ * A flow that lives only in a browser can be shared as a self-contained link.
+ *
+ * It has no address to point at, so Share packs the whole flow into the URL
+ * (`?flowdata=`), tells the person it did, and a recipient who opens the link —
+ * a fresh browser, nothing seeded, no server — gets the flow back exactly. This
+ * is the whole promise: a flow you made, shared, with nothing hosted.
+ */
+test('a local flow shares as a self-contained link that opens elsewhere', async ({ page, context, browser }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+  const titleOf = (p: import('@playwright/test').Page) => p.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // A flow made here: new (so it has no source URL), with a node in it.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  const dialog = page.locator('fb-flows-dialog');
+  await dialog.locator('form.new input').fill('Sketch');
+  await dialog.locator('form.new button[type=submit]').click();
+  await expect.poll(() => titleOf(page)).toBe('Sketch');
+
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+  await expect(page.locator('fb-node-box')).toHaveCount(1);
+
+  // Share it. The flow has no home, so the link carries it, and the notice says so.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.share-flow').click();
+  await expect(page.locator('p.share-notice')).toContainText('packed into the link');
+
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  expect(link).toContain('?flowdata=');
+
+  // A recipient: a genuinely fresh browser, nothing the harness seeded, opens
+  // the link and gets the flow — title and node — back.
+  const recipient = await browser.newContext();
+  const rp = await recipient.newPage();
+  await rp.goto(link);
+  await rp.waitForSelector('fb-node-box', { timeout: 20_000 });
+  expect(await titleOf(rp)).toBe('Sketch');
+  expect(await rp.locator('fb-node-box').count()).toBe(1);
+  await expect(rp.locator('p.load-error')).toHaveCount(0);
+  await recipient.close();
 });

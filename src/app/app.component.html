@@ -96,6 +96,16 @@ showing this app's cockpit.
       </button>
     }
 
+    <!--
+    Share the flow itself (the graph), at any time. A flow with a home on the
+    web goes by its address; one that lives only here is packed WHOLE into the
+    link — shareFlow says which, and refuses a link too big to open.
+    -->
+    <button type="button" mat-menu-item class="share-flow" (click)="shareFlow()">
+      <mat-icon>share</mat-icon>
+      <span>Share flow link</span>
+    </button>
+
     <mat-divider></mat-divider>
 
     <button type="button" mat-menu-item class="save" (click)="save()">
@@ -144,6 +154,13 @@ showing this app's cockpit.
 
 @if (loadError) {
   <p class="load-error" role="alert">Could not load that flow — {{loadError}}</p>
+}
+
+@if (shareNotice) {
+  <p class="share-notice" role="status">
+    {{shareNotice}}
+    <button type="button" class="dismiss" (click)="dismissNotice()" aria-label="Dismiss">✕</button>
+  </p>
 }
 
 <main>
