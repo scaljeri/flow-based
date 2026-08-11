@@ -81,15 +81,32 @@ mat-toolbar {
     position: relative;
   }
 
+  /*
+   * The unsaved-changes dot. It was 9px of tertiary GREEN, which on the indigo
+   * bar sat too close to the toolbar's own tone to notice — the whole point of
+   * the dot is to be seen, and it was being missed. Amber reads as "attention"
+   * and pops against indigo; a ring in the bar's colour lifts it off the icon so
+   * it does not merge with the save glyph behind it. A soft pulse draws the eye
+   * once without nagging.
+   */
   .save-flow.has-changes::after {
-    background: var(--mat-sys-tertiary, #7ad67a);
+    background: #ffb300;
+    border: 2px solid var(--mat-sys-primary, #3f51b5);
     border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
     content: '';
-    height: 9px;
+    height: 13px;
     position: absolute;
-    right: 6px;
-    top: 6px;
-    width: 9px;
+    right: 3px;
+    top: 3px;
+    width: 13px;
+    animation: save-dot-pulse 1.6s ease-out 2;
+  }
+
+  @keyframes save-dot-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 179, 0, 0.7); }
+    70% { box-shadow: 0 0 0 7px rgba(255, 179, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 179, 0, 0); }
   }
 }
 
