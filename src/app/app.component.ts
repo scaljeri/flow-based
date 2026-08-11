@@ -84,6 +84,15 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   remoteDirty = false;
 
+  /**
+   * A homed flow has an edit not yet written to its local shelf copy — true from
+   * the change until the debounced autosave persists it, ~600ms later. It exists
+   * so a homed flow, which autosaves silently, still SHOWS that a drag or edit
+   * registered and was kept: without it the Save dot never moved for a homed
+   * flow and dragging looked like it did nothing.
+   */
+  pendingSave = false;
+
   /** The flow as last PUT to its endpoint, to tell a pushed state from a dirty one. */
   private lastPushedJson: string | null = null;
 
@@ -639,14 +648,33 @@ export class AppComponent implements OnInit, AfterViewInit {
       // nowhere to autosave to, so a genuine edit raises the Save button AND is
       // kept as a working copy, so a reload does not lose it.
       if (this.currentFlowId) {
-        clearTimeout(this.saveTimer);
-        this.saveTimer = setTimeout(() => this.persist(), 600);
+        // A homed flow autosaves — but silently gave NO feedback, so dragging a
+        // node looked like it did nothing (the dot only ever lit for a homeless
+        // or remote-homed flow). The dot now goes up on the change and comes
+        // down when the debounced local save has written it: you see that the
+        // edit registered, and that it was kept.
+        const remote = this.store.destinationOf(this.currentFlowId).kind === 'remote';
 
-        // A remote-homed flow autosaves LOCALLY but not to its endpoint — that
-        // needs an explicit Save. Mark it so the Save button wears its dot.
-        if (!this.remoteDirty && this.store.destinationOf(this.currentFlowId).kind === 'remote') {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => {
+          this.persist();
           this.zone.run(() => {
-            this.remoteDirty = true;
+            this.pendingSave = false;   // written; a remote flow keeps its own dot
+            this.cdr.detectChanges();
+          });
+        }, 600);
+
+        // Only the FIRST change of a burst touches the zone — a drag fires many
+        // geometry events a second, and running change detection on each was the
+        // per-frame cost the guard here avoids.
+        const wantRemote = remote && !this.remoteDirty;
+
+        if (!this.pendingSave || wantRemote) {
+          this.zone.run(() => {
+            this.pendingSave = true;
+            if (remote) {
+              this.remoteDirty = true;   // endpoint still needs an explicit Save
+            }
             this.cdr.detectChanges();
           });
         }

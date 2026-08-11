@@ -5514,3 +5514,39 @@ test('a changed hosted flow offers the published address or the edited version',
   expect(address).toContain('flow=assets%2Fflows%2Fcrypto.json');
   expect(address).not.toContain('flowdata=');
 });
+
+/**
+ * Dragging a node on a HOMED flow shows, then clears, the save dot.
+ *
+ * A homed flow autosaves silently — and used to give NO feedback at all, so
+ * moving a node looked like nothing happened (the dot only ever lit for a
+ * homeless or remote-homed flow). The dot now goes up on the change and comes
+ * down once the debounced autosave has written it: proof the edit registered
+ * and was kept.
+ */
+test('dragging a node on a homed flow shows the save dot, then clears it', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+  // The harness seeds the demo as the current, HOMED flow, so it autosaves.
+  await page.waitForTimeout(900);
+
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).not.toHaveClass(/has-changes/);
+
+  // A real pointer drag of the first node — not a synthetic click.
+  const node = page.locator('fb-node-box').first();
+  const box = await node.boundingBox();
+  if (!box) throw new Error('no node to drag');
+  const cx = box.x + box.width / 2;
+  const cy = box.y + 12;   // the node's own handle bar, near its top
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 70, cy + 45, { steps: 8 });
+  await page.mouse.move(cx + 130, cy + 90, { steps: 8 });
+  await page.mouse.up();
+
+  // The drag registered: the dot is up while the save is pending…
+  await expect(save).toHaveClass(/has-changes/, { timeout: 2000 });
+  // …and comes back down once the debounced autosave has written it.
+  await expect(save).not.toHaveClass(/has-changes/, { timeout: 3000 });
+});
