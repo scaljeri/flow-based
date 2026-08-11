@@ -72,17 +72,13 @@ mat-toolbar {
   }
 
   /*
-   * Save says whether there is anything to keep. Muted with nothing to save; at
-   * full strength with a dot when there are unsaved changes — the "you have
-   * changes" tell the person asked for.
+   * Save is always THERE and clearly visible — muting it to 0.55 with nothing to
+   * save read as gone/disabled next to the bright hamburger and Add, which is
+   * not what "it worked well" wanted. A dot marks unsaved changes; the icon
+   * itself stays at full strength either way.
    */
   .save-flow {
-    opacity: 0.55;
     position: relative;
-  }
-
-  .save-flow.has-changes {
-    opacity: 1;
   }
 
   .save-flow.has-changes::after {
