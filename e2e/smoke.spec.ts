@@ -1182,6 +1182,51 @@ test('a changed demo is kept across a reload', async ({ page }) => {
   await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
   // And it is still unsaved, so Save stands.
   await expect(page.locator('mat-toolbar button.save-flow')).toBeVisible();
+
+  // Coming back, a banner asks whether to keep the unsaved changes. Keeping it
+  // dismisses the banner and leaves the change in place.
+  const banner = page.locator('.share-notice', { hasText: 'unsaved changes from last time' });
+  await expect(banner).toBeVisible();
+  await banner.locator('button', { hasText: 'Keep editing' }).click();
+  await expect(banner).toHaveCount(0);
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+});
+
+/**
+ * Discarding the restored changes opens the published flow instead.
+ *
+ * The other half of the come-back choice: when the changes are not wanted, the
+ * working copy is thrown away and the file loads fresh — the added node gone.
+ */
+test('discarding restored changes opens the published demo', async ({ page }) => {
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/?fbnoseed');
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+  await page.waitForTimeout(900);
+
+  const before = await page.locator('fb-node-box').count();
+
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+  await page.waitForTimeout(900);
+
+  await page.reload();
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+
+  const banner = page.locator('.share-notice', { hasText: 'unsaved changes from last time' });
+  await expect(banner).toBeVisible();
+  await banner.locator('button', { hasText: 'Discard changes' }).click();
+
+  // Reloaded onto the published flow: the added node is gone, and nothing asks.
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+  await expect(page.locator('fb-node-box')).toHaveCount(before);
+  await expect(page.locator('.share-notice', { hasText: 'unsaved changes from last time' })).toHaveCount(0);
 });
 
 /**

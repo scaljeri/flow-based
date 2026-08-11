@@ -156,6 +156,19 @@ showing this app's cockpit.
   <p class="load-error" role="alert">Could not load that flow — {{loadError}}</p>
 }
 
+@if (restoredWorking) {
+  <div class="share-notice" role="status">
+    <div class="head">
+      <span class="text">You have unsaved changes from last time. Keep editing them, or discard them and open the published version?</span>
+      <button type="button" class="dismiss" (click)="keepWorking()" aria-label="Keep">✕</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="copy" (click)="keepWorking()">Keep editing</button>
+      <button type="button" class="choice" (click)="discardWorking()">Discard changes</button>
+    </div>
+  </div>
+}
+
 @if (shareNotice) {
   <div class="share-notice" role="status">
     <div class="head">

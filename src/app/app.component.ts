@@ -116,6 +116,13 @@ export class AppComponent implements OnInit, AfterViewInit {
   shareLink: string | null = null;
 
   /**
+   * A working copy was restored on boot, and the person has not yet said whether
+   * to keep it. Raises a banner offering to keep the unsaved changes or discard
+   * them for the published version.
+   */
+  restoredWorking = false;
+
+  /**
    * The notice is asking which version to share, not reporting one.
    *
    * Only when a flow HAS a home on the web but has been changed since: the
@@ -481,11 +488,29 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.dirty = true;
       this.loadedJson = serializeFlowToJson(working.flow);
       this.loadError = null;
+      this.restoredWorking = true;   // ask whether to keep it
       this.reflectUrl();
       this.cdr.detectChanges();
     });
 
     return true;
+  }
+
+  /** Keep the restored working copy; the banner has done its job. */
+  keepWorking(): void {
+    this.restoredWorking = false;
+  }
+
+  /**
+   * Throw the unsaved changes away and open the published flow instead.
+   *
+   * Clear the draft and reload: boot then finds no working copy and fetches the
+   * file fresh — the simplest way to be certain nothing of the discarded copy
+   * lingers.
+   */
+  discardWorking(): void {
+    this.store.clearWorking();
+    location.reload();
   }
 
   /** Show a freshly loaded flow, in memory; `source` is its URL, or null. */
