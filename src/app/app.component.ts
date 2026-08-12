@@ -62,39 +62,23 @@ export class AppComponent implements OnInit, AfterViewInit {
   private currentSourceUrl: string | null = null;
 
   /**
-   * A URL-loaded flow has no home on the shelf, so its changes cannot autosave
-   * anywhere. `dirty` raises the Save button instead; it can only ever be true
-   * while `currentFlowId` is null, because a flow with a home autosaves.
+   * There are edits not yet Saved — the flow on screen differs from its saved
+   * copy on the shelf. THE state behind the Save dot. There is no autosave: this
+   * stays true, and the dot stays lit, until an explicit Save writes the saved
+   * copy (and, for a remote flow, pushes it). Meanwhile the edits are kept as a
+   * DRAFT in localStorage so a reload resumes them — that draft is not a save, it
+   * is only so nothing is lost while `dirty` waits for Save.
    */
   dirty = false;
 
   /**
-   * The flow exactly as it was fetched, serialised. A programmatic load rebuilds
-   * the graph and that rebuild emits change events — comparing against this
-   * snapshot tells a real edit from the echo of loading, so the Save button
-   * appears when the person changes something, not when the flow arrives.
+   * The saved copy, serialised — the baseline a change is measured against. A
+   * load rebuilds the graph and that rebuild emits change events; comparing
+   * against this snapshot tells a real edit from the echo of loading, so the dot
+   * appears when the person changes something, not when the flow arrives. Reset
+   * to the flow's current serialisation on every Save.
    */
   private loadedJson: string | null = null;
-
-  /**
-   * A homed flow whose destination is a REMOTE endpoint has changes not yet
-   * pushed. Unlike `dirty` (which is for a homeless flow), this can be true while
-   * `currentFlowId` is set — a local autosave happened, the remote did not — and
-   * it puts the same "unsaved" dot on the Save button. Reset by a successful push.
-   */
-  remoteDirty = false;
-
-  /**
-   * A homed flow has an edit not yet written to its local shelf copy — true from
-   * the change until the debounced autosave persists it, ~600ms later. It exists
-   * so a homed flow, which autosaves silently, still SHOWS that a drag or edit
-   * registered and was kept: without it the Save dot never moved for a homed
-   * flow and dragging looked like it did nothing.
-   */
-  pendingSave = false;
-
-  /** The flow as last PUT to its endpoint, to tell a pushed state from a dirty one. */
-  private lastPushedJson: string | null = null;
 
   /**
    * Embed mode: the article alone, with the app's chrome gone.
@@ -136,16 +120,6 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   /** The link the notice is about, so its Copy button has something to copy. */
   shareLink: string | null = null;
-
-  /**
-   * A working copy was restored on boot, and the person has not yet said whether
-   * to keep it. Raises a banner offering to keep the unsaved changes or discard
-   * them for the published version.
-   */
-  restoredWorking = false;
-
-  /** Discarding a draft and reloading: block every save until the page goes. */
-  private discarding = false;
 
   /**
    * The notice is asking which version to share, not reporting one.
@@ -301,7 +275,6 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
 
   private currentFlowId: string | null = null;
-  private saveTimer?: ReturnType<typeof setTimeout>;
 
   private async restoreFlow(): Promise<void> {
     /*
@@ -344,25 +317,11 @@ export class AppComponent implements OnInit, AfterViewInit {
     const fromUrl = params.get('flow');
 
     if (fromUrl) {
-      // Unsaved changes to this very flow win over both a saved copy and the
-      // file: coming back should land you where you left off.
-      if (await this.tryWorking(fromUrl)) {
-        return;
-      }
-
+      // A local copy that already mirrors this URL wins over re-fetching: it may
+      // carry a draft (unsaved edits) or saved changes the fetch would discard.
       const localId = this.store.findBySourceUrl(fromUrl);
-      const local = localId ? this.store.load(localId) : null;
 
-      if (localId && local) {
-        await this.modules.enableFor(local);
-        this.zone.run(() => {
-          this.currentFlowId = localId;
-          this.currentSourceUrl = fromUrl;
-          this.store.setCurrent(localId);
-          this.flow = local;
-          this.cdr.detectChanges();
-        });
-
+      if (localId && (await this.openStored(localId, fromUrl))) {
         return;
       }
 
@@ -374,18 +333,8 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     const id = this.store.currentId();
-    const saved = id ? this.store.load(id) : null;
 
-    if (id && saved) {
-      // The flow names its own types, and a type name names its module.
-      await this.modules.enableFor(saved);
-
-      this.zone.run(() => {
-        this.currentFlowId = id;
-        this.flow = saved;
-        this.cdr.detectChanges();
-      });
-
+    if (id && (await this.openStored(id))) {
       return;
     }
 
@@ -398,10 +347,6 @@ export class AppComponent implements OnInit, AfterViewInit {
      * lib is unreachable (offline, a broken deploy), the small starter stands
      * in rather than a blank canvas.
      */
-    if (await this.tryWorking(AppComponent.SHOWCASE)) {
-      return;   // your changed demo, kept from last time
-    }
-
     if (await this.loadFromUrl(AppComponent.SHOWCASE)) {
       return;
     }
@@ -416,13 +361,66 @@ export class AppComponent implements OnInit, AfterViewInit {
      * module download above is exactly that — and then an explicit tick:
      * measured here, re-entering the zone alone did not schedule one, so the
      * flow was saved and never shown until the next unrelated click. `create`
-     * makes it the current stored flow, so its edits autosave from the start.
+     * gives it an entry on the shelf so it, too, is a saved flow from the start.
      */
     this.zone.run(() => {
       this.flow = starter;
       this.currentFlowId = this.store.create(starter);
+      this.dirty = false;
+      this.captureBaselineSoon();
       this.cdr.detectChanges();
     });
+  }
+
+  /**
+   * Open a flow already on the shelf, restoring its DRAFT if it has one.
+   *
+   * The saved copy is the baseline; a draft (unsaved edits kept from last time)
+   * takes its place on screen and comes up `dirty`, so the Save dot shows the
+   * flow is out of sync with what is saved. Returns false if the id has no saved
+   * copy, so boot can fall through to its next option.
+   */
+  private async openStored(id: string, sourceUrl?: string): Promise<boolean> {
+    const saved = this.store.load(id);
+
+    if (!saved) {
+      return false;
+    }
+
+    const draft = this.store.loadDraft(id);
+    const flow = draft ?? saved;
+
+    // The flow names its own types, and a type name names its module — register
+    // them before drawing, or every node comes up an empty box with no worker.
+    await this.modules.enableFor(flow);
+
+    this.zone.run(() => {
+      this.history.clear();
+      this.currentFlowId = id;
+      this.currentSourceUrl = sourceUrl ?? this.store.sourceUrlOf(id) ?? null;
+      this.store.setCurrent(id);
+      this.flow = flow;
+
+      if (draft) {
+        // A restored draft is unsaved by definition; its baseline is the SAVED
+        // copy, so it reads dirty and STAYS dirty (until edited back or Saved).
+        this.dirty = true;
+        this.loadedJson = serializeFlowToJson(saved);
+      } else {
+        // A clean load: baseline once the engine settles, NOT now — loading
+        // resolves formats and records views, which a same-instant baseline
+        // would count as edits and light the dot before anyone touched it.
+        this.dirty = false;
+        this.loadedJson = null;
+        this.captureBaselineSoon();
+      }
+
+      this.loadError = null;
+      this.reflectUrl();
+      this.cdr.detectChanges();
+    });
+
+    return true;
   }
 
   /** Where the shipped showcase lives, relative to the app — the default open. */
@@ -490,66 +488,20 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Restore the unsaved working copy, if there is one for this address.
+   * Show a freshly loaded flow and give it an entry on the shelf.
    *
-   * The demo (and any URL-loaded flow) lives in memory; its changes are kept as
-   * a working copy so a reload does not reset them. Shown dirty — it has changes
-   * that are not on the shelf — so Save still offers to keep it there.
+   * Every loaded flow — from a URL, a `?flowdata=` link, or an upload — becomes a
+   * saved entry the moment it opens: what came in IS its saved copy, so it opens
+   * clean (no dot). Its edits then live as a draft until Save. `source` is the
+   * URL it came from (for the address bar and share), or null.
    */
-  private async tryWorking(sourceUrl: string): Promise<boolean> {
-    const working = this.store.loadWorking();
-
-    if (!working || working.sourceUrl !== sourceUrl) {
-      return false;
-    }
-
-    await this.modules.enableFor(working.flow);
-
-    this.zone.run(() => {
-      this.history.clear();
-      this.currentFlowId = null;
-      this.currentSourceUrl = working.sourceUrl;
-      this.flow = working.flow;
-      this.dirty = true;
-      this.loadedJson = serializeFlowToJson(working.flow);
-      this.loadError = null;
-      this.restoredWorking = true;   // ask whether to keep it
-      this.reflectUrl();
-      this.cdr.detectChanges();
-    });
-
-    return true;
-  }
-
-  /** Keep the restored working copy; the banner has done its job. */
-  keepWorking(): void {
-    this.restoredWorking = false;
-  }
-
-  /**
-   * Throw the unsaved changes away and open the published flow instead.
-   *
-   * Clear the draft and reload: boot then finds no working copy and fetches the
-   * file fresh — the simplest way to be certain nothing of the discarded copy
-   * lingers.
-   */
-  discardWorking(): void {
-    // `discarding` blocks every save until the reload: the flow is still
-    // settling, so a pending debounce (or the unload flush) would otherwise
-    // write the very draft we are throwing away straight back.
-    this.discarding = true;
-    this.store.clearWorking();
-    location.reload();
-  }
-
-  /** Show a freshly loaded flow, in memory; `source` is its URL, or null. */
   private applyLoadedFlow(flow: FbNodeState, source: string | null): void {
     this.zone.run(() => {
       this.history.clear();
-      this.currentFlowId = null;        // in memory: it has no home yet
       this.currentSourceUrl = source;
-      this.dirty = false;
       this.flow = flow;
+      this.currentFlowId = this.store.create(flow, source ?? undefined);
+      this.dirty = false;
       // Baseline once the load settles, not now — see startAutosave.
       this.loadedJson = null;
       this.captureBaselineSoon();
@@ -581,47 +533,39 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Leaving with unsaved changes: keep them, and warn.
+   * Leaving with unsaved changes: keep the draft, and warn.
    *
-   * The debounce that writes the working copy may not have fired yet, so flush
-   * it NOW (localStorage is synchronous, which is why this works in an unload
-   * handler) — then coming back really does find the changes. The browser will
-   * not show a custom message here (it shows its own generic "changes may not be
-   * saved", for security), so the prompt is only a reminder; the flush above is
-   * what makes the reassurance true. Only when there ARE unsaved changes: a
-   * homed flow autosaves and a clean demo has nothing to warn about.
+   * There is no autosave — the saved copy is untouched until you press Save — so
+   * leaving with a lit dot means real work is unsaved, and the browser's own
+   * "changes may not be saved" reminder is warranted. The DRAFT debounce may not
+   * have fired yet, so flush it NOW (localStorage is synchronous, which is why
+   * this works in an unload handler); coming back then resumes exactly here. The
+   * warning is only the reminder; the flush is what makes "resume" true.
    */
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: BeforeUnloadEvent): void {
-    this.flushPending();
+    this.flushDraft();
 
-    if (this.dirty && !this.discarding) {
+    if (this.dirty) {
       event.preventDefault();
       event.returnValue = '';
     }
   }
 
   // pagehide fires where beforeunload does not always (a phone discarding the
-  // tab), and only needs to save — the last line of defence for the draft.
+  // tab), and only needs to keep the draft — the last line of defence for it.
   @HostListener('window:pagehide')
   onPageHide(): void {
-    this.flushPending();
+    this.flushDraft();
   }
 
-  /** Write any debounced save right now, before the page goes. */
-  private flushPending(): void {
-    clearTimeout(this.saveTimer);
-    clearTimeout(this.workingTimer);
+  /** Write the pending draft right now, before the page goes. */
+  private flushDraft(): void {
+    clearTimeout(this.draftTimer);
 
-    if (this.discarding) {
-      return;
-    }
-
-    if (this.currentFlowId) {
-      this.persist();
-    } else if (this.dirty && this.currentSourceUrl) {
+    if (this.dirty && this.currentFlowId) {
       this.modules.stamp(this.flow);
-      this.store.saveWorking(this.currentSourceUrl, this.flow);
+      this.store.saveDraft(this.currentFlowId, this.flow);
     }
   }
 
@@ -631,10 +575,14 @@ export class AppComponent implements OnInit, AfterViewInit {
    * taken there was a subscription on undefined, and nothing ever saved.
    */
   ngAfterViewInit(): void {
-    this.startAutosave();
+    this.watchEdits();
   }
 
-  private startAutosave(): void {
+  /**
+   * Watch the editor for edits. No autosave: an edit only raises the dot and
+   * keeps a DRAFT (so a reload resumes it) — the saved copy waits for Save.
+   */
+  private watchEdits(): void {
     this.flowService.editor?.changes.subscribe(change => {
       // The graph, not the gestures: a pointer trail or a selection is not
       // worth a serialisation, and 'history' fires on every capture.
@@ -644,83 +592,51 @@ export class AppComponent implements OnInit, AfterViewInit {
         return;
       }
 
-      // A flow with a home autosaves. One without — loaded from a URL — has
-      // nowhere to autosave to, so a genuine edit raises the Save button AND is
-      // kept as a working copy, so a reload does not lose it.
-      if (this.currentFlowId) {
-        // A homed flow autosaves — but silently gave NO feedback, so dragging a
-        // node looked like it did nothing (the dot only ever lit for a homeless
-        // or remote-homed flow). The dot now goes up on the change and comes
-        // down when the debounced local save has written it: you see that the
-        // edit registered, and that it was kept.
-        const remote = this.store.destinationOf(this.currentFlowId).kind === 'remote';
-
-        clearTimeout(this.saveTimer);
-        this.saveTimer = setTimeout(() => {
-          this.persist();
-          this.zone.run(() => {
-            this.pendingSave = false;   // written; a remote flow keeps its own dot
-            this.cdr.detectChanges();
-          });
-        }, 600);
-
-        // Only the FIRST change of a burst touches the zone — a drag fires many
-        // geometry events a second, and running change detection on each was the
-        // per-frame cost the guard here avoids.
-        const wantRemote = remote && !this.remoteDirty;
-
-        if (!this.pendingSave || wantRemote) {
-          this.zone.run(() => {
-            this.pendingSave = true;
-            if (remote) {
-              this.remoteDirty = true;   // endpoint still needs an explicit Save
-            }
-            this.cdr.detectChanges();
-          });
-        }
-
-        return;
-      }
-
       /*
        * Until the baseline is set, a change is the LOAD settling, not an edit.
        * Loading a flow makes the engine write into it — format propagation
        * resolves socket formats, a plot records its view — and comparing the
-       * on-screen flow to the file it came from would call all of that a change,
-       * so the demo showed Save (and offered to share "your version") before
-       * anyone touched it. The baseline is taken once those settle; only a
-       * change AFTER it is the person's.
+       * on-screen flow to its saved copy would call all of that a change, so the
+       * demo showed the dot before anyone touched it. The baseline is taken once
+       * those settle; only a change AFTER it is the person's.
        */
       if (this.loadedJson === null) {
         this.captureBaselineSoon();
-      } else if (serializeFlowToJson(this.flow) !== this.loadedJson) {
-        if (!this.dirty) {
-          this.zone.run(() => {
-            this.dirty = true;
-            this.cdr.detectChanges();
-          });
-        }
 
-        this.saveWorkingSoon();
+        return;
+      }
+
+      const changed = serializeFlowToJson(this.flow) !== this.loadedJson;
+
+      // The dot tracks "differs from saved" exactly — editing back to the saved
+      // state clears it (and the draft), so it never lies.
+      if (changed !== this.dirty) {
+        this.zone.run(() => {
+          this.dirty = changed;
+          this.cdr.detectChanges();
+        });
+      }
+
+      if (changed) {
+        this.saveDraftSoon();
+      } else if (this.currentFlowId) {
+        clearTimeout(this.draftTimer);
+        this.store.clearDraft(this.currentFlowId);
       }
     });
   }
 
   private baselineTimer?: ReturnType<typeof setTimeout>;
-  private workingTimer?: ReturnType<typeof setTimeout>;
+  private draftTimer?: ReturnType<typeof setTimeout>;
 
-  /** Keep the loaded flow's unsaved state, debounced, so a reload restores it. */
-  private saveWorkingSoon(): void {
-    if (this.discarding || !this.currentSourceUrl) {
-      return;   // only a flow with an address can be matched on the way back in
-    }
-
-    clearTimeout(this.workingTimer);
-    this.workingTimer = setTimeout(() => {
-      if (this.currentSourceUrl && !this.currentFlowId) {
+  /** Keep the flow's unsaved state as a draft, debounced, so a reload resumes it. */
+  private saveDraftSoon(): void {
+    clearTimeout(this.draftTimer);
+    this.draftTimer = setTimeout(() => {
+      if (this.currentFlowId) {
         // Carry the module URLs it needs, the same as a download or a save.
         this.modules.stamp(this.flow);
-        this.store.saveWorking(this.currentSourceUrl, this.flow);
+        this.store.saveDraft(this.currentFlowId, this.flow);
       }
     }, 600);
   }
@@ -733,23 +649,30 @@ export class AppComponent implements OnInit, AfterViewInit {
     }, 600);
   }
 
+  /**
+   * SAVE: write the flow's saved copy — the conscious act the dot waits for.
+   *
+   * Stamps the module URLs it needs (so it reopens in a browser that never heard
+   * of them), writes the saved copy (which clears the draft), and resets the
+   * baseline so the dot goes out. The caller pushes to a remote endpoint after,
+   * if one is configured.
+   */
   private persist(): void {
     if (!this.currentFlowId) {
       return;
     }
 
-    // Which fetched modules this flow needs, written into the flow itself —
-    // so it can be reopened in a browser that has never heard of them.
     this.modules.stamp(this.flow);
     this.store.save(this.currentFlowId, this.flow);
     this.store.setCurrent(this.currentFlowId);
+    this.loadedJson = serializeFlowToJson(this.flow);
+    this.dirty = false;
+    clearTimeout(this.draftTimer);
   }
 
   openFlows(): void {
-    // Written first, so the list the dialog shows includes the newest state.
-    // A homeless flow has nowhere to write, so persist() no-ops — deliberate.
-    this.persist();
-
+    // No silent save on open: the shelf shows each flow's SAVED copy, which is
+    // the point — the dot on the toolbar already says the current one is ahead.
     this.dialog.open(FlowsDialogComponent, { width: '360px' })
       .afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
   }
@@ -763,38 +686,34 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * The Save button. What it does depends on where the flow lives.
+   * The Save button — the conscious act, since there is no autosave.
    *
-   * A flow with a home on the shelf autosaves; Save writes it NOW and confirms,
-   * so the button is not a lie by omission. A flow that lives only in memory has
-   * no home — Save opens the Flows dialog to give it one, unless nothing has
-   * changed, in which case it says so rather than saving a copy identical to the
-   * file it came from.
+   * Every flow has an entry on the shelf, so Save always has somewhere to write.
+   * It records the saved copy (clearing the draft and the dot), and then, if the
+   * flow's configured destination is a remote endpoint, pushes it there too. With
+   * nothing changed it says so rather than rewriting an identical copy.
    */
   saveToShelf(): void {
-    if (this.currentFlowId) {
-      // Local copy first, always — then, if this flow's home is a remote
-      // endpoint, push it there. The shelf is the safety net; the network is not.
-      this.persist();
-
-      const dest = this.store.destinationOf(this.currentFlowId);
-
-      if (dest.kind === 'remote') {
-        void this.pushRemote(dest.url);
-      } else {
-        this.notify('Saved.');
-      }
-
-      return;
-    }
-
     if (!this.dirty) {
       this.notify('No changes yet — nothing to save.');
 
       return;
     }
 
-    this.openSaveDialog();
+    // The shelf copy first, always — then the network, if a destination is set.
+    // The shelf is the safety net; a failed push never loses what is on screen.
+    this.persist();
+    this.cdr.detectChanges();
+
+    const dest = this.currentFlowId
+      ? this.store.destinationOf(this.currentFlowId)
+      : { kind: 'local' as const };
+
+    if (dest.kind === 'remote') {
+      void this.pushRemote(dest.url);
+    } else {
+      this.notify('Saved.');
+    }
   }
 
   /** "Save as…" — pick a name and, if wanted, an endpoint, from any state. */
@@ -832,8 +751,6 @@ export class AppComponent implements OnInit, AfterViewInit {
       const { canonicalUrl } = await this.remote.save(url, json);
 
       this.zone.run(() => {
-        this.lastPushedJson = json;
-        this.remoteDirty = false;
         this.shareNotice = `Saved to ${this.hostOf(url)}.`;
         this.shareLink = null;
         this.shareChoosing = false;
@@ -872,31 +789,19 @@ export class AppComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Leaving the in-memory flow behind — its working copy no longer applies.
-    this.store.clearWorking();
+    // Opening another flow overwrites the current one on screen. With no
+    // autosave, unsaved edits would be lost — so warn first, for every action
+    // that replaces the flow. (Save inside the dialog does not replace it.)
+    const replaces = action.kind === 'open' || action.kind === 'load'
+      || action.kind === 'file' || action.kind === 'new';
+
+    if (replaces && this.dirty
+      && !confirm('This flow has unsaved changes. Open another and lose them?')) {
+      return;
+    }
 
     if (action.kind === 'open') {
-      const flow = this.store.load(action.id);
-
-      if (flow) {
-        /*
-         * Modules first, then the flow: a flow shown before its types are
-         * registered draws every one of its nodes as an empty box, and
-         * the engine gives them no workers at all.
-         */
-        void this.modules.enableFor(flow).then(() => this.zone.run(() => {
-          this.currentFlowId = action.id;
-          // A stored flow may remember where it came from — restore the link.
-          this.currentSourceUrl = this.store.sourceUrlOf(action.id) ?? null;
-          this.dirty = false;
-          this.loadedJson = null;
-          this.store.setCurrent(action.id);
-          this.history.clear();
-          this.flow = flow;
-          this.reflectUrl();
-          this.cdr.detectChanges();
-        }));
-      }
+      void this.openStored(action.id);
 
       return;
     }
@@ -914,30 +819,25 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     if (action.kind === 'save') {
-      // Save HERE (local). A homeless flow gets a home under the chosen name; a
-      // homed one is renamed and pinned back to local (dropping any endpoint).
+      // Rename this flow and pin it to LOCAL (dropping any endpoint), then save.
       this.flow = { ...this.flow, title: action.title };
 
       if (this.currentFlowId) {
         this.store.setDestination(this.currentFlowId, null);
-        this.remoteDirty = false;
-        this.persist();
-        this.notify('Saved.');
       } else {
         this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
-        this.dirty = false;
-        this.loadedJson = null;
       }
 
+      this.persist();
       this.reflectUrl();
-      this.cdr.detectChanges();
+      this.notify('Saved.');
 
       return;
     }
 
     if (action.kind === 'save-remote') {
       // Save to an endpoint. The token goes to RemoteFlowService (keyed by
-      // origin), NEVER onto the flow. The flow gets a local home too — the shelf
+      // origin), NEVER onto the flow. The flow keeps a local copy too — the shelf
       // is the safety net — and remembers the endpoint for later saves.
       this.flow = { ...this.flow, title: action.title };
 
@@ -945,15 +845,12 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.remote.setToken(action.endpoint, action.token);
       }
 
-      if (this.currentFlowId) {
-        this.persist();
-      } else {
+      if (!this.currentFlowId) {
         this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
-        this.dirty = false;
-        this.loadedJson = null;
       }
 
       this.store.setDestination(this.currentFlowId, action.endpoint);
+      this.persist();
       this.reflectUrl();
       this.cdr.detectChanges();
       void this.pushRemote(action.endpoint);
@@ -961,7 +858,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // 'new': an empty flow of its own, with no source.
+    // 'new': an empty flow of its own, with no source — an entry from the start.
     const flow: FbNodeState = {
       type: 'flow', title: action.title, sockets: [], children: [], connections: [],
     } as FbNodeState;
@@ -971,6 +868,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.currentSourceUrl = null;
     this.dirty = false;
     this.loadedJson = null;
+    this.captureBaselineSoon();
     this.currentFlowId = this.store.create(flow);
     this.reflectUrl();
     this.cdr.detectChanges();

@@ -31,14 +31,18 @@ export type FbSaveDestination = { kind: 'local' } | { kind: 'remote'; url: strin
 const INDEX_KEY = 'fb-flows';
 const CURRENT_KEY = 'fb-flow-current';
 const FLOW_PREFIX = 'fb-flow-';
-const WORKING_KEY = 'fb-flow-working';
 
-/** The unsaved state of a loaded flow, kept so a reload does not lose it. */
-export interface FbWorkingFlow {
-  /** The address the flow was loaded from — how boot knows it belongs here. */
-  sourceUrl: string;
-  flow: FbNodeState;
-}
+/**
+ * The DRAFT of a flow: its current, not-yet-saved state, kept per flow so a
+ * reload resumes exactly where you left off. It is NOT autosave — the saved
+ * copy at `fb-flow-<id>` only ever changes on an explicit Save. A draft's
+ * presence is what "unsaved changes" means for a flow: Save clears it.
+ *
+ * Keyed off the flow id (`fb-flow-<id>-draft`), and since an id never contains
+ * "-draft" it cannot collide with a saved key. Covered by `reset()` (starts
+ * with `fb-flow`).
+ */
+const draftKey = (id: string) => `${FLOW_PREFIX}${id}-draft`;
 
 /**
  * Flows in localStorage, so a reload costs nothing.
@@ -85,16 +89,18 @@ export class FlowStoreService {
   }
 
   /**
-   * Write a flow's current state; called by the autosave, so it must be cheap.
+   * SAVE: write the flow's saved copy, the conscious act. There is no autosave —
+   * this runs only when the person presses Save. It also clears the draft: the
+   * saved copy now IS the current state, so the flow is in sync ("saved").
    *
-   * `sourceUrl` left undefined preserves whatever the entry already had — the
-   * autosave passes nothing, and a saved-from-a-URL flow must not lose its
-   * origin on the next keystroke.
+   * `sourceUrl` left undefined preserves whatever the entry already had, so a
+   * saved-from-a-URL flow keeps its origin.
    */
   save(id: string, flow: FbNodeState, sourceUrl?: string): void {
     try {
       localStorage.setItem(FLOW_PREFIX + id, serializeFlowToJson(flow));
       this.touch(id, flow.title ?? 'Untitled', sourceUrl);
+      this.clearDraft(id);
     } catch {
       // Quota. The flow on screen is unharmed; the next save tries again.
     }
@@ -111,41 +117,35 @@ export class FlowStoreService {
   }
 
   /**
-   * The working copy: the current, UNSAVED state of a loaded flow.
-   *
-   * A flow opened from a URL (the demo, a shared link) lives in memory and is
-   * not on the shelf — but its changes should survive a reload all the same, so
-   * you do not come back to find the demo reset and your live-refresh, your
-   * extra node, gone. This is that draft: one slot, the last loaded flow that
-   * was touched, keyed by where it came from so boot only restores it over the
-   * SAME flow. Saving it to the shelf, or opening another, clears it.
+   * The DRAFT: a flow's current, unsaved state, written as you edit (debounced
+   * by the caller) so a reload resumes where you left off. One per flow, keyed
+   * by id. This is the ONLY thing localStorage takes on an edit — the saved copy
+   * waits for Save. A draft's presence means the flow has unsaved changes.
    */
-  saveWorking(sourceUrl: string, flow: FbNodeState): void {
+  saveDraft(id: string, flow: FbNodeState): void {
     try {
-      localStorage.setItem(WORKING_KEY, JSON.stringify({ sourceUrl, flow: serializeFlowToJson(flow) }));
+      localStorage.setItem(draftKey(id), serializeFlowToJson(flow));
     } catch {
       // Quota. The flow on screen is unharmed; the next change tries again.
     }
   }
 
-  loadWorking(): FbWorkingFlow | null {
+  loadDraft(id: string): FbNodeState | null {
     try {
-      const raw = localStorage.getItem(WORKING_KEY);
+      const raw = localStorage.getItem(draftKey(id));
 
-      if (!raw) {
-        return null;
-      }
-
-      const parsed = JSON.parse(raw) as { sourceUrl: string; flow: string };
-
-      return { sourceUrl: parsed.sourceUrl, flow: deserializeFlowFromJson(parsed.flow) };
+      return raw ? deserializeFlowFromJson(raw) : null;
     } catch {
       return null;
     }
   }
 
-  clearWorking(): void {
-    localStorage.removeItem(WORKING_KEY);
+  hasDraft(id: string): boolean {
+    return localStorage.getItem(draftKey(id)) !== null;
+  }
+
+  clearDraft(id: string): void {
+    localStorage.removeItem(draftKey(id));
   }
 
   /** The address a stored flow was fetched from, if any. */
@@ -165,6 +165,7 @@ export class FlowStoreService {
 
   remove(id: string): void {
     localStorage.removeItem(FLOW_PREFIX + id);
+    this.clearDraft(id);
     localStorage.setItem(INDEX_KEY, JSON.stringify(this.list().filter(f => f.id !== id)));
 
     if (this.currentId() === id) {

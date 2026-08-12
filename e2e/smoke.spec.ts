@@ -1038,6 +1038,10 @@ test('a formula flows into a derivative and comes out differentiated', async ({ 
  * the state a returning browser is in, so this still tests what it always did.
  */
 test('the demo flow appears first, changes survive a reload, and new flows can be created', async ({ page }) => {
+  // Replacing the flow while it is unsaved asks "lose your changes?" — accept it,
+  // the way a person would when they mean to move on.
+  page.on('dialog', dialog => dialog.accept());
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
@@ -1054,7 +1058,12 @@ test('the demo flow appears first, changes survive a reload, and new flows can b
       .some(n => (n as unknown as { state?: { type?: string } }).state?.type === 'math-formula')))
     .toBe(true);
 
-  // Move a node, let the autosave write, reload: the move holds.
+  // Let the load settle so the baseline is set — an edit inside the first ~600ms
+  // reads as the load still settling, not as the person's change.
+  await page.waitForTimeout(800);
+
+  // Move a node, let the draft be written, reload: the move holds (resumed from
+  // the draft — there is no autosave; the saved copy waits for Save).
   await page.evaluate(() => {
     const editor = (document.querySelector('fb-flow-canvas') as unknown as { editor: any }).editor;
 
@@ -1186,14 +1195,14 @@ test('the price source pulls a live price that reaches the whole chain', async (
 });
 
 /**
- * A change to the demo survives a reload.
+ * A change to a flow survives a reload — resumed from its draft.
  *
- * The demo lives in memory, not on the shelf, but its edits are kept as a
- * working copy — so coming back does not reset it and lose your extra node or
- * your live refresh. Boot restores that copy over re-fetching the file, and
- * Save still stands, because the changes are not on the shelf.
+ * There is no autosave; an edit is kept as a DRAFT (per flow) so coming back
+ * does not reset it and lose your extra node. Boot resumes the draft over
+ * re-fetching the file, and the Save dot stays lit because the change is not yet
+ * Saved. (The old keep/discard banner is gone: you simply resume where you were.)
  */
-test('a changed demo is kept across a reload', async ({ page }) => {
+test('a changed flow is resumed from its draft across a reload', async ({ page }) => {
   const titleOf = () => page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
       ?.editor?.state?.title);
@@ -1209,32 +1218,28 @@ test('a changed demo is kept across a reload', async ({ page }) => {
   await palette.locator('input[type="search"]').fill('note');
   await palette.locator('button.item').first().click();
   await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
-  await page.waitForTimeout(900);   // let the working copy be written (debounced)
+  // The edit lit the Save dot, and it STAYS (no autosave writes it away).
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).toHaveClass(/has-changes/);
+  await page.waitForTimeout(900);   // let the draft be written (debounced)
 
   await page.reload();
   await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
 
-  // The added node is still there — restored from the working copy, not the file.
+  // The added node is still there — resumed from the draft, not the file — and
+  // it is still unsaved, so the dot is still lit. No banner asks anything.
   await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
-  // And it is still unsaved, so Save stands.
-  await expect(page.locator('mat-toolbar button.save-flow')).toBeVisible();
-
-  // Coming back, a banner asks whether to keep the unsaved changes. Keeping it
-  // dismisses the banner and leaves the change in place.
-  const banner = page.locator('.share-notice', { hasText: 'unsaved changes from last time' });
-  await expect(banner).toBeVisible();
-  await banner.locator('button', { hasText: 'Keep editing' }).click();
-  await expect(banner).toHaveCount(0);
-  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+  await expect(save).toHaveClass(/has-changes/);
+  await expect(page.locator('.share-notice')).toHaveCount(0);
 });
 
 /**
- * Discarding the restored changes opens the published flow instead.
+ * Saving persists the change: a reload after Save comes up clean.
  *
- * The other half of the come-back choice: when the changes are not wanted, the
- * working copy is thrown away and the file loads fresh — the added node gone.
+ * The conscious act. Save writes the draft into the saved copy and clears the
+ * dot; reloading then resumes nothing extra — the edit IS the saved flow now.
  */
-test('discarding restored changes opens the published demo', async ({ page }) => {
+test('after Save, a reload is clean and the change is the saved flow', async ({ page }) => {
   const titleOf = () => page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
       ?.editor?.state?.title);
@@ -1250,19 +1255,15 @@ test('discarding restored changes opens the published demo', async ({ page }) =>
   await palette.locator('input[type="search"]').fill('note');
   await palette.locator('button.item').first().click();
   await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
-  await page.waitForTimeout(900);
+
+  const save = page.locator('mat-toolbar button.save-flow');
+  await save.click();
+  await expect(save).not.toHaveClass(/has-changes/, { timeout: 3000 });
 
   await page.reload();
   await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
-
-  const banner = page.locator('.share-notice', { hasText: 'unsaved changes from last time' });
-  await expect(banner).toBeVisible();
-  await banner.locator('button', { hasText: 'Discard changes' }).click();
-
-  // Reloaded onto the published flow: the added node is gone, and nothing asks.
-  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
-  await expect(page.locator('fb-node-box')).toHaveCount(before);
-  await expect(page.locator('.share-notice', { hasText: 'unsaved changes from last time' })).toHaveCount(0);
+  await expect(page.locator('fb-node-box')).toHaveCount(before + 1);
+  await expect(save).not.toHaveClass(/has-changes/);
 });
 
 /**
@@ -2321,10 +2322,16 @@ test('a module can be fetched from a URL, and is remembered', async ({ page }) =
   await expect(page.locator('fb-flow-canvas')).toContainText('hello from a URL');
 
   /*
-   * The flow SAVES the module it needs. This is the part that makes a shared
-   * document openable: a type name says which shipped module it belongs to,
-   * but nothing about `greet-hello` says where on the internet to find it.
+   * Save it — the conscious act, since there is no autosave — and the SAVED copy
+   * records the module it needs. This is the part that makes a shared document
+   * openable: a type name says which shipped module it belongs to, but nothing
+   * about `greet-hello` says where on the internet to find it.
    */
+  // The Add palette is still open (its backdrop would eat the click); close it.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.cdk-overlay-backdrop')).toHaveCount(0);
+
+  await page.locator('mat-toolbar button.save-flow').click();
   await expect.poll(() => page.evaluate(() => {
     const id = localStorage.getItem('fb-flow-current');
     const raw = id ? localStorage.getItem('fb-flow-' + id) : null;
@@ -5182,8 +5189,7 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
   await expect(page.locator('.share-notice')).toContainText('No changes yet');
   await page.locator('.share-notice button.dismiss').click();
 
-  // Change it — add a node — and Save shows it has changes, because a URL flow
-  // has no home to autosave into.
+  // Change it — add a node — and the Save dot lights and STAYS (no autosave).
   const before = await page.locator('fb-node-box').count();
   await page.locator('mat-toolbar button.add').click();
   const palette = page.locator('.cdk-overlay-container fb-component-selection');
@@ -5196,23 +5202,13 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
 
   await expect(save).toHaveClass(/has-changes/);
 
-  // Save asks where it should land, because for a homeless flow it is not
-  // obvious: the Flows dialog, in its naming mode.
-  await save.click();
-  const dialog = page.locator('fb-flows-dialog');
-  await expect(dialog).toBeVisible();
-  await dialog.locator('form.new input[name="name"]').fill('Shared, kept');
-  await dialog.locator('form.new button[type="submit"]').click();
-
-  // It has a home now: the dialog closes; Save is still there (it stays, so it
-  // never flashes and vanishes) but shows no unsaved-changes dot, and clicking
-  // it saves the homed flow rather than opening the dialog again. The source URL
-  // is still there, so its share link still points home.
-  await expect(dialog).toHaveCount(0);
-  await expect(save).toBeVisible();
-  await expect(save).not.toHaveClass(/has-changes/);
+  // A URL flow already has an entry (given on load), so Save writes directly —
+  // no naming dialog — clears the dot, and confirms. The source URL is still
+  // there, so its share link still points home.
   await save.click();
   await expect(page.locator('.share-notice')).toContainText('Saved');
+  await expect(save).not.toHaveClass(/has-changes/);
+  await expect(page.locator('fb-flows-dialog')).toHaveCount(0);
   expect(page.url()).toContain(`flow=${encodeURIComponent(source)}`);
 });
 
@@ -5271,10 +5267,9 @@ test('a local flow shares as a self-contained link that opens elsewhere', async 
 /**
  * Loading a file while a saved flow is open must not overwrite that flow.
  *
- * A file has no home, so it loads in memory — the previous flow's shelf id is
- * dropped. Before the fix, uploading over a homed flow left its id set, so the
- * next autosave wrote the file's content over the stored flow. This pins that
- * the stored copy is untouched and the uploaded one is homeless.
+ * An uploaded file becomes its OWN entry with a fresh id, and the current flow
+ * switches to it — so edits to the upload write ITS draft, never the previously
+ * open flow's saved copy. This pins that the demo's stored copy is untouched.
  */
 test('loading a file while a saved flow is open does not overwrite it', async ({ page }) => {
   const titleOf = () => page.evaluate(() =>
@@ -5298,13 +5293,13 @@ test('loading a file while a saved flow is open does not overwrite it', async ({
   });
   await dialog.locator('input[type=file]').setInputFiles({ name: 'up.json', mimeType: 'application/json', buffer: Buffer.from(uploaded) });
 
-  // The uploaded flow is on screen, in memory (Save stands, no changes dot).
+  // The uploaded flow is on screen, its own clean entry (no changes dot).
   await expect.poll(titleOf, { timeout: 15_000 }).toBe('Uploaded thing');
   const save = page.locator('mat-toolbar button.save-flow');
   await expect(save).toBeVisible();
   await expect(save).not.toHaveClass(/has-changes/);
 
-  // Edit it, wait past the autosave debounce, and the stored demo is untouched.
+  // Edit it, wait past the draft debounce, and the stored demo is untouched.
   await page.locator('mat-toolbar button.add').click();
   const palette = page.locator('.cdk-overlay-container fb-component-selection');
   await palette.locator('input[type="search"]').fill('note');
@@ -5392,13 +5387,13 @@ test('a remote save sends a Bearer token but never writes it into the flow', asy
 });
 
 /**
- * A remote-homed flow keeps its endpoint across an autosave.
+ * A remote-homed flow keeps its endpoint, and its saved copy stays token-free.
  *
- * The autosave writes locally and, being cheap, must not disturb the endpoint
- * metadata — nor ever spill the token into the stored flow. Editing after a
- * remote save leaves the destination intact and the flow still token-free.
+ * Saving to an endpoint records the destination and writes a token-free saved
+ * copy; a later edit lights the dot again (no autosave) without disturbing the
+ * endpoint metadata or ever spilling the token into the stored flow.
  */
-test('a remote-homed flow keeps its endpoint and stays token-free across an autosave', async ({ page }) => {
+test('a remote-homed flow keeps its endpoint and stays token-free after an edit', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
 
@@ -5414,7 +5409,7 @@ test('a remote-homed flow keeps its endpoint and stays token-free across an auto
   await dialog.locator('.to-endpoint button[type=submit]').click();
   await expect(page.locator('.share-notice')).toBeVisible({ timeout: 10_000 });
 
-  // Edit and let the autosave debounce pass.
+  // Edit and let the draft debounce pass.
   await page.locator('mat-toolbar button.add').click();
   const palette = page.locator('.cdk-overlay-container fb-component-selection');
   await palette.locator('input[type="search"]').fill('note');
@@ -5429,8 +5424,8 @@ test('a remote-homed flow keeps its endpoint and stays token-free across an auto
   });
   expect(after.index).toContain('/flows/mine');
   expect(after.stored).not.toContain('tok-abc');
-  // An unsaved remote push raises the Save dot — the local copy is saved, the
-  // endpoint is not, and the button says so.
+  // The edit raised the Save dot again — the endpoint has this flow's last save,
+  // not the new edit, and the button says there is something to save.
   await expect(page.locator('mat-toolbar button.save-flow')).toHaveClass(/has-changes/);
 });
 
@@ -5516,18 +5511,17 @@ test('a changed hosted flow offers the published address or the edited version',
 });
 
 /**
- * Dragging a node on a HOMED flow shows, then clears, the save dot.
+ * Dragging a node raises the save dot, and it STAYS until Save.
  *
- * A homed flow autosaves silently — and used to give NO feedback at all, so
- * moving a node looked like nothing happened (the dot only ever lit for a
- * homeless or remote-homed flow). The dot now goes up on the change and comes
- * down once the debounced autosave has written it: proof the edit registered
- * and was kept.
+ * There is no autosave, so an edit — a drag included — lights the dot and leaves
+ * it lit: it marks "you have unsaved changes", not "a write is in flight". It
+ * clears only when Save is pressed. (Before, on a homed flow a drag gave no
+ * feedback at all; then briefly, wrongly, it blinked off on the autosave.)
  */
-test('dragging a node on a homed flow shows the save dot, then clears it', async ({ page }) => {
+test('dragging a node raises the save dot and it stays until Save', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
-  // The harness seeds the demo as the current, HOMED flow, so it autosaves.
+  // The harness seeds the demo as the current flow, saved and clean.
   await page.waitForTimeout(900);
 
   const save = page.locator('mat-toolbar button.save-flow');
@@ -5545,8 +5539,12 @@ test('dragging a node on a homed flow shows the save dot, then clears it', async
   await page.mouse.move(cx + 130, cy + 90, { steps: 8 });
   await page.mouse.up();
 
-  // The drag registered: the dot is up while the save is pending…
+  // The drag registered: the dot is up — and it STAYS (no autosave clears it).
   await expect(save).toHaveClass(/has-changes/, { timeout: 2000 });
-  // …and comes back down once the debounced autosave has written it.
+  await page.waitForTimeout(1500);
+  await expect(save).toHaveClass(/has-changes/);
+
+  // Only Save takes it down.
+  await save.click();
   await expect(save).not.toHaveClass(/has-changes/, { timeout: 3000 });
 });
