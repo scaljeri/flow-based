@@ -762,9 +762,9 @@ export class AppComponent implements OnInit, AfterViewInit {
   private captureBaselineSoon(): void {
     clearTimeout(this.baselineTimer);
     this.baselineTimer = setTimeout(() => {
-      // In the zone, so the host binding (data-baseline='ready') actually
-      // re-renders: the bare timer fires outside Angular, where detectChanges on
-      // the component left the attribute stuck at its old value.
+      // In the zone, so the template binding (data-baseline='ready' on the
+      // toolbar) actually re-renders: the bare timer fires outside Angular, and
+      // a detectChanges there left the attribute stuck at its old value.
       this.zone.run(() => {
         this.loadedJson = serializeFlowToJson(this.flow);
         this.cdr.detectChanges();
