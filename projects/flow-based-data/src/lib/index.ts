@@ -20,6 +20,10 @@ import { FieldsSmallComponent } from './fields-small.component';
 import { JoinWorker } from './join.worker';
 import { JoinSmallComponent } from './join-small.component';
 import { JoinSettingsComponent } from './join-settings.component';
+import { AggregateWorker } from './aggregate.worker';
+import { ListWorker } from './list.worker';
+import { ComposeWorker } from './compose.worker';
+import { AggregateSmallComponent, ComposeSmallComponent, ListSmallComponent } from './data-transform-small.components';
 
 /**
  * The Data module: reshaping what flows, without writing code.
@@ -203,6 +207,58 @@ export const DATA_MODULE: FbModule = {
         addableSockets: 'out',
       },
       worker: FieldsWorker,
+    },
+
+    /*
+     * The reshape trio the data story needs: aggregate (total per category,
+     * mean per station), list (sort/first-N/pluck/length — "top 10 by value"),
+     * and compose (build an object from named wires — the opposite of fields).
+     */
+    'data-aggregate': {
+      component: { small: AggregateSmallComponent },
+      settings: {
+        title: 'Aggregate',
+        help: 'Group a list by a key and fold each group — sum, mean, min, max or count. "Sales per region", "mean PM2.5 per station". With no key it folds the whole list to one number; with a key it emits one {key, value} row per group.',
+        group: 'Data',
+        config: { op: 'sum', value: '', key: '' },
+        sockets: [
+          { type: 'in', formats: ['data'] },
+          { type: 'out', formats: ['data', 'number'] },
+        ],
+      },
+      worker: AggregateWorker,
+    },
+
+    'data-list': {
+      component: { small: ListSmallComponent },
+      settings: {
+        title: 'List',
+        help: 'Reshape a list: sort by a field, keep the first N, pull one field out of every row (pluck), or count its length. "Top 10 by value" is sort desc then first 10.',
+        group: 'Data',
+        config: { op: 'sort', path: '', dir: 'asc', n: 10 },
+        sockets: [
+          { type: 'in', formats: ['data'] },
+          { type: 'out', formats: ['data', 'number'] },
+        ],
+      },
+      worker: ListWorker,
+    },
+
+    'data-compose': {
+      component: { small: ComposeSmallComponent },
+      settings: {
+        title: 'Compose',
+        help: 'Build an object from named wires — each input socket\'s NAME is a key (rename the socket to name it), its value the value. The opposite of Fields. Stays silent until every wire has arrived, so a half-built object never leaves.',
+        group: 'Data',
+        config: {},
+        sockets: [
+          { type: 'in', name: 'a', formats: ['data', 'string', 'number'] },
+          { type: 'in', name: 'b', formats: ['data', 'string', 'number'] },
+          { type: 'out', formats: ['data'] },
+        ],
+        addableSockets: 'in',
+      },
+      worker: ComposeWorker,
     },
 
     /*
