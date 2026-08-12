@@ -389,25 +389,31 @@ export class ModulesService {
       // trusting the origin would run it.
       const own = this.isOwnLib(href);
       const target = own ? this.withBuild(href) : href;
-      const known = this.modules.find(info => info.id === `url:${target}`);
+      const existing = this.modules.find(info => info.id === `url:${target}`);
 
       /*
-       * A module this browser already has is loaded; one it has never seen is
-       * only LISTED — unless it is one of our own shipped libs, which loads.
+       * A module this browser has CONSENTED to is loaded; one it has never seen
+       * is only LISTED — unless it is one of our own shipped libs, which loads.
        *
        * The difference is consent. Opening a document must not run code the
-       * reader has not agreed to run — a flow is a file, files arrive by
-       * email, and "opening it fetched and executed a script from a stranger's
-       * server" is the shape of a drive-by. So an unknown module appears in
-       * the dialog, next to the warning, with its switch off. The nodes that
-       * need it draw as empty boxes until it is turned on, which is honest:
-       * they ARE missing something.
+       * reader has not agreed to run — a flow is a file, files arrive by email,
+       * and "opening it fetched and executed a script from a stranger's server"
+       * is the shape of a drive-by. So an unknown module appears in the dialog,
+       * next to the warning, with its switch off, and the nodes that need it draw
+       * as empty boxes until it is turned on.
+       *
+       * The gate is `enabled`, NOT "have I seen it": a module that was merely
+       * listed on a first open is remembered in memory, so a naive "known?" check
+       * treated the SECOND open (reopen the flow, or open another flow that uses
+       * it) as consent and ran it — a drive-by one interaction later, which also
+       * silently un-did a disable. So a remembered-but-unconsented module is left
+       * exactly as it is: listed, off, not run.
        */
-      if (known) {
-        await this.enable(known.id);
+      if (existing?.enabled) {
+        await this.enable(existing.id);
       } else if (own) {
         await this.addFromUrl(target);
-      } else {
+      } else if (!existing) {
         this.remember({
           url: href,
           prefix: entry.prefix,

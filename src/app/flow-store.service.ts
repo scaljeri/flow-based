@@ -96,13 +96,18 @@ export class FlowStoreService {
    * `sourceUrl` left undefined preserves whatever the entry already had, so a
    * saved-from-a-URL flow keeps its origin.
    */
-  save(id: string, flow: FbNodeState, sourceUrl?: string): void {
+  save(id: string, flow: FbNodeState, sourceUrl?: string): boolean {
     try {
       localStorage.setItem(FLOW_PREFIX + id, serializeFlowToJson(flow));
       this.touch(id, flow.title ?? 'Untitled', sourceUrl);
       this.clearDraft(id);
+
+      return true;
     } catch {
-      // Quota. The flow on screen is unharmed; the next save tries again.
+      // Quota, or a private-mode block. Returns false so the caller does NOT
+      // clear the dirty dot or say "Saved." — the write did not happen, and
+      // reporting success here once lost a tab's worth of edits on close.
+      return false;
     }
   }
 

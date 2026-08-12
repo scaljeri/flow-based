@@ -657,17 +657,26 @@ export class AppComponent implements OnInit, AfterViewInit {
    * baseline so the dot goes out. The caller pushes to a remote endpoint after,
    * if one is configured.
    */
-  private persist(): void {
+  private persist(): boolean {
     if (!this.currentFlowId) {
-      return;
+      return false;
     }
 
     this.modules.stamp(this.flow);
-    this.store.save(this.currentFlowId, this.flow);
+
+    // Only clear the dot when the write actually happened. A failed write (quota,
+    // private mode) that still reported "Saved." and dropped `dirty` disarmed the
+    // unload warning — closing the tab then lost everything.
+    if (!this.store.save(this.currentFlowId, this.flow)) {
+      return false;
+    }
+
     this.store.setCurrent(this.currentFlowId);
     this.loadedJson = serializeFlowToJson(this.flow);
     this.dirty = false;
     clearTimeout(this.draftTimer);
+
+    return true;
   }
 
   openFlows(): void {
@@ -702,7 +711,13 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     // The shelf copy first, always — then the network, if a destination is set.
     // The shelf is the safety net; a failed push never loses what is on screen.
-    this.persist();
+    if (!this.persist()) {
+      this.notify('Could not save — this device’s storage is full. Download the flow (menu → Download JSON) and remove some saved flows to free space.');
+      this.cdr.detectChanges();
+
+      return;   // dirty stays, the dot stays, the unload warning stays armed
+    }
+
     this.cdr.detectChanges();
 
     const dest = this.currentFlowId

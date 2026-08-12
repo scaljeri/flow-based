@@ -685,14 +685,26 @@ export class FbConnectionsElement extends LitElement {
     window.removeEventListener('pointercancel', this.onHandleUp);
   }
 
-  /** Where a pointer is, in the plane's own coordinates. */
+  /**
+   * Where a pointer is, in the plane's own coordinates.
+   *
+   * fb-connections lives INSIDE the transformed `.plane`, so its own rect already
+   * carries the pan (the plane's translate) — the top-left corner sits at the
+   * plane origin on screen. So the offset from that corner, divided by zoom, IS
+   * the plane point. Do NOT route this through `viewport.toPlane`, which subtracts
+   * the pan a second time: that left every draw/drop/picker/reroute off by
+   * -pan/zoom the moment pan was non-zero — which is every phone (fitPlane centres
+   * with slack) and any wheel-zoom away from centre. It read correct only at
+   * pan 0, which is exactly where the e2e ran.
+   */
   private toPlane(event: { clientX: number; clientY: number }): FbPosition {
     const rect = this.planeRect ?? this.getBoundingClientRect();
+    const zoom = this.editor.viewport.zoom;
 
-    return this.editor.viewport.toPlane({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    });
+    return {
+      x: (event.clientX - rect.left) / zoom,
+      y: (event.clientY - rect.top) / zoom,
+    };
   }
 
   /* ----------------------------------------------------------------------

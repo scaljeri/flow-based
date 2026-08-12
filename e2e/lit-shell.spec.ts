@@ -190,6 +190,71 @@ test('zooms, and keeps the geometry correct while zoomed', async ({ page }) => {
   expect(await worstEndpointError(page)).toBeLessThan(1);
 });
 
+/*
+ * Dragging a wire onto a socket must land while the plane is PANNED.
+ *
+ * fb-connections lives inside the transformed .plane, so its own rect already
+ * carries the pan; routing the drop point through viewport.toPlane subtracted the
+ * pan a SECOND time, so every draw/drop/picker/reroute was off by -pan/zoom once
+ * pan!=0 — which is every phone (fitPlane centres with slack) and any wheel-zoom
+ * away from centre. It read correct only at pan 0, which is exactly where the
+ * other connection tests run. Here we pan first, then drop a dragged wire on a
+ * socket at its real screen position: pre-fix the drop misses (no connection).
+ */
+test('a dragged wire’s endpoint maps correctly while the plane is panned', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  await page.locator('#add').click();
+  await expect.poll(() => nodeCount(page)).toBe(4);
+
+  // Force a non-zero pan (the harness fits at pan 0 on a desktop viewport).
+  await page.evaluate(() => (window.fbEditor as unknown as { viewport: { panBy(x: number, y: number): void } }).viewport.panBy(150, 90));
+  await page.waitForTimeout(50);
+
+  // Arm a pending wire from the source's out-socket, its free end out in empty
+  // top-left space so the draggable handle renders where nothing overlaps.
+  await page.evaluate(() => {
+    const dot = document.querySelectorAll('fb-flow-canvas fb-node-box')[0]
+      .shadowRoot!.querySelector('.socket-out') as HTMLElement;
+    dot.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, button: 0 }));
+    (window.fbEditor as unknown as { setPointer(p: { x: number; y: number }): void }).setPointer({ x: 30, y: 30 });
+  });
+
+  const handle = await page.evaluate(async () => {
+    const conn = document.querySelector('fb-flow-canvas')!.shadowRoot!
+      .querySelector('fb-connections') as HTMLElement & { updateComplete: Promise<boolean> };
+    await conn.updateComplete;
+    const h = conn.shadowRoot!.querySelector('circle.pending-handle') as SVGElement | null;
+    if (!h) return null;
+    const r = h.getBoundingClientRect();
+    return { hx: r.x + r.width / 2, hy: r.y + r.height / 2 };
+  });
+  expect(handle).not.toBeNull();
+
+  // Grab the handle with a REAL pointer (a synthetic one can't be captured) and
+  // move it to a chosen screen point.
+  const target = { x: handle!.hx + 240, y: handle!.hy + 140 };
+  await page.mouse.move(handle!.hx, handle!.hy);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y, { steps: 6 });
+
+  // The free end (editor.pointer, plane coords) must be the screen point mapped
+  // through the plane's OWN rect exactly once. Pre-fix it went through
+  // viewport.toPlane too, subtracting the pan a second time — off by -pan/zoom.
+  const check = await page.evaluate((t) => {
+    const ed = window.fbEditor as unknown as { pointer: { x: number; y: number }; viewport: { zoom: number } };
+    const conn = document.querySelector('fb-flow-canvas')!.shadowRoot!.querySelector('fb-connections') as HTMLElement;
+    const r = conn.getBoundingClientRect();
+    const z = ed.viewport.zoom;
+    return { pointer: ed.pointer, expected: { x: (t.x - r.left) / z, y: (t.y - r.top) / z } };
+  }, target);
+  await page.mouse.up();
+
+  expect(check.pointer.x).toBeCloseTo(check.expected.x, 0);
+  expect(check.pointer.y).toBeCloseTo(check.expected.y, 0);
+});
+
 test('undoes an added node', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();

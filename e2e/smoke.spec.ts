@@ -1267,6 +1267,46 @@ test('after Save, a reload is clean and the change is the saved flow', async ({ 
 });
 
 /**
+ * A Save that hits the storage quota keeps the dot and warns — it must not lie.
+ *
+ * The write is swallowed on quota, but Save used to clear `dirty` and say
+ * "Saved." anyway — so nothing was written, the dot was gone, and the unload
+ * warning was disarmed: closing the tab lost everything. Now a failed write
+ * keeps the dot lit and says storage is full.
+ */
+test('a Save that hits the storage quota keeps the dot and warns, not "Saved."', async ({ page }) => {
+  // Fail only the SAVED-flow write (not drafts, not the index), the way a full
+  // quota would fail the largest single setItem.
+  await page.addInitScript(() => {
+    const orig = localStorage.setItem.bind(localStorage);
+    (window as unknown as { __failSaves: boolean }).__failSaves = false;
+    localStorage.setItem = (k: string, v: string) => {
+      if ((window as unknown as { __failSaves: boolean }).__failSaves
+        && k.startsWith('fb-flow-') && !k.endsWith('-draft')) {
+        throw new DOMException('quota', 'QuotaExceededError');
+      }
+      return orig(k, v);
+    };
+  });
+
+  await page.goto('/');
+  await waitUntilReady(page);
+  await page.waitForTimeout(800);   // let the baseline settle
+
+  await addNote(page);
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).toHaveClass(/has-changes/);
+
+  // Arm the failure, then Save.
+  await page.evaluate(() => { (window as unknown as { __failSaves: boolean }).__failSaves = true; });
+  await save.click();
+
+  await expect(page.locator('.share-notice')).toContainText(/full|Could not save/i, { timeout: 10_000 });
+  // The dot STAYS — the edit is not lost, and the unload warning is still armed.
+  await expect(save).toHaveClass(/has-changes/);
+});
+
+/**
  * The sampler is the bridge between vocabularies: a FUNCTION in, POINTS out —
  * a sample without its x is half a fact. f(x) = x^2 swept from 0 in steps of
  * 0.1 must produce [0,0], [0.1,0.01], [0.2,0.04]; and in sweep mode, the
@@ -2453,6 +2493,61 @@ test('opening a flow that asks for an unknown module lists it, and does not run 
   await expect(page.locator('fb-modules-dialog li', { hasText: 'Greeting' })
     .locator('input[type=checkbox]')).toBeChecked();
   expect(fetched).toBe(1);
+});
+
+/**
+ * Reopening a flow must not turn a merely-listed module into consent.
+ *
+ * The first open LISTS an unknown module (off, unfetched) but remembers it in
+ * memory. A naive "have I seen this module?" check then treated the SECOND open
+ * — reopen the flow, or open another that uses it — as consent and RAN it: a
+ * drive-by one interaction later, which also silently un-did a disable. Consent
+ * is `enabled`, not "remembered": reopening leaves it listed and unfetched.
+ */
+test('reopening a flow does not run its still-unconsented module', async ({ page }) => {
+  let fetched = 0;
+
+  await page.route('**/stranger-module.js', route => {
+    fetched += 1;
+
+    return route.fulfill({ body: REMOTE_MODULE, contentType: 'text/javascript' });
+  });
+
+  await page.addInitScript(() => {
+    const flow = {
+      type: 'flow',
+      title: 'from a stranger',
+      config: { modules: [{ url: '/stranger-module.js', prefix: 'greet' }] },
+      sockets: [],
+      connections: [],
+      children: [{ type: 'greet-hello', id: 1, title: 'Hello', sockets: [], position: { x: 10, y: 70 } }],
+    };
+
+    localStorage.setItem('fb-flow-stranger', JSON.stringify({ version: 1, flow }));
+    localStorage.setItem('fb-flows', JSON.stringify([{ id: 'stranger', title: 'from a stranger' }]));
+    localStorage.setItem('fb-flow-current', 'stranger');
+  });
+
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title), { timeout: 30_000 }).toBe('from a stranger');
+
+  // Listed on the first open, not fetched.
+  expect(fetched).toBe(0);
+
+  // Reopen the SAME flow from the shelf — enableFor runs again, the module now
+  // remembered. It must STAY listed and unfetched.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  await page.locator('fb-flows-dialog li', { hasText: 'from a stranger' })
+    .locator('button.open').click();
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title), { timeout: 15_000 }).toBe('from a stranger');
+  await page.waitForTimeout(600);
+
+  expect(fetched).toBe(0);
 });
 
 
