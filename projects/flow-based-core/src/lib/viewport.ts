@@ -97,7 +97,7 @@ export class FbViewport {
    * its own size, and a phone opens on the whole flow rather than on whichever
    * node happens to sit in the top-left corner.
    */
-  fitPlane(viewport: FbSize): void {
+  fitPlane(viewport: FbSize, minZoom: number = FB_ZOOM_MIN): void {
     if (!this.plane.width || !viewport.width || !viewport.height) {
       return;
     }
@@ -108,7 +108,11 @@ export class FbViewport {
       return;
     }
 
-    this.zoomLevel = Math.max(FB_ZOOM_MIN, fit);
+    // A caller may raise the floor above FB_ZOOM_MIN: a phone fitting the whole
+    // 1200px plane lands at ~0.3, which shrinks every node, button and socket to
+    // a few real pixels — the shell passes a touch floor so the editor stays
+    // tappable, at the cost of panning a large flow rather than seeing all of it.
+    this.zoomLevel = Math.max(minZoom, fit);
 
     /*
      * Centred in whatever room is left over. Fitting takes the smaller of the

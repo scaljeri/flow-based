@@ -3569,3 +3569,27 @@ test('a subflow\'s boundary sockets stay on the screen edges through a zoom', as
     expect(Math.abs(state.lineStartY! - state.dotCentreY)).toBeLessThanOrEqual(2);
   }
 });
+
+/**
+ * A phone must not open the editor so far out that nothing can be tapped.
+ *
+ * fitPlane on a coarse pointer holds the zoom at a floor (FB_TOUCH_FIT_MIN) and
+ * pans the flow, rather than shrinking the whole 1200px plane to ~0.3 — at which
+ * a 44px socket rendered ~13 real px, untappable. A mouse keeps the full fit.
+ */
+test.describe('the initial fit on a finger', () => {
+  test.use({ viewport: { width: 380, height: 650 }, hasTouch: true });
+
+  test('holds a tappable floor instead of shrinking the whole plane', async ({ page }) => {
+    await page.goto(HARNESS);
+    await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+    const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+    expect(coarse).toBe(true);
+
+    // Without the floor the width ratio (380/1200 ≈ 0.317) would win; the floor
+    // holds it at 0.6 and pans the overflow.
+    const zoom = await page.evaluate(() => window.fbEditor.viewport.zoom);
+    expect(zoom).toBeCloseTo(0.6, 2);
+  });
+});

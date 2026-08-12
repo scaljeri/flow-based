@@ -27,6 +27,15 @@ const ICON_SHRINK = svg`<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 
 
 /**
+ * How far a touch device is allowed to zoom OUT to fit the plane. Fitting the
+ * whole 1200px plane on a phone lands near 0.3, which shrinks every node, button
+ * and socket to a few real pixels — untappable. Below this floor we pan the flow
+ * instead of showing all of it; the whole-flow overview is the document view's
+ * job on a phone, not the editor's. A mouse keeps the full zoom-out (FB_ZOOM_MIN).
+ */
+const FB_TOUCH_FIT_MIN = 0.6;
+
+/**
  * The editor surface: viewport, plane, zoom and pan.
  *
  * Node positions are percentages of a fixed-size plane rather than of this
@@ -641,8 +650,8 @@ export class FbFlowCanvasElement extends LitElement {
       this.editor?.viewport.setPlaneSize(rect.width, rect.height);
       this.editor?.viewport.setViewSize(rect.width, rect.height);
       // A plane bigger than the screen it opened on is shown whole, not
-      // cropped to its top-left corner.
-      this.editor?.viewport.fitPlane(rect);
+      // cropped to its top-left corner — but not so small it cannot be tapped.
+      this.editor?.viewport.fitPlane(rect, this.fitFloor());
     }
 
     this.resizeObserver = new ResizeObserver(() => {
@@ -659,12 +668,23 @@ export class FbFlowCanvasElement extends LitElement {
        */
       if (this.editor?.viewport.planeSize.width === 0) {
         this.editor.viewport.setPlaneSize(measured.width, measured.height);
-        this.editor.viewport.fitPlane(measured);
+        this.editor.viewport.fitPlane(measured, this.fitFloor());
       }
 
       this.editor?.viewport.setViewSize(measured.width, measured.height);
     });
     this.resizeObserver.observe(this);
+  }
+
+  /**
+   * The zoom-out floor for the initial fit. A coarse pointer (a finger) holds it
+   * at FB_TOUCH_FIT_MIN so nothing shrinks below a tappable size; a mouse gets
+   * the full FB_ZOOM_MIN (undefined → fitPlane's default), the whole-flow view.
+   */
+  private fitFloor(): number | undefined {
+    return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+      ? FB_TOUCH_FIT_MIN
+      : undefined;
   }
 
   protected override updated(): void {

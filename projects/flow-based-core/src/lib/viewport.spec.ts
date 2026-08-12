@@ -103,4 +103,35 @@ describe('FbViewportService', () => {
     expect(viewport.zoom).toBe(1);
     expect(viewport.pan).toEqual({ x: 0, y: 0 });
   });
+
+  describe('fitPlane', () => {
+    // A phone: the plane floors at FB_PLANE_MIN (1200x600), the screen is smaller.
+    const phone = { width: 380, height: 650 };
+
+    beforeEach(() => {
+      viewport.setPlaneSize(phone.width, phone.height);
+    });
+
+    it('opens a large plane whole on a small screen, zoomed out', () => {
+      viewport.fitPlane(phone);
+
+      // min(380/1200, 650/600-clamped) → the width ratio wins, ~0.317.
+      expect(viewport.zoom).toBeCloseTo(380 / 1200, 5);
+    });
+
+    // A finger cannot hit a socket rendered at 0.3x; the shell raises the floor
+    // so the editor stays tappable, and the flow is panned rather than shrunk.
+    it('will not zoom out past a raised floor (a phone stays tappable)', () => {
+      viewport.fitPlane(phone, 0.6);
+
+      expect(viewport.zoom).toBe(0.6);
+    });
+
+    it('still shows a plane that fits at its own size, floor or no floor', () => {
+      viewport.setViewSize(2000, 2000);
+      viewport.fitPlane({ width: 2000, height: 2000 }, 0.6);
+
+      expect(viewport.zoom).toBe(1);
+    });
+  });
 });
