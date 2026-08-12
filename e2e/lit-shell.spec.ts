@@ -3593,3 +3593,48 @@ test.describe('the initial fit on a finger', () => {
     expect(zoom).toBeCloseTo(0.6, 2);
   });
 });
+
+/**
+ * Renaming a node in its panel is ONE undo step, not one per letter.
+ *
+ * setTitle captured a structuredClone of the whole root graph on every
+ * keystroke — the clone-the-document-per-keystroke cost — and, as a side
+ * effect, undo reverted a rename a single character at a time. The panel now
+ * captures once for the edit session, exactly as a socket rename does, and
+ * setTitle no longer captures at all.
+ */
+test('renaming a node in its panel is one undo step, not one per letter', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+  // A long press opens config only for a non-subflow node.
+  const target = await page.evaluate(() => {
+    const index = window.fbEditor.children.findIndex(c => c.type !== 'flow');
+    return { index, title: window.fbEditor.children[index].title ?? '' };
+  });
+  expect(target.index).toBeGreaterThanOrEqual(0);
+
+  // Long-press the node's header (its draggable strip) — 500ms, no travel.
+  const box = page.locator('fb-flow-canvas fb-node-box').nth(target.index);
+  const rect = (await box.boundingBox())!;
+  await page.mouse.move(rect.x + rect.width * 0.3, rect.y + 6);
+  await page.mouse.down();
+  await page.waitForTimeout(650);
+  await page.mouse.up();
+
+  const title = page.locator('fb-node-settings input[type="text"]').first();
+  await expect(title).toBeVisible();
+
+  await title.focus();
+  await title.pressSequentially('XYZ');
+
+  const titleOf = () => page.evaluate(i => window.fbEditor.children[i].title, target.index);
+
+  // The model took the rename, letter by letter.
+  await expect.poll(titleOf).toBe(target.title + 'XYZ');
+
+  // And ONE undo takes the whole rename back — not just the last letter, which
+  // is what a capture-per-keystroke would have left behind.
+  await page.evaluate(() => window.fbEditor.undo());
+  await expect.poll(titleOf).toBe(target.title);
+});

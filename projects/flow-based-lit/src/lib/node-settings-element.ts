@@ -878,7 +878,14 @@ export class FbNodeSettingsElement extends LitElement {
           <input
             type="text"
             .value=${state.title ?? ''}
-            @input=${(e: Event) => this.editor.setTitle(state.id!, (e.target as HTMLInputElement).value)}>
+            @focus=${() => { this.editCaptured = false; }}
+            @input=${(e: Event) => {
+              // One undo for the whole rename, taken at the first letter — not a
+              // full-root structuredClone per keystroke, which is what setTitle
+              // used to do. Same contract as the socket name field above.
+              this.captureOnce();
+              this.editor.setTitle(state.id!, (e.target as HTMLInputElement).value);
+            }}>
         </label>
 
         <!--

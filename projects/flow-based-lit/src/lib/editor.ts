@@ -465,6 +465,14 @@ export class FbEditor {
      where it used to live, so every consumer had to rebuild it.
    */
 
+  /**
+   * No history capture here, on purpose. This runs per keystroke from the title
+   * field, and capturing structuredClone'd the whole root graph on every letter
+   * — the clone-the-document-per-keystroke cost — and made undo revert a rename
+   * one character at a time. The panel captures ONCE for the whole edit session
+   * (captureOnce), exactly as a socket rename does; a caller that mutates the
+   * title outside a session must capture for itself.
+   */
   setTitle(nodeId: number, title: string): void {
     const node = this.nodeById(nodeId);
 
@@ -472,7 +480,6 @@ export class FbEditor {
       return;
     }
 
-    this.history.capture(this.root);
     node.title = title;
     this.changes.emit({ kind: 'structure', nodeId });
   }
