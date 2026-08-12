@@ -32,6 +32,12 @@ import { FlowParamSettingsComponent } from './flow-param-settings.component';
 import { COMPARE_SETTINGS, CompareWorker } from './compare.worker';
 import { LOGIC_SETTINGS, LogicWorker } from './logic.worker';
 import { CompareSmallComponent, LogicSmallComponent } from './condition-small.components';
+import { CONVERT_SETTINGS, ConvertWorker } from './convert.worker';
+import { ConvertSmallComponent } from './convert-small.component';
+import { TIMESTAMP_SETTINGS, TimestampWorker } from './timestamp.worker';
+import { WINDOW_SETTINGS, WindowWorker } from './window.worker';
+import { DEFER_SETTINGS, DeferWorker } from './defer.worker';
+import { DeferSmallComponent, TimestampSmallComponent, WindowSmallComponent } from './utility-small.components';
 import { REROUTE_SETTINGS, RerouteWorker } from './reroute.worker';
 import { RerouteSmallComponent } from './reroute-small.component';
 import { FRAME_SETTINGS, FrameSettingsComponent, FrameSmallComponent, NOTE_SETTINGS, NoteSmallComponent } from './annotation.components';
@@ -104,6 +110,39 @@ export const BASICS_TYPES: FbNodeTypes = {
     component: { small: LogicSmallComponent },
     settings: LOGIC_SETTINGS,
     worker: LogicWorker,
+  },
+
+  /*
+   * A cast, made visible: to number (junk refused, not passed as a fake 0), to
+   * text with optional decimals, or JSON text parsed into data.
+   */
+  'convert': {
+    component: { small: ConvertSmallComponent },
+    settings: CONVERT_SETTINGS,
+    worker: ConvertWorker,
+  },
+
+  /*
+   * Time, three generic things a live-data flow could not do without a script:
+   * `timestamp` stamps each arrival with the wall clock; `window` is a rolling
+   * mean/min/max/sum; `defer` debounces, throttles or delays a fast feed.
+   */
+  'timestamp': {
+    component: { small: TimestampSmallComponent },
+    settings: TIMESTAMP_SETTINGS,
+    worker: TimestampWorker,
+  },
+
+  'window': {
+    component: { small: WindowSmallComponent },
+    settings: WINDOW_SETTINGS,
+    worker: WindowWorker,
+  },
+
+  'defer': {
+    component: { small: DeferSmallComponent },
+    settings: DEFER_SETTINGS,
+    worker: DeferWorker,
   },
 
   /*
