@@ -323,9 +323,13 @@ export class PickWorker implements FbNodeWorker {
       const path = this.wiredPath ?? this.config.a;
       const value = path ? readConfigValue(source, path) : source;
 
-      this.count = value === undefined ? 0 : 1;
+      this.count = value === undefined || value === null ? 0 : 1;
 
-      if (value === undefined) {
+      if (value === undefined || value === null) {
+        // null is the standard "no reading / station down / forecast not made"
+        // signal this repo keeps distinct from a real 0 — but Number(null) is 0,
+        // which would publish a made-up reading of zero down a `number` socket.
+        // Treat it as absent, exactly like undefined.
         throw new Error(`Nothing at "${path}"`);
       }
 
@@ -344,9 +348,16 @@ export class PickWorker implements FbNodeWorker {
        * shape called "one value (a number)" either produces a number or says
        * what went wrong.
        */
-      const asNumber = Number(value);
+      // A genuine numeric value only: a number, or a non-empty string that
+      // parses to a finite one. Number('') and Number([]) are BOTH 0, and a
+      // field holding "Infinity" is Infinity — none of those is a reading, so
+      // they are refused rather than travelling a `number` socket as a fake 0.
+      const asNumber =
+        typeof value === 'number' ? value
+          : typeof value === 'string' && value.trim() !== '' ? Number(value)
+            : NaN;
 
-      if (Number.isNaN(asNumber) && typeof value !== 'number') {
+      if (!Number.isFinite(asNumber)) {
         throw new Error(`"${path}" is not a number: ${JSON.stringify(value)?.slice(0, 40)}`);
       }
 

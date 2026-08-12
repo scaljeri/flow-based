@@ -117,4 +117,32 @@ describe('PickWorker shapes', () => {
 
     expect(seen.at(-1)).toBe(3);
   });
+
+  it('value: null / "" / [] are refused, not published as the number 0', () => {
+    // null is the "no reading / station down" signal this repo keeps distinct
+    // from a real 0 — but Number(null), Number('') and Number([]) are all 0, so
+    // each used to travel a `number` socket as a made-up reading of zero.
+    const emitted = (field: unknown): unknown[] => {
+      const worker = new PickWorker({ shape: 'value', a: 'count' });
+      const seen: unknown[] = [];
+
+      worker.getStream().subscribe(value => seen.push(value));
+      feed(worker, { count: field });
+
+      return seen;
+    };
+
+    expect(emitted(null)).not.toContain(0);
+    expect(emitted('')).not.toContain(0);
+    expect(emitted([])).not.toContain(0);
+
+    // A genuine 0 IS a reading, and still travels.
+    const worker = new PickWorker({ shape: 'value', a: 'count' });
+    const seen: unknown[] = [];
+
+    worker.getStream().subscribe(value => seen.push(value));
+    feed(worker, { count: 0 });
+
+    expect(seen.at(-1)).toBe(0);
+  });
 });

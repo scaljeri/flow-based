@@ -98,4 +98,39 @@ describe('RequestWorker', () => {
 
     worker.destroy();
   });
+
+  it('a slower earlier response does not overwrite a newer one', async () => {
+    // url A answers SLOWLY, url B fast. Switch A -> B; A's late answer must be
+    // dropped, or a plot shows station A's data under station B's name.
+    const asked: string[] = [];
+    globalThis.fetch = (async (url: string) => {
+      asked.push(url);
+      const slow = url.includes('/a.json');
+      await new Promise(resolve => setTimeout(resolve, slow ? 60 : 5));
+
+      return {
+        ok: true, status: 200, statusText: 'OK',
+        headers: { get: (name: string) => name === 'content-type' ? 'application/json' : null },
+        text: async () => JSON.stringify({ who: slow ? 'A' : 'B' }),
+      } as unknown as Response;
+    }) as typeof fetch;
+
+    // Constructor fires A (slow); then the wired url switches to B (fast).
+    const worker = new RequestWorker({ url: 'https://x/a.json', every: 0 });
+    const seen: { value?: unknown }[] = [];
+
+    worker.getStream().subscribe(value => seen.push(value as { value?: unknown }));
+
+    const urls = new Subject<string>();
+    worker.setStream(urls, urlIn, wire(10));
+    urls.next('https://x/b.json');
+
+    await new Promise(resolve => setTimeout(resolve, 120));
+
+    // B is the answer that stands; A's slower response never lands.
+    expect(seen.at(-1)).toMatchObject({ value: { who: 'B' } });
+    expect(seen.some(s => (s.value as { who?: string })?.who === 'A')).toBe(false);
+
+    worker.destroy();
+  });
 });

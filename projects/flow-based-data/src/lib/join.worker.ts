@@ -67,7 +67,13 @@ export class JoinWorker implements FbNodeWorker {
         this.right = { list };
       }
 
-      this.error = Array.isArray(source) ? this.error : `Side ${side} is not a list`;
+      // Clear the red when THIS side recovers — but only its own error, so a
+      // valid 'a' does not paper over a still-broken 'b'. Keeping `this.error`
+      // unconditionally on a valid input left the node red long after the input
+      // that upset it had recovered, teaching readers to ignore a red node.
+      this.error = Array.isArray(source)
+        ? (this.error?.startsWith(`Side ${side}`) ? null : this.error)
+        : `Side ${side} is not a list`;
       this.emit();
     });
   }

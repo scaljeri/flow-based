@@ -67,6 +67,8 @@ export class RequestWorker implements FbNodeWorker {
   private readonly subject = new ReplaySubject<unknown>(1);
   private readonly subscriptions: { [id: number]: Subscription } = {};
   private timer?: ReturnType<typeof setInterval>;
+  /** Which request is current; a slower earlier one checks this before it lands. */
+  private attempt = 0;
 
   /** What went wrong, for the node's own drawing. Null while it is fine. */
   error: string | null = null;
@@ -225,6 +227,16 @@ export class RequestWorker implements FbNodeWorker {
       return;
     }
 
+    /*
+     * Stamp this request. send() is called from the constructor, the repeat
+     * timer, any trigger, and every url change, so several can be in flight at
+     * once — and without this each one unconditionally overwrote `last` and
+     * pushed a value when it happened to resolve. Switch stations quickly and the
+     * OLDER url's slower response landed last, so a plot showed station A's data
+     * under station B's name. A superseded request drops its result on arrival.
+     */
+    const mine = ++this.attempt;
+
     this.loading = true;
     this.ticks.next();
 
@@ -237,6 +249,10 @@ export class RequestWorker implements FbNodeWorker {
           ? { body: this.config.body ?? '', headers: { 'content-type': 'application/json' } }
           : {}),
       });
+
+      if (mine !== this.attempt) {
+        return;   // a newer request went out while this one was in the air
+      }
 
       this.status = response.status;
 
@@ -254,6 +270,10 @@ export class RequestWorker implements FbNodeWorker {
       const type = response.headers.get('content-type') ?? '';
       const text = await response.text();
 
+      if (mine !== this.attempt) {
+        return;   // superseded while reading the body
+      }
+
       this.bytes = Number(response.headers.get('content-length')) || text.length;
 
       const value = type.includes('json') ? JSON.parse(text) : text;
@@ -267,6 +287,10 @@ export class RequestWorker implements FbNodeWorker {
         value,
       } satisfies FetchedValue);
     } catch (error) {
+      if (mine !== this.attempt) {
+        return;   // a superseded request's failure is not news either
+      }
+
       const message = (error as Error).message ?? String(error);
 
       /*
@@ -298,12 +322,16 @@ export class RequestWorker implements FbNodeWorker {
         value: null,
       } satisfies FetchedValue);
     } finally {
-      // Measured around the whole thing, failures included: a request that
-      // took eight seconds to fail is the most useful eight seconds to know
-      // about.
-      this.ms = Math.round(performance.now() - started);
-      this.loading = false;
-      this.ticks.next();
+      // Only the CURRENT request owns the status line: a superseded one clearing
+      // `loading` or writing `ms` would report the wrong request's timing.
+      if (mine === this.attempt) {
+        // Measured around the whole thing, failures included: a request that
+        // took eight seconds to fail is the most useful eight seconds to know
+        // about.
+        this.ms = Math.round(performance.now() - started);
+        this.loading = false;
+        this.ticks.next();
+      }
     }
   }
 
