@@ -51,6 +51,19 @@ export class ListWorker implements FbNodeWorker {
     return this.config.op ?? 'sort';
   }
 
+  /** For the drawing. */
+  get path(): string {
+    return this.config.path ?? '';
+  }
+
+  get dir(): 'asc' | 'desc' {
+    return this.config.dir === 'desc' ? 'desc' : 'asc';
+  }
+
+  get n(): number {
+    return this.config.n ?? 10;
+  }
+
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => this.transform(value));
   }

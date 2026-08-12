@@ -78,15 +78,15 @@ const DATA_STYLES = `
       <option value="max" [selected]="worker?.op === 'max'">max</option>
       <option value="count" [selected]="worker?.op === 'count'">count</option>
     </select>
-    <input type="text" fbNoDrag placeholder="value path" [value]="worker?.['config']?.value ?? ''"
+    <input type="text" fbNoDrag placeholder="value path" [value]="worker?.valuePath ?? ''"
            (change)="write('value', $event)" aria-label="Value path">
-    <input type="text" fbNoDrag placeholder="group by" [value]="worker?.['config']?.key ?? ''"
+    <input type="text" fbNoDrag placeholder="group by" [value]="worker?.key ?? ''"
            (change)="write('key', $event)" aria-label="Group-by key">
     <span [class]="worker?.error ? 'error' : 'reading'">{{ worker?.error ?? (worker?.groups + ' groups') }}</span>
   `,
   styles: [DATA_STYLES],
 })
-export class AggregateSmallComponent extends DataView<AggregateWorker & { ['config']?: { key?: string; value?: string } }> {
+export class AggregateSmallComponent extends DataView<AggregateWorker> {
 }
 
 /** List: op, path, direction / count. */
@@ -102,24 +102,24 @@ export class AggregateSmallComponent extends DataView<AggregateWorker & { ['conf
       <option value="length" [selected]="worker?.op === 'length'">length</option>
     </select>
     @if (worker?.op === 'sort' || worker?.op === 'pluck') {
-      <input type="text" fbNoDrag placeholder="path" [value]="worker?.['config']?.path ?? ''"
+      <input type="text" fbNoDrag placeholder="path" [value]="worker?.path ?? ''"
              (change)="write('path', $event)" aria-label="Path">
     }
     @if (worker?.op === 'sort') {
       <select fbNoDrag aria-label="Direction" (change)="write('dir', $event)">
-        <option value="asc" [selected]="worker?.['config']?.dir !== 'desc'">↑</option>
-        <option value="desc" [selected]="worker?.['config']?.dir === 'desc'">↓</option>
+        <option value="asc" [selected]="worker?.dir !== 'desc'">↑</option>
+        <option value="desc" [selected]="worker?.dir === 'desc'">↓</option>
       </select>
     }
     @if (worker?.op === 'slice') {
-      <input type="number" min="0" fbNoDrag [value]="worker?.['config']?.n ?? 10"
+      <input type="number" min="0" fbNoDrag [value]="worker?.n ?? 10"
              (change)="write('n', $event)" aria-label="How many">
     }
     <span [class]="worker?.error ? 'error' : 'reading'">{{ worker?.error ?? (worker?.count + ' items') }}</span>
   `,
   styles: [DATA_STYLES],
 })
-export class ListSmallComponent extends DataView<ListWorker & { ['config']?: { path?: string; dir?: string; n?: number } }> {
+export class ListSmallComponent extends DataView<ListWorker> {
 }
 
 /** Compose: no controls — the keys come from the input socket names. */

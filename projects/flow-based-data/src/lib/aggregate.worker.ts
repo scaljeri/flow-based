@@ -73,6 +73,15 @@ export class AggregateWorker implements FbNodeWorker {
     return this.config.op ?? 'sum';
   }
 
+  /** For the drawing. */
+  get key(): string {
+    return this.config.key ?? '';
+  }
+
+  get valuePath(): string {
+    return this.config.value ?? '';
+  }
+
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => this.aggregate(value));
   }
