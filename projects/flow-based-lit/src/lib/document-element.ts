@@ -1231,7 +1231,7 @@ export class FbFlowDocumentElement extends LitElement {
 
       case 'text':
         return paragraphsOf(block.text).map(paragraph => {
-          const tokens = parseInline(paragraph);
+          const tokens = this.parseInlineCached(paragraph);
 
           // A paragraph that is only a display formula is a block of its own;
           // a <p> around it would left-align what should sit centred on its
@@ -1797,8 +1797,39 @@ export class FbFlowDocumentElement extends LitElement {
     }
   }
 
+  /*
+   * The document re-renders on every 'config' — a doc pill commits per keystroke
+   * and a live scrub fires per animation frame — and each render re-parsed every
+   * paragraph and re-typeset every formula from scratch. On the formula-dense
+   * articles that is the doc-view's jank floor. Both are PURE of the config
+   * values that change (prose and TeX are static; only the inline INPUTS read a
+   * value), so they memoise by their text. New prose is a new key; the maps stay
+   * bounded by the distinct paragraphs and formulas the document has ever shown.
+   */
+  private readonly inlineCache = new Map<string, FbInline[]>();
+  private readonly typesetCache = new Map<string, string | undefined>();
+
+  private parseInlineCached(paragraph: string): FbInline[] {
+    let tokens = this.inlineCache.get(paragraph);
+
+    if (!tokens) {
+      tokens = parseInline(paragraph);
+      this.inlineCache.set(paragraph, tokens);
+    }
+
+    return tokens;
+  }
+
   private renderMath(tex: string, display: boolean) {
-    const typeset = this.mathRenderer?.(tex, display);
+    const key = `${display ? 'd' : 'i'}:${tex}`;
+    let typeset: string | undefined;
+
+    if (this.typesetCache.has(key)) {
+      typeset = this.typesetCache.get(key);
+    } else {
+      typeset = this.mathRenderer?.(tex, display);   // KaTeX renderToString — the cost
+      this.typesetCache.set(key, typeset);
+    }
 
     if (typeset === undefined) {
       // No typesetter: show the source. Readable, and obviously a formula.

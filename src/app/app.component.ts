@@ -677,36 +677,53 @@ export class AppComponent implements OnInit, AfterViewInit {
         return;
       }
 
-      const changed = serializeFlowToJson(this.flow) !== this.loadedJson;
-
-      // The dot tracks "differs from saved" exactly — editing back to the saved
-      // state clears it (and the draft), so it never lies.
-      if (changed !== this.dirty) {
+      /*
+       * A real change after the baseline. Raise the dot NOW, cheaply — a whole-
+       * flow serialize + string-compare on EVERY geometry/config event (a drag
+       * fires one per pointermove, a doc pill one per keystroke) was O(flow) in
+       * the pointer path, undoing the shell's own O(moved)-per-frame design. The
+       * one serialisation is deferred to the debounced draft write, which also
+       * reconciles: editing back to exactly the saved state clears the dot again.
+       */
+      if (!this.dirty) {
         this.zone.run(() => {
-          this.dirty = changed;
+          this.dirty = true;
           this.cdr.detectChanges();
         });
       }
 
-      if (changed) {
-        this.saveDraftSoon();
-      } else if (this.currentFlowId) {
-        clearTimeout(this.draftTimer);
-        this.store.clearDraft(this.currentFlowId);
-      }
+      this.saveDraftSoon();
     });
   }
 
   private baselineTimer?: ReturnType<typeof setTimeout>;
   private draftTimer?: ReturnType<typeof setTimeout>;
 
-  /** Keep the flow's unsaved state as a draft, debounced, so a reload resumes it. */
+  /**
+   * Keep the flow's unsaved state as a draft, debounced, so a reload resumes it —
+   * and this is where the ONE serialisation per burst of edits happens. If the
+   * edits net out to exactly the saved state (an edit then undone), reconcile:
+   * drop the draft and the dot, so the dot never lies without paying a compare
+   * on every frame.
+   */
   private saveDraftSoon(): void {
     clearTimeout(this.draftTimer);
     this.draftTimer = setTimeout(() => {
-      if (this.currentFlowId) {
-        // Carry the module URLs it needs, the same as a download or a save.
-        this.modules.stamp(this.flow);
+      if (!this.currentFlowId) {
+        return;
+      }
+
+      // Carry the module URLs it needs, the same as a download or a save.
+      this.modules.stamp(this.flow);
+      const json = serializeFlowToJson(this.flow);
+
+      if (json === this.loadedJson) {
+        this.store.clearDraft(this.currentFlowId);
+        this.zone.run(() => {
+          this.dirty = false;
+          this.cdr.detectChanges();
+        });
+      } else {
         this.store.saveDraft(this.currentFlowId, this.flow);
       }
     }, 600);
