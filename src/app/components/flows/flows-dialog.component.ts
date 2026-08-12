@@ -413,6 +413,14 @@ export class FlowsDialogComponent {
   }
 
   onDelete(flow: FbStoredFlow): void {
+    // Delete destroys the saved copy AND any unsaved draft, from one tap sitting
+    // ~6px from the settings gear. Confirm when there is unsaved work to lose —
+    // a mis-tap should not be able to take edits with it.
+    if (this.store.hasDraft(flow.id)
+      && !confirm(`“${flow.title}” has unsaved changes. Delete it and lose them?`)) {
+      return;
+    }
+
     this.store.remove(flow.id);
     this.flows = this.store.list();
   }

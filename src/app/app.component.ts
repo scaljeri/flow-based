@@ -72,6 +72,15 @@ export class AppComponent implements OnInit, AfterViewInit {
   dirty = false;
 
   /**
+   * A remote-destined flow whose local save succeeded but whose PUSH did not
+   * (offline, CORS, a rejected token). Save clears `dirty` on the local write, so
+   * without this a failed push was a dead end — pressing Save again said "no
+   * changes" and the only retry was a throwaway edit. While set, Save retries the
+   * push even with nothing new to write. Cleared by a successful push.
+   */
+  remoteBehind = false;
+
+  /**
    * The saved copy, serialised — the baseline a change is measured against. A
    * load rebuilds the graph and that rebuild emits change events; comparing
    * against this snapshot tells a real edit from the echo of loading, so the dot
@@ -157,9 +166,20 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.editingDoc = false;
   }
 
-  /** The document wrote itself into the flow; put that on the shelf. */
+  /**
+   * The document wrote itself into the flow; save it — the same way the Save
+   * button does, endpoint and all. Before, a document edit was written to the
+   * local shelf only and cleared the dot, so a remote-destined flow's article
+   * edits never reached the endpoint and Save then said "no changes".
+   */
   persistNow(): void {
-    this.persist();
+    if (!this.persist()) {
+      this.notify('Could not save — this device’s storage is full. Download the flow (menu → Download JSON) and remove some saved flows to free space.');
+
+      return;
+    }
+
+    this.pushIfRemote();
   }
 
   /**
@@ -255,6 +275,15 @@ export class AppComponent implements OnInit, AfterViewInit {
   @HostListener('document:keydown.control.z', ['$event'])
   @HostListener('document:keydown.meta.z', ['$event'])
   onUndoKey(event: Event): void {
+    // The canvas handles its own Ctrl+Z (editor.undo) and does NOT stop the
+    // event, so it bubbles here — and the app popped the SAME shared history a
+    // second time, undoing two steps. If the press passed through the canvas it
+    // is already handled; this document-level handler is only for when focus is
+    // elsewhere (the toolbar, the body).
+    if (this.fromCanvas(event)) {
+      return;
+    }
+
     event.preventDefault();
     this.undo();
   }
@@ -262,8 +291,17 @@ export class AppComponent implements OnInit, AfterViewInit {
   @HostListener('document:keydown.control.shift.z', ['$event'])
   @HostListener('document:keydown.meta.shift.z', ['$event'])
   onRedoKey(event: Event): void {
+    if (this.fromCanvas(event)) {
+      return;
+    }
+
     event.preventDefault();
     this.redo();
+  }
+
+  /** Whether a keyboard event already travelled through the canvas element. */
+  private fromCanvas(event: Event): boolean {
+    return event.composedPath().some(t => (t as HTMLElement)?.tagName?.toLowerCase() === 'fb-flow-canvas');
   }
 
   /* ----------------------------------------------------------------------
@@ -387,6 +425,12 @@ export class AppComponent implements OnInit, AfterViewInit {
       return false;
     }
 
+    // Flush the flow we are LEAVING first, and cancel its pending draft timer.
+    // The timer closes over currentFlowId; letting it fire after the switch wrote
+    // the just-loaded flow's state as the NEXT flow's draft, so that one opened
+    // dirty though nobody edited it, and the previous flow's last edits were lost.
+    this.flushDraft();
+
     const draft = this.store.loadDraft(id);
     const flow = draft ?? saved;
 
@@ -496,13 +540,20 @@ export class AppComponent implements OnInit, AfterViewInit {
    * URL it came from (for the address bar and share), or null.
    */
   private applyLoadedFlow(flow: FbNodeState, source: string | null): void {
+    this.flushDraft();   // keep the flow we are leaving; see openStored
+
     this.zone.run(() => {
       this.history.clear();
       this.currentSourceUrl = source;
       this.flow = flow;
-      this.currentFlowId = this.store.create(flow, source ?? undefined);
+      // Embedded, the article is only READ: giving it a shelf entry hijacks the
+      // reader's current-flow pointer, and a ?flowdata= embed minted a fresh
+      // entry on every page view, filling their storage. So embed loads in
+      // memory only — no entry, no autosave draft (saveDraftSoon needs an id),
+      // and onBeforeUnload bows out too.
+      this.currentFlowId = this.embed ? null : this.store.create(flow, source ?? undefined);
       this.dirty = false;
-      // Baseline once the load settles, not now — see startAutosave.
+      // Baseline once the load settles, not now — see watchEdits.
       this.loadedJson = null;
       this.captureBaselineSoon();
       this.loadError = null;
@@ -527,6 +578,15 @@ export class AppComponent implements OnInit, AfterViewInit {
       params.delete('flow');
     }
 
+    // Drop a `?flowdata=` payload once the flow has opened and is on the shelf:
+    // otherwise boot keeps giving it priority, so every reload re-unpacked the
+    // ORIGINAL and minted another shelf entry, leaving the saved work orphaned
+    // under a duplicate. NOT in embed, where the iframe has no shelf entry and
+    // reloads the article FROM that payload.
+    if (!this.embed) {
+      params.delete('flowdata');
+    }
+
     const query = params.toString();
 
     window.history.replaceState(null, '', `${location.pathname}${query ? '?' + query : ''}`);
@@ -544,6 +604,13 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: BeforeUnloadEvent): void {
+    // Embedded, this is somebody else's page: it has no shelf entry to flush and
+    // must not raise a "leave site?" prompt inside their iframe when a reader
+    // merely scrubbed a figure.
+    if (this.embed) {
+      return;
+    }
+
     this.flushDraft();
 
     if (this.dirty) {
@@ -556,6 +623,10 @@ export class AppComponent implements OnInit, AfterViewInit {
   // tab), and only needs to keep the draft — the last line of defence for it.
   @HostListener('window:pagehide')
   onPageHide(): void {
+    if (this.embed) {
+      return;
+    }
+
     this.flushDraft();
   }
 
@@ -703,7 +774,8 @@ export class AppComponent implements OnInit, AfterViewInit {
    * nothing changed it says so rather than rewriting an identical copy.
    */
   saveToShelf(): void {
-    if (!this.dirty) {
+    // Nothing to write, and nothing still owed to an endpoint.
+    if (!this.dirty && !this.remoteBehind) {
       this.notify('No changes yet — nothing to save.');
 
       return;
@@ -711,7 +783,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     // The shelf copy first, always — then the network, if a destination is set.
     // The shelf is the safety net; a failed push never loses what is on screen.
-    if (!this.persist()) {
+    if (this.dirty && !this.persist()) {
       this.notify('Could not save — this device’s storage is full. Download the flow (menu → Download JSON) and remove some saved flows to free space.');
       this.cdr.detectChanges();
 
@@ -719,7 +791,11 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     this.cdr.detectChanges();
+    this.pushIfRemote();
+  }
 
+  /** After a local save: push to the flow's endpoint if it has one, else confirm. */
+  private pushIfRemote(): void {
     const dest = this.currentFlowId
       ? this.store.destinationOf(this.currentFlowId)
       : { kind: 'local' as const };
@@ -748,6 +824,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       const { canonicalUrl } = await this.remote.save(url, json);
 
       this.zone.run(() => {
+        this.remoteBehind = false;
         this.shareNotice = `Saved to ${this.hostOf(url)}.`;
         this.shareLink = null;
         this.shareChoosing = false;
@@ -761,11 +838,15 @@ export class AppComponent implements OnInit, AfterViewInit {
       });
     } catch (err) {
       this.zone.run(() => {
+        // The local copy is saved; the endpoint is behind. Mark it so Save can
+        // retry the push directly, instead of insisting there is nothing to save.
+        this.remoteBehind = true;
+
         const auth = err instanceof FbRemoteSaveError && err.kind === 'auth';
 
         this.shareNotice = auth
-          ? 'The endpoint rejected the token. Set a new one under “Save as…”. Your changes are kept on this device.'
-          : `Save failed — ${(err as Error).message} Your changes are kept on this device.`;
+          ? 'The endpoint rejected the token. Set a new one in the flow’s settings, then press Save to retry. Your changes are kept on this device.'
+          : `Save failed — ${(err as Error).message} Press Save to retry; your changes are kept on this device.`;
         this.shareLink = null;
         this.shareChoosing = false;
         this.cdr.detectChanges();
@@ -794,7 +875,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       || (action.kind === 'replace' && action.id === this.currentFlowId);
 
     if (replaces && this.dirty
-      && !confirm('This flow has unsaved changes. Open another and lose them?')) {
+      && !confirm('This flow has unsaved changes. Open another flow? Your changes stay as a draft you can reopen.')) {
       return;
     }
 
@@ -805,7 +886,16 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     if (action.kind === 'load') {
-      void this.loadFromUrl(action.url);
+      // A local copy that already mirrors this URL wins over re-fetching — the
+      // same rule boot follows — so re-opening a URL does not mint a duplicate
+      // shelf entry and orphan the edits saved under the first one.
+      const localId = this.store.findBySourceUrl(action.url);
+
+      if (localId) {
+        void this.openStored(localId, action.url);
+      } else {
+        void this.loadFromUrl(action.url);
+      }
 
       return;
     }
@@ -823,6 +913,8 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     // 'new': an empty flow of its own, with no source — an entry from the start.
+    this.flushDraft();   // keep the flow we are leaving; see openStored
+
     const flow: FbNodeState = {
       type: 'flow', title: action.title, sockets: [], children: [], connections: [],
     } as FbNodeState;

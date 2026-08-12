@@ -5711,3 +5711,140 @@ test('dragging a node raises the save dot and it stays until Save', async ({ pag
   await save.click();
   await expect(save).not.toHaveClass(/has-changes/, { timeout: 3000 });
 });
+
+/**
+ * Ctrl+Z with the canvas focused undoes exactly ONE step.
+ *
+ * The canvas handles its own Ctrl+Z but did not stop the event, so it bubbled to
+ * the app's document-level handler, which popped the SAME shared history again —
+ * two edits undone from one press. Now the app ignores a press that already
+ * passed through the canvas.
+ */
+test('Ctrl+Z with the canvas focused undoes exactly one step', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+  await page.waitForTimeout(800);
+
+  const count = () => page.locator('fb-node-box').count();
+  const base = await count();
+
+  await addNote(page);
+  await addNote(page);
+  await expect.poll(count).toBe(base + 2);
+
+  // Focus the canvas, so its own Ctrl+Z fires AND bubbles to the app handler.
+  await page.evaluate(() => (document.querySelector('fb-flow-canvas') as HTMLElement).focus());
+  await page.keyboard.press('Control+z');
+
+  // Exactly one node removed — not two.
+  await expect.poll(count).toBe(base + 1);
+  await page.waitForTimeout(200);
+  expect(await count()).toBe(base + 1);
+});
+
+/**
+ * A failed remote push can be retried with Save.
+ *
+ * Save writes locally first and clears the dot, so a push that then failed left
+ * no way back: Save said "no changes". Now a failed push arms a retry — Save
+ * pushes again even with nothing new to write, and the dot stays lit meanwhile.
+ */
+test('a failed remote push can be retried with Save', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+  await page.waitForTimeout(800);
+
+  const origin = await page.evaluate(() => location.origin);
+  const endpoint = `${origin}/flows/mine`;
+  let fail = true;
+  await page.route('**/flows/mine', route => fail
+    ? route.fulfill({ status: 500, body: 'nope' })
+    : route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+
+  await setRemoteDestination(page, endpoint, 'tok');
+  await addNote(page);
+
+  const save = page.locator('mat-toolbar button.save-flow');
+  await save.click();
+  await expect(page.locator('.share-notice')).toContainText(/failed|retry/i, { timeout: 10_000 });
+  // The endpoint is behind, so the dot stays lit for the retry.
+  await expect(save).toHaveClass(/has-changes/);
+
+  // Endpoint recovers; Save retries and succeeds.
+  fail = false;
+  await save.click();
+  await expect(page.locator('.share-notice')).toContainText(/Saved to/i, { timeout: 10_000 });
+  await expect(save).not.toHaveClass(/has-changes/);
+});
+
+/**
+ * Deleting a flow that has unsaved draft edits asks first.
+ *
+ * Delete destroys the saved copy and the draft from one tap ~6px from the
+ * settings gear. When there is unsaved work to lose, it confirms.
+ */
+test('deleting a flow with unsaved changes asks first', async ({ page }) => {
+  let asked = '';
+  page.on('dialog', d => { asked = d.message(); void d.accept(); });
+
+  await page.goto('/');
+  await waitUntilReady(page);
+  await page.waitForTimeout(800);
+
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  // Open tno, edit it (so it gets a draft), then switch back to the demo — tno's
+  // draft is preserved, so it is now a NON-current flow with unsaved changes.
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  await page.locator('fb-flows-dialog li', { hasText: 'tno' }).locator('button.open').click();
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('tno');
+  await page.waitForTimeout(800);
+  await addNote(page);
+  await page.waitForTimeout(700);   // let tno's draft be written
+
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  await page.locator('fb-flows-dialog li').filter({ hasNotText: 'tno' }).locator('button.open').click();
+  await expect.poll(titleOf, { timeout: 15_000 }).not.toBe('tno');
+
+  // Delete tno from the shelf — it has a draft, so it must ask before losing it.
+  asked = '';
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  await page.locator('fb-flows-dialog li', { hasText: 'tno' }).locator('button.delete').click();
+
+  expect(asked).toMatch(/delete it/i);
+  await expect(page.locator('fb-flows-dialog li', { hasText: 'tno' })).toHaveCount(0);
+});
+
+/**
+ * An embedded article does not write to the reader's flow store.
+ *
+ * ?embed=doc ran the full boot: applyLoadedFlow unconditionally created a shelf
+ * entry and hijacked the current-flow pointer — merely reading an embedded
+ * article rewrote the reader's storage. Embed now loads in memory only.
+ */
+test('an embedded article creates no shelf entry', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem('fb-flows') ?? '[]').length);
+
+  const flow = JSON.stringify({
+    version: 5,
+    flow: { type: 'flow', title: 'Embedded', sockets: [], children: [{ type: 'note', title: 'N', id: 2, sockets: [] }], connections: [] },
+  });
+  const origin = await page.evaluate(() => location.origin);
+  const url = `${origin}/embed-flow.json`;
+  await page.route('**/embed-flow.json', route => route.fulfill({
+    contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: flow,
+  }));
+
+  await page.goto(`/?flow=${encodeURIComponent(url)}&embed=doc`);
+  await page.waitForTimeout(2500);   // let boot load it (in memory)
+
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem('fb-flows') ?? '[]').length);
+  expect(after).toBe(before);   // no new entry from merely viewing the embed
+});
