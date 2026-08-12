@@ -5848,3 +5848,34 @@ test('an embedded article creates no shelf entry', async ({ page }) => {
   const after = await page.evaluate(() => JSON.parse(localStorage.getItem('fb-flows') ?? '[]').length);
   expect(after).toBe(before);   // no new entry from merely viewing the embed
 });
+
+/**
+ * The condition nodes are in the standard palette and draw their control.
+ *
+ * compare and logic are the sweep's #1 missing capability: the palette consumed
+ * 0/1 but nothing produced it. They ship in BASICS_TYPES, so a fresh editor has
+ * them — no module to enable.
+ */
+test('the compare and logic nodes are in the palette and draw their control', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+  await page.waitForTimeout(800);
+
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  const selects = page.locator('fb-flow-canvas select');   // each condition node's operator picker
+  const before = await selects.count();
+
+  await page.locator('mat-toolbar button.add').click();
+  await palette.locator('input[type="search"]').fill('compare');
+  await expect(palette.locator('button.item', { hasText: /compare/i }).first()).toBeVisible();
+  await palette.locator('button.item').first().click();
+  await expect(selects).toHaveCount(before + 1, { timeout: 10_000 });
+
+  await page.locator('mat-toolbar button.add').click();
+  await palette.locator('input[type="search"]').fill('logic');
+  await expect(palette.locator('button.item', { hasText: /logic/i }).first()).toBeVisible();
+  await palette.locator('button.item').first().click();
+  await expect(selects).toHaveCount(before + 2, { timeout: 10_000 });
+  // The logic node's picker offers AND/OR/NOT.
+  await expect(page.locator('fb-flow-canvas option').filter({ hasText: 'AND' })).toHaveCount(1);
+});
