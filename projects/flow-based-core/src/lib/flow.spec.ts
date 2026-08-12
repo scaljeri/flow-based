@@ -185,6 +185,21 @@ describe('Flow nested flows (FlowWorker bridging)', () => {
 
     expect(sink.received).toEqual(['through']);
   });
+
+  it('registers a subflow’s children even when it declares no connections', () => {
+    // A subflow can carry children with NO `connections` key — assertFlowShape
+    // allows it, and hand-written or generated flows do. Nesting the recursion
+    // inside `if (node.connections)` left the whole inside unregistered: no child
+    // node, no worker, no sockets, drawn dead with no warning.
+    const leaf: any = { id: 30, type: 'source', sockets: [{ id: 300, type: 'out', format: 'number' }] };
+    const inner: any = { id: 40, type: 'flow', sockets: [], children: [leaf] };   // no connections key
+    const root: any = { id: 1, type: 'flow', sockets: [], children: [inner], connections: [] };
+
+    const flow = new Flow(flowTypes() as any).initialize(root);
+
+    expect(flow.getNode(30)!.state).toBe(leaf);
+    expect(flow.getWorker(30)).toBeInstanceOf(RecordingWorker);
+  });
 });
 
 describe('Flow.addNode / addConnection', () => {
@@ -216,6 +231,52 @@ describe('Flow.addNode / addConnection', () => {
 
     expect(newSink.received).toEqual(['fanout']);
     expect(root.connections.map((c: any) => c.id)).toContain(1001);
+  });
+
+  it('propagates a format THROUGH a spreading node when a wire is added', () => {
+    // A helper that copies the arriving format onto the receiving node's OUT
+    // sockets too — the tap rule. Wiring a number into `mid` must reach `mid`'s
+    // out AND the sink downstream of it. addConnection used to pre-call connect()
+    // itself, which APPLIED the change, so propagateFormats then saw "no change"
+    // on that connection and never enqueued mid's other wires: the spread died
+    // at the first hop and the sink stayed unformatted.
+    const spreadingHelpers = {
+      resetSockets: () => undefined,
+      connect: (out: any, inn: any, _from: any, to: any) => {
+        if (out.format && inn.format !== out.format) {
+          inn.format = out.format;
+          for (const s of to.sockets ?? []) {
+            if (s.type === 'out') {
+              s.format = out.format;
+            }
+          }
+
+          return true;
+        }
+
+        return false;
+      },
+    };
+
+    const source: any = { id: 10, type: 'source', sockets: [{ id: 100, type: 'out', format: 'number' }] };
+    const mid: any = { id: 60, type: 'source', sockets: [{ id: 600, type: 'in' }, { id: 601, type: 'out' }] };
+    const sink: any = { id: 70, type: 'sink', sockets: [{ id: 700, type: 'in' }] };
+    const root: any = {
+      id: 1, type: 'flow', sockets: [], children: [source, mid, sink],
+      connections: [{ id: 1002, from: 60, to: 70, out: 601, in: 700 }],
+    };
+
+    const flow = new Flow(flowTypes() as any, spreadingHelpers as any).initialize(root);
+
+    // Both sockets of the mid->sink wire start unformatted, so nothing propagated yet.
+    expect(sink.sockets[0].format).toBeUndefined();
+
+    flow.addConnection(root, { id: 1001, from: 10, to: 60, out: 100, in: 600 } as any);
+
+    // The number reached mid's in, spread to mid's out, and carried on to the sink.
+    expect(mid.sockets[0].format).toBe('number');   // in 600
+    expect(mid.sockets[1].format).toBe('number');   // out 601
+    expect(sink.sockets[0].format).toBe('number');  // in 700, two hops away
   });
 });
 

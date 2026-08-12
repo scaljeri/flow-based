@@ -137,10 +137,14 @@ export class Flow {
      * pass per connect, which made wiring a graph up quadratic. Removals keep
      * the rebuild, because taking a constraint away can genuinely un-settle
      * sockets.
+     *
+     * NOT guarded by a pre-call to connect(): that call APPLIED the change, so
+     * propagateFormats then popped the same connection, called connect() again,
+     * got "no change" and stopped — the neighbours it should have enqueued
+     * (a spreading node's downstream sockets) never re-resolved. The worklist
+     * does its own connect() and reports whether anything changed; let it.
      */
-    if (this.connect(connection)) {
-      this.propagateFormats([connection]);
-    }
+    this.propagateFormats([connection]);
 
     this.changes.emit('connections');
   }
@@ -386,6 +390,7 @@ export class Flow {
       }
 
       this.createWorker(node);
+
       if (node.connections) {
         node.connections.forEach(c => {
           // Same trap as at the root, and easier to fall into: a subflow's
@@ -399,10 +404,15 @@ export class Flow {
 
           this.connections[c.id] = {connection: c, state: node};
         });
-
-        // A flow with connections but no children yet is odd, not fatal.
-        this.createVirtualFlow(node.children ?? [], node.id!);
       }
+
+      // OUTSIDE the connections guard: a subflow can have children but no
+      // `connections` key (assertFlowShape allows it, and hand-written or
+      // generated flows do), and nesting the recursion inside it left the entire
+      // inside unregistered — no child nodes, no workers, no sockets — drawing
+      // dead with no warning. Children are registered whether or not this node
+      // declares any wires between them.
+      this.createVirtualFlow(node.children ?? [], node.id!);
     });
   }
 

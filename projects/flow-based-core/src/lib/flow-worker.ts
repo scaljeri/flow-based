@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { FbConnection, FbSocket, FbNodeWorker, FbNodeState } from './types';
 
 export class FlowWorker implements FbNodeWorker {
@@ -72,7 +72,14 @@ export class FlowWorker implements FbNodeWorker {
 
   getSubject(socketId: number): Subject<any> {
     if (!this.subjects[socketId]) {
-      this.subjects[socketId] = new Subject<any>();
+      // ReplaySubject(1), not a plain Subject: a replaying source (Value/Reroute
+      // emit on construction) wired THROUGH a subflow forwards across this
+      // boundary, and if the inner bridge subscribes after the outer one pushed
+      // the initial value, a plain Subject dropped it — the inner node sat empty.
+      // Subscribe order follows ascending connection id, so the same graph
+      // worked or failed by which wire got the lower id. Every other input bridge
+      // already replays its latest value; this one now does too.
+      this.subjects[socketId] = new ReplaySubject<any>(1);
     }
 
     return this.subjects[socketId];
