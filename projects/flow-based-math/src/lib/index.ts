@@ -1,10 +1,4 @@
-import { FbNodeTypes } from '@scaljeri/flow-based';
 import { FbModule } from '@scaljeri/flow-based';
-import { OperatorWorker, SumWorker } from './operator.worker';
-import { OperatorSmallComponent } from './operator-small.component';
-import { RangeWorker } from './range.worker';
-import { RangeSmallComponent } from './range-small.component';
-import { RangeSettingsComponent } from './range-settings.component';
 import { FormulaWorker } from './formula.worker';
 import { FormulaSmallComponent } from './formula-small.component';
 import { FormulaSettingsComponent } from './formula-settings.component';
@@ -29,29 +23,10 @@ import { SamplerSettingsComponent } from './sampler-settings.component';
 
 const GROUP = 'Mathematics';
 
-/** An operator type is the same node several times, differing in one function. */
-const operator = (
-  title: string,
-  symbol: string,
-  operate: (a: number, b: number) => number | undefined,
-): FbNodeTypes[string] => ({
-  component: { small: OperatorSmallComponent },
-  settings: {
-    title,
-    group: GROUP,
-    config: { symbol },
-    sockets: [
-      { type: 'in', format: 'number', name: 'a' },
-      { type: 'in', format: 'number', name: 'b' },
-      { type: 'out', format: 'number' },
-    ],
-  },
-  worker: class extends OperatorWorker {
-    constructor() {
-      super(operate);
-    }
-  },
-});
+// Arithmetic (add/subtract/multiply/divide) and range moved to the standard
+// palette (flow-based-basics): a fresh editor must be able to add two numbers
+// without enabling a module for a dependency (mathjs) they do not use. The math
+// module keeps what actually needs mathjs — formula, derivative, sampler.
 
 export const MATH_MODULE: FbModule = {
   name: 'Mathematics',
@@ -69,54 +44,6 @@ export const MATH_MODULE: FbModule = {
   ],
 
   types: {
-    /*
-     * Add is n-ary where its siblings are binary: a sum has no fixed arity,
-     * and this is where merge-streams went when the two nodes answering "add
-     * two streams" became one (2026-08-09). More terms are more sockets —
-     * the array-port pattern the plots already use.
-     */
-    'math-add': {
-      component: { small: OperatorSmallComponent },
-      settings: {
-        title: 'Add',
-        help: 'Adds its inputs — as many as you wire in. The n-ary sum: two number streams or ten, over the latest value of each.',
-        group: GROUP,
-        config: { symbol: '+' },
-        sockets: [
-          { type: 'in', format: 'number' },
-          { type: 'in', format: 'number' },
-          { type: 'out', format: 'number' },
-        ],
-        addableSockets: 'in',
-      },
-      worker: SumWorker,
-    },
-    'math-subtract': operator('Subtract', '−', (a, b) => a - b),
-    'math-multiply': operator('Multiply', '×', (a, b) => a * b),
-    // Divide says nothing at b = 0: Infinity on a wire poisons every plot
-    // downstream, silence holds the last honest value. See OperatorWorker.
-    'math-divide': operator('Divide', '÷', (a, b) => b === 0 ? undefined : a / b),
-
-    /*
-     * The commonest glue there is: a slider's 0..100 rarely matches a
-     * formula's domain. See RangeWorker.
-     */
-    'math-range': {
-      component: { small: RangeSmallComponent },
-      settingsComponent: RangeSettingsComponent,
-      settings: {
-        title: 'Range',
-        help: 'Maps a number from one interval onto another — a slider\'s 0..100 into a plot\'s domain, a value into a colour ramp. The commonest glue in a viz, without reaching for a script.',
-        group: GROUP,
-        config: { fromA: 0, fromB: 1, toA: 0, toB: 100, clamp: true },
-        sockets: [
-          { type: 'in', format: 'number' },
-          { type: 'out', format: 'number' },
-        ],
-      },
-      worker: RangeWorker,
-    },
-
     /*
      * A producer: it emits a FUNCTION, not numbers. Its whole configuration is
      * the formula editor in the settings panel.

@@ -38,6 +38,11 @@ import { TIMESTAMP_SETTINGS, TimestampWorker } from './timestamp.worker';
 import { WINDOW_SETTINGS, WindowWorker } from './window.worker';
 import { DEFER_SETTINGS, DeferWorker } from './defer.worker';
 import { DeferSmallComponent, TimestampSmallComponent, WindowSmallComponent } from './utility-small.components';
+import { OperatorWorker, SumWorker } from './operator.worker';
+import { OperatorSmallComponent } from './operator-small.component';
+import { RangeWorker } from './range.worker';
+import { RangeSmallComponent } from './range-small.component';
+import { RangeSettingsComponent } from './range-settings.component';
 import { REROUTE_SETTINGS, RerouteWorker } from './reroute.worker';
 import { RerouteSmallComponent } from './reroute-small.component';
 import { FRAME_SETTINGS, FrameSettingsComponent, FrameSmallComponent, NOTE_SETTINGS, NoteSmallComponent } from './annotation.components';
@@ -54,6 +59,29 @@ import { FRAME_SETTINGS, FrameSettingsComponent, FrameSmallComponent, NOTE_SETTI
  * basics are the floor everything stands on. A host spreads BASICS_TYPES
  * into the registry it provides.
  */
+/** A binary operator type: the same node several times, one function apart. */
+const operator = (
+  title: string,
+  symbol: string,
+  operate: (a: number, b: number) => number | undefined,
+): FbNodeTypes[string] => ({
+  component: { small: OperatorSmallComponent },
+  settings: {
+    title,
+    config: { symbol },
+    sockets: [
+      { type: 'in', format: 'number', name: 'a' },
+      { type: 'in', format: 'number', name: 'b' },
+      { type: 'out', format: 'number' },
+    ],
+  },
+  worker: class extends OperatorWorker {
+    constructor() {
+      super(operate);
+    }
+  },
+});
+
 export const BASICS_TYPES: FbNodeTypes = {
   /*
    * A constant with a handle on it: the reader's hand on the model. Small IS
@@ -143,6 +171,49 @@ export const BASICS_TYPES: FbNodeTypes = {
     component: { small: DeferSmallComponent },
     settings: DEFER_SETTINGS,
     worker: DeferWorker,
+  },
+
+  /*
+   * Arithmetic, moved here from the math module: a fresh editor must be able to
+   * add two numbers without enabling a module for a dependency (mathjs) these
+   * workers never used. Add is n-ary (as many inputs as you wire); the others
+   * are binary. Divide is silent at b=0 — Infinity poisons every plot
+   * downstream, silence holds the last honest value.
+   */
+  'add': {
+    component: { small: OperatorSmallComponent },
+    settings: {
+      title: 'Add',
+      help: 'Adds its inputs — as many as you wire in. The n-ary sum, over the latest value of each.',
+      config: { symbol: '+' },
+      sockets: [
+        { type: 'in', format: 'number' },
+        { type: 'in', format: 'number' },
+        { type: 'out', format: 'number' },
+      ],
+      addableSockets: 'in',
+    },
+    worker: SumWorker,
+  },
+
+  'subtract': operator('Subtract', '−', (a, b) => a - b),
+  'multiply': operator('Multiply', '×', (a, b) => a * b),
+  'divide': operator('Divide', '÷', (a, b) => b === 0 ? undefined : a / b),
+
+  /* A slider's 0..100 rarely matches a formula's domain — the commonest glue. */
+  'range': {
+    component: { small: RangeSmallComponent },
+    settingsComponent: RangeSettingsComponent,
+    settings: {
+      title: 'Range',
+      help: 'Maps a number from one interval onto another — a slider\'s 0..100 into a plot\'s domain, a value into a colour ramp.',
+      config: { fromA: 0, fromB: 1, toA: 0, toB: 100, clamp: true },
+      sockets: [
+        { type: 'in', format: 'number' },
+        { type: 'out', format: 'number' },
+      ],
+    },
+    worker: RangeWorker,
   },
 
   /*
