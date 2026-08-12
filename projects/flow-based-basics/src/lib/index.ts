@@ -29,6 +29,9 @@ import { ClockSettingsComponent, TriggerSettingsComponent } from './moment-setti
 import { ACCUMULATOR_SETTINGS, AccumulatorWorker, DELAY_SETTINGS, DelayWorker, HOLD_SETTINGS, HoldWorker } from './state.workers';
 import { AccumulatorSmallComponent, DelaySmallComponent, HoldSmallComponent } from './state-small.components';
 import { FlowParamSettingsComponent } from './flow-param-settings.component';
+import { COMPARE_SETTINGS, CompareWorker } from './compare.worker';
+import { LOGIC_SETTINGS, LogicWorker } from './logic.worker';
+import { CompareSmallComponent, LogicSmallComponent } from './condition-small.components';
 import { REROUTE_SETTINGS, RerouteWorker } from './reroute.worker';
 import { RerouteSmallComponent } from './reroute-small.component';
 import { FRAME_SETTINGS, FrameSettingsComponent, FrameSmallComponent, NOTE_SETTINGS, NoteSmallComponent } from './annotation.components';
@@ -82,6 +85,25 @@ export const BASICS_TYPES: FbNodeTypes = {
     component: { small: GateSmallComponent },
     settings: GATE_SETTINGS,
     worker: GateWorker,
+  },
+
+  /*
+   * The missing half of control: the palette's gate and on/off light CONSUME a
+   * 0 or a 1, but until now nothing PRODUCED one from a condition — you reached
+   * for the script node. `compare` turns two numbers and an operator into 0/1;
+   * `logic` folds 0/1 signals with AND/OR/NOT. Together they are the everyday
+   * "if this, then that" a flow-based editor cannot do without.
+   */
+  'compare': {
+    component: { small: CompareSmallComponent },
+    settings: COMPARE_SETTINGS,
+    worker: CompareWorker,
+  },
+
+  'logic': {
+    component: { small: LogicSmallComponent },
+    settings: LOGIC_SETTINGS,
+    worker: LogicWorker,
   },
 
   /*
