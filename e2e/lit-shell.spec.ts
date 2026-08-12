@@ -3638,3 +3638,44 @@ test('renaming a node in its panel is one undo step, not one per letter', async 
   await page.evaluate(() => window.fbEditor.undo());
   await expect.poll(titleOf).toBe(target.title);
 });
+
+/**
+ * Holding a wire to delete it must not ALSO draw a frame.
+ *
+ * A wire press bubbled to the canvas background, where the same 500ms hold arms
+ * the draw-a-frame gesture. Once the hold fired, the connection was removed AND
+ * a frame was armed — so the next twitch of the finger grew a stray frame node
+ * over the graph and released into it. The wire now owns its press.
+ */
+test('holding a wire to delete it does not also draw a frame', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => window.fbEditor.connections.length)).toBeGreaterThan(0);
+
+  const before = await page.evaluate(() => ({
+    children: window.fbEditor.children.length,
+    connections: window.fbEditor.connections.length,
+  }));
+
+  // A real point on the first wire's hit path, in screen coordinates.
+  const point = await page.evaluate(() => {
+    const conns = document.querySelector('fb-flow-canvas')!.shadowRoot!.querySelector('fb-connections')!;
+    const hit = conns.shadowRoot!.querySelector('path.hit') as SVGPathElement;
+    const p = hit.getPointAtLength(hit.getTotalLength() / 2);
+    const m = hit.getScreenCTM()!;
+    return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f };
+  });
+
+  // Hold still to fire the 500ms delete, THEN drag — the twitch that used to
+  // grow the stray frame.
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.waitForTimeout(600);
+  await page.mouse.move(point.x + 60, point.y + 60, { steps: 8 });
+  await page.mouse.up();
+
+  // The wire is gone...
+  await expect.poll(() => page.evaluate(() => window.fbEditor.connections.length)).toBe(before.connections - 1);
+  // ...and no frame was born from the same press.
+  expect(await page.evaluate(() => window.fbEditor.children.length)).toBe(before.children);
+});
