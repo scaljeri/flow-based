@@ -1557,7 +1557,13 @@ export class FbEditor {
   socketAt(point: FbPosition, within = 26): FbPendingSocket | undefined {
     const plane = this.viewport.planeSize;
     let best: FbPendingSocket | undefined;
-    let nearest = within;
+    // `within` is a SCREEN-pixel radius; the distances below are in plane space,
+    // so divide by zoom. Before this it was a plane-pixel radius, which on a
+    // phone (fitPlane opens at zoom ~0.3) shrank the 26px target to ~8 real px so
+    // most drops missed, and at zoom 4 ballooned it to ~104px so it snapped to a
+    // far socket. At zoom 1 this is exactly 26, so nothing about the desktop
+    // changes.
+    let nearest = within / this.viewport.zoom;
 
     const consider = (socket: FbSocket, nodeId: number, at: FbPosition | undefined) => {
       if (!at) {

@@ -255,6 +255,42 @@ test('a dragged wire’s endpoint maps correctly while the plane is panned', asy
   expect(check.pointer.y).toBeCloseTo(check.expected.y, 0);
 });
 
+/*
+ * The wire-drop tolerance is a constant SCREEN distance, whatever the zoom.
+ *
+ * socketAt measured its radius in PLANE pixels, so on a phone (fitPlane opens at
+ * zoom ~0.3) the 26px target shrank to ~8 real px and most drops missed. It is
+ * now divided by zoom: at zoom 0.5 a drop 40 plane px (20 screen px) off a
+ * socket still lands, while 120 plane px (60 screen px) does not.
+ */
+test('the wire-drop tolerance holds a constant screen distance across zoom', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+
+  const hits = await page.evaluate(() => {
+    const ed = window.fbEditor as unknown as {
+      viewport: { setZoom(z: number): void; planeSize: unknown };
+      children: { id: number; sockets: { id: number; type: string }[] }[];
+      geometry: { socketPosition(node: unknown, socket: unknown, plane: unknown): { x: number; y: number } | undefined };
+      socketAt(p: { x: number; y: number }, within?: number): unknown;
+    };
+    ed.viewport.setZoom(0.5);
+    const node = ed.children[0];
+    const socket = node.sockets.find(s => s.type === 'out') ?? node.sockets[0];
+    const at = ed.geometry.socketPosition(node, socket, ed.viewport.planeSize)!;
+
+    return {
+      onIt: !!ed.socketAt({ x: at.x, y: at.y }),
+      near: !!ed.socketAt({ x: at.x + 40, y: at.y }),   // 20 screen px — inside
+      far: !!ed.socketAt({ x: at.x + 120, y: at.y }),   // 60 screen px — outside
+    };
+  });
+
+  expect(hits.onIt).toBe(true);
+  expect(hits.near).toBe(true);
+  expect(hits.far).toBe(false);
+});
+
 test('undoes an added node', async ({ page }) => {
   await page.goto(HARNESS);
   await expect(canvas(page)).toBeVisible();
