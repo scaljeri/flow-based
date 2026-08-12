@@ -900,10 +900,24 @@ export class FbFlowCanvasElement extends LitElement {
     this.panFrom = { x: event.clientX, y: event.clientY };
     this.panMoved = false;
 
-    // Hold still long enough and this press draws a frame instead of panning.
-    // Only when the registry HAS frames; a host without the type keeps the
-    // plain pan and never notices.
-    if (this.editor.types['frame']) {
+    /*
+     * Hold still long enough and this press draws a frame instead of panning.
+     * Only when the registry HAS frames; a host without the type keeps the plain
+     * pan and never notices.
+     *
+     * NOT over a wire, though. A connection's press bubbles here (unlike a node's,
+     * which stops) so that sliding off a held wire still pans — a real feature.
+     * But arming the frame here too meant a hold-to-delete on a wire ALSO armed
+     * the pencil, and the next twitch grew a stray frame. Skip only the frame
+     * arming when the press is on a connection; the pan below still arms, so the
+     * slide-off-to-pan gesture is untouched.
+     */
+    const onWire = event.composedPath().some(
+      target => target instanceof Element
+        && (target.tagName === 'FB-CONNECTIONS' || target.classList.contains('hit')),
+    );
+
+    if (this.editor.types['frame'] && !onWire) {
       const client = { x: event.clientX, y: event.clientY };
       const from = this.editor.viewport.toPlane(this.toLocal(event));
 

@@ -739,14 +739,6 @@ export class FbConnectionsElement extends LitElement {
       return;
     }
 
-    // Own the press, the way a node and a socket do. Left to bubble, it reached
-    // the canvas background too, where the SAME 500ms hold arms the draw-a-frame
-    // gesture (and a pan): holding a wire to delete it then released into a stray
-    // frame node. Shift still bubbles, so a marquee can begin over a wire.
-    if (!event.shiftKey) {
-      event.stopPropagation();
-    }
-
     this.cancelArming();
 
     const id = connection.id;
