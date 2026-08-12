@@ -8,7 +8,7 @@ import { APP_VERSION } from './version';
 import { FlowStoreService } from './flow-store.service';
 import { FbRemoteSaveError, RemoteFlowService } from './remote-flow.service';
 import { SHARE_URL_LIMIT, packJson, unpackJson } from './flow-link';
-import { FbFlowsAction, FbFlowsData, FlowsDialogComponent } from './components/flows/flows-dialog.component';
+import { FbFlowsAction, FlowsDialogComponent } from './components/flows/flows-dialog.component';
 import {
   FbHistoryService,
   FbNodeState,
@@ -716,24 +716,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
   }
 
-  /** "Save as…" — pick a name and, if wanted, an endpoint, from any state. */
-  saveAs(): void {
-    this.openSaveDialog();
-  }
-
-  private openSaveDialog(): void {
-    const dest = this.currentFlowId ? this.store.destinationOf(this.currentFlowId) : { kind: 'local' as const };
-
-    this.dialog.open(FlowsDialogComponent, {
-      width: '360px',
-      data: {
-        mode: 'save',
-        title: this.flow.title,
-        endpoint: dest.kind === 'remote' ? dest.url : '',
-      } as FbFlowsData,
-    }).afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
-  }
-
   /**
    * Push the flow to its remote endpoint.
    *
@@ -789,11 +771,12 @@ export class AppComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Opening another flow overwrites the current one on screen. With no
-    // autosave, unsaved edits would be lost — so warn first, for every action
-    // that replaces the flow. (Save inside the dialog does not replace it.)
+    // Opening or replacing the flow on screen overwrites it. With no autosave,
+    // unsaved edits would be lost — so warn first. (Destination and token, set
+    // inside the dialog, do not replace the flow, so they never reach here.)
     const replaces = action.kind === 'open' || action.kind === 'load'
-      || action.kind === 'file' || action.kind === 'new';
+      || action.kind === 'file' || action.kind === 'new'
+      || (action.kind === 'replace' && action.id === this.currentFlowId);
 
     if (replaces && this.dirty
       && !confirm('This flow has unsaved changes. Open another and lose them?')) {
@@ -818,42 +801,8 @@ export class AppComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    if (action.kind === 'save') {
-      // Rename this flow and pin it to LOCAL (dropping any endpoint), then save.
-      this.flow = { ...this.flow, title: action.title };
-
-      if (this.currentFlowId) {
-        this.store.setDestination(this.currentFlowId, null);
-      } else {
-        this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
-      }
-
-      this.persist();
-      this.reflectUrl();
-      this.notify('Saved.');
-
-      return;
-    }
-
-    if (action.kind === 'save-remote') {
-      // Save to an endpoint. The token goes to RemoteFlowService (keyed by
-      // origin), NEVER onto the flow. The flow keeps a local copy too — the shelf
-      // is the safety net — and remembers the endpoint for later saves.
-      this.flow = { ...this.flow, title: action.title };
-
-      if (action.token) {
-        this.remote.setToken(action.endpoint, action.token);
-      }
-
-      if (!this.currentFlowId) {
-        this.currentFlowId = this.store.create(this.flow, this.currentSourceUrl ?? undefined);
-      }
-
-      this.store.setDestination(this.currentFlowId, action.endpoint);
-      this.persist();
-      this.reflectUrl();
-      this.cdr.detectChanges();
-      void this.pushRemote(action.endpoint);
+    if (action.kind === 'replace') {
+      void this.replaceFlow(action.id, action.json);
 
       return;
     }
@@ -872,6 +821,31 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.currentFlowId = this.store.create(flow);
     this.reflectUrl();
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Replace a flow's saved content — from an edited or uploaded JSON in its
+   * details. Validated by deserialising: a bad file becomes a load error, not a
+   * broken shelf entry. Writing the saved copy clears that flow's draft, and if
+   * it is the one on screen it is reopened so the editor shows the new content.
+   */
+  private async replaceFlow(id: string, json: string): Promise<void> {
+    try {
+      const flow = deserializeFlowFromJson(json);
+
+      // It may name modules; register (consent-gated) before it could be drawn.
+      await this.modules.enableFor(flow);
+      this.store.save(id, flow);
+
+      if (id === this.currentFlowId) {
+        await this.openStored(id);
+      }
+    } catch (err) {
+      this.zone.run(() => {
+        this.loadError = `Could not replace that flow — ${(err as Error).message}`;
+        this.cdr.detectChanges();
+      });
+    }
   }
 
   /* ----------------------------------------------------------------------

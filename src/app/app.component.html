@@ -107,12 +107,9 @@ showing this app's cockpit.
 
     <mat-divider></mat-divider>
 
-    <!-- Choose where this flow is saved: here, or a remote endpoint. -->
-    <button type="button" mat-menu-item class="save-as" (click)="saveAs()">
-      <mat-icon>save_as</mat-icon>
-      <span>Save as…</span>
-    </button>
-
+    <!-- Where a flow saves (this device or a remote endpoint), its JSON to view
+         or edit, download and upload — all now live per flow in the Flows dialog,
+         under each flow's settings. -->
     <button type="button" mat-menu-item class="save" (click)="save()">
       <mat-icon>download</mat-icon>
       <span>Download JSON</span>

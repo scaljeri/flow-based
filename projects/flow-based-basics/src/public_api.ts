@@ -18,3 +18,7 @@ export * from './lib/meter.node';
 export * from './lib/subflow.component';
 export * from './lib/subflow-settings.component';
 export * from './lib/google-charts.types';
+
+// Monaco, lazy-loaded and shared as one promise, so the JSON editor in the app
+// reuses the very download the script node already pays for.
+export { monaco } from './lib/monaco';

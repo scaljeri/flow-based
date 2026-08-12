@@ -7,6 +7,7 @@ import { TypeColorsComponent } from './components/type-colors/type-colors.compon
 import { SocketTypesDialogComponent } from './components/socket-types/socket-types-dialog.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
 import { FlowsDialogComponent } from './components/flows/flows-dialog.component';
+import { JsonEditorDialogComponent } from './components/json-editor/json-editor-dialog.component';
 import { ModulesService } from './modules.service';
 import { FlowComponent } from './flow/flow.component';
 import { FB_FORMAT_INFO, FB_FORMAT_NAMES, FB_NODE_HELPERS, FB_SOCKET_COLORS, FB_TYPE_ASSIGNABILITY, FbSocketColors, FlowBasedModule, FB_NODE_TYPES } from '@scaljeri/flow-based';
@@ -46,6 +47,7 @@ import { NODE_HELPERS } from './node-helpers';
     SocketTypesDialogComponent,
     ModulesDialogComponent,
     FlowsDialogComponent,
+    JsonEditorDialogComponent,
     FlowComponent,
     ComponentSelectionComponent,
   ],

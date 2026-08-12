@@ -5298,6 +5298,7 @@ test('loading a file while a saved flow is open does not overwrite it', async ({
   const save = page.locator('mat-toolbar button.save-flow');
   await expect(save).toBeVisible();
   await expect(save).not.toHaveClass(/has-changes/);
+  await page.waitForTimeout(800);   // let the upload's baseline settle before editing
 
   // Edit it, wait past the draft debounce, and the stored demo is untouched.
   await page.locator('mat-toolbar button.add').click();
@@ -5335,6 +5336,35 @@ test('an uploaded flow with no title takes its file name', async ({ page }) => {
 });
 
 /**
+ * Point the current flow's destination at a remote endpoint, via its details in
+ * the Flows dialog (where destination now lives). Sets the endpoint and, if
+ * given, the token — the same origin-keyed store the app reads at save time.
+ */
+async function setRemoteDestination(page: import('@playwright/test').Page, endpoint: string, token?: string) {
+  await page.locator('mat-toolbar button.overflow').click();
+  await page.locator('.cdk-overlay-container button.flows').click();
+  const dialog = page.locator('fb-flows-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.locator('li:has(.open.current) .details-open').click();
+  await dialog.locator('input[value=remote]').check();
+  await dialog.locator('input.endpoint').fill(endpoint);
+  if (token) {
+    await dialog.locator('input.token').fill(token);
+  }
+  await dialog.locator('button.apply-dest').click();
+  await expect(dialog.locator('.saved')).toBeVisible();
+  await dialog.locator('button.close-details').click();
+  await expect(dialog).toBeHidden();
+}
+
+async function addNote(page: import('@playwright/test').Page) {
+  await page.locator('mat-toolbar button.add').click();
+  const palette = page.locator('.cdk-overlay-container fb-component-selection');
+  await palette.locator('input[type="search"]').fill('note');
+  await palette.locator('button.item').first().click();
+}
+
+/**
  * A remote save carries the token in the header, never in the flow.
  *
  * This is the whole point of keeping the token in RemoteFlowService and out of
@@ -5345,6 +5375,7 @@ test('an uploaded flow with no title takes its file name', async ({ page }) => {
 test('a remote save sends a Bearer token but never writes it into the flow', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
+  await page.waitForTimeout(800);   // let the baseline settle before editing
 
   const origin = await page.evaluate(() => location.origin);
   const endpoint = `${origin}/flows/mine`;
@@ -5358,14 +5389,11 @@ test('a remote save sends a Bearer token but never writes it into the flow', asy
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   });
 
-  // Save as… → the save dialog → the endpoint form.
-  await page.locator('mat-toolbar button.overflow').click();
-  await page.locator('.cdk-overlay-container button.save-as').click();
-  const dialog = page.locator('fb-flows-dialog');
-  await expect(dialog).toBeVisible();
-  await dialog.locator('input[name=endpoint]').fill(endpoint);
-  await dialog.locator('input[name=token]').fill(TOKEN);
-  await dialog.locator('.to-endpoint button[type=submit]').click();
+  // Point this flow at the endpoint (in its details), then edit and Save — Save
+  // is the conscious act that pushes.
+  await setRemoteDestination(page, endpoint, TOKEN);
+  await addNote(page);
+  await page.locator('mat-toolbar button.save-flow').click();
 
   // The PUT arrives authorised, and its body is the flow — without the token.
   await expect.poll(() => authHeader, { timeout: 10_000 }).toBe(`Bearer ${TOKEN}`);
@@ -5387,45 +5415,37 @@ test('a remote save sends a Bearer token but never writes it into the flow', asy
 });
 
 /**
- * A remote-homed flow keeps its endpoint, and its saved copy stays token-free.
+ * A remote destination survives an edit, and the saved copy stays token-free.
  *
- * Saving to an endpoint records the destination and writes a token-free saved
- * copy; a later edit lights the dot again (no autosave) without disturbing the
- * endpoint metadata or ever spilling the token into the stored flow.
+ * Setting the destination records the endpoint (and stores the token apart); a
+ * later edit lights the dot without disturbing that metadata or ever spilling
+ * the token into the stored flow.
  */
-test('a remote-homed flow keeps its endpoint and stays token-free after an edit', async ({ page }) => {
+test('a remote destination survives an edit and the saved copy stays token-free', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
+  await page.waitForTimeout(800);
 
   const origin = await page.evaluate(() => location.origin);
   const endpoint = `${origin}/flows/mine`;
-  await page.route('**/flows/mine', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 
-  await page.locator('mat-toolbar button.overflow').click();
-  await page.locator('.cdk-overlay-container button.save-as').click();
-  const dialog = page.locator('fb-flows-dialog');
-  await dialog.locator('input[name=endpoint]').fill(endpoint);
-  await dialog.locator('input[name=token]').fill('tok-abc');
-  await dialog.locator('.to-endpoint button[type=submit]').click();
-  await expect(page.locator('.share-notice')).toBeVisible({ timeout: 10_000 });
+  await setRemoteDestination(page, endpoint, 'tok-abc');
 
   // Edit and let the draft debounce pass.
-  await page.locator('mat-toolbar button.add').click();
-  const palette = page.locator('.cdk-overlay-container fb-component-selection');
-  await palette.locator('input[type="search"]').fill('note');
-  await palette.locator('button.item').first().click();
+  await addNote(page);
   await page.waitForTimeout(900);
 
   const after = await page.evaluate(() => {
     const id = localStorage.getItem('fb-flow-current');
     const stored = id ? (localStorage.getItem('fb-flow-' + id) ?? '') : '';
     const index = localStorage.getItem('fb-flows') ?? '';
-    return { stored, index };
+    const draft = id ? (localStorage.getItem('fb-flow-' + id + '-draft') ?? '') : '';
+    return { stored, index, draft };
   });
   expect(after.index).toContain('/flows/mine');
   expect(after.stored).not.toContain('tok-abc');
-  // The edit raised the Save dot again — the endpoint has this flow's last save,
-  // not the new edit, and the button says there is something to save.
+  expect(after.draft).not.toContain('tok-abc');
+  // The edit raised the Save dot: there is something to push.
   await expect(page.locator('mat-toolbar button.save-flow')).toHaveClass(/has-changes/);
 });
 
@@ -5438,23 +5458,71 @@ test('a remote-homed flow keeps its endpoint and stays token-free after an edit'
 test('a 401 from the endpoint reports the rejected token and keeps changes', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
+  await page.waitForTimeout(800);
 
   const origin = await page.evaluate(() => location.origin);
   const endpoint = `${origin}/flows/mine`;
   await page.route('**/flows/mine', route => route.fulfill({ status: 401, body: 'nope' }));
 
-  await page.locator('mat-toolbar button.overflow').click();
-  await page.locator('.cdk-overlay-container button.save-as').click();
-  const dialog = page.locator('fb-flows-dialog');
-  await dialog.locator('input[name=endpoint]').fill(endpoint);
-  await dialog.locator('input[name=token]').fill('stale-token');
-  await dialog.locator('.to-endpoint button[type=submit]').click();
+  await setRemoteDestination(page, endpoint, 'stale-token');
+  await addNote(page);
+  await page.locator('mat-toolbar button.save-flow').click();
 
   const notice = page.locator('.share-notice');
   await expect(notice).toContainText(/token/i, { timeout: 10_000 });
   // Homed locally all the same — the flow is on the shelf, not lost.
   const homed = await page.evaluate(() => !!localStorage.getItem('fb-flow-current'));
   expect(homed).toBe(true);
+});
+
+/**
+ * A flow's details: its JSON in Monaco, and a replace.
+ *
+ * Selecting a flow's settings opens its details — where its JSON lives, to view
+ * or hand-edit in Monaco (the same editor the script node uses), and to replace
+ * from a file. A no-edit Save round-trips the JSON unchanged; a replace reopens
+ * the flow as the uploaded one. (Destination lives here too; the remote tests
+ * exercise it.)
+ */
+test('a flow’s details show its JSON in Monaco and can replace it', async ({ page }) => {
+  page.on('dialog', d => d.accept());
+  await page.goto('/');
+  await waitUntilReady(page);
+  await page.waitForTimeout(800);
+
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+  const seeded = await titleOf();
+
+  const openDetails = async () => {
+    await page.locator('mat-toolbar button.overflow').click();
+    await page.locator('.cdk-overlay-container button.flows').click();
+    const dialog = page.locator('fb-flows-dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.locator('li:has(.open.current) .details-open').click();
+    return dialog;
+  };
+
+  // Monaco opens on the flow's JSON; a no-edit Save round-trips it closed and
+  // the flow is unchanged.
+  let dialog = await openDetails();
+  await dialog.locator('button.edit-json').click();
+  const editor = page.locator('fb-json-editor-dialog');
+  await expect(editor.locator('.monaco-editor')).toBeVisible({ timeout: 20_000 });
+  await expect(editor.locator('.view-lines')).toContainText('"type"');
+  await editor.locator('button:has-text("Save")').click();
+  await expect(editor).toBeHidden();
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe(seeded);
+
+  // Replace this flow's content from a file → it reopens as the uploaded one.
+  dialog = await openDetails();
+  const replacement = JSON.stringify({
+    version: 5,
+    flow: { type: 'flow', title: 'Replaced via upload', sockets: [], children: [{ type: 'note', title: 'N', id: 2, sockets: [] }], connections: [] },
+  });
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'r.json', mimeType: 'application/json', buffer: Buffer.from(replacement) });
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Replaced via upload');
 });
 
 /**
