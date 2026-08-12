@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { NodeService } from '@scaljeri/flow-based';
+import { FbNoDragDirective, NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 import { ScriptWorker } from './script.worker';
 
@@ -13,9 +13,17 @@ import { ScriptWorker } from './script.worker';
  */
 @Component({
   standalone: true,
+  imports: [FbNoDragDirective],
   selector: 'fb-script-small',
   template: `
     <span class="label">JS</span>
+
+    <!-- How several named inputs combine before the script sees them. -->
+    <select fbNoDrag class="mode" aria-label="Combine inputs" (change)="setMode($event)">
+      <option value="merge" [selected]="worker?.mode === 'merge'">merge</option>
+      <option value="latest" [selected]="worker?.mode === 'latest'">latest</option>
+      <option value="zip" [selected]="worker?.mode === 'zip'">zip</option>
+    </select>
 
     @if (problem) {
       <span class="error">{{problem}}</span>
@@ -31,7 +39,7 @@ import { ScriptWorker } from './script.worker';
       display: flex;
       flex-direction: column;
       font: 12px system-ui, sans-serif;
-      gap: 1px;
+      gap: 3px;
       justify-content: center;
       padding: 10px 12px;
       width: 110px;
@@ -42,6 +50,18 @@ import { ScriptWorker } from './script.worker';
       letter-spacing: 0.08em;
       opacity: 0.7;
     }
+
+    .mode {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font: 11px system-ui, sans-serif;
+      padding: 2px 4px;
+    }
+
+    .mode option { color: #000; }
 
     .count {
       font-size: 18px;
@@ -80,5 +100,10 @@ export class ScriptSmallComponent implements OnInit, OnDestroy {
 
   get problem(): string | null {
     return this.worker?.compileError ?? this.worker?.runtimeError ?? null;
+  }
+
+  setMode(event: Event): void {
+    this.worker?.setConfigValue('mode', (event.target as HTMLSelectElement).value);
+    this.cdr.detectChanges();
   }
 }

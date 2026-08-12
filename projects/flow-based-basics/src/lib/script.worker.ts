@@ -1,15 +1,19 @@
 import { FbConnection, FbNodeSettings, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
 import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 
+export type ScriptMode = 'merge' | 'latest' | 'zip';
+
 export const SCRIPT_SETTINGS: FbNodeSettings = {
   title: 'JavaScript',
-  help: 'The escape hatch: behaviour you write, in JavaScript, when no other node fits. Your code gets each value, an emit() to send on, and a state object kept between runs. It compiles as you type.',
+  help: 'The escape hatch: behaviour you write, in JavaScript, when no other node fits. Add named input sockets and choose how they combine — merge (run per arrival, `port` says which), latest (run on any arrival, `value` is {name: latest}), or zip (run once every input has a fresh value). `emit` sends on, `state` is kept between runs. Compiles as you type.',
   config: {
+    mode: 'merge',
     source: [
       '// Runs for every value that arrives.',
-      '//   value  what came in',
+      '//   value  what came in (an object of named inputs in latest/zip)',
       '//   emit   send something on',
       '//   state  yours, kept between runs',
+      '//   port   which input socket it came from (merge mode)',
       '',
       'state.seen = (state.seen ?? 0) + 1;',
       '',
@@ -20,6 +24,8 @@ export const SCRIPT_SETTINGS: FbNodeSettings = {
     { type: 'in' },
     { type: 'out' },
   ],
+  // Name the sockets to name the inputs; f(a, b) needs more than one.
+  addableSockets: 'in',
 };
 
 /*
@@ -33,22 +39,25 @@ function toError(thrown: unknown): Error {
 /**
  * A node whose behaviour is written rather than configured.
  *
- * Every other node in this editor answers one question well; this one answers
- * whatever you can express, and it is the escape hatch a flow eventually needs
- * — the reshaping nobody anticipated, the arithmetic between two formats, the
- * quick "what does this actually look like". The graph stays the picture; one
- * box in it happens to be a function.
+ * Every other node answers one question well; this one answers whatever you can
+ * express. The code is a function BODY, so it can branch, loop and keep state.
+ * Four names are in scope: `value`, `emit`, `state`, `port` — and nothing else,
+ * because a script that reached into the editor would be a plugin, and a plugin
+ * is a module.
  *
- * The code is a function BODY, not an expression, so it can branch, loop and
- * keep something between runs. Three names are in scope and nothing else is
- * promised: `value`, `emit`, `state`. That is deliberately small — a script
- * that reached into the editor would be a plugin, and a plugin is a module.
+ * Multiple inputs used to interleave anonymously: everything arrived as `value`
+ * with no way to tell `a` from `b`, so `f(a, b)` was impossible in the very
+ * escape hatch meant for it. Now each input socket has a NAME, and a mode says
+ * how the inputs combine — the three fundamental stream combinators:
+ *   - merge:  run for each arrival; `port` is the socket it came from.
+ *   - latest: run on any arrival; `value` is {name: latest}, some maybe absent.
+ *   - zip:    run once every input has a fresh value, then wait for all again.
+ * `value`/`emit`/`state` keep their positions, so a single-input script written
+ * before this still runs unchanged (it simply ignores `port`).
  *
- * `new Function` compiles it. That is the same trust question a flow's own
- * modules raise, and it has the same answer: a flow is code as soon as it
- * contains one of these, so a flow from a stranger is a program from a
- * stranger. Nothing here sandboxes it, and pretending otherwise would be
- * worse than saying so.
+ * `new Function` compiles it. That is the same trust question a flow's modules
+ * raise, with the same answer: a flow with one of these IS a program, so a flow
+ * from a stranger is a program from a stranger. Nothing here sandboxes it.
  */
 export class ScriptWorker implements FbNodeWorker {
   private readonly subject = new ReplaySubject<unknown>(1);
@@ -70,11 +79,16 @@ export class ScriptWorker implements FbNodeWorker {
   emitted = 0;
   last: unknown;
 
+  /** Per wire: the input name it fills. Latest value + freshness, per name. */
+  private readonly wires = new Map<number, string>();
+  private readonly latest = new Map<string, unknown>();
+  private readonly fresh = new Set<string>();
+
   /** The script's own memory, kept between runs and cleared on recompile. */
   private state: Record<string, unknown> = {};
-  private run?: (value: unknown, emit: (out: unknown) => void, state: Record<string, unknown>) => void;
+  private run?: (value: unknown, emit: (out: unknown) => void, state: Record<string, unknown>, port?: string) => void;
 
-  constructor(private readonly config: { source?: string } = {}) {
+  constructor(private readonly config: { source?: string; mode?: ScriptMode } = {}) {
     this.compile();
   }
 
@@ -88,13 +102,21 @@ export class ScriptWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
+  get mode(): ScriptMode {
+    return this.config.mode ?? 'merge';
+  }
+
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    this.subscriptions[connection.id] = stream.subscribe(value => this.feed(value));
+    const name = socket.name || 'in';
+
+    this.wires.set(connection.id, name);
+    this.subscriptions[connection.id] = stream.subscribe(value => this.arrive(connection.id, value));
   }
 
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    this.wires.delete(connection.id);
   }
 
   get source(): string {
@@ -105,9 +127,9 @@ export class ScriptWorker implements FbNodeWorker {
    * Write the script and compile it.
    *
    * Compiling on every keystroke is the point: a syntax error is worth seeing
-   * while it is being made, not when the next value happens to arrive. The
-   * previous working function is kept until the new one compiles, so a flow
-   * does not stop running while it is being edited.
+   * while it is being made, not when the next value arrives. The previous
+   * working function is kept until the new one compiles, so a flow does not stop
+   * running while it is being edited.
    */
   setSource(source: string): void {
     this.config.source = source;
@@ -118,22 +140,27 @@ export class ScriptWorker implements FbNodeWorker {
   setConfigValue(path: string, value: unknown): void {
     if (path === 'source') {
       this.setSource(String(value));
+    } else if (path === 'mode') {
+      this.config.mode = value as ScriptMode;
+      this.fresh.clear();
+      this.ticks.next();
     }
   }
 
-  /** Run it again over the last value, for a reader who edited the code. */
+  /** Run it again over the last input, for a reader who edited the code. */
   rerun(): void {
-    if (this.last !== undefined) {
-      this.feed(this.lastIn);
+    if (this.lastValue !== undefined) {
+      this.invoke(this.lastValue, this.lastPort);
     }
   }
 
-  private lastIn: unknown;
+  private lastValue: unknown;
+  private lastPort?: string;
 
   private compile(): void {
     try {
       // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      this.run = new Function('value', 'emit', 'state', this.source) as typeof this.run;
+      this.run = new Function('value', 'emit', 'state', 'port', this.source) as typeof this.run;
       this.compileError = null;
       this.state = {};
     } catch (thrown) {
@@ -141,8 +168,41 @@ export class ScriptWorker implements FbNodeWorker {
     }
   }
 
-  private feed(value: unknown): void {
-    this.lastIn = value;
+  /** A value landed on one wire; combine per mode and maybe run. */
+  private arrive(connectionId: number, value: unknown): void {
+    const name = this.wires.get(connectionId) ?? 'in';
+
+    this.latest.set(name, value);
+    this.fresh.add(name);
+
+    if (this.mode === 'merge') {
+      this.invoke(value, name);
+
+      return;
+    }
+
+    if (this.mode === 'latest') {
+      this.invoke(this.snapshot(), name);
+
+      return;
+    }
+
+    // zip: run only once EVERY wired input has a fresh value, then wait again.
+    const names = new Set(this.wires.values());
+
+    if ([...names].every(n => this.fresh.has(n))) {
+      this.invoke(this.snapshot(), undefined);
+      this.fresh.clear();
+    }
+  }
+
+  private snapshot(): Record<string, unknown> {
+    return Object.fromEntries(this.latest);
+  }
+
+  private invoke(value: unknown, port: string | undefined): void {
+    this.lastValue = value;
+    this.lastPort = port;
 
     if (!this.run) {
       return;
@@ -155,7 +215,7 @@ export class ScriptWorker implements FbNodeWorker {
         this.emitted += 1;
         this.last = out;
         this.subject.next(out);
-      }, this.state);
+      }, this.state, port);
 
       this.runtimeError = null;
     } catch (thrown) {
