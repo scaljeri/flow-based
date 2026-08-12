@@ -17,10 +17,18 @@ const stamp = (worker: TimestampWorker): unknown => {
   return seen.at(-1);
 };
 
+const pinned = (as: 'ms' | 's' | 'iso', now: number): TimestampWorker => {
+  const worker = new TimestampWorker({ as });
+
+  worker.now = () => now;
+
+  return worker;
+};
+
 describe('TimestampWorker', () => {
   it('stamps each arrival with the wall clock, in the chosen form', () => {
-    expect(stamp(new TimestampWorker({ as: 'ms' }, () => 1500))).toBe(1500);
-    expect(stamp(new TimestampWorker({ as: 's' }, () => 2500))).toBe(2);
-    expect(stamp(new TimestampWorker({ as: 'iso' }, () => 0))).toBe('1970-01-01T00:00:00.000Z');
+    expect(stamp(pinned('ms', 1500))).toBe(1500);
+    expect(stamp(pinned('s', 2500))).toBe(2);
+    expect(stamp(pinned('iso', 0))).toBe('1970-01-01T00:00:00.000Z');
   });
 });

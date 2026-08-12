@@ -34,11 +34,14 @@ export class DeferWorker implements FbNodeWorker {
   private latest?: { value: unknown };
   private throttleUntil = 0;
 
+  /** The wall clock; a field, not a ctor arg, so a node ctor stays (config) — pinned in tests. */
+  now: () => number = () => Date.now();
+
   get changes(): Observable<void> {
     return this.ticks.asObservable();
   }
 
-  constructor(private readonly config: DeferConfig = {}, private readonly now: () => number = () => Date.now()) {
+  constructor(private readonly config: DeferConfig = {}) {
     this.ticks.next();
   }
 

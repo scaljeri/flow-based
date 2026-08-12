@@ -32,12 +32,14 @@ export class TimestampWorker implements FbNodeWorker {
   /** For the drawing: the last stamp it produced. */
   reading?: string;
 
+  /** The wall clock; a field, not a ctor arg, so a node ctor stays (config) — pinned in tests. */
+  now: () => number = () => Date.now();
+
   get changes(): Observable<void> {
     return this.ticks.asObservable();
   }
 
-  /** Injectable for tests; the wall clock in the browser. */
-  constructor(private readonly config: TimestampConfig = {}, private readonly now: () => number = () => Date.now()) {
+  constructor(private readonly config: TimestampConfig = {}) {
     this.ticks.next();
   }
 

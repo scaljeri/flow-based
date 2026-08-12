@@ -30,7 +30,8 @@ describe('DeferWorker', () => {
 
   it('throttle lets the first through, then shuts for ms', () => {
     let clock = 0;
-    const worker = new DeferWorker({ mode: 'throttle', ms: 100 }, () => clock);
+    const worker = new DeferWorker({ mode: 'throttle', ms: 100 });
+    worker.now = () => clock;
     const seen: unknown[] = [];
     const source = new Subject<unknown>();
 
