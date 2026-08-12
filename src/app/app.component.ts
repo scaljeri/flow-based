@@ -90,6 +90,20 @@ export class AppComponent implements OnInit, AfterViewInit {
   private loadedJson: string | null = null;
 
   /**
+   * Whether a freshly loaded flow has settled and its baseline been taken.
+   *
+   * Loading writes into the flow (format propagation, a plot recording its view,
+   * fetch-driven redraws) and how long that takes depends on the flow's fetches
+   * and modules, so the baseline is taken once those changes stop, not at a fixed
+   * moment. Bound into the template (data-baseline) so a caller can wait for the
+   * settle rather than guess a delay — guessing it is exactly what made a test
+   * flaky. A "loading…" affordance could hang off the same getter.
+   */
+  get flowSettled(): boolean {
+    return this.loadedJson !== null;
+  }
+
+  /**
    * Embed mode: the article alone, with the app's chrome gone.
    *
    * `?embed=doc` is what the share button hands out, made for an <iframe> on
@@ -100,6 +114,7 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   @HostBinding('class.is-embed')
   readonly embed = new URLSearchParams(window.location.search).has('embed');
+
 
   /**
    * Whether the document has ever been on screen.
@@ -747,7 +762,13 @@ export class AppComponent implements OnInit, AfterViewInit {
   private captureBaselineSoon(): void {
     clearTimeout(this.baselineTimer);
     this.baselineTimer = setTimeout(() => {
-      this.loadedJson = serializeFlowToJson(this.flow);
+      // In the zone, so the host binding (data-baseline='ready') actually
+      // re-renders: the bare timer fires outside Angular, where detectChanges on
+      // the component left the attribute stuck at its old value.
+      this.zone.run(() => {
+        this.loadedJson = serializeFlowToJson(this.flow);
+        this.cdr.detectChanges();
+      });
     }, 600);
   }
 

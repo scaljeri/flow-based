@@ -1209,7 +1209,11 @@ test('a changed flow is resumed from its draft across a reload', async ({ page }
 
   await page.goto('/?fbnoseed');
   await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
-  await page.waitForTimeout(900);   // let the baseline settle
+  // Wait for the load to SETTLE, deterministically — not a guessed delay. The
+  // baseline is taken once fetches and view-recording stop, and under load that
+  // ran past a fixed 900ms, so an edit made before it was read as load settling
+  // and the dot never lit. data-baseline flips to 'ready' at that exact moment.
+  await expect(page.locator('mat-toolbar')).toHaveAttribute('data-baseline', 'ready', { timeout: 15_000 });
 
   const before = await page.locator('fb-node-box').count();
 
@@ -1246,7 +1250,7 @@ test('after Save, a reload is clean and the change is the saved flow', async ({ 
 
   await page.goto('/?fbnoseed');
   await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
-  await page.waitForTimeout(900);
+  await expect(page.locator('mat-toolbar')).toHaveAttribute('data-baseline', 'ready', { timeout: 15_000 });
 
   const before = await page.locator('fb-node-box').count();
 

@@ -15,7 +15,7 @@ the article alone, and an iframe on someone else's page has no business
 showing this app's cockpit.
 -->
 @if (!embed) {
-<mat-toolbar [color]="'primary'">
+<mat-toolbar [color]="'primary'" [attr.data-baseline]="flowSettled ? 'ready' : 'pending'">
   <button type="button" mat-icon-button class="overflow" [matMenuTriggerFor]="overflowMenu"
     aria-label="Menu">
     <mat-icon>menu</mat-icon>
