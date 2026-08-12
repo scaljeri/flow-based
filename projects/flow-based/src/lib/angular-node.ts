@@ -52,8 +52,31 @@ export function angularNodeMount(
     // any view, so nothing would ever check it for changes.
     appRef.attachView(ref.hostView);
 
+    /*
+     * Then taken straight back OUT of the app-wide tick. A node view pushes its
+     * own updates — each of the ~13 view bases (WorkerView, StatsView, PlotView,
+     * …) subscribes to its worker and calls detectChanges, and every control
+     * handler does the same after it writes — so leaving it attached meant
+     * re-checking every node's bindings on every unrelated event: a crypto tick,
+     * a timer, a mousemove. That cost grew with the graph and was pure waste,
+     * since the intended contract (see node-element's `update` comment) is that a
+     * node is re-checked only when its own worker gives it a reason. markForCheck
+     * could not deliver that on a default-CD component; detaching does. A view
+     * change is the one push that does not come from the worker, so `update`
+     * drives a detectChanges by hand — it is a Lit callback, outside Angular's
+     * own CD, so a synchronous check there is safe.
+     *
+     * The first check is run by hand too, BEFORE detaching: createComponent does
+     * not run ngOnInit or an initial CD (attachView leaves that to the next
+     * app-wide tick), so detaching first would strand the view uninitialised —
+     * no ngOnInit, an empty box. One detectChanges initialises it; then it leaves
+     * the tick.
+     */
+    ref.changeDetectorRef.detectChanges();
+    ref.changeDetectorRef.detach();
+
     return {
-      update: () => ref.changeDetectorRef.markForCheck(),
+      update: () => ref.changeDetectorRef.detectChanges(),
       /*
        * The type's own settings, built into the panel's host when it opens.
        *

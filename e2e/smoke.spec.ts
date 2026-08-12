@@ -5916,3 +5916,36 @@ test('a flow whose own module 404s still opens, with a load error', async ({ pag
   // And it says a module failed, rather than failing silently.
   await expect(page.locator('p.load-error')).toBeVisible();
 });
+
+/**
+ * A node view keeps redrawing from its worker after it leaves the app-wide tick.
+ *
+ * Every mounted node view is now DETACHED from Angular's application-wide change
+ * detection the instant it is created — it was being re-checked on every
+ * unrelated event (a crypto tick, a timer, a mousemove), work that scaled with
+ * the graph. The contract that makes that safe is that a view redraws itself
+ * from its own worker: this pushes a new `c` through an iterate node, with no
+ * interaction and no unrelated tick, and the box's `c = …` must follow. A view
+ * left stale by the detach would freeze here.
+ */
+test('a node view keeps redrawing from its worker after it leaves the app-wide tick', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  // The iterate node's drawing mounts onto a plain host div — there is no
+  // <fb-math-iterate-small> element — so its `c = …` span is what to watch.
+  const cell = page.locator('span.c', { hasText: 'c =' }).first();
+  await expect(cell).toBeVisible({ timeout: 15_000 });
+  const before = (await cell.textContent())?.trim();
+
+  // Push a distinctive c through node 1900 — a worker change, nothing else: no
+  // interaction, no unrelated tick.
+  await page.evaluate(() => {
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.setNodeConfigValue(1900, 'c.re', -0.123);
+  });
+
+  // The detached view followed its worker.
+  await expect.poll(async () => (await cell.textContent())?.trim(), { timeout: 10_000 }).not.toBe(before);
+  await expect(cell).toContainText('-0.123');
+});
