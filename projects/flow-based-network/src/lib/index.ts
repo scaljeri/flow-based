@@ -9,6 +9,8 @@ import { WebSocketSettingsComponent } from './websocket-settings.component';
 import { WEBTRANSPORT_SETTINGS, WebTransportWorker } from './webtransport.worker';
 import { WebTransportSmallComponent } from './webtransport-small.component';
 import { WebTransportSettingsComponent } from './webtransport-settings.component';
+import { EVENTSOURCE_SETTINGS, EventSourceWorker } from './eventsource.worker';
+import { EventSourceSmallComponent } from './eventsource-small.component';
 
 /**
  * The Network module: data that arrives on somebody else's schedule.
@@ -84,6 +86,18 @@ export const NETWORK_MODULE: FbModule = {
       settingsComponent: WebTransportSettingsComponent,
       settings: WEBTRANSPORT_SETTINGS,
       worker: WebTransportWorker,
+    },
+
+    /*
+     * Server-Sent Events: a live HTTP stream over plain HTTP + CORS — what most
+     * public "live" feeds actually push over. The only live-HTTP path before was
+     * the Request node polling on a timer; this holds one connection open and
+     * reconnects itself.
+     */
+    'net-eventsource': {
+      component: { small: EventSourceSmallComponent },
+      settings: EVENTSOURCE_SETTINGS,
+      worker: EventSourceWorker,
     },
   },
 };
