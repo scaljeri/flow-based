@@ -436,7 +436,21 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     // The flow names its own types, and a type name names its module — register
     // them before drawing, or every node comes up an empty box with no worker.
-    await this.modules.enableFor(flow);
+    //
+    // Guarded, unlike before: a flow can declare one of our OWN libs whose
+    // current-build URL 404s (a redeploy renamed it, or an offline boot), and
+    // enableFor THROWS then. Unguarded, this ran on boot (currentId / ?flow) as a
+    // void promise, so the whole load chain died as an unhandled rejection — no
+    // loadError, no fallback, currentFlowId left null (and then Save misbehaved).
+    // Surface it and draw the flow anyway; the nodes whose module failed come up
+    // empty, which is honest — the same as loadFromUrl and replaceFlow already do.
+    let moduleError: string | null = null;
+
+    try {
+      await this.modules.enableFor(flow);
+    } catch (err) {
+      moduleError = `Some of this flow’s modules could not load — ${(err as Error).message}`;
+    }
 
     this.zone.run(() => {
       this.history.clear();
@@ -459,7 +473,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.captureBaselineSoon();
       }
 
-      this.loadError = null;
+      this.loadError = moduleError;
       this.reflectUrl();
       this.cdr.detectChanges();
     });

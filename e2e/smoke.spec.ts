@@ -5879,3 +5879,40 @@ test('the compare and logic nodes are in the palette and draw their control', as
   // The logic node's picker offers AND/OR/NOT.
   await expect(page.locator('fb-flow-canvas option').filter({ hasText: 'AND' })).toHaveCount(1);
 });
+
+/**
+ * A flow whose own module 404s still opens — boot must not die.
+ *
+ * openStored awaited enableFor with no try/catch, fired as a void promise from
+ * boot: a flow declaring one of OUR libs whose current-build URL 404s (a
+ * redeploy, offline) made enableFor throw, and the whole load chain died as an
+ * unhandled rejection — no flow, no error, currentFlowId null. Now it is caught:
+ * the flow draws, and a load error says a module failed.
+ */
+test('a flow whose own module 404s still opens, with a load error', async ({ page }) => {
+  await page.route('**/assets/modules/broken.js*', route =>
+    route.fulfill({ status: 404, contentType: 'text/javascript', body: 'gone' }));
+
+  await page.addInitScript(() => {
+    const flow = {
+      type: 'flow', title: 'Broken lib',
+      config: { modules: [{ url: 'assets/modules/broken.js', prefix: 'brk' }] },
+      sockets: [], connections: [],
+      children: [{ type: 'note', title: 'N', id: 2, sockets: [] }],
+    };
+
+    localStorage.setItem('fb-flow-brk', JSON.stringify({ version: 5, flow }));
+    localStorage.setItem('fb-flows', JSON.stringify([{ id: 'brk', title: 'Broken lib' }]));
+    localStorage.setItem('fb-flow-current', 'brk');
+  });
+
+  await page.goto('/');
+
+  // Boot did NOT die on the rejection: the flow drew.
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title), { timeout: 20_000 }).toBe('Broken lib');
+
+  // And it says a module failed, rather than failing silently.
+  await expect(page.locator('p.load-error')).toBeVisible();
+});
