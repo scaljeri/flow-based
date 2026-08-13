@@ -614,6 +614,7 @@ export class FbFlowCanvasElement extends LitElement {
     this.marquee = null;
     this.cancelFramePress();
     this.frameDraft = null;
+    this.framePointerId = null;
 
     if (this.editor) {
       this.editor.pinchActive = false;
@@ -777,6 +778,7 @@ export class FbFlowCanvasElement extends LitElement {
        */
       this.cancelFramePress();
       this.frameDraft = null;
+      this.framePointerId = null;
       this.rebaselinePinch();
     }
   };
@@ -796,7 +798,8 @@ export class FbFlowCanvasElement extends LitElement {
   }
 
   private onPinchMove = (event: PointerEvent): void => {
-    if (!this.pointers.has(event.pointerId)) {
+    // Same suspension as the wheel: a pinch under a full node zoomed unseen.
+    if (this.editor?.fullNode || !this.pointers.has(event.pointerId)) {
       return;
     }
 
@@ -847,14 +850,28 @@ export class FbFlowCanvasElement extends LitElement {
      * On WINDOW, deliberately: the plane's own pointerup never fires when the
      * finger lifts outside it — off the edge, or over a dialog — and the pan
      * survived its own release, so the next bare hover dragged the graph
-     * around with no button down.
+     * around with no button down. The FRAME pointer takes the same escape
+     * hatch: once the pencil takes a press, panPointerId is null, so this was
+     * the one release nothing caught — the draft survived an outside release
+     * and the next unrelated click committed it.
      */
-    if (event.pointerId === this.panPointerId) {
-      this.onPointerUp();
+    if (event.pointerId === this.panPointerId || event.pointerId === this.framePointerId) {
+      this.onPointerUp(event);
     }
   };
 
   private onWheel = (event: WheelEvent): void => {
+    /*
+     * Suspended while a node has the surface to itself — the render comment
+     * has promised that all along, but only the TRANSFORM was suspended: the
+     * wheel kept mutating zoom invisibly, and stepping back out of the node
+     * jumped to a viewport the user never saw applied. Not preventing default
+     * here also lets the full view's own content scroll.
+     */
+    if (this.editor.fullNode) {
+      return;
+    }
+
     event.preventDefault();
     this.editor.viewport.zoomAt(event.deltaY < 0 ? 1.1 : 1 / 1.1, this.toLocal(event));
   };
@@ -917,24 +934,41 @@ export class FbFlowCanvasElement extends LitElement {
         && (target.tagName === 'FB-CONNECTIONS' || target.classList.contains('hit')),
     );
 
-    if (this.editor.types['frame'] && !onWire) {
+    /*
+     * And NOT while a second finger is down. The capture-phase tracker cancels
+     * the frame press when a pinch begins — but this bubble handler then ran
+     * for the SAME pointerdown and re-armed the timer for finger 2: the guard
+     * defeated itself, and a slow pinch grew and committed a stray frame
+     * between the fingers.
+     */
+    if (this.editor.types['frame'] && !onWire && this.pointers.size <= 1) {
       const client = { x: event.clientX, y: event.clientY };
       const from = this.editor.viewport.toPlane(this.toLocal(event));
+      const pointerId = event.pointerId;
 
       this.framePress = {
-        pointerId: event.pointerId,
+        pointerId,
         client,
         timer: window.setTimeout(() => {
           this.framePress = null;
           // The pan this press was going to be is over; the pencil takes it.
+          // The POINTER is remembered: the draft belongs to this finger, so
+          // only its moves grow it and its release (anywhere — see the window
+          // fallback) ends it. Unowned, a mouse released outside the editor
+          // left the draft alive, growing on bare hover, committed by the next
+          // unrelated click.
           this.panPointerId = null;
           this.panFrom = null;
+          this.framePointerId = pointerId;
           this.frameDraft = { from, rect: { ...from, width: 0, height: 0 } };
           this.requestUpdate();
         }, 500),
       };
     }
   };
+
+  /** The pointer drawing the current frame draft; null when none. */
+  private framePointerId: number | null = null;
 
   private onPointerMove = (event: PointerEvent): void => {
     if (this.editor.pending) {
@@ -947,7 +981,9 @@ export class FbFlowCanvasElement extends LitElement {
       this.cancelFramePress();
     }
 
-    if (this.frameDraft) {
+    // Only the finger that ARMED the draft grows it — any pointer used to,
+    // including a bare hover after an off-element release.
+    if (this.frameDraft && event.pointerId === this.framePointerId) {
       const to = this.editor.viewport.toPlane(this.toLocal(event));
       const { from } = this.frameDraft;
 
@@ -1002,13 +1038,28 @@ export class FbFlowCanvasElement extends LitElement {
     this.panFrom = { x: event.clientX, y: event.clientY };
   };
 
-  private onPointerUp = (): void => {
+  private onPointerUp = (event?: PointerEvent): void => {
     this.cancelFramePress();
+
+    /*
+     * A CANCELLED background gesture is not a click: the browser took it back
+     * (palm rejection, an edge swipe) with no travel recorded, and clearing
+     * the selection for it punished a gesture that explicitly wasn't one. The
+     * node element makes the same distinction; the canvas didn't.
+     */
+    const cancelled = event?.type === 'pointercancel';
 
     if (this.frameDraft) {
       const { rect } = this.frameDraft;
 
       this.frameDraft = null;
+      this.framePointerId = null;
+
+      if (cancelled) {
+        this.requestUpdate();
+
+        return;
+      }
 
       /*
        * Anything smaller than the shell's own node floor was a held press
@@ -1038,7 +1089,7 @@ export class FbFlowCanvasElement extends LitElement {
     // a zoom leaves the selection and its highlight where they were. The
     // element's pointerup runs before the window's, so pinchActive is still
     // true here for a pinch that is only now lifting.
-    if (this.panPointerId !== null && !this.panMoved && !this.marqueeFrom && !this.editor.pinchActive) {
+    if (!cancelled && this.panPointerId !== null && !this.panMoved && !this.marqueeFrom && !this.editor.pinchActive) {
       this.editor.clearSelection();
     }
 
@@ -1107,8 +1158,14 @@ export class FbFlowCanvasElement extends LitElement {
         break;
 
       case event.key === 'Escape':
+        // An accidental pencil (the 500ms hold) had no way out but shrinking
+        // the rectangle under 24px before releasing.
+        this.cancelFramePress();
+        this.frameDraft = null;
+        this.framePointerId = null;
         this.editor.cancelPending();
         this.editor.clearSelection();
+        this.requestUpdate();
         break;
 
       default:
@@ -1529,7 +1586,8 @@ export class FbFlowCanvasElement extends LitElement {
 
     return html`
       <div class="socket-note" role="status"
-           @pointerdown=${(event: PointerEvent) => event.stopPropagation()}>
+           @pointerdown=${(event: PointerEvent) => event.stopPropagation()}
+           @wheel=${(event: WheelEvent) => event.stopPropagation()}>
         <div class="line">
           <span class="dot" style=${colour ? `background:${colour}` : ''}></span>
           <span class="what">

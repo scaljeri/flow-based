@@ -78,7 +78,12 @@ export class AppComponent implements OnInit, AfterViewInit {
    * changes" and the only retry was a throwaway edit. While set, Save retries the
    * push even with nothing new to write. Cleared by a successful push.
    */
-  remoteBehind = false;
+  private readonly remoteBehindIds = new Set<string>();
+
+  /** Whether the flow ON SCREEN is behind its endpoint — see remoteBehindIds. */
+  get remoteBehind(): boolean {
+    return !!this.currentFlowId && this.remoteBehindIds.has(this.currentFlowId);
+  }
 
   /**
    * The saved copy, serialised — the baseline a change is measured against. A
@@ -295,7 +300,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     // second time, undoing two steps. If the press passed through the canvas it
     // is already handled; this document-level handler is only for when focus is
     // elsewhere (the toolbar, the body).
-    if (this.fromCanvas(event)) {
+    if (this.fromCanvas(event) || this.undoHijacksTyping(event)) {
       return;
     }
 
@@ -306,12 +311,28 @@ export class AppComponent implements OnInit, AfterViewInit {
   @HostListener('document:keydown.control.shift.z', ['$event'])
   @HostListener('document:keydown.meta.shift.z', ['$event'])
   onRedoKey(event: Event): void {
-    if (this.fromCanvas(event)) {
+    if (this.fromCanvas(event) || this.undoHijacksTyping(event)) {
       return;
     }
 
     event.preventDefault();
     this.redo();
+  }
+
+  /**
+   * Ctrl+Z belongs to the TEXT when someone is typing. This handler used to
+   * preventDefault unconditionally outside the canvas — killing the browser's
+   * native text-undo in the doc editor, the Flows dialog's endpoint field, the
+   * Monaco overlay — and popping the GRAPH history instead: the flow rebuilt
+   * under a person fixing a typo.
+   */
+  private undoHijacksTyping(event: Event): boolean {
+    const target = event.composedPath()[0] as HTMLElement | undefined;
+
+    return this.editingDoc || this.showJson
+      || !!target?.isContentEditable
+      || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')
+      || !!(event.target as HTMLElement | null)?.closest?.('mat-dialog-container');
   }
 
   /** Whether a keyboard event already travelled through the canvas element. */
@@ -381,9 +402,29 @@ export class AppComponent implements OnInit, AfterViewInit {
       if (await this.loadFromUrl(fromUrl)) {
         return;
       }
-      // The fetch failed; loadError is showing. Fall through to the usual flow
-      // so the app still opens on something rather than a blank canvas.
+
+      /*
+       * The fetch failed. Fall through so the app still opens on SOMETHING —
+       * but the failure must survive the fallback: every fall-through path
+       * below nulls loadError and reflectUrl rewrites the address bar, so the
+       * person following a shared link got a DIFFERENT flow with no sign their
+       * link was broken, and could edit the wrong one believing it opened.
+       */
+      await this.openFallback();
+      this.zone.run(() => {
+        this.loadError = `Could not open the shared flow (${fromUrl}) — it did not load. `
+          + 'Showing your own flows instead.';
+        this.cdr.detectChanges();
+      });
+
+      return;
     }
+
+    await this.openFallback();
+  }
+
+  /** The boot fallback chain: last-current flow, showcase, small starter. */
+  private async openFallback(): Promise<void> {
 
     const id = this.store.currentId();
 
@@ -471,7 +512,12 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.history.clear();
       this.currentFlowId = id;
       this.currentSourceUrl = sourceUrl ?? this.store.sourceUrlOf(id) ?? null;
-      this.store.setCurrent(id);
+
+      // An EMBEDDED reader is a guest: scrubbing a figure must not hijack the
+      // owner's current-flow pointer (drafts are guarded the same way below).
+      if (!this.embed) {
+        this.store.setCurrent(id);
+      }
       this.flow = flow;
 
       if (draft) {
@@ -518,9 +564,31 @@ export class AppComponent implements OnInit, AfterViewInit {
 
       const restored = deserializeFlowFromJson(await response.text());
 
-      await this.modules.enableFor(restored);
+      /*
+       * A module that fails to load must not take the whole FLOW down. This
+       * catch used to swallow it into "the flow did not load", so the default
+       * showcase silently became the tiny starter after a bad deploy 404'd its
+       * lib — while the same flow opened from the shelf drew with a warning.
+       * Same guarded treatment as openStored: draw anyway, empty module nodes,
+       * and say which part failed.
+       */
+      let moduleError: string | null = null;
+
+      try {
+        await this.modules.enableFor(restored);
+      } catch (moduleErr) {
+        moduleError = `Some of this flow's modules could not load — ${(moduleErr as Error).message}`;
+      }
+
       // Its source is the URL, so the address bar and a re-share point at it.
       this.applyLoadedFlow(restored, url);
+
+      if (moduleError) {
+        this.zone.run(() => {
+          this.loadError = moduleError;
+          this.cdr.detectChanges();
+        });
+      }
 
       return true;
     } catch (err) {
@@ -665,7 +733,13 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     if (this.dirty && this.currentFlowId) {
       this.modules.stamp(this.flow);
-      this.store.saveDraft(this.currentFlowId, this.flow);
+
+      if (!this.store.saveDraft(this.currentFlowId, this.flow)) {
+        // Storage is full and the promised draft was NOT written. Said out
+        // loud — silently dropping it turned "your changes stay as a draft"
+        // into data loss at the worst moment.
+        this.loadError = 'Storage is full — the unsaved changes could not be kept as a draft.';
+      }
     }
   }
 
@@ -738,7 +812,10 @@ export class AppComponent implements OnInit, AfterViewInit {
   private saveDraftSoon(): void {
     clearTimeout(this.draftTimer);
     this.draftTimer = setTimeout(() => {
-      if (!this.currentFlowId) {
+      // An embedded reader's figure-scrubs are THEIR moment, not the owner's
+      // shelf: writing them as drafts made the flow open dirty next session,
+      // carrying edits nobody made on purpose.
+      if (!this.currentFlowId || this.embed) {
         return;
       }
 
@@ -876,13 +953,32 @@ export class AppComponent implements OnInit, AfterViewInit {
       const { canonicalUrl } = await this.remote.save(url, json);
 
       this.zone.run(() => {
-        this.remoteBehind = false;
+        /*
+         * Cleared for THIS flow only. As one global boolean, flow A's failed
+         * push lit flow B's dot, and B's successful push then cleared it —
+         * masking that A was still behind; A's endpoint was never retried.
+         */
+        if (this.currentFlowId) {
+          this.remoteBehindIds.delete(this.currentFlowId);
+        }
+
         this.shareNotice = `Saved to ${this.hostOf(url)}.`;
         this.shareLink = null;
         this.shareChoosing = false;
 
         if (canonicalUrl) {
           this.currentSourceUrl = canonicalUrl;
+
+          /*
+           * Onto the SHELF too. In memory only, a reload saw ?flow=<canonical>
+           * in the address bar, found no entry mirroring it, re-fetched, and
+           * minted a DUPLICATE entry with no endpoint — every later Save said
+           * "Saved." locally and the published copy silently went stale.
+           */
+          if (this.currentFlowId) {
+            this.store.rememberSource(this.currentFlowId, canonicalUrl);
+          }
+
           this.reflectUrl();
         }
 
@@ -890,9 +986,12 @@ export class AppComponent implements OnInit, AfterViewInit {
       });
     } catch (err) {
       this.zone.run(() => {
-        // The local copy is saved; the endpoint is behind. Mark it so Save can
-        // retry the push directly, instead of insisting there is nothing to save.
-        this.remoteBehind = true;
+        // The local copy is saved; the endpoint is behind. Mark THIS flow so
+        // Save can retry the push directly, instead of insisting there is
+        // nothing to save.
+        if (this.currentFlowId) {
+          this.remoteBehindIds.add(this.currentFlowId);
+        }
 
         const auth = err instanceof FbRemoteSaveError && err.kind === 'auth';
 
@@ -1197,6 +1296,8 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     if (action === 'flow') {
       this.showDoc = false;
+      // Same rule as Escape: closing the document ends an edit session.
+      this.editingDoc = false;
       this.cdr.detectChanges();
 
       return;
@@ -1326,7 +1427,19 @@ export class AppComponent implements OnInit, AfterViewInit {
    * where that API or the permission is missing — clunky, never silent.
    */
   private copyAsync(text: Promise<string>): void {
-    const blob = text.then(value => new Blob([value], { type: 'text/plain' }));
+    /*
+     * An EMPTY answer writes nothing. The too-big path resolves to '' so the
+     * notice can explain — but the ClipboardItem write went ahead regardless
+     * and replaced whatever the person had on their clipboard with an empty
+     * string, on top of the failure.
+     */
+    const blob = text.then(value => {
+      if (!value) {
+        throw new Error('nothing to copy');
+      }
+
+      return new Blob([value], { type: 'text/plain' });
+    });
 
     Promise.resolve()
       .then(() => navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]))
@@ -1404,6 +1517,10 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.showJson = false;
     } else if (this.showDoc) {
       this.showDoc = false;
+      // Closing abandons an edit (the element and its draft are destroyed) —
+      // so edit MODE ends too. Left armed, the next "Show document" opened in
+      // edit mode uninvited, with Save/Cancel for a session nobody started.
+      this.editingDoc = false;
     } else if (this.activeOverlay) {
       this.activeOverlay.dispose();
 

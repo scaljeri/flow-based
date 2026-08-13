@@ -116,7 +116,13 @@ export class StatsFullComponent extends StatsView {
     let count = 0;
 
     while ((count - 1) * width < data.end) {
-      dataTable.addRow([data.start + count++ * width + width / 2, data.values[count], data.gauss ? data.gauss[count] : null]);
+      /*
+       * count is read for the row BEFORE stepping. The old inline `count++`
+       * bumped it between the x and the y (arguments evaluate left to right),
+       * so every bar showed the NEXT bin's count and bin 0 was never drawn.
+       */
+      dataTable.addRow([data.start + count * width + width / 2, data.values[count], data.gauss ? data.gauss[count] : null]);
+      count++;
     }
 
     const view = new GoogleCharts.api.visualization.DataView(dataTable);

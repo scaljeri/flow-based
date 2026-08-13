@@ -1313,9 +1313,19 @@ export class FbEditor {
       this.history.capture(this.root);
       connection.id = this.ids.create();
       this.flow.addConnection(this.state, connection);
+      this.cancelPending();
+
+      return;
     }
 
-    this.cancelPending();
+    /*
+     * REFUSED — wrong direction, same node, type mismatch, already taken. The
+     * wire stays pending rather than vanishing: a drop 20px beside the meant
+     * socket landed on an invalid neighbour and silently destroyed the whole
+     * gesture, with no feedback and the entire drag to redo. The loose end
+     * stays on the pointer; Escape or a background press still cancels.
+     */
+    this.changes.emit({ kind: 'interaction' });
   }
 
   /**
@@ -1728,6 +1738,18 @@ export class FbEditor {
     // A node feeding itself is a cycle of one, and every drawing of it lies:
     // the line leaves and re-enters the same box.
     if (a.nodeId === b.nodeId) {
+      return null;
+    }
+
+    /*
+     * The same pair, again, is refused. Nothing checked for an identical
+     * out→in connection, and the second one drew on exactly the same curve —
+     * invisible — while every packet was delivered twice (a second subscription
+     * into the same bridge) and a long-press delete removed only the top one,
+     * looking like it failed.
+     */
+    if (this.connections.some(existing =>
+      existing.out === out.socket.id && existing.in === inn.socket.id)) {
       return null;
     }
 

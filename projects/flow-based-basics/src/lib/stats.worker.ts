@@ -1,4 +1,5 @@
 import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
+import { toNumber } from '@scaljeri/flow-based-node-utils';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './gauss';
 
@@ -86,13 +87,26 @@ export class StatsWorker implements FbNodeWorker {
     this.total = 0;
     this.count = 0;
     this.values = [];
+    // Announced, so the full view's chart clears NOW — under the app-wide
+    // detach nothing else redraws it until the next arrival, minutes on a
+    // slow feed.
+    this.updatedSubject.next({ start: 0, end: 0, values: [] });
   }
 
   // INPUT
   setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     // TODO: Refactor
-    this.subscriptions[connection.id] = stream.subscribe(val => {
-      if (this.columnWidth === 0) {
+    this.subscriptions[connection.id] = stream.subscribe(raw => {
+      /*
+       * Numbers only, and only SANE ones. A string '5' concatenated into
+       * `total` and poisoned the average for good; a 1e9 reading materialised
+       * a billion-slot histogram array that froze the tab on every later
+       * arrival. The histogram is index-per-columnWidth, so the index is
+       * capped; a value beyond it still counts toward min/max/avg.
+       */
+      const val = toNumber(raw);
+
+      if (val === undefined || this.columnWidth === 0) {
         return;
       }
 
@@ -119,7 +133,14 @@ export class StatsWorker implements FbNodeWorker {
         this.subjects.max.next(this.max);
       }
 
-      const index = Math.round(val / this.columnWidth);
+      /*
+       * Clamped into a bounded histogram. The raw index was value/width: a
+       * crypto price at width 1 asked for slot 60,000 (a sparse array iterated
+       * on EVERY arrival), and a negative value wrote below zero, invisible to
+       * the chart while still counted. 4096 bins is more than any drawing
+       * resolves; the edges collect the overflow.
+       */
+      const index = Math.min(4095, Math.max(0, Math.round(val / this.columnWidth)));
 
       this.values[index] = (this.values[index] || 0) + 1;
 

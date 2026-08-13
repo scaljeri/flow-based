@@ -1276,13 +1276,13 @@ export class FbNodeSettingsElement extends LitElement {
         <label for=${`${this.formatsId}`}>Type</label>
         ${this.renderFormats(socket)}
 
-        ${this.socketsFixed ? nothing : html`
+        ${this.canRemove(socket) ? html`
           <div class="danger">
             <button type="button" class="delete" @click=${() => this.removeSocket(socket)}>
               ${ICON_TRASH} Remove socket
             </button>
           </div>
-        `}
+        ` : nothing}
       </dialog>
     `;
   }
@@ -1295,6 +1295,16 @@ export class FbNodeSettingsElement extends LitElement {
    * read-only and the remove button is gone. The name stays editable: what a
    * socket is CALLED is the flow's to decide ("price", "lower band").
    */
+  /**
+   * Removable only where it could be re-ADDED. A type declaring
+   * addableSockets:'in' hides +out — so offering Remove on its out socket was
+   * a one-way door: one press and the node could compute but never emit, with
+   * no way back but undo, saved crippled into the flow.
+   */
+  private canRemove(socket: FbSocket): boolean {
+    return !!this.state?.id && !!this.editor?.canAddSocket(this.state.id, socket.type);
+  }
+
   private get socketsFixed(): boolean {
     const type = this.state?.type;
 

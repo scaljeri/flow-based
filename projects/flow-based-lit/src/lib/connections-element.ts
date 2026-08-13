@@ -268,6 +268,13 @@ export class FbConnectionsElement extends LitElement {
         this.nodeSigs.clear();
         this.keyCache.clear();
         this.touching = undefined;
+        /*
+         * The hovered wire may be the one that just left. Browsers do not
+         * reliably fire pointerleave for a removed element, so the peek
+         * reading floated on the canvas until the pointer happened to cross
+         * another wire.
+         */
+        this.peek = null;
       }
     });
   }
@@ -659,6 +666,16 @@ export class FbConnectionsElement extends LitElement {
     }
 
     this.releaseHandle();
+
+    /*
+     * The browser took the gesture back — a second finger landing, a palm.
+     * That is not a drop: treating it as one connected wires mid-pinch, or
+     * popped the picker under the user's own zoom gesture. The socket editor
+     * makes the same distinction.
+     */
+    if (event.type === 'pointercancel') {
+      return;
+    }
 
     /*
      * Dropped on a socket, that is the other end. Found through the editor's

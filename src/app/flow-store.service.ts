@@ -127,11 +127,16 @@ export class FlowStoreService {
    * by id. This is the ONLY thing localStorage takes on an edit — the saved copy
    * waits for Save. A draft's presence means the flow has unsaved changes.
    */
-  saveDraft(id: string, flow: FbNodeState): void {
+  saveDraft(id: string, flow: FbNodeState): boolean {
     try {
       localStorage.setItem(draftKey(id), serializeFlowToJson(flow));
+
+      return true;
     } catch {
-      // Quota. The flow on screen is unharmed; the next change tries again.
+      // Quota. The flow on screen is unharmed; the next change tries again —
+      // but the CALLER must know: "your changes stay as a draft" is a promise,
+      // and swallowing the failure made it a lie exactly when storage filled.
+      return false;
     }
   }
 
@@ -217,6 +222,19 @@ export class FlowStoreService {
     if (flow) {
       // Rewrite the entry, keeping title/sourceUrl, changing only the endpoint.
       this.touch(id, flow.title, flow.sourceUrl, endpoint === null ? '' : endpoint);
+    }
+  }
+
+  /**
+   * Remember which URL this flow mirrors — the remote push's canonical answer.
+   * Without it, a reload saw ?flow=<canonical> in the address bar, found no
+   * entry mirroring it, and minted a duplicate with no endpoint.
+   */
+  rememberSource(id: string, sourceUrl: string): void {
+    const entry = this.list().find(f => f.id === id);
+
+    if (entry) {
+      this.touch(id, entry.title, sourceUrl);
     }
   }
 

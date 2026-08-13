@@ -49,5 +49,8 @@ export abstract class StatsView implements OnInit, OnDestroy {
 
   onReset(): void {
     this.worker.reset();
+    // Under the app-wide detach nothing re-checks this view for a button press
+    // — the zeroed readings showed only when the next value happened to arrive.
+    this.cdr.detectChanges();
   }
 }

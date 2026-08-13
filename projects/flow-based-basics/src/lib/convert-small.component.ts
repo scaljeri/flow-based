@@ -15,7 +15,9 @@ import { ConvertWorker } from './convert.worker';
       <option value="json" [selected]="worker?.to === 'json'">→ data (parse JSON)</option>
     </select>
     @if (worker?.error) {
-      <span class="error" [title]="worker?.error ?? ''">!</span>
+      <!-- Inline, not a hover title: a finger has no hover, and the network
+           nodes already print their error in words. -->
+      <span class="error">{{ worker?.error }}</span>
     }
   `,
   styles: [`
@@ -41,14 +43,12 @@ import { ConvertWorker } from './convert.worker';
     select option { color: #000; }
 
     .error {
-      background: #c62828;
-      border-radius: 50%;
-      color: #fff;
-      font-weight: 700;
-      height: 16px;
-      line-height: 16px;
-      text-align: center;
-      width: 16px;
+      color: #ff8a80;
+      font-size: 11px;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   `]
 })

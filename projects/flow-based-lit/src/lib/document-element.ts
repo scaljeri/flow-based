@@ -1447,12 +1447,22 @@ export class FbFlowDocumentElement extends LitElement {
     const decimals = decimalsOf(text);
     const magnitude = decimals - (event.shiftKey ? 1 : 0) + (event.altKey ? 1 : 0);
     const direction = event.key === 'ArrowUp' ? 1 : -1;
+    const next = settle(base + direction * Math.pow(10, -magnitude), Math.max(decimals, magnitude));
 
-    this.editor.setNodeConfigValue(
-      token.nodeId,
-      token.path,
-      settle(base + direction * Math.pow(10, -magnitude), Math.max(decimals, magnitude)),
-    );
+    this.editor.setNodeConfigValue(token.nodeId, token.path, next);
+
+    /*
+     * The FIELD follows the step. Once a keystroke set `typing`, every
+     * re-render pinned the field to the stale typed text, and the next repeat
+     * recomputed typed+1 from it: type 2, hold ArrowUp, and the pill read 2
+     * while committing 3, 3, 3... — the promised sweep never swept. Stepping
+     * is a commit, so the shown text and the typing baseline both advance.
+     */
+    input.value = String(next);
+
+    if (this.typing) {
+      this.typed = String(next);
+    }
   }
 
   /**
@@ -1492,6 +1502,21 @@ export class FbFlowDocumentElement extends LitElement {
 
       value = parsed;
     } else if (typeof current === 'boolean') {
+      /*
+       * Only a FINISHED word writes. Mid-typing, `t` of a fresh "true" read as
+       * not-"true" and committed false — gates downstream slammed shut per
+       * keystroke and reopened on the final `e`. The same not-parsed-yet rule
+       * numbers get: an unfinished boolean is not written, and on commit an
+       * unrecognisable one snaps back.
+       */
+      if (raw !== 'true' && raw !== 'false') {
+        if (!options.silent) {
+          this.requestUpdate();
+        }
+
+        return;
+      }
+
       value = raw === 'true';
     }
 
@@ -1828,7 +1853,13 @@ export class FbFlowDocumentElement extends LitElement {
       typeset = this.typesetCache.get(key);
     } else {
       typeset = this.mathRenderer?.(tex, display);   // KaTeX renderToString — the cost
-      this.typesetCache.set(key, typeset);
+
+      // Only a RENDERED formula is worth remembering. Caching the undefined a
+      // missing renderer returns pinned every formula already shown to raw TeX
+      // even after a host assigned the renderer a beat later.
+      if (typeset !== undefined) {
+        this.typesetCache.set(key, typeset);
+      }
     }
 
     if (typeset === undefined) {
@@ -1844,6 +1875,16 @@ export class FbFlowDocumentElement extends LitElement {
   }
 
   private renderFigure(block: FbDocNodeBlock) {
+    /*
+     * No node, no well. The framed figure body rendered regardless, and a
+     * block whose node was deleted (or a hand-edited id) showed a captioned
+     * empty box — pinned to the top of a phone screen, saying nothing. Pills
+     * already degrade honestly; figures now do too.
+     */
+    if (!this.editor?.nodeById(block.nodeId)) {
+      return nothing;
+    }
+
     const float = block.float ?? 'none';
     const width = block.width ? `width:${block.width};` : '';
     const loose = block.pin === false ? ' loose' : '';

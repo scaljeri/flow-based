@@ -576,6 +576,14 @@ export class FbNodeElement extends LitElement {
   }
 
   override disconnectedCallback(): void {
+    /*
+     * A node can leave the DOM MID-GESTURE — deleted while pressed, removed by
+     * an undo. The drag's window listeners and the hold timer survived that:
+     * moves kept writing positions into a state no longer in the flow, and the
+     * timer could still pop a config dialog on a detached element.
+     */
+    this.endDrag();
+    clearTimeout(this.holdTimer);
     this.unsubscribe?.();
     this.unmountContent();
     this.observer?.disconnect();
@@ -720,8 +728,18 @@ export class FbNodeElement extends LitElement {
    */
   private onChange(change: FbEditorChange): void {
     switch (change.kind) {
-      case 'structure':
       case 'sockets':
+        /*
+         * A socket rename/add reaches the mounted CONTENT too: drawings that
+         * render socket names (switch's rows, compose's key count) are detached
+         * from the app tick, and a rename otherwise showed up only when the
+         * worker next happened to emit — on a static dataset, never.
+         */
+        this.requestUpdate();
+        this.handle?.update?.();
+        break;
+
+      case 'structure':
       case 'formats':
       case 'interaction':
         this.requestUpdate();
@@ -1006,6 +1024,14 @@ export class FbNodeElement extends LitElement {
        */
       refresh: () => {
         this.requestUpdate();
+        /*
+         * The mounted CONTENT re-checks too. Node drawings are detached from
+         * the app-wide tick, so requestUpdate alone re-rendered only the Lit
+         * chrome — a frame renamed in its panel kept its old label on the
+         * canvas indefinitely. handle.update() is the push channel the detach
+         * left for exactly this.
+         */
+        this.handle?.update?.();
         this.editor?.changes.emit({ kind: 'config', nodeId: this.state?.id });
       },
       retype: () => editor.retypeNode(state),
@@ -1068,7 +1094,9 @@ export class FbNodeElement extends LitElement {
 
     const origin = this.getBoundingClientRect();
     // The plane is scaled, so client rects are too; work in unscaled pixels.
-    const zoom = this.editor?.viewport.zoom || 1;
+    // EXCEPT in full view, where the plane's transform is 'none' — dividing by
+    // the stored zoom there inflated every coordinate and the wires missed.
+    const zoom = this.view === 'full' ? 1 : this.editor?.viewport.zoom || 1;
 
     /** An element's box in this node's own unscaled coordinates. */
     const boxOf = (el: Element) => {
@@ -1189,6 +1217,17 @@ export class FbNodeElement extends LitElement {
     }
 
     /*
+     * A FULL node cannot be dragged — its host is pinned to the surface with
+     * !important, so the drag machinery ran with nothing visibly moving while
+     * setPosition relocated the node in the MODEL: step back to normal and the
+     * node sat somewhere else, with an inexplicable undo entry, persisted on
+     * the next save.
+     */
+    if (this.view === 'full') {
+      return;
+    }
+
+    /*
      * Selection is a CLICK, not a press — it moves to onPointerUp, so a drag
      * of a node and a pinch that starts on one no longer light up the path
      * around it. A frame is the exception: carrying its contents needs them
@@ -1223,7 +1262,7 @@ export class FbNodeElement extends LitElement {
     if (this.state.type !== 'flow') {
       clearTimeout(this.holdTimer);
       this.holdTimer = window.setTimeout(() => {
-        if (!this.dragMoved && this.dragPointerId !== null) {
+        if (!this.dragMoved && this.dragPointerId !== null && !this.editor?.pinchActive) {
           this.endDrag();
           // The drag's history snapshot was for a move that never happened.
           this.editor.history.discard();
