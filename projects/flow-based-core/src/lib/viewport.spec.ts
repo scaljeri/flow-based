@@ -137,6 +137,33 @@ describe('FbViewportService', () => {
 });
 
 describe('the standing zoom floor', () => {
+  // The floor guards tappability, not overview: held rigid, a phone could
+  // never see a large flow whole — zoom-out stopped at 0.6 with half the
+  // graph forever off-screen.
+  it('the touch floor yields exactly as far as the whole-plane fit', () => {
+    const viewport = new FbViewport();
+
+    viewport.setPlaneSize(380, 650);   // floors at FB_PLANE_MIN 1200x600
+    viewport.setViewSize(380, 650);
+    viewport.setZoomFloor(0.6);
+    viewport.setZoom(0.1);
+
+    // min(380/1200, 650/600) — the width ratio — is where the whole plane
+    // fits; the floor gives way to that and no further.
+    expect(viewport.zoom).toBeCloseTo(380 / 1200, 5);
+  });
+
+  it('the floor holds when the whole plane already fits above it', () => {
+    const viewport = new FbViewport();
+
+    viewport.setPlaneSize(1200, 600);
+    viewport.setViewSize(1400, 900);   // fit would be > 1
+    viewport.setZoomFloor(0.6);
+    viewport.setZoom(0.1);
+
+    expect(viewport.zoom).toBe(0.6);
+  });
+
   // Floored at open, the next pinch dived straight back under it.
   it('a raised floor holds for later zooming too, and never forces zooming in', () => {
     const viewport = new FbViewport();

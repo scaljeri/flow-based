@@ -3638,6 +3638,24 @@ test.describe('the initial fit on a finger', () => {
     const zoom = await page.evaluate(() => window.fbEditor.viewport.zoom);
     expect(zoom).toBeCloseTo(0.6, 2);
   });
+
+  // The floor guards tappability, not overview. Held rigid, a phone could
+  // never see a large flow whole: zoom-out stopped at 0.6 with part of the
+  // graph forever off-screen, and pinning was the only way around.
+  test('zooming out goes exactly far enough to fit the whole flow', async ({ page }) => {
+    await page.goto(HARNESS);
+    await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+    // The same clamp every zoom path shares — buttons, wheel and pinch all
+    // land in viewport.setZoom.
+    const zoom = await page.evaluate(() => {
+      window.fbEditor.viewport.setZoom(0.01);
+
+      return window.fbEditor.viewport.zoom;
+    });
+
+    expect(zoom).toBeCloseTo(380 / 1200, 2);
+  });
 });
 
 /**

@@ -201,13 +201,35 @@ export class FbViewport {
   setZoomFloor(floor: number): void {
     this.zoomFloor = Math.min(FB_ZOOM_MAX, Math.max(FB_ZOOM_MIN, floor));
 
-    if (this.zoomLevel < this.zoomFloor) {
-      this.zoomLevel = this.zoomFloor;
+    const effective = this.effectiveFloor();
+
+    if (this.zoomLevel < effective) {
+      this.zoomLevel = effective;
       this.changes.emit();
     }
   }
 
+  /**
+   * The floor actually in force: the configured floor, but never above the
+   * zoom at which the whole plane fits the view.
+   *
+   * The touch floor exists against untappable zoom levels, not against
+   * overview — held rigid, a phone could never see a large flow whole at all:
+   * zooming out stopped at 0.6 with half the graph forever off-screen. So the
+   * floor yields exactly as far as the whole-plane fit and no further; the
+   * opening fit stays at the configured floor (tappable first, overview one
+   * pinch away). Hard-bounded below by FB_ZOOM_MIN, and by the configured
+   * floor while the view has no size yet.
+   */
+  private effectiveFloor(): number {
+    const fit = this.view.width && this.plane.width
+      ? Math.min(this.view.width / this.plane.width, this.view.height / this.plane.height)
+      : this.zoomFloor;
+
+    return Math.max(FB_ZOOM_MIN, Math.min(this.zoomFloor, fit));
+  }
+
   private clamp(zoom: number): number {
-    return Math.min(FB_ZOOM_MAX, Math.max(this.zoomFloor, zoom));
+    return Math.min(FB_ZOOM_MAX, Math.max(this.effectiveFloor(), zoom));
   }
 }
