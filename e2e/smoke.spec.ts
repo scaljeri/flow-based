@@ -6038,7 +6038,9 @@ test('a config edit alone lights the dot, and survives a reload as a draft', asy
   await expect(save).not.toHaveClass(/has-changes/);
 
   await page.locator('fb-flow-canvas textarea').first().pressSequentially('remember me');
-  await expect(save).toHaveClass(/has-changes/, { timeout: 5_000 });
+  // 10s, not 5: under 4x suite contention the zone tick that raises the dot
+  // can lag; the claim is THAT it rises, not how fast.
+  await expect(save).toHaveClass(/has-changes/, { timeout: 10_000 });
 
   // The debounced draft caught it, so a reload resumes the text unsaved.
   await page.waitForTimeout(900);

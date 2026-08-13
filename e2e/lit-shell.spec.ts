@@ -3250,12 +3250,17 @@ test('an input socket accepts a second connection', async ({ page }) => {
 
   const before = (await connectionPaths(page)).length;
 
-  // The Sink's input is already fed by the Source; a second wire fans in.
+  /*
+   * The Sink's input is already fed by the Source; a SECOND source fans in.
+   * From a different out socket on purpose: re-wiring the identical out→in
+   * pair is a DUPLICATE (same curve, packets delivered twice) and is now
+   * refused — fan-in means more sources, not the same wire twice.
+   */
   const allowed = await page.evaluate(() => {
-    const source = window.fbEditor.children.find(n => n.title === 'Source')!;
+    const second = window.fbEditor.addNode('source', { x: 8, y: 40 })!;
     const sink = window.fbEditor.children.find(n => n.title === 'Sink')!;
 
-    window.fbEditor.socketClicked(source.sockets![0], source.id!);
+    window.fbEditor.socketClicked(second.sockets![0], second.id!);
 
     const accepts = window.fbEditor.accepts(sink.sockets![0], sink.id!);
 
