@@ -1114,3 +1114,91 @@ describe('config-write announcement', () => {
     expect(kinds).toContain('config');
   });
 });
+
+describe('deep-dive engine fixes', () => {
+  // The ghost: an undeclared socket kept the format its ONLY wire gave it,
+  // then refused a source of another type on the strength of it.
+  it('a negotiated format is forgotten when its wire is removed', () => {
+    const types = {
+      src: { worker: RecordingWorker, settings: { isFlow: false, title: 'S', config: {}, sockets: [] } },
+      bare: { worker: RecordingWorker, settings: { isFlow: false, title: 'B', config: {}, sockets: [] } },
+    };
+    const root: any = {
+      id: 1, children: [
+        { id: 2, type: 'src', sockets: [{ id: 20, type: 'out', format: 'number' }] },
+        { id: 3, type: 'bare', sockets: [{ id: 30, type: 'in' }] },   // declares NOTHING
+      ], connections: [{ id: 100, from: 2, to: 3, out: 20, in: 30 }],
+    };
+    const flow = new Flow(types as any).initialize(root);
+
+    expect(root.children[1].sockets[0].format).toBe('number');   // adopted
+
+    flow.removeConnection(root.connections[0], root);
+    // Forgotten again — not ghosting to refuse the next wire.
+    expect(root.children[1].sockets[0].format ?? null).toBe(null);
+  });
+
+  it('an identical out→in pair is refused as a duplicate', () => {
+    const types = flowTypes();
+    const root: any = {
+      id: 1, children: [
+        { id: 2, type: 'source', sockets: [{ id: 20, type: 'out' }] },
+        { id: 3, type: 'sink', sockets: [{ id: 30, type: 'in' }] },
+      ], connections: [{ id: 100, from: 2, to: 3, out: 20, in: 30 }],
+    };
+    const flow = new Flow(types as any).initialize(root);
+    const warn = console.warn;
+    console.warn = () => {};
+
+    try {
+      flow.addConnection(root, { id: 101, from: 2, to: 3, out: 20, in: 30 } as any);
+    } finally {
+      console.warn = warn;
+    }
+
+    expect(root.connections).toHaveLength(1);   // still just the one wire
+  });
+
+  // A flow authored as a reusable subflow, opened standalone: its boundary
+  // connections name the ROOT, which had no worker, so they silently did
+  // nothing and the inner node sat empty.
+  it('the root gets a FlowWorker when its own boundary is wired', () => {
+    const types = flowTypes();
+    const root: any = {
+      id: 1, sockets: [{ id: 10, type: 'in' }],
+      children: [{ id: 2, type: 'sink', sockets: [{ id: 20, type: 'in' }] }],
+      connections: [{ id: 100, from: 1, to: 2, out: 10, in: 20 }],
+    };
+    const flow = new Flow(types as any).initialize(root);
+
+    expect(flow.getWorker(1)).toBeDefined();
+  });
+});
+
+// A subflow boundary between two declared sets whose intersection is exactly
+// one type used to stay unresolved forever — adopt() returned early with
+// nothing to copy, skipping the narrowing that leaf sockets get.
+describe('boundary narrowing', () => {
+  it('narrows a boundary socket when the intersection is unique', () => {
+    const types = {
+      ...flowTypes(),
+      sub: { settings: { isFlow: true, title: 'Sub', config: {}, sockets: [] } },
+    };
+    const root: any = {
+      id: 1, children: [
+        {
+          id: 2, type: 'sub', sockets: [{ id: 20, type: 'out', formats: ['number', 'string'] }],
+          children: [], connections: [],
+        },
+        { id: 3, type: 'sink', sockets: [{ id: 30, type: 'in', formats: ['string', 'point'] }] },
+      ],
+      connections: [{ id: 100, from: 2, to: 3, out: 20, in: 30 }],
+    };
+
+    new Flow(types as any).initialize(root);
+
+    // ['number','string'] ∩ ['string','point'] = string — uniquely determined.
+    expect(root.children[0].sockets[0].format).toBe('string');
+    expect(root.children[1].sockets[0].format).toBe('string');
+  });
+});

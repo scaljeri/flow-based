@@ -107,6 +107,18 @@ export class Flow {
     });
     this.createVirtualFlow(children, flow.id!);
 
+    /*
+     * The ROOT gets a worker too, when its own boundary is wired. A flow
+     * authored as a reusable subflow declares sockets on itself and wires them
+     * to children; opened standalone, those connections name the root as an
+     * end — and with no worker registered for it, connectWorkers returned
+     * silently and the inner node sat empty with no warning.
+     */
+    if (!this.workers[flow.id!] && flow.sockets?.length
+      && connections.some(c => c.from === flow.id || c.to === flow.id)) {
+      this.workers[flow.id!] = new FlowWorker(flow, childId => this.workers[childId]);
+    }
+
     this.propagateFormats();
 
     Object.keys(this.connections).forEach(key => {
@@ -126,6 +138,21 @@ export class Flow {
   }
 
   addConnection(state: FbNodeState, connection: FbConnection): void {
+    /*
+     * An identical out→in pair is a duplicate, not a second connection: it
+     * drew on the same curve (invisible), subscribed the same bridge twice
+     * (every packet delivered twice) and survived the delete of its twin. The
+     * editor refuses it at the gesture; this guards the API paths — paste, a
+     * hand-written fixture — with the same console.warn treatment a duplicate
+     * id gets.
+     */
+    if (state.connections?.some(existing =>
+      existing.out === connection.out && existing.in === connection.in)) {
+      console.warn(`Duplicate connection ${connection.out} → ${connection.in} refused.`);
+
+      return;
+    }
+
     state.connections = [connection, ...state.connections!];
     this.connections[connection.id] = {connection, state};
     this.connectWorkers(connection);
@@ -173,6 +200,15 @@ export class Flow {
         node.sockets.forEach(socket => {
           if (socket.formats?.length) {
             socket.format = socket.formats.length === 1 ? socket.formats[0] : null;
+          } else if (socket.id !== undefined && this.adoptedSockets.has(socket.id)) {
+            /*
+             * A bare socket whose type was only ever negotiated forgets it too
+             * — propagation re-adopts whatever is STILL wired. Without this a
+             * deleted wire's format ghosted on the socket and a legal new wire
+             * of another type was refused with no feedback.
+             */
+            socket.format = null;
+            this.adoptedSockets.delete(socket.id);
           }
         });
 
@@ -672,9 +708,19 @@ export class Flow {
      * did not enforce its own types was the one place two graphs meet.
      */
     if (from.state.children && !outSocket.format) {
-      return this.adopt(outSocket, inSocket.format);
+      /*
+       * Falls THROUGH when adoption had nothing to copy (the peer is unsettled
+       * too): returning here skipped the commonFormats narrowing below, so two
+       * declared sets whose intersection was exactly one type — a uniquely
+       * determined boundary — stayed unresolved forever, painted "no type yet".
+       */
+      if (this.adopt(outSocket, inSocket.format)) {
+        return true;
+      }
     } else if (to.state.children && !inSocket.format) {
-      return this.adopt(inSocket, outSocket.format);
+      if (this.adopt(inSocket, outSocket.format)) {
+        return true;
+      }
     }
 
     /*
@@ -707,6 +753,13 @@ export class Flow {
     if (common.length === 1) {
       for (const socket of [outSocket, inSocket]) {
         if (socket.format !== common[0]) {
+          // A bare socket (no declared set, no prior format) is being TYPED BY
+          // THE WIRE here — remember that, so removing the wire can forget it.
+          // A socket that already carried a format keeps its provenance.
+          if (!socket.format && !socket.formats?.length && socket.id !== undefined) {
+            this.adoptedSockets.add(socket.id);
+          }
+
           socket.format = common[0];
           isChanged = true;
         }
@@ -723,6 +776,17 @@ export class Flow {
    * means it may hold anything, which is what an empty declaration has always
    * meant here.
    */
+  /**
+   * Sockets whose format is purely NEGOTIATED — adopted onto a socket that
+   * declared nothing. Remembered so a wire removal can forget it again: an
+   * undeclared subflow-boundary socket kept the `number` its first wire gave it
+   * forever, then refused a `string` source on the strength of a ghost. Only
+   * declared-SET sockets were being reset, because for them "declared" and
+   * "negotiated" are distinguishable; for bare sockets this set is what
+   * distinguishes.
+   */
+  private readonly adoptedSockets = new Set<number>();
+
   private adopt(socket: FbSocket, format: string | null | undefined): boolean {
     if (!format) {
       return false;
@@ -732,6 +796,10 @@ export class Flow {
 
     if (declared.length && !declared.some(allowed => this.assignable(format, allowed))) {
       return false;
+    }
+
+    if (!declared.length && !socket.format && socket.id !== undefined) {
+      this.adoptedSockets.add(socket.id);
     }
 
     socket.format = format;

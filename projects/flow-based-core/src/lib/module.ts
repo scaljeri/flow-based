@@ -154,7 +154,7 @@ export class FbFormatRegistry {
      * sockets rewritten under it, which is the right outcome and a confusing
      * one to meet for the first time in a dropdown.
      */
-    this.problems.push(
+    this.collisions.push(
       `${prefix} declares ${def.name} differently from the ${existing.owner ?? 'app'}'s, `
       + `so its own sockets speak ${prefixed}.`,
     );
@@ -224,7 +224,19 @@ export class FbFormatRegistry {
    * `assignable` walks a chain that ends nowhere, answers false, and a wire
    * silently refuses to connect with nothing at all to read.
    */
-  readonly problems: string[] = [];
+  get problems(): string[] {
+    return [...this.collisions, ...this.audited];
+  }
+
+  /**
+   * Renames register() performed — kept apart from audit()'s findings because
+   * audit() recomputes ITS list from scratch, and clearing everything wiped the
+   * collision report the very same prepareModule call had just written: the
+   * dialog built to explain a renamed type showed nothing, and the user met
+   * `game:score` cold in a dropdown.
+   */
+  private readonly collisions: string[] = [];
+  private readonly audited: string[] = [];
 
   /**
    * Check what a definition claims against what is already known.
@@ -233,11 +245,11 @@ export class FbFormatRegistry {
    * a base its own module declares later in the same list.
    */
   audit(): void {
-    this.problems.length = 0;
+    this.audited.length = 0;
 
     for (const { def } of this.formats.values()) {
       if (def.refines && !this.formats.has(def.refines)) {
-        this.problems.push(
+        this.audited.push(
           `${def.name} refines ${def.refines}, which is not a registered type — `
           + 'every connection to it will be refused with no explanation.',
         );
@@ -254,7 +266,7 @@ export class FbFormatRegistry {
        * can be caught at all.
        */
       if (def.shape && base?.shape && !shapeFits(def.shape, base.shape)) {
-        this.problems.push(
+        this.audited.push(
           `${def.name} says it refines ${base.name}, but its shape does not fit it: `
           + `${typeScriptOf(def.shape)} is not a ${typeScriptOf(base.shape)}.`,
         );

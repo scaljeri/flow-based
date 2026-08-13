@@ -143,3 +143,16 @@ describe('assignable', () => {
     expect(registry.assignable('advantage', 'point')).toBe(false);
   });
 });
+
+describe('collision reporting', () => {
+  // audit() used to clear problems wholesale, destroying the collision report
+  // register() had just written — the dialog then explained nothing.
+  it('a prefix collision survives the audit that follows registration', () => {
+    const registry = new FbFormatRegistry();
+
+    prepareModule({ name: 'A', prefix: 'a', formats: [def('score', 'goals scored')], types: {} } as FbModule, registry);
+    prepareModule({ name: 'B', prefix: 'b', formats: [def('score', 'something else')], types: {} } as FbModule, registry);
+
+    expect(registry.problems.some(problem => problem.includes('b:score'))).toBe(true);
+  });
+});

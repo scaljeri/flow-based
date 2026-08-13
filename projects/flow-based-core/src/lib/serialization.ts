@@ -169,6 +169,23 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
         ];
 
         children.push(compute);
+
+        /*
+         * A wire that fed the region followed its socket — INCLUDING its `to`.
+         * The socket id moved onto the compute node, but a connection names the
+         * node as well, and one still saying `to: drawing` was delivered to the
+         * drawing's worker for a socket no longer its own: panning the region
+         * never reached the computation, and the broken `to` was then saved
+         * into v4 for good.
+         */
+        if (region) {
+          for (const wire of node.connections ?? []) {
+            if (wire.in === region.id && wire.to === drawing.id) {
+              wire.to = compute.id!;
+            }
+          }
+        }
+
         node.connections = [
           ...(node.connections ?? []),
           { id: id(), from: compute.id!, to: drawing.id!, out: fieldOut, in: fieldIn },

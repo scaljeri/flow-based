@@ -163,9 +163,11 @@ describe('deserializeFlow', () => {
     expect(drawing.type).toBe('graph-field');
     expect(compute.config.view).toEqual({ re: -0.6, im: 0, span: 3.2 });
 
-    // The region socket moved across whole, so the wire into it never knew.
+    // The region socket moved across whole, AND the wire followed it — a
+    // connection names the node too, and one left saying `to: drawing` was
+    // delivered to the wrong worker (the engine resolves workers by `to`).
     expect(compute.sockets!.some(socket => socket.id === 200)).toBe(true);
-    expect(read.connections!.find(c => c.id === 900)!.to).toBe(20);
+    expect(read.connections!.find(c => c.id === 900)!.to).toBe(compute.id);
 
     // The pressed point still leaves from the drawing, on the same socket.
     expect(drawing.sockets!.find(socket => socket.type === 'out')!.id).toBe(201);
@@ -372,5 +374,29 @@ describe('deserializeFlow', () => {
     out.children![0].type = 'changed';
 
     expect(input.flow.children![0].type).toBe('source');
+  });
+});
+
+describe('migration 3→4 rewires the region feed', () => {
+  // The region socket moved onto the compute node, but a wire that fed it kept
+  // `to: drawing` — delivered to the wrong worker, then saved broken into v4.
+  it('a wire into the mandelbrot region follows its socket to the compute node', () => {
+    const v3 = {
+      version: 3,
+      flow: {
+        id: 1, type: 'flow', title: 'M', sockets: [], children: [
+          { id: 2, type: 'graph-viewpoints', sockets: [{ id: 20, type: 'out' }] },
+          { id: 3, type: 'graph-mandelbrot', config: { view: {}, iterations: 50 },
+            sockets: [{ id: 30, type: 'in' }, { id: 31, type: 'out' }] },
+        ],
+        connections: [{ id: 100, from: 2, to: 3, out: 20, in: 30 }],
+      },
+    };
+    const flow = deserializeFlow(v3 as never);
+    const compute = flow.children!.find(child => child.type === 'math-mandelbrot')!;
+    const feed = flow.connections!.find(connection => connection.in === 30)!;
+
+    expect(compute).toBeDefined();
+    expect(feed.to).toBe(compute.id);
   });
 });

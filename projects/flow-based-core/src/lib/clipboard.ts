@@ -104,9 +104,12 @@ export function pasteNodes(
         out: socketIds.get(connection.out!)!,
         in: socketIds.get(connection.in!)!,
       }))
-      // A clipboard from an older flow could name sockets that no longer exist;
-      // dropping those beats pasting a connection to nothing.
-      .filter(connection => connection.out !== undefined && connection.in !== undefined);
+      // A clipboard from an older flow could name sockets — or NODES — that no
+      // longer exist; dropping those beats pasting a connection to nothing (the
+      // node check was missing, and a dead from/to registered a permanently
+      // dead wire).
+      .filter(connection => connection.out !== undefined && connection.in !== undefined
+        && connection.from !== undefined && connection.to !== undefined);
 
     (node.children ?? []).forEach(rewireConnections);
   };
@@ -133,7 +136,8 @@ export function pasteNodes(
       out: socketIds.get(connection.out!)!,
       in: socketIds.get(connection.in!)!,
     }))
-    .filter(connection => connection.out !== undefined && connection.in !== undefined);
+    .filter(connection => connection.out !== undefined && connection.in !== undefined
+      && connection.from !== undefined && connection.to !== undefined);
 
   flow.children = [...(flow.children ?? []), ...nodes];
   flow.connections = [...(flow.connections ?? []), ...connections];
