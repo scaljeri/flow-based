@@ -5978,8 +5978,11 @@ test('the crypto compare reads its operands from its sockets, which are fixed', 
     (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
       ?.editor?.state?.title), { timeout: 15_000 }).toBe('Bitcoin');
 
-  // The comparison reads out in the flow's own words, from the socket names.
-  await expect(page.locator('.crypto-sub', { hasText: 'price < lower band' })).toBeVisible({ timeout: 15_000 });
+  // The comparison reads out in the flow's own words, from the socket names —
+  // and the operator between them is a CONTROL now, not baked text.
+  const sub = page.locator('.crypto-sub', { hasText: 'price' }).filter({ hasText: 'lower band' });
+  await expect(sub).toBeVisible({ timeout: 15_000 });
+  await expect(sub.locator('select.crypto-op')).toHaveValue('<');
   // And it computes: both operands are found by aux (not name), so it reaches a
   // verdict rather than staying '—' — proof the sides did not get swapped.
   await expect(page.locator('.crypto-bool')).toHaveText(/true|false/, { timeout: 15_000 });
@@ -6130,4 +6133,42 @@ test('saving while a module is unreachable keeps the flow\'s modules declaration
   const modules = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('fb-flow-brk')!).flow?.config?.modules);
   expect(modules?.some((entry: { url: string }) => entry.url.includes('broken.js'))).toBe(true);
+});
+
+/**
+ * The baseline lands at a FIXED moment, even while the flow keeps emitting.
+ *
+ * The old 600ms sliding debounce re-armed on every change: a flow emitting on
+ * a shorter period never got a baseline at all — no dot ever rose, no draft
+ * was ever written, and Save answered "No changes" forever. The capture is two
+ * frames after the load now, whatever the flow is doing.
+ */
+test('a flow that never stops emitting still gets its baseline', async ({ page }) => {
+  await page.addInitScript(() => {
+    const flow = {
+      type: 'flow', title: 'Busy', sockets: [], connections: [
+        { id: 100, from: 2, to: 3, out: 20, in: 30 },
+      ],
+      children: [
+        { type: 'clock', title: 'C', id: 2, config: { interval: 100, running: true },
+          sockets: [{ id: 20, type: 'out', format: 'number' }] },
+        { type: 'tap', title: 'T', id: 3, sockets: [{ id: 30, type: 'in' }] },
+      ],
+    };
+    localStorage.setItem('fb-flow-busy', JSON.stringify({ version: 5, flow }));
+    localStorage.setItem('fb-flows', JSON.stringify([{ id: 'busy', title: 'Busy' }]));
+    localStorage.setItem('fb-flow-current', 'busy');
+  });
+
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as any)?.editor?.state?.title), { timeout: 20_000 }).toBe('Busy');
+
+  // Ready promptly — not never.
+  await expect(page.locator('mat-toolbar')).toHaveAttribute('data-baseline', 'ready', { timeout: 5_000 });
+
+  // And an edit right after is a real edit, not swallowed load-echo.
+  await page.evaluate(() => (document.querySelector('fb-flow-canvas') as any).editor
+    .addNode('note', { x: 10, y: 70 }));
+  await expect(page.locator('mat-toolbar button.save-flow')).toHaveClass(/has-changes/, { timeout: 5_000 });
 });

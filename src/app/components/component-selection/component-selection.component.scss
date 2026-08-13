@@ -175,3 +175,12 @@ mat-toolbar {
   margin-top: 12px;
   padding-top: 10px;
 }
+
+/* A finger needs a target; 24px met no guideline while the shell holds 34+. */
+@media (pointer: coarse) {
+  .info {
+    height: 34px;
+    min-width: 34px;
+    width: 34px;
+  }
+}

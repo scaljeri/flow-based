@@ -356,8 +356,20 @@ export class FlowsDialogComponent {
       return;
     }
 
-    const flow = this.store.load(this.details.id);
     const id = this.details.id;
+
+    /*
+     * What the editor shows is what is TRUE of the flow right now:
+     * - the current flow's canvas state may be ahead of its saved copy, and
+     *   Monaco showing the stale save while the canvas showed the edits meant
+     *   two versions of one flow on screen at once;
+     * - any other flow may carry a DRAFT (unsaved edits from last time), which
+     *   is that flow's "now" for the same reason.
+     * Saving from Monaco replaces the saved copy AND the draft — the same
+     * moment Delete already warns about, so Edit warns too (see the confirm in
+     * the replace handler and onReplaceFile below).
+     */
+    const flow = this.store.loadDraft(id) ?? this.store.load(id);
 
     this.dialog.open(JsonEditorDialogComponent, {
       maxWidth: '90vw',
@@ -367,6 +379,11 @@ export class FlowsDialogComponent {
       } as FbJsonEditorData,
     }).afterClosed().subscribe((json?: string) => {
       if (json) {
+        if (this.store.hasDraft(id) && id !== this.currentId
+          && !confirm('This flow has unsaved changes from an earlier session. Replacing its JSON discards them. Continue?')) {
+          return;
+        }
+
         this.ref.close({ kind: 'replace', id, json });
       }
     });
@@ -381,6 +398,14 @@ export class FlowsDialogComponent {
     }
 
     const id = this.details.id;
+
+    // The same courtesy Delete extends: replacing wipes this flow's draft too.
+    if (this.store.hasDraft(id) && id !== this.currentId
+      && !confirm('This flow has unsaved changes from an earlier session. Replacing its JSON discards them. Continue?')) {
+      input.value = '';
+
+      return;
+    }
 
     // Read here; the app validates it (a bad file becomes a load error there).
     void file.text().then(text => this.ref.close({ kind: 'replace', id, json: text }));

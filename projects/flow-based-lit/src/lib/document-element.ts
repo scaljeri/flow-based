@@ -1282,8 +1282,18 @@ export class FbFlowDocumentElement extends LitElement {
       case 'action':
         return this.renderAction(token);
 
-      default:
-        return html`${token.text}`;
+      default: {
+        /*
+         * A single newline inside a text block is a LINE BREAK, not a space: a
+         * hand-written list collapsed into one run-on line because HTML folds
+         * whitespace. Double newlines still split paragraphs (paragraphsOf).
+         */
+        const lines = token.text.split('\n');
+
+        return lines.length === 1
+          ? html`${token.text}`
+          : lines.map((line, i) => i === 0 ? html`${line}` : html`<br>${line}`);
+      }
     }
   }
 
@@ -1604,8 +1614,10 @@ export class FbFlowDocumentElement extends LitElement {
       this.markLiveDependents(scrub.token.nodeId, true);
     }
 
-    // Three pixels per step reads as deliberate; Shift refines by a decade.
-    const magnitude = scrub.decimals + (event.shiftKey ? 1 : 0);
+    // Three pixels per step reads as deliberate. Shift COARSENS by a decade —
+    // the same meaning it has on the arrow keys; it used to refine here, so one
+    // modifier meant opposite things depending on which hand held the pill.
+    const magnitude = scrub.decimals - (event.shiftKey ? 1 : 0) + (event.altKey ? 1 : 0);
     const value = settle(
       scrub.startValue + Math.round(dx / 3) * Math.pow(10, -magnitude),
       Math.max(scrub.decimals, magnitude),

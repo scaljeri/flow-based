@@ -47,6 +47,10 @@ export type FbInline =
  */
 const PATTERN = new RegExp(
   [
+    // Escaped dollar first: "costs \$3 and \$5" must never typeset as math —
+    // two plain amounts in one sentence used to become a formula, and there
+    // was no way at all to write a literal $ beside another one.
+    /\\\$/.source,
     /\{\{!([a-z][a-z0-9-]*):([^}]+)\}\}/.source,
     /\{\{(\d+):([A-Za-z_][A-Za-z0-9_.]*)\}\}/.source,
     /\$\$([\s\S]+?)\$\$/.source,
@@ -115,9 +119,16 @@ export function parseInline(text: string): FbInline[] {
     }
 
     const [
-      , actionName, actionText,
+      matched, actionName, actionText,
       inputNode, inputPath, displayMath, inlineMath, code, strong, em, linkText, linkHref,
     ] = match;
+
+    // The escape renders as the literal character.
+    if (matched === '\\$') {
+      pushText('$');
+      last = index + matched.length;
+      continue;
+    }
 
     if (actionName !== undefined) {
       tokens.push({ type: 'action', action: actionName, text: actionText.trim() });

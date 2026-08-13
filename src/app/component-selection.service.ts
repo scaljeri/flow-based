@@ -17,6 +17,13 @@ export class ComponentSelectionService {
     this.selection$ = this.selection.asObservable();
   }
 
+  /**
+   * Whether the palette was opened INSIDE a subflow. Set by whoever opens it.
+   * A Parameter is "a named value inside a subflow" — offering it at root
+   * level added a node whose whole purpose has no meaning there.
+   */
+  insideSubflow = false;
+
   select(type: string): void {
     this.selection.next(type);
   }

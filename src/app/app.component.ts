@@ -767,16 +767,15 @@ export class AppComponent implements OnInit, AfterViewInit {
       }
 
       /*
-       * Until the baseline is set, a change is the LOAD settling, not an edit.
-       * Loading a flow makes the engine write into it — format propagation
-       * resolves socket formats, a plot records its view — and comparing the
-       * on-screen flow to its saved copy would call all of that a change, so the
-       * demo showed the dot before anyone touched it. The baseline is taken once
-       * those settle; only a change AFTER it is the person's.
+       * Until the baseline lands, a change is the LOAD being applied — format
+       * propagation, a plot recording its view on mount. The capture is a FIXED
+       * moment (two frames after the load, see captureBaselineSoon), not a
+       * sliding debounce: the old 600ms re-arm meant an edit made while a slow
+       * fetch was still settling got absorbed into the baseline and silently
+       * lost, and a flow that kept emitting never got a baseline at all — Save
+       * permanently dead. Changes here do NOT re-arm anything.
        */
       if (this.loadedJson === null) {
-        this.captureBaselineSoon();
-
         return;
       }
 
@@ -799,7 +798,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     });
   }
 
-  private baselineTimer?: ReturnType<typeof setTimeout>;
   private draftTimer?: ReturnType<typeof setTimeout>;
 
   /**
@@ -835,18 +833,24 @@ export class AppComponent implements OnInit, AfterViewInit {
     }, 600);
   }
 
-  /** Capture the "unchanged" baseline once a freshly loaded flow stops settling. */
+  /**
+   * Capture the "unchanged" baseline at a FIXED moment: two frames after the
+   * load. Two, because the first render is when mounted content writes its
+   * echo (a plot records its view); after that, every change — the person's OR
+   * the data's — counts as unsaved. That is a deliberate ruling: a fetch that
+   * rewrites the flow makes the saved copy stale, and the dot saying so is
+   * honesty, not noise. (The old 600ms sliding debounce traded that honesty
+   * for two real data-loss holes; see watchEdits.)
+   */
   private captureBaselineSoon(): void {
-    clearTimeout(this.baselineTimer);
-    this.baselineTimer = setTimeout(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       // In the zone, so the template binding (data-baseline='ready' on the
-      // toolbar) actually re-renders: the bare timer fires outside Angular, and
-      // a detectChanges there left the attribute stuck at its old value.
+      // toolbar) actually re-renders — RAF fires outside Angular.
       this.zone.run(() => {
         this.loadedJson = serializeFlowToJson(this.flow);
         this.cdr.detectChanges();
       });
-    }, 600);
+    }));
   }
 
   /**
@@ -882,6 +886,10 @@ export class AppComponent implements OnInit, AfterViewInit {
   openFlows(): void {
     // No silent save on open: the shelf shows each flow's SAVED copy, which is
     // the point — the dot on the toolbar already says the current one is ahead.
+    // The dialog's Edit-JSON shows a flow's NOW; for the current flow that is
+    // the canvas, which the debounced draft can lag by a beat — flush first.
+    this.flushDraft();
+
     this.dialog.open(FlowsDialogComponent, { width: '360px' })
       .afterClosed().subscribe((action?: FbFlowsAction) => this.onFlowsAction(action));
   }
@@ -1221,6 +1229,10 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   openModal(): void {
+    // Whether we are inside a subflow decides what the palette offers (a
+    // Parameter has no meaning at root level).
+    this.selectionService.insideSubflow = (this.editor?.path.length ?? 1) > 1;
+
     const portal = new ComponentPortal(ComponentSelectionComponent);
     const positionStrategy = this.overlay.position()
       .global()

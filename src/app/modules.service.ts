@@ -659,8 +659,39 @@ export class ModulesService {
     return url.href;
   }
 
+  /** The URL with its build stamp removed — one lib, whatever deploy fetched it. */
+  private static unversioned(url: string): string {
+    try {
+      const parsed = new URL(url);
+
+      parsed.searchParams.delete('v');
+
+      return parsed.href;
+    } catch {
+      return url;
+    }
+  }
+
   /** List a fetched module without loading it. */
   private remember(entry: { url: string; title: string; description: string; prefix?: string }): FbModuleInfo {
+    /*
+     * One row per LIB, not per deploy. Our own libs are fetched with a build
+     * stamp (?v=1.2.3), and every redeploy minted a fresh id beside the old
+     * one: duplicate dialog rows, a double fetch per boot — and disabling the
+     * STALE row deleted the type names the live one had registered, killing
+     * its nodes. A stale same-lib entry is superseded, not accumulated.
+     */
+    if (entry.url) {
+      const base = ModulesService.unversioned(entry.url);
+      const stale = this.modules.filter(info =>
+        info.url && info.url !== entry.url && ModulesService.unversioned(info.url) === base);
+
+      for (const twin of stale) {
+        this.loadedTypes.delete(twin.id);
+        this.modules.splice(this.modules.indexOf(twin), 1);
+      }
+    }
+
     const info: FbModuleInfo = {
       id: `url:${entry.url}`,
       url: entry.url,

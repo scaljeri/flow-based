@@ -239,6 +239,10 @@ export class IterateWorker implements FbNodeWorker {
      * picture for a reader comparing two values of c rather than watching one.
      */
     if (this.interval > 0) {
+      // A NEW orbit walks from z0. The index survived a restart, so pressing a
+      // new point continued from step k of the previous walk — the reader saw
+      // an orbit that began mid-flight.
+      this.index = 0;
       this.timer = setInterval(() => this.step(), this.interval);
     } else {
       this.index = this.orbit.length - 1;

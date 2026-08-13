@@ -222,6 +222,13 @@ export class FbNodeSettingsElement extends LitElement {
         height: 28px;
         width: 28px;
       }
+
+      /* The info mark is the ONE way to a node's explanation; 22px was under
+         every finger guideline while the rest of the shell holds 34+. */
+      .config header button.info {
+        height: 34px;
+        width: 34px;
+      }
     }
 
     .rim .hint {

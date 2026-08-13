@@ -278,6 +278,8 @@ if (bulk > 0) {
     }
   }
 
+  // A NEW document: the host clears its history, per the load() contract.
+  editor.history.clear();
   editor.load({ id: 1, type: 'flow', title: `Benchmark (${bulk} nodes)`, sockets: [], children, connections });
 }
 

@@ -65,7 +65,6 @@ export class FbConnectionsElement extends LitElement {
       pointer-events: none;
       position: absolute;
       text-overflow: ellipsis;
-      transform: translate(10px, -24px);
       white-space: nowrap;
       z-index: 50;
     }
@@ -349,7 +348,12 @@ export class FbConnectionsElement extends LitElement {
         ${this.renderPending()}
       </svg>
       ${this.peek
-        ? html`<div class="peek" style=${`left:${this.peek.x}px;top:${this.peek.y}px`}>${this.peek.text}</div>`
+        ? html`<div class="peek" style=${
+          /* Counter-scaled: the label lives inside the zoomed plane, so at a
+             phone's 0.6 fit it rendered ~7px tall and at zoom 3 it was a
+             banner. 1/zoom keeps it a constant screen size. */
+          `left:${this.peek.x}px;top:${this.peek.y}px;transform:scale(${1 / (this.editor?.viewport.zoom || 1)}) translate(10px, -24px);transform-origin:top left`
+        }>${this.peek.text}</div>`
         : nothing}
     `;
   }

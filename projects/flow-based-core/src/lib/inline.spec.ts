@@ -108,3 +108,20 @@ describe('action tokens', () => {
     expect(parseInline('{{!flow:}}')).toEqual([{ type: 'text', text: '{{!flow:}}' }]);
   });
 });
+
+describe('escaped dollars', () => {
+  // "costs $3 and $5" used to typeset "3 and " as a formula, with no way to
+  // write a literal $ beside another one.
+  it('renders \\$ as a literal dollar, never as a math opener', () => {
+    const tokens = parseInline('costs \\$3 and \\$5 today');
+
+    expect(tokens).toEqual([{ type: 'text', text: 'costs $3 and $5 today' }]);
+  });
+
+  it('still typesets real math beside an escaped dollar', () => {
+    const tokens = parseInline('pay \\$2 for $x^2$');
+
+    expect(tokens[0]).toEqual({ type: 'text', text: 'pay $2 for ' });
+    expect(tokens[1]).toEqual({ type: 'math', tex: 'x^2', display: false });
+  });
+});

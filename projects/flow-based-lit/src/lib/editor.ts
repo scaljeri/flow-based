@@ -257,7 +257,20 @@ export class FbEditor {
     this.coreUnsubscribes.length = 0;
   }
 
+  /**
+   * Load a document. Deliberately does NOT clear the history: a host that
+   * restores an undone state re-loads through here (the Angular app assigns a
+   * new `flow` input on every undo), and clearing would wipe the very stack
+   * being walked. A host opening a genuinely NEW document clears its history
+   * itself — `editor.history.clear()` — as the Angular app does; a lit-only
+   * host must do the same or undo can cross documents.
+   */
   load(state: FbNodeState): void {
+    this.restore(state);
+  }
+
+  /** Apply a state without touching history — the undo/redo path. */
+  private restore(state: FbNodeState): void {
     this.ids.observeFlow(state);
 
     if (!state.children) {
@@ -1273,7 +1286,7 @@ export class FbEditor {
     const restored = this.history.undo(this.root);
 
     if (restored) {
-      this.load(restored);
+      this.restore(restored);
     }
   }
 
@@ -1281,7 +1294,7 @@ export class FbEditor {
     const restored = this.history.redo(this.root);
 
     if (restored) {
-      this.load(restored);
+      this.restore(restored);
     }
   }
 

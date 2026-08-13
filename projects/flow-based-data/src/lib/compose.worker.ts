@@ -16,7 +16,7 @@ export class ComposeWorker implements FbNodeWorker {
   private readonly subscriptions: Record<number, Subscription> = {};
 
   /** One entry per wire: the key it fills, and its latest value. */
-  private readonly inputs = new Map<number, { name: string; value: unknown; has: boolean }>();
+  private readonly inputs = new Map<number, { socket: FbSocket; fallback: string; value: unknown; has: boolean }>();
 
   keys = 0;
 
@@ -35,7 +35,10 @@ export class ComposeWorker implements FbNodeWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    this.inputs.set(connection.id, { name: socket.name || `in${connection.id}`, value: undefined, has: false });
+    // The SOCKET is held, not a copy of its name: the emitted key follows a
+    // rename. Captured at wire time, renaming an input kept composing under
+    // the old key until the wire was re-made.
+    this.inputs.set(connection.id, { socket, fallback: `in${connection.id}`, value: undefined, has: false });
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
       const entry = this.inputs.get(connection.id);
@@ -71,7 +74,7 @@ export class ComposeWorker implements FbNodeWorker {
     const object: Record<string, unknown> = {};
 
     for (const entry of entries) {
-      object[entry.name] = entry.value;
+      object[entry.socket.name || entry.fallback] = entry.value;
     }
 
     this.subject.next(object);

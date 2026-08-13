@@ -35,3 +35,18 @@ export type {
  * `readConfigValue`/`writeConfigValue` walk a dotted path in a config object.
  */
 export { FB_DRAG_IGNORE, FB_MODULE_CONTRACT_VERSION, readConfigValue, writeConfigValue } from '@scaljeri/flow-based-core';
+
+import type { FbModule, FbNodeMount, FbViewComponents } from '@scaljeri/flow-based-core';
+
+/**
+ * A framework-free module, with its VIEWS actually type-checked.
+ *
+ * `FbModule` is generic in the component type and defaults to `unknown` — which
+ * absorbs the whole `component` union, so `satisfies FbModule` validated the
+ * workers and settings but not the one thing a URL-lib author most needs
+ * checked: a typo'd `{ small: { mont: ... } }` compiled clean and mounted as a
+ * blank box. Author against this alias instead:
+ *
+ *   export default { ... } satisfies FbMountModule;
+ */
+export type FbMountModule = FbModule<{ mount: FbNodeMount } | FbViewComponents<{ mount: FbNodeMount }>>;

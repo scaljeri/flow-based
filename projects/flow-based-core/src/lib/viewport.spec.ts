@@ -135,3 +135,21 @@ describe('FbViewportService', () => {
     });
   });
 });
+
+describe('the standing zoom floor', () => {
+  // Floored at open, the next pinch dived straight back under it.
+  it('a raised floor holds for later zooming too, and never forces zooming in', () => {
+    const viewport = new FbViewport();
+
+    viewport.setZoomFloor(0.6);
+    viewport.setZoom(0.2);
+    expect(viewport.zoom).toBe(0.6);
+
+    viewport.zoomAt(0.1, { x: 0, y: 0 });
+    expect(viewport.zoom).toBe(0.6);
+
+    // A bad floor cannot zoom IN past MAX.
+    viewport.setZoomFloor(100);
+    expect(viewport.zoom).toBeLessThanOrEqual(FB_ZOOM_MAX);
+  });
+});

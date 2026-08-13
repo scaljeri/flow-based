@@ -96,23 +96,61 @@ export class ComponentSelectionComponent implements OnInit {
    * alphabetically. The search spans all of it; a group with no match is not
    * shown at all rather than shown empty.
    */
+  /**
+   * Types the palette does not offer: their own help says how they are made.
+   * A reroute comes from double-clicking a wire; a frame from a long press on
+   * empty canvas. Both were rows here regardless, inviting a gesture-born node
+   * to be planted like ordinary furniture.
+   */
+  private static readonly HIDDEN = new Set(['reroute', 'frame']);
+
+  /**
+   * Presentation-only sub-grouping of the General wall: after arithmetic moved
+   * into basics it was ~28 alphabetised rows, and finding Add meant reading
+   * all of them. The registry's `group` field is untouched — this maps KEYS,
+   * so module types (which carry their own group) never pass through it.
+   */
+  private static readonly SUBGROUPS: Record<string, string> = {
+    'value': 'Values', 'range': 'Values', 'convert': 'Values', 'random-numbers': 'Values',
+    'add': 'Arithmetic', 'subtract': 'Arithmetic', 'multiply': 'Arithmetic', 'divide': 'Arithmetic',
+    'compare': 'Conditions', 'logic': 'Conditions', 'gate': 'Conditions',
+    'clock': 'Time & state', 'trigger': 'Time & state', 'timestamp': 'Time & state',
+    'defer': 'Time & state', 'window': 'Time & state', 'hold': 'Time & state',
+    'accumulator': 'Time & state', 'unit-delay': 'Time & state',
+    'tap': 'Inspect', 'stats': 'Inspect', 'meter': 'Inspect',
+    'script': 'Structure', 'flow': 'Structure', 'flow-param': 'Structure', 'note': 'Structure',
+  };
+
   private rebuild(): void {
     const needle = this.query.trim().toLowerCase();
     const byGroup = new Map<string, string[]>();
 
     const keys = Object.keys(this.flowTypes)
+      .filter(key => !ComponentSelectionComponent.HIDDEN.has(key))
+      // A Parameter is a named value INSIDE a subflow; at root it is furniture
+      // with no meaning, so the row only appears when the palette opened there.
+      .filter(key => key !== 'flow-param' || this.selectionService.insideSubflow)
       .sort((a, b) => this.title(a).localeCompare(this.title(b)))
       .filter(key => !needle || `${this.title(key)} ${key}`.toLowerCase().includes(needle));
 
     for (const key of keys) {
-      const group = this.flowTypes[key].settings.group ?? 'General';
+      const group = this.flowTypes[key].settings.group
+        ?? ComponentSelectionComponent.SUBGROUPS[key]
+        ?? 'General';
 
       byGroup.set(group, [...(byGroup.get(group) ?? []), key]);
     }
 
+    const HOUSE_ORDER = ['Values', 'Arithmetic', 'Conditions', 'Time & state', 'Inspect', 'Structure', 'General'];
+    const rank = (name: string) => {
+      const at = HOUSE_ORDER.indexOf(name);
+
+      return at === -1 ? HOUSE_ORDER.length : at;
+    };
+
     this.groups = [...byGroup.entries()]
       .map(([name, groupKeys]) => ({ name, keys: groupKeys }))
-      .sort((a, b) => (a.name === 'General' ? -1 : b.name === 'General' ? 1 : a.name.localeCompare(b.name)));
+      .sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
   }
 
   get empty(): boolean {

@@ -2,7 +2,7 @@
 // are erased at build; the helpers (FB_DRAG_IGNORE, injectStyleOnce, lastValue)
 // are bundled into this single file, the way rxjs is — the editor shares nothing
 // with a URL-loaded module at runtime, so a module carries what it needs.
-import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket, FbSeries as Series }
+import type { FbMountModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket, FbSeries as Series }
   from '@scaljeri/flow-based-node-utils';
 import { FB_DRAG_IGNORE, injectStyleOnce, lastValue } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject } from 'rxjs';
@@ -362,6 +362,7 @@ interface LightConfig { on?: string; off?: string; }
 class LightWorker implements FbNodeWorker {
   private readonly ticks = new ReplaySubject<void>(1);
   private readonly wires = new Map<number, { unsubscribe(): void }>();
+  private readonly out = new ReplaySubject<boolean>(1);
   private value?: boolean;
 
   constructor(private readonly config: LightConfig = {}) {}
@@ -374,19 +375,16 @@ class LightWorker implements FbNodeWorker {
   destroy(): void {
     this.wires.forEach(s => s.unsubscribe());
     this.wires.clear();
+    this.out.complete();
     this.ticks.complete();
   }
 
   // A terminal display, but harmless to pass its state on — never subscribed
-  // unless the flow gives it an output socket.
+  // unless the flow gives it an output socket. ONE live subject: the old
+  // fresh-ReplaySubject-per-call answered the mount-time snapshot and then
+  // never updated a downstream wire again.
   getStream(): Observable<boolean> {
-    const subject = new ReplaySubject<boolean>(1);
-
-    if (this.value !== undefined) {
-      subject.next(this.value);
-    }
-
-    return subject.asObservable();
+    return this.out.asObservable();
   }
 
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection?: { id: number }): void {
@@ -395,6 +393,11 @@ class LightWorker implements FbNodeWorker {
     this.wires.get(key)?.unsubscribe();
     this.wires.set(key, stream.subscribe(value => {
       this.value = value === undefined ? undefined : Boolean(value);
+
+      if (this.value !== undefined) {
+        this.out.next(this.value);
+      }
+
       this.ticks.next();
     }));
   }
@@ -606,13 +609,38 @@ const gateNode: FbNodeMount = (host, { api }) => {
   const nameOf = (aux: 'a' | 'b'): string =>
     api.state.sockets?.find(s => s.type === 'in' && s.aux === aux)?.name || aux;
 
-  return valueNode(host, (value, sub) => {
+  const mounted = valueNode(host, (value, sub) => {
     const state = worker?.state;
 
     value.textContent = state === undefined ? '—' : (state ? 'true' : 'false');
     value.className = `crypto-value crypto-bool ${state ? 'is-true' : 'is-false'}`;
-    sub.textContent = worker ? `${nameOf('a')} ${worker.op} ${nameOf('b')}` : '';
+    sub.textContent = worker ? `${nameOf('a')} ` : '';
+
+    /*
+     * The operator is a CONTROL on the face, the same gesture the general
+     * Compare offers — the help promised >, <= and >= and nothing anywhere let
+     * you pick them; only hand-editing the JSON changed the op.
+     */
+    const select = document.createElement('select');
+
+    select.className = `crypto-op ${FB_DRAG_IGNORE}`;
+    select.setAttribute('aria-label', 'Operator');
+
+    for (const op of Object.keys(OPS) as Op[]) {
+      const option = document.createElement('option');
+
+      option.value = op;
+      option.textContent = op;
+      option.selected = worker?.op === op;
+      select.appendChild(option);
+    }
+
+    select.addEventListener('change', () => worker?.setConfigValue?.('op', select.value));
+    sub.appendChild(select);
+    sub.appendChild(document.createTextNode(` ${nameOf('b')}`));
   }, worker?.changes);
+
+  return mounted;
 };
 
 const lightNode: FbNodeMount = (host, { api }) => {
@@ -658,6 +686,16 @@ const STYLE = `
 .crypto-bool { font-size: 24px; }
 .crypto-bool.is-true { color: #22c55e; }
 .crypto-bool.is-false { color: #ef4444; }
+.crypto-op {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  color: #fff;
+  font: inherit;
+  margin: 0 2px;
+  padding: 1px 2px;
+}
+.crypto-op option { color: #000; }
 .crypto-field { display: flex; flex-direction: column; font-size: 13px; gap: 4px; margin-bottom: 8px; }
 .crypto-field input { padding: 6px 8px; }
 .crypto-light { flex-direction: row; gap: 12px; padding: 16px 22px; }
@@ -768,4 +806,4 @@ export default {
       worker: LightWorker,
     },
   },
-} satisfies FbModule;
+} satisfies FbMountModule;

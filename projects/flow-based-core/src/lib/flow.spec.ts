@@ -486,6 +486,36 @@ describe('subflow parameters (params.<name>)', () => {
     flow.getWorker(10)!.setConfigValue!('params.bestaatniet', 1);
     expect((flow.getWorker(20) as any as ParamWorker).writes).toHaveLength(1);
   });
+
+  /*
+   * The READ side. A document pill shows readConfigValue(subflow.config,
+   * 'params.top') — and nothing ever created that params object, so the
+   * documented pill form rendered dead, and a write that only reached the
+   * child snapped the pill back on blur while the saved JSON disagreed with
+   * itself. The subflow's config is the face; the children the machinery.
+   */
+  it('mirrors the named children up as config.params, and a write updates both', () => {
+    class ParamWorker extends RecordingWorker {
+      setConfigValue(path: string, value: unknown) {
+        (this.config as Record<string, unknown>)[path] = value;
+      }
+    }
+
+    const types = { ...flowTypes(), param: { worker: ParamWorker, settings: { isFlow: false, title: 'Param', config: {}, sockets: [] } } };
+    const child: any = { id: 20, type: 'param', config: { name: 'top', value: 5 }, sockets: [] };
+    const sub: any = { id: 10, type: 'flow', sockets: [], children: [child], connections: [] };
+    const root: any = { id: 1, type: 'flow', sockets: [], children: [sub], connections: [] };
+
+    const flow = new Flow(types as any).initialize(root);
+
+    // Seeded at load: the pill has something to read.
+    expect((sub.config as any).params).toEqual({ top: 5 });
+
+    // A write lands on the child AND the face, so a re-render reads 12, not 5.
+    flow.getWorker(10)!.setConfigValue!('params.top', 12);
+    expect((sub.config as any).params.top).toBe(12);
+    expect((flow.getWorker(20) as any).config.value).toBe(12);
+  });
 });
 
 describe('Flow.removeNode', () => {

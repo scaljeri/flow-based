@@ -112,7 +112,9 @@ export class FbViewport {
     // 1200px plane lands at ~0.3, which shrinks every node, button and socket to
     // a few real pixels — the shell passes a touch floor so the editor stays
     // tappable, at the cost of panning a large flow rather than seeing all of it.
-    this.zoomLevel = Math.max(minZoom, fit);
+    // Clamped against MAX (a bad argument must not zoom IN) and never below the
+    // standing floor.
+    this.zoomLevel = Math.max(this.zoomFloor, Math.min(FB_ZOOM_MAX, minZoom), fit);
 
     /*
      * Centred in whatever room is left over. Fitting takes the smaller of the
@@ -187,7 +189,25 @@ export class FbViewport {
     };
   }
 
+  /**
+   * The zoom-out floor in force. FB_ZOOM_MIN by default; a shell raises it for
+   * a touch device (see the canvas's FB_TOUCH_FIT_MIN) so a pinch cannot land
+   * the editor in untappable territory — the opening fit was floored but the
+   * very next pinch dived straight back under it. Clamped against MAX so a
+   * bad value can never force zooming IN.
+   */
+  private zoomFloor = FB_ZOOM_MIN;
+
+  setZoomFloor(floor: number): void {
+    this.zoomFloor = Math.min(FB_ZOOM_MAX, Math.max(FB_ZOOM_MIN, floor));
+
+    if (this.zoomLevel < this.zoomFloor) {
+      this.zoomLevel = this.zoomFloor;
+      this.changes.emit();
+    }
+  }
+
   private clamp(zoom: number): number {
-    return Math.min(FB_ZOOM_MAX, Math.max(FB_ZOOM_MIN, zoom));
+    return Math.min(FB_ZOOM_MAX, Math.max(this.zoomFloor, zoom));
   }
 }

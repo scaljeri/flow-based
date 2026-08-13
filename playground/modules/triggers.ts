@@ -1,5 +1,5 @@
-// Types only, from CORE — the framework-free contract (see the crypto lib).
-import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker } from '@scaljeri/flow-based-core';
+// Types from the authoring package — FbMountModule is node-utils' checked alias.
+import type { FbMountModule, FbNodeApi, FbNodeMount, FbNodeWorker } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject } from 'rxjs';
 
 /**
@@ -311,4 +311,4 @@ export default {
       worker: ButtonWorker,
     },
   },
-} satisfies FbModule;
+} satisfies FbMountModule;

@@ -10,6 +10,42 @@ export class FlowWorker implements FbNodeWorker {
     /** How this worker reaches its CHILDREN's workers — the Flow owns them all. */
     private readonly workerOf?: (id: number) => FbNodeWorker | undefined,
   ) {
+    this.seedParams();
+  }
+
+  /**
+   * Mirror the named children's values UP into the subflow's own config, so
+   * `subflow.config.params.<name>` exists and answers reads.
+   *
+   * The params feature was broken in both directions without this: the write
+   * routed to the child but the READ side — a document pill shows
+   * `readConfigValue(subflow.config, 'params.top')` — looked at a `params`
+   * object nothing ever created, so the documented pill form rendered dead.
+   * The subflow's config is the ONE place a reader (and the saved JSON) sees
+   * the parameters; the children remain the machinery underneath.
+   */
+  private seedParams(): void {
+    const params: Record<string, unknown> = {};
+    let found = false;
+
+    for (const child of this.state.children ?? []) {
+      const config = child.config as { name?: string; value?: unknown } | undefined;
+
+      if (config?.name) {
+        params[config.name] = config.value;
+        found = true;
+      }
+    }
+
+    if (found) {
+      /*
+       * The CHILDREN win at load: they are what computes, their workers may
+       * not even exist yet to receive a write, and a params object on the
+       * subflow that disagrees with them is exactly the split-truth this seed
+       * exists to end. From here on, setConfigValue keeps both in step.
+       */
+      ((this.state.config ??= {}) as Record<string, unknown>)['params'] = params;
+    }
   }
 
   /**
@@ -22,6 +58,12 @@ export class FlowWorker implements FbNodeWorker {
    * copied four times with one value different per copy, instead of four
    * hand-edited variants (the stationReadings contortion), and lets a
    * document pill drive `{{subflowId:params.top}}`.
+   *
+   * Written to BOTH places: the child (the machinery that computes with it)
+   * and the subflow's own `config.params` (the face a pill reads and the JSON
+   * a save keeps). One without the other is how the feature was broken: the
+   * child computed with 7 while the pill snapped back to 5 on blur, and the
+   * saved file disagreed with itself.
    */
   setConfigValue(path: string, value: unknown): void {
     const match = /^params\.(.+)$/.exec(path);
@@ -32,9 +74,16 @@ export class FlowWorker implements FbNodeWorker {
 
     const name = match[1];
 
+    ((this.state.config ??= {}) as { params?: Record<string, unknown> }).params ??= {};
+    ((this.state.config as { params: Record<string, unknown> }).params)[name] = value;
+
+    this.writeToChildren(name, value);
+  }
+
+  private writeToChildren(name: string, value: unknown): void {
     for (const child of this.state.children ?? []) {
       if ((child.config as { name?: string } | undefined)?.name === name) {
-        const worker = this.workerOf(child.id!);
+        const worker = this.workerOf?.(child.id!);
 
         worker?.setConfigValue?.('value', value);
       }

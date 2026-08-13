@@ -648,6 +648,18 @@ export class FbFlowCanvasElement extends LitElement {
      * and have to follow a resize, a rotation, a keyboard appearing.
      */
     if (rect.width && rect.height) {
+      /*
+       * The touch floor is STANDING, not just the opening fit: floored at 0.6
+       * on open, the very next pinch dived back to 0.2 and everything was
+       * untappable again. setZoomFloor makes every zoom path — pinch, wheel,
+       * the toolbar buttons — respect it on a coarse pointer.
+       */
+      const floor = this.fitFloor();
+
+      if (floor !== undefined) {
+        this.editor?.viewport.setZoomFloor(floor);
+      }
+
       this.editor?.viewport.setPlaneSize(rect.width, rect.height);
       this.editor?.viewport.setViewSize(rect.width, rect.height);
       // A plane bigger than the screen it opened on is shown whole, not
