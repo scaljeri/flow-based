@@ -1,4 +1,5 @@
-import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker } from '@scaljeri/flow-based';
+// Types only, from CORE — the framework-free contract (see the crypto lib).
+import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker } from '@scaljeri/flow-based-core';
 import { Observable, ReplaySubject } from 'rxjs';
 
 /**

@@ -1,4 +1,7 @@
-import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
+// Types only, and from CORE — the framework-free contract. A URL-loaded lib has
+// no business typing against the Angular package (it would drag @angular/core
+// into the type graph, and nothing of the editor may reach this bundle anyway).
+import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket } from '@scaljeri/flow-based-core';
 import { Observable, ReplaySubject } from 'rxjs';
 
 /**
@@ -358,7 +361,7 @@ class GateWorker implements FbNodeWorker {
   }
 
   setConfigValue(path: string, value: unknown): void {
-    if (path === 'op' && value != null && value in OPS) {
+    if (path === 'op' && typeof value === 'string' && value in OPS) {
       this.config.op = value as Op;
       this.emit();
     }

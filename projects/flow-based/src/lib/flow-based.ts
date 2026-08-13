@@ -1,5 +1,6 @@
 import { InjectionToken, Type } from '@angular/core';
 import {
+  FbModule as FbCoreModule,
   FbNodeHelpers,
   FbNodeMount,
   FbNodeState,
@@ -50,6 +51,15 @@ export type FbNodeComponent = Type<unknown> | FbMountedNode;
 
 export type FbAngularNodeType = FbNodeType<FbNodeComponent>;
 export type FbNodeTypes = FbCoreNodeTypes<FbNodeComponent>;
+
+/**
+ * The module contract, narrowed to Angular. Core owns the generic `FbModule`
+ * (framework-free, `TComponent = unknown`, which is what a URL-loaded lib types
+ * against); this fixes its node types to Angular components for an in-tree lib,
+ * exactly as `FbNodeTypes` above narrows the generic one. Shadows the core name
+ * the `export *` re-exports, the same way `FbNodeTypes` does.
+ */
+export type FbModule = FbCoreModule<FbNodeComponent>;
 
 /* ==========================================================================
    Injection tokens

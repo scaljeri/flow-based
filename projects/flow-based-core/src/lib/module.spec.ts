@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FbFormatRegistry, FbModule, prepareModule } from './module-registry';
+import { FbFormatRegistry, FbModule, prepareModule } from './module';
 
 const def = (name: string, description?: string, color?: string) => ({ name, description, color });
 

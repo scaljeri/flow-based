@@ -1,5 +1,5 @@
-import { FbShape, shapeFits, typeScriptOf } from '@scaljeri/flow-based-core';
-import { FbNodeTypes } from './flow-based';
+import { FbShape, shapeFits, typeScriptOf } from './shapes';
+import { FbNodeTypes } from './types';
 
 /**
  * A data type a module brings with it: the format names its sockets speak.
@@ -38,11 +38,15 @@ export interface FbFormatDef {
  * What a loadable node-type module exports.
  *
  * A module is a bundle of node types that joins the registry at runtime —
- * Mathematics, Graphs, whatever comes next. The shape lives HERE, in the
- * package every module already depends on, so a module does not have to know
- * anything about the app that loads it.
+ * Mathematics, Graphs, whatever comes next. The shape lives HERE, in core, so a
+ * module — including a framework-free one a flow loads from a URL — depends only
+ * on this framework-agnostic contract, never on the app that loads it.
+ *
+ * `TComponent` is generic, mirroring `FbNodeType`: a framework-free module leaves
+ * it `unknown` and draws with `FbNodeMount`; the Angular package narrows it to a
+ * component type. So the same `FbModule` types a URL lib and an in-tree one.
  */
-export interface FbModule {
+export interface FbModule<TComponent = unknown> {
   /** How the module introduces itself to a human. */
   name: string;
   /**
@@ -60,7 +64,7 @@ export interface FbModule {
   prefix: string;
   /** The data types this module defines; used sockets need no declaration. */
   formats?: FbFormatDef[];
-  types: FbNodeTypes;
+  types: FbNodeTypes<TComponent>;
 }
 
 interface FbRegisteredFormat {
@@ -249,10 +253,10 @@ export class FbFormatRegistry {
  * and must survive a disable/re-enable unrewritten. Returns the node types to
  * register and the colours the module brings for its types.
  */
-export function prepareModule(
-  module: FbModule,
+export function prepareModule<TComponent = unknown>(
+  module: FbModule<TComponent>,
   registry: FbFormatRegistry,
-): { types: FbNodeTypes; colors: Record<string, string> } {
+): { types: FbNodeTypes<TComponent>; colors: Record<string, string> } {
   const renames = new Map<string, string>();
   const colors: Record<string, string> = {};
 
@@ -290,7 +294,7 @@ export function prepareModule(
   const rename = (name: string | null | undefined) =>
     name == null ? name : renames.get(name) ?? name;
 
-  const types: FbNodeTypes = {};
+  const types: FbNodeTypes<TComponent> = {};
 
   for (const [key, entry] of Object.entries(module.types)) {
     types[key] = {

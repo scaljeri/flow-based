@@ -177,6 +177,17 @@ export interface FbNodeDoc {
 /** A worker is registered as a class and instantiated by the engine. */
 export type FbNodeWorkerCtor = new (config?: any, sockets?: FbSocket[]) => FbNodeWorker;
 
+/**
+ * Which sides a user may add sockets to — `both` (the default when omitted),
+ * one side, or `none` for a type whose socket contract is fixed (a comparison
+ * is exactly two inputs and one output; see FbNodeSettings.addableSockets).
+ *
+ * A NAMED type so a module author — including one writing a framework-free lib
+ * against this contract — can annotate a settings object built up separately,
+ * where a bare literal would silently widen to `string`.
+ */
+export type FbAddableSockets = 'in' | 'out' | 'both' | 'none';
+
 export interface FbNodeSettings {
   title: string;
   /**
@@ -226,7 +237,7 @@ export interface FbNodeSettings {
    * declaration for that side, so its data type is inherited rather than
    * chosen — the format of a socket is not something a user gets to pick.
    */
-  addableSockets?: 'in' | 'out' | 'both' | 'none';
+  addableSockets?: FbAddableSockets;
 }
 
 /**

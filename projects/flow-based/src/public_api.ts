@@ -35,4 +35,3 @@ export * from './lib/pipes/socket-out.pipe';
 
 // Graph engine — re-exported from @scaljeri/flow-based-core via ./lib/flow-based
 export * from './lib/utils/history.service';
-export * from './lib/module-registry';

@@ -29,3 +29,4 @@ export * from './lib/node-events';
 export * from './lib/node-renderer';
 export * from './lib/document';
 export * from './lib/shapes';
+export * from './lib/module';
