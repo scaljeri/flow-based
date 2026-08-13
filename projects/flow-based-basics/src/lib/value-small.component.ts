@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { FbNoDragDirective } from '@scaljeri/flow-based';
 import { FbSliderComponent, NodeService } from '@scaljeri/flow-based';
 import { Subscription } from 'rxjs';
 import { ValueWorker } from './value.worker';
@@ -10,7 +11,7 @@ import { ValueWorker } from './value.worker';
  */
 @Component({
   standalone: true,
-  imports: [FbSliderComponent],
+  imports: [FbSliderComponent, FbNoDragDirective],
   selector: 'fb-value-small',
   template: `
     @if (worker?.kind === 'number') {
@@ -25,8 +26,11 @@ import { ValueWorker } from './value.worker';
       @if (worker?.label) {
         <span class="label">{{worker?.label}}</span>
       }
+      <!-- fbNoDrag: selecting text must not drag the node — the one control
+           here that was missing it (the slider carries it via hostDirectives). -->
       <input
         type="text"
+        fbNoDrag
         [value]="text"
         (input)="onText($event)">
     }

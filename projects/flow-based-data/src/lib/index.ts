@@ -147,7 +147,7 @@ export const DATA_MODULE: FbModule = {
         sockets: [
           // Named by hand, one per placeholder. A socket called `pattern`
           // carries the pattern itself.
-          { type: 'in', name: 'pattern' },
+          { type: 'in', aux: 'pattern', name: 'pattern' },
           { type: 'out', format: 'string' },
         ],
         // As many inputs as the pattern asks for; an output would have nothing
@@ -252,8 +252,8 @@ export const DATA_MODULE: FbModule = {
         group: 'Data',
         config: {},
         sockets: [
-          { type: 'in', name: 'a', formats: ['data', 'string', 'number'] },
-          { type: 'in', name: 'b', formats: ['data', 'string', 'number'] },
+          { type: 'in', aux: 'a', name: 'a', formats: ['data', 'string', 'number'] },
+          { type: 'in', aux: 'b', name: 'b', formats: ['data', 'string', 'number'] },
           { type: 'out', formats: ['data'] },
         ],
         addableSockets: 'in',
@@ -275,8 +275,8 @@ export const DATA_MODULE: FbModule = {
         group: 'Data',
         config: { pathA: '', pathB: '', how: 'inner' },
         sockets: [
-          { type: 'in', name: 'a', formats: ['data'] },
-          { type: 'in', name: 'b', formats: ['data'] },
+          { type: 'in', aux: 'a', name: 'a', formats: ['data'] },
+          { type: 'in', aux: 'b', name: 'b', formats: ['data'] },
           { type: 'out', format: 'data' },
         ],
       },
@@ -298,7 +298,7 @@ export const DATA_MODULE: FbModule = {
            * Named, because a socket's name is how this node tells the two
            * apart — the list arrives on the one without a name.
            */
-          { type: 'in', name: 'value', format: 'string' },
+          { type: 'in', aux: 'value', name: 'value', format: 'string' },
           { type: 'out', format: 'data' },
         ],
         addableSockets: 'none',
@@ -315,8 +315,8 @@ export const DATA_MODULE: FbModule = {
         group: 'Data',
         config: { which: 1 },
         sockets: [
-          { type: 'in', formats: ['geo', 'grid', 'point', 'number', 'data'], name: 'a' },
-          { type: 'in', formats: ['geo', 'grid', 'point', 'number', 'data'], name: 'b' },
+          { type: 'in', aux: 'a', formats: ['geo', 'grid', 'point', 'number', 'data'], name: 'a' },
+          { type: 'in', aux: 'b', formats: ['geo', 'grid', 'point', 'number', 'data'], name: 'b' },
           /*
            * As broad as the inputs, because a switch cannot know what it
            * carries until something is wired into it. A flow that does know

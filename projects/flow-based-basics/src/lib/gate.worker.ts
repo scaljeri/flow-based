@@ -9,12 +9,17 @@ export const GATE_SETTINGS: FbNodeSettings = {
   title: 'Gate',
   help: 'Passes what arrives, or holds it. Wire a 0 into \'open\' to close it, non-zero to open; with a clock on \'open\' it becomes a figure\'s play/stop. Reopening emits what arrived while it was shut, so you see NOW rather than the past.',
   config: { open: true },
+  // A gate is a value in, a control in, a value out — nothing addable.
+  addableSockets: 'none',
   sockets: [
     // Untyped, like the tap: a gate carries whatever is on the wire.
-    { type: 'in' },
+    { type: 'in', aux: 'value' },
     // 0 closes, anything else opens. Wired, it overrides the config without
-    // being saved — the run/url convention.
-    { type: 'in', name: 'open', format: 'number' },
+    // being saved — the run/url convention. AUX is the routing identity, so
+    // renaming the label ("play") cannot turn the control wire into data.
+    // A number (0/1) or a boolean — the crypto compare speaks boolean, and a
+    // signal is a signal; refusing the wire taught nothing.
+    { type: 'in', aux: 'open', name: 'open', formats: ['number', 'boolean'] },
     { type: 'out' },
   ],
 };
@@ -56,8 +61,12 @@ export class GateWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
+  /** Which wires drive `open`, so losing the last one can release the override. */
+  private readonly openWires = new Set<number>();
+
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'open') {
+    if ((socket.aux ?? socket.name) === 'open') {
+      this.openWires.add(connection.id);
       this.subscriptions[connection.id] = stream.subscribe(value => {
         this.setOpen(!!value && value !== 0, 'wire');
       });
@@ -79,6 +88,18 @@ export class GateWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    /*
+     * Losing the `open` wire hands control back to the toggle. `wired` used to
+     * survive the wire that set it: a compare that last said 0 was deleted and
+     * the gate stayed shut FOREVER — the toggle wrote config.open, but the
+     * getter still read the ghost. The clock does this correctly; now both do.
+     */
+    if (this.openWires.delete(connection.id) && this.openWires.size === 0) {
+      this.wired = undefined;
+      this.release();
+      this.ticks.next();
+    }
   }
 
   get open(): boolean {

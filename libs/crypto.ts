@@ -762,7 +762,7 @@ export default {
         title: 'Signal',
         group: 'Crypto',
         config: { on: 'BUY', off: 'WAIT' },
-        sockets: [{ type: 'in', formats: ['boolean'] }],
+        sockets: [{ type: 'in', formats: ['boolean', 'number'] }],
         help: 'On or off, green or red: it shows the latest boolean it is given, labelled. Wire the compare node into it and it lights green when the condition holds.',
       },
       worker: LightWorker,

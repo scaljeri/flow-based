@@ -16,7 +16,7 @@ import { DeferWorker } from './defer.worker';
       <option value="s" [selected]="worker?.as === 's'">epoch s</option>
       <option value="iso" [selected]="worker?.as === 'iso'">ISO</option>
     </select>
-    <span class="reading">{{ worker?.reading ?? '·' }}</span>
+    <span class="reading">{{ worker?.reading ?? '—' }}</span>
   `,
   styles: [NODE_VIEW_STYLES],
 })
@@ -37,8 +37,8 @@ export class TimestampSmallComponent extends WorkerView<TimestampWorker> {
     </select>
     <span class="label">of</span>
     <input type="number" min="1" fbNoDrag aria-label="Window size"
-           [value]="worker?.size ?? 5" (change)="onNumberInput('size', $event)">
-    <span class="reading">{{ worker?.reading ?? '·' }}</span>
+           [value]="worker?.size ?? 5" (input)="onNumberInput('size', $event)">
+    <span class="reading">{{ worker?.reading ?? '—' }}</span>
   `,
   styles: [NODE_VIEW_STYLES],
 })
@@ -57,7 +57,7 @@ export class WindowSmallComponent extends WorkerView<WindowWorker> {
       <option value="delay" [selected]="worker?.mode === 'delay'">delay</option>
     </select>
     <input type="number" min="0" fbNoDrag aria-label="Milliseconds"
-           [value]="worker?.ms ?? 200" (change)="onNumberInput('ms', $event)">
+           [value]="worker?.ms ?? 200" (input)="onNumberInput('ms', $event)">
     <span class="label">ms</span>
   `,
   styles: [NODE_VIEW_STYLES],

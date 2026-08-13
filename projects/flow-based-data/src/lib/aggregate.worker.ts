@@ -1,4 +1,5 @@
 import { FbConnection, FbNodeWorker, FbSocket, readConfigValue, writeConfigValue } from '@scaljeri/flow-based';
+import { toNumber } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 import { isEnvelope, unwrap } from './envelope';
 
@@ -11,12 +12,6 @@ export interface AggregateConfig {
   value?: string;
   op?: AggregateOp;
 }
-
-const toNumber = (value: unknown): number | undefined => {
-  const n = typeof value === 'number' ? value : Number(value);
-
-  return Number.isFinite(n) ? n : undefined;
-};
 
 const fold = (op: AggregateOp, values: number[]): number => {
   if (op === 'count') {

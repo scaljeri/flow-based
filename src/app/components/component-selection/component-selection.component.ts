@@ -34,6 +34,20 @@ export class ComponentSelectionComponent implements OnInit {
     return this.flowTypes[key].settings.title;
   }
 
+  /**
+   * The label a palette row shows: the title, plus the GROUP when another type
+   * wears the same title. Two rows both reading "Compare" (the general one and
+   * a module's own) were indistinguishable — same word, disjoint behaviour —
+   * and the type key is deliberately not shown here.
+   */
+  label(key: string): string {
+    const title = this.title(key);
+    const twin = Object.keys(this.flowTypes)
+      .some(other => other !== key && this.flowTypes[other].settings.title === title);
+
+    return twin ? `${title} (${this.flowTypes[key].settings.group ?? 'General'})` : title;
+  }
+
   /** The type's explanation, or a note that none is written. */
   helpText(key: string): string {
     return this.flowTypes[key].settings.help ?? 'No explanation written for this node yet.';

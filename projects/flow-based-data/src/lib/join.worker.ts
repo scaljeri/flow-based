@@ -53,9 +53,13 @@ export class JoinWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
-  setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    const side = socket.name === 'b' ? 'b' : 'a';
+  /** Which side each wire feeds, so removing it can clear that side's data. */
+  private readonly sides = new Map<number, 'a' | 'b'>();
 
+  setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
+    const side = (socket.aux ?? socket.name) === 'b' ? 'b' : 'a';
+
+    this.sides.set(connection.id, side);
     this.subscriptions[connection.id] = stream.subscribe(value => {
       const meta = isEnvelope(value) ? value.meta : undefined;
       const source = unwrap(value);
@@ -81,6 +85,20 @@ export class JoinWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // A disconnected side must stop joining: its data used to linger, so rows
+    // kept being annotated with a lookup whose wire no longer existed.
+    const side = this.sides.get(connection.id);
+
+    this.sides.delete(connection.id);
+
+    if (side === 'a') {
+      this.left = undefined;
+      this.emit();
+    } else if (side === 'b') {
+      this.right = undefined;
+      this.emit();
+    }
   }
 
   get how(): 'inner' | 'left' {

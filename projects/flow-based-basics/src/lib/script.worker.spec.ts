@@ -127,3 +127,28 @@ describe('ScriptWorker', () => {
     worker.destroy();
   });
 });
+
+describe('ScriptWorker — removed inputs leave the snapshot', () => {
+  // In latest mode a removed input's last value used to ride along forever —
+  // the script kept computing with a wire that no longer existed.
+  it('latest mode drops a removed input from the snapshot', () => {
+    const worker = new ScriptWorker({ mode: 'latest', source: 'emit(value)' });
+    const seen: any[] = [];
+
+    worker.getStream().subscribe(value => seen.push(value));
+
+    const a = new Subject<unknown>();
+    const b = new Subject<unknown>();
+
+    worker.setStream(a, { id: 1, type: 'in', name: 'a' } as any, { id: 10, from: 0, to: 1 } as any);
+    worker.setStream(b, { id: 2, type: 'in', name: 'b' } as any, { id: 11, from: 0, to: 1 } as any);
+
+    a.next(1);
+    b.next(2);
+    expect(seen.at(-1)).toEqual({ a: 1, b: 2 });
+
+    worker.removeStream({ id: 11, from: 0, to: 1 } as any);
+    a.next(3);
+    expect(seen.at(-1)).toEqual({ a: 3 });   // no ghost b
+  });
+});

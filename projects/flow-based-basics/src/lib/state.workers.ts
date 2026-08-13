@@ -42,10 +42,12 @@ export const HOLD_SETTINGS: FbNodeSettings = {
   title: 'Hold',
   help: 'Freezes a value on demand. Any moment on \'hold\' latches whatever is flowing now, and holds it until the next latch — \'keep this reading, change the parameter, compare\'.',
   config: {},
+  // Its socket contract is fixed — nothing there is addable.
+  addableSockets: 'none',
   sockets: [
     { type: 'in' },
     // Any arriving value latches — a moment, not a message.
-    { type: 'in', name: 'hold', format: 'number' },
+    { type: 'in', aux: 'hold', name: 'hold', format: 'number' },
     { type: 'out' },
   ],
 };
@@ -64,7 +66,7 @@ export class HoldWorker extends StateWorker {
   held?: unknown;
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'hold') {
+    if ((socket.aux ?? socket.name) === 'hold') {
       this.subscriptions[connection.id] = stream.subscribe(() => this.latch());
 
       return;
@@ -97,10 +99,12 @@ export const ACCUMULATOR_SETTINGS: FbNodeSettings = {
   title: 'Accumulator',
   help: 'Adds up what passes through — a running sum, or a count of arrivals. A moment on \'reset\' starts over. The bridge from per-tick values to an evolving quantity.',
   config: { mode: 'sum' },
+  // Its socket contract is fixed — nothing there is addable.
+  addableSockets: 'none',
   sockets: [
     { type: 'in', format: 'number' },
     // Any arriving value resets — a moment.
-    { type: 'in', name: 'reset', format: 'number' },
+    { type: 'in', aux: 'reset', name: 'reset', format: 'number' },
     { type: 'out', format: 'number' },
   ],
 };
@@ -121,7 +125,7 @@ export class AccumulatorWorker extends StateWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'reset') {
+    if ((socket.aux ?? socket.name) === 'reset') {
       this.subscriptions[connection.id] = stream.subscribe(() => this.reset());
 
       return;
@@ -155,10 +159,12 @@ export const DELAY_SETTINGS: FbNodeSettings = {
   title: 'Unit delay',
   help: 'Emits the PREVIOUS value, one step behind — advanced only by a moment on \'step\'. This is the one legal way to close a feedback loop: clocked, a cycle takes one visible step per tick instead of running away.',
   config: {},
+  // Its socket contract is fixed — nothing there is addable.
+  addableSockets: 'none',
   sockets: [
     { type: 'in' },
     // The beat this delay advances on. Without one it stays silent.
-    { type: 'in', name: 'step', format: 'number' },
+    { type: 'in', aux: 'step', name: 'step', format: 'number' },
     { type: 'out' },
   ],
 };
@@ -181,7 +187,7 @@ export class DelayWorker extends StateWorker {
   stored?: unknown;
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'step') {
+    if ((socket.aux ?? socket.name) === 'step') {
       this.subscriptions[connection.id] = stream.subscribe(() => this.step());
 
       return;

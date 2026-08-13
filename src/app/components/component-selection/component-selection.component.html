@@ -1,5 +1,5 @@
 <mat-toolbar color="primary">
-  <span>Component selection</span>
+  <span>Add a node</span>
 
   <button type="button" mat-icon-button class="close" aria-label="Close" (click)="onClose()">
     <mat-icon>close</mat-icon>
@@ -8,7 +8,7 @@
 
 <section class="type-selection">
   <mat-form-field class="search">
-    <mat-label>Search flow units</mat-label>
+    <mat-label>Search nodes</mat-label>
     <input matInput type="search" autocomplete="off" cdkFocusInitial
       [ngModel]="query" (ngModelChange)="onQuery($event)" (keyup.enter)="onEnter()">
     <mat-icon matSuffix>search</mat-icon>
@@ -21,7 +21,7 @@
 
         @for (key of group.keys; track key) {
           <div class="row">
-            <button type="button" class="item" (click)="onSelection(key)">{{title(key)}}</button>
+            <button type="button" class="item" (click)="onSelection(key)">{{label(key)}}</button>
             <button type="button" class="info" aria-label="What this node does"
                     (click)="onInfo(key, $event)">i</button>
           </div>
@@ -30,7 +30,7 @@
     }
 
     @if (empty) {
-      <p class="no-matches">No flow unit matches &ldquo;{{query}}&rdquo;.</p>
+      <p class="no-matches">No node matches &ldquo;{{query}}&rdquo;.</p>
     }
   </div>
 </section>

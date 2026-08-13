@@ -11,7 +11,7 @@ import { RangeConfig, RangeWorker } from './range.worker';
       <label class="field">
         <span class="label">{{field.label}}</span>
         <input type="number" [value]="worker?.read(field.key)"
-               (change)="onNumber(field.key, $event)">
+               (input)="onNumber(field.key, $event)">
       </label>
     }
 

@@ -114,8 +114,15 @@ export class RequestWorker implements FbNodeWorker {
    * message. That is what lets any node at all drive this one — a timer, a
    * button, the end of some other request.
    */
+  /** Which wires feed `url`, so losing the last one releases the override. */
+  private readonly urlWires = new Set<number>();
+
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    const named = (socket.name ?? '').trim();
+    const named = String(socket.aux ?? socket.name ?? '').trim();
+
+    if (named === 'url') {
+      this.urlWires.add(connection.id);
+    }
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
       /*
@@ -166,6 +173,16 @@ export class RequestWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    /*
+     * Losing the url wire hands the address back to the panel. The override
+     * used to survive: with a repeat interval the node kept POLLING the removed
+     * wire's URL forever, and editing config.url did nothing (wiredUrl won).
+     */
+    if (this.urlWires.delete(connection.id) && this.urlWires.size === 0 && this.wiredUrl) {
+      this.wiredUrl = undefined;
+      void this.send();
+    }
   }
 
   /** A URL that arrived on the wire, which outranks the one in the panel. */

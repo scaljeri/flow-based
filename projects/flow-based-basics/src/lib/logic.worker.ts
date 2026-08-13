@@ -12,8 +12,8 @@ export const LOGIC_SETTINGS: FbNodeSettings = {
   help: 'AND / OR / NOT over 0-and-1 signals — the boolean the base shapes describe but no node produced. AND is 1 when every wire is non-zero, OR when any is, NOT flips the first. Add inputs from the panel; out is 0 or 1.',
   config: { op: 'and' },
   sockets: [
-    { type: 'in', format: 'number' },
-    { type: 'in', format: 'number' },
+    { type: 'in', formats: ['number', 'boolean'] },
+    { type: 'in', formats: ['number', 'boolean'] },
     { type: 'out', format: 'number' },
   ],
   // AND/OR are n-ary — more terms is more wires, not more nodes.
@@ -93,13 +93,22 @@ export class LogicWorker implements FbNodeWorker {
     const values = [...this.terms.values()];
 
     if (values.length === 0) {
+      // No terms, no verdict — a removed last wire must not leave a stale one.
+      this.result = undefined;
       this.ticks.next();
 
       return;
     }
 
+    /*
+     * NOT flips the OLDEST wire — by connection id, which is creation order —
+     * not Map insertion order, which is whichever wire happened to EMIT first
+     * and made two-wired NOT nondeterministic.
+     */
+    const first = [...this.terms.entries()].sort((a, b) => a[0] - b[0])[0][1];
+
     const answer =
-      this.op === 'not' ? !values[0]
+      this.op === 'not' ? !first
         : this.op === 'or' ? values.some(Boolean)
           : values.every(Boolean);
 

@@ -85,9 +85,16 @@ export class ValueWorker implements FbNodeWorker {
       return this.config.value === undefined ? '' : String(this.config.value);
     }
 
+    // A cleared field is "nothing yet", not zero: Number('') is 0, which broke
+    // the promise (a few lines down) that unparseable input stays silent.
+    if (this.config.value === undefined || this.config.value === null
+      || (typeof this.config.value === 'string' && this.config.value.trim() === '')) {
+      return undefined;
+    }
+
     const numeric = Number(this.config.value);
 
-    return Number.isNaN(numeric) ? undefined : numeric;
+    return Number.isFinite(numeric) ? numeric : undefined;
   }
 
   get min(): number {

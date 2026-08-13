@@ -85,7 +85,7 @@ export class WebTransportWorker implements FbNodeWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'url') {
+    if ((socket.aux ?? socket.name) === 'url') {
       this.subscriptions[connection.id] = stream.subscribe(value => {
         this.wiredUrl = value === null || value === undefined ? undefined : String(value);
         this.reconnect();
@@ -94,7 +94,7 @@ export class WebTransportWorker implements FbNodeWorker {
       return;
     }
 
-    if (socket.name === 'send') {
+    if ((socket.aux ?? socket.name) === 'send') {
       this.subscriptions[connection.id] = stream.subscribe(value => void this.send(value));
     }
   }
@@ -124,7 +124,12 @@ export class WebTransportWorker implements FbNodeWorker {
 
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
-      this.reconnect();
+      // Only a changed ADDRESS redials. Tearing the connection down for a
+      // retitle dropped a live stream to change a label — the panel's own
+      // write() already made this distinction; now the doc-pill path does too.
+      if (path === 'url') {
+        this.reconnect();
+      }
     }
   }
 

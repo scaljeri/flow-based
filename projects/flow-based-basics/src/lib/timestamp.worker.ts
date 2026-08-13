@@ -11,6 +11,8 @@ export const TIMESTAMP_SETTINGS: FbNodeSettings = {
   title: 'Timestamp',
   help: 'When did this arrive? Every moment that comes in leaves stamped with the wall-clock — epoch milliseconds, seconds, or an ISO string. Live-data flows could not label a reading with its time without a script; drive it from a clock or a request to timestamp each poll.',
   config: { as: 'ms' },
+  // Its socket contract is fixed — nothing there is addable.
+  addableSockets: 'none',
   sockets: [
     { type: 'in' },
     { type: 'out' },

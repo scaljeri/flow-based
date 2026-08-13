@@ -1,4 +1,5 @@
 import { FbConnection, FbNodeWorker, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
+import { toNumber } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export interface RangeConfig {
@@ -48,9 +49,11 @@ export class RangeWorker implements FbNodeWorker {
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => {
-      const numeric = Number(value);
+      const numeric = toNumber(value);
 
-      if (Number.isNaN(numeric)) {
+      // Blank is "nothing yet" (Number('') is 0) and Infinity passed the old
+      // NaN-only check straight through to downstream with clamp off.
+      if (numeric === undefined) {
         return;
       }
 

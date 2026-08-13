@@ -13,6 +13,8 @@ export const CONVERT_SETTINGS: FbNodeSettings = {
   title: 'Convert',
   help: 'Change what a value IS, honestly. To number (a numeric string becomes the number, anything else is refused rather than passed as a fake 0), to text (with optional decimals), or parse JSON text into data. The type system separates number/string/data but nothing legally converted between them until now.',
   config: { to: 'number' },
+  // Its socket contract is fixed — nothing there is addable.
+  addableSockets: 'none',
   sockets: [
     { type: 'in' },
     { type: 'out' },
@@ -64,17 +66,30 @@ export class ConvertWorker implements FbNodeWorker {
     return this.config.to ?? 'number';
   }
 
+  /** The last arrival, held so a config change can re-answer without new data. */
+  private last?: { value: unknown };
+
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection: FbConnection): void {
-    this.subscriptions[connection.id] = stream.subscribe(value => this.emit(value));
+    this.subscriptions[connection.id] = stream.subscribe(value => {
+      this.last = { value };
+      this.emit(value);
+    });
   }
 
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    this.last = undefined;
   }
 
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
+      // Re-answer with the held value: a doc pill scrubbing `precision` over a
+      // static input used to change nothing until the next upstream emission.
+      if (this.last) {
+        this.emit(this.last.value);
+      }
+
       this.ticks.next();
     }
   }

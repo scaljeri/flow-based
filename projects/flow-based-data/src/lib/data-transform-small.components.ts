@@ -66,9 +66,9 @@ const DATA_STYLES = `
       <option value="count" [selected]="worker?.op === 'count'">count</option>
     </select>
     <input type="text" fbNoDrag placeholder="value path" [value]="worker?.valuePath ?? ''"
-           (change)="write('value', $event)" aria-label="Value path">
+           (input)="write('value', $event)" aria-label="Value path">
     <input type="text" fbNoDrag placeholder="group by" [value]="worker?.key ?? ''"
-           (change)="write('key', $event)" aria-label="Group-by key">
+           (input)="write('key', $event)" aria-label="Group-by key">
     <span [class]="worker?.error ? 'error' : 'reading'">{{ worker?.error ?? (worker?.groups + ' groups') }}</span>
   `,
   styles: [DATA_STYLES],
@@ -90,7 +90,7 @@ export class AggregateSmallComponent extends DataView<AggregateWorker> {
     </select>
     @if (worker?.op === 'sort' || worker?.op === 'pluck') {
       <input type="text" fbNoDrag placeholder="path" [value]="worker?.path ?? ''"
-             (change)="write('path', $event)" aria-label="Path">
+             (input)="write('path', $event)" aria-label="Path">
     }
     @if (worker?.op === 'sort') {
       <select fbNoDrag aria-label="Direction" (change)="write('dir', $event)">
@@ -100,7 +100,7 @@ export class AggregateSmallComponent extends DataView<AggregateWorker> {
     }
     @if (worker?.op === 'slice') {
       <input type="number" min="0" fbNoDrag [value]="worker?.n ?? 10"
-             (change)="write('n', $event)" aria-label="How many">
+             (input)="write('n', $event)" aria-label="How many">
     }
     <span [class]="worker?.error ? 'error' : 'reading'">{{ worker?.error ?? (worker?.count + ' items') }}</span>
   `,

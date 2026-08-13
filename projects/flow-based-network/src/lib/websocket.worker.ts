@@ -73,7 +73,8 @@ export class WebSocketWorker implements FbNodeWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'url') {
+    if ((socket.aux ?? socket.name) === 'url') {
+      this.urlWires.add(connection.id);
       this.subscriptions[connection.id] = stream.subscribe(value => {
         this.wiredUrl = value === null || value === undefined ? undefined : String(value);
         this.reconnect();
@@ -82,14 +83,23 @@ export class WebSocketWorker implements FbNodeWorker {
       return;
     }
 
-    if (socket.name === 'send') {
+    if ((socket.aux ?? socket.name) === 'send') {
       this.subscriptions[connection.id] = stream.subscribe(value => this.send(value));
     }
   }
 
+  /** Which wires feed `url`; losing the last releases the override. */
+  private readonly urlWires = new Set<number>();
+
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // The socket used to keep reconnecting to the removed wire's URL.
+    if (this.urlWires.delete(connection.id) && this.urlWires.size === 0 && this.wiredUrl !== undefined) {
+      this.wiredUrl = undefined;
+      this.reconnect();
+    }
   }
 
   get url(): string {
@@ -112,7 +122,12 @@ export class WebSocketWorker implements FbNodeWorker {
 
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
-      this.reconnect();
+      // Only a changed ADDRESS redials. Tearing the connection down for a
+      // retitle dropped a live stream to change a label — the panel's own
+      // write() already made this distinction; now the doc-pill path does too.
+      if (path === 'url') {
+        this.reconnect();
+      }
     }
   }
 

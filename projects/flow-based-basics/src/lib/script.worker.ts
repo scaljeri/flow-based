@@ -116,7 +116,21 @@ export class ScriptWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    const name = this.wires.get(connection.id);
+
     this.wires.delete(connection.id);
+
+    /*
+     * The removed input leaves the snapshot too — unless another wire still
+     * feeds the same name. It used to stay: in `latest` mode every later run
+     * received the ghost's last value forever, computing with an input whose
+     * wire no longer existed on the canvas.
+     */
+    if (name && ![...this.wires.values()].includes(name)) {
+      this.latest.delete(name);
+      this.fresh.delete(name);
+    }
   }
 
   get source(): string {

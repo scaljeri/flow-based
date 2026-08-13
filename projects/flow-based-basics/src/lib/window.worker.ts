@@ -1,4 +1,5 @@
 import { FbConnection, FbNodeSettings, FbNodeWorker, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
+import { toNumber } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export type WindowOp = 'mean' | 'min' | 'max' | 'sum';
@@ -13,16 +14,12 @@ export const WINDOW_SETTINGS: FbNodeSettings = {
   title: 'Moving average',
   help: 'A rolling fold over the last N numbers — mean, min, max or sum. Smoothing a live feed is generic maths, not one case\'s vocabulary; the crypto demo had to ship its own lib for a rolling mean. Feed it a number stream; out is the fold, recomputed on each arrival.',
   config: { op: 'mean', size: 5 },
+  // Its socket contract is fixed — nothing there is addable.
+  addableSockets: 'none',
   sockets: [
     { type: 'in', format: 'number' },
     { type: 'out', format: 'number' },
   ],
-};
-
-const toNumber = (value: unknown): number | undefined => {
-  const n = typeof value === 'number' ? value : Number(value);
-
-  return Number.isFinite(n) ? n : undefined;
 };
 
 /** A ring of the last N numbers, folded on each arrival. */

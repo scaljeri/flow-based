@@ -83,7 +83,7 @@ export class FilterWorker implements FbNodeWorker {
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
     // The socket says which question it answers: what to filter, or what to
     // filter FOR.
-    if (socket.name === 'value') {
+    if ((socket.aux ?? socket.name) === 'value') {
       this.subscriptions[connection.id] = stream.subscribe(value => {
         this.wired = value === null || value === undefined ? undefined : String(unwrap(value));
         this.emit();

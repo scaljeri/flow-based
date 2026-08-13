@@ -152,8 +152,14 @@ export class PickWorker implements FbNodeWorker {
   private wiredPath?: string;
   private wiredTop?: number;
 
+  /** Which control socket each wire feeds, so removal can release its override. */
+  private readonly controlWires = new Map<number, 'path' | 'top'>();
+
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'path') {
+    const role = socket.aux ?? socket.name;
+
+    if (role === 'path') {
+      this.controlWires.set(connection.id, 'path');
       this.subscriptions[connection.id] = stream.subscribe(value => {
         this.wiredPath = value === null || value === undefined ? undefined : String(this.unwrap(value));
         this.emit();
@@ -162,7 +168,8 @@ export class PickWorker implements FbNodeWorker {
       return;
     }
 
-    if (socket.name === 'top') {
+    if (role === 'top') {
+      this.controlWires.set(connection.id, 'top');
       this.subscriptions[connection.id] = stream.subscribe(value => {
         const numeric = Number(this.unwrap(value));
 
@@ -182,6 +189,21 @@ export class PickWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // Losing the wire hands control back to the panel. The override used to
+    // survive it: disconnect a flow-param feeding `path`, retype a path in the
+    // panel — ignored until reload, because wiredPath still held the ghost.
+    const role = this.controlWires.get(connection.id);
+
+    this.controlWires.delete(connection.id);
+
+    if (role === 'path') {
+      this.wiredPath = undefined;
+      this.emit();
+    } else if (role === 'top') {
+      this.wiredTop = undefined;
+      this.emit();
+    }
   }
 
   get shape(): PickShape {

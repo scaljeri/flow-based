@@ -71,7 +71,7 @@ const CONDITION_STYLES = `
         <option [value]="o.key" [selected]="o.key === worker?.op">{{ o.symbol }}</option>
       }
     </select>
-    <span class="reading">{{ worker?.result === undefined ? '·' : worker?.result }}</span>
+    <span class="reading">{{ worker?.result === undefined ? '—' : worker?.result }}</span>
   `,
   styles: [CONDITION_STYLES],
 })
@@ -90,7 +90,7 @@ export class CompareSmallComponent extends ConditionView<CompareWorker> {
       <option value="or" [selected]="worker?.op === 'or'">OR</option>
       <option value="not" [selected]="worker?.op === 'not'">NOT</option>
     </select>
-    <span class="reading">{{ worker?.result === undefined ? '·' : worker?.result }}</span>
+    <span class="reading">{{ worker?.result === undefined ? '—' : worker?.result }}</span>
   `,
   styles: [CONDITION_STYLES],
 })

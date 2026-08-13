@@ -18,7 +18,8 @@
     "@angular/core": "^22.0.0",
     "@angular/forms": "^22.0.0",
     "rxjs": "^7.4.0",
-    "@scaljeri/flow-based": "^0.1.0"
+    "@scaljeri/flow-based": "^0.1.0",
+    "@scaljeri/flow-based-node-utils": "^0.1.0"
   },
   "dependencies": {
     "google-charts": "^2.0.0",

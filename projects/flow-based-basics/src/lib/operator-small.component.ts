@@ -61,6 +61,7 @@ export class OperatorSmallComponent implements OnInit, OnDestroy {
   get result(): string {
     const value = this.worker?.result;
 
-    return value === undefined ? '' : Number.isInteger(value) ? String(value) : value.toFixed(4);
+    // '—' is the house glyph for "not yet" — blank read as broken.
+    return value === undefined ? '—' : Number.isInteger(value) ? String(value) : value.toFixed(4);
   }
 }

@@ -12,6 +12,8 @@ export const DEFER_SETTINGS: FbNodeSettings = {
   title: 'Defer',
   help: 'Hold a fast feed back in time. Debounce waits for a pause then emits the last value; throttle lets one through then ignores the rest for a while; delay passes everything, later. Untyped — it holds whatever is on the wire. Nothing debounced or throttled a feed without a script setTimeout before.',
   config: { mode: 'debounce', ms: 200 },
+  // Its socket contract is fixed — nothing there is addable.
+  addableSockets: 'none',
   sockets: [
     { type: 'in' },
     { type: 'out' },
@@ -47,6 +49,8 @@ export class DeferWorker implements FbNodeWorker {
 
   destroy(): void {
     clearTimeout(this.debounceTimer);
+    this.delayTimers.forEach(timer => clearTimeout(timer));
+    this.delayTimers.clear();
     Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
     this.subject.complete();
     this.ticks.complete();
@@ -104,9 +108,18 @@ export class DeferWorker implements FbNodeWorker {
       return;
     }
 
-    // delay: everything passes, each held back by `ms`.
-    setTimeout(() => this.emit(value), this.ms);
+    // delay: everything passes, each held back by `ms`. Tracked, so destroy()
+    // can cancel what is still in the air — an untracked timeout outlived the
+    // node by up to `ms`, firing into a completed subject.
+    const timer = setTimeout(() => {
+      this.delayTimers.delete(timer);
+      this.emit(value);
+    }, this.ms);
+
+    this.delayTimers.add(timer);
   }
+
+  private readonly delayTimers = new Set<ReturnType<typeof setTimeout>>();
 
   private emit(value: unknown): void {
     this.subject.next(value);

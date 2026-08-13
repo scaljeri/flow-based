@@ -68,7 +68,7 @@ export class EventSourceWorker implements FbNodeWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name === 'url') {
+    if ((socket.aux ?? socket.name) === 'url') {
       this.subscriptions[connection.id] = stream.subscribe(value => {
         const next = value === undefined || value === null ? undefined : String(value);
 
