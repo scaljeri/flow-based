@@ -582,6 +582,13 @@ export class FbNodeElement extends LitElement {
      * moves kept writing positions into a state no longer in the flow, and the
      * timer could still pop a config dialog on a detached element.
      */
+    // A press that never moved captured history for a drag that never came;
+    // leaving mid-press (deleted while pressed, removed by an undo) kept that
+    // phantom capture as a do-nothing undo step. Read before endDrag nulls it.
+    if (this.dragPointerId !== null && !this.dragMoved) {
+      this.editor?.history.discard();
+    }
+
     this.endDrag();
     clearTimeout(this.holdTimer);
     this.unsubscribe?.();

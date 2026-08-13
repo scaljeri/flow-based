@@ -1034,7 +1034,19 @@ export class FbFlowDocumentElement extends LitElement {
     const blocks = draft.blocks;
 
     return html`
-      <article class="page editing">
+      <article class="page editing"
+        @keydown=${(event: KeyboardEvent) => {
+          const target = event.composedPath()[0] as HTMLElement | undefined;
+
+          // Escape in a field leaves the FIELD. Unstopped it reached the
+          // host's document-level handler, which closes the document view and
+          // destroys the whole edit draft — the harshest possible reading of
+          // a key meant to step out of one input.
+          if (event.key === 'Escape' && /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) {
+            event.stopPropagation();
+            target?.blur();
+          }
+        }}>
         <label class="edit-title">
           <span>Title</span>
           <input
@@ -1378,6 +1390,18 @@ export class FbFlowDocumentElement extends LitElement {
   private typed = '';
 
   /**
+   * The committed value when this pill's edit began — what Escape restores.
+   * Typing and arrow steps commit per keystroke, so by the time Escape is
+   * pressed the config already holds the edit; without this origin there was
+   * nothing to go back to, while a scrub's Escape did revert. One pill at a
+   * time: focus is single.
+   */
+  private editOrigin?: { key: string; value: unknown };
+
+  /** Swallows the native change that fires while Escape's revert blurs. */
+  private reverting = false;
+
+  /**
    * A keystroke is a value.
    *
    * Waiting for blur made the figures answer a beat after the reader stopped
@@ -1387,13 +1411,29 @@ export class FbFlowDocumentElement extends LitElement {
    * rather than an error.
    */
   private onConfigInputTyped(token: { nodeId: number; path: string }, input: HTMLInputElement): void {
+    this.rememberEditOrigin(token);
     this.typing = `${token.nodeId}:${token.path}`;
     this.typed = input.value;
 
     this.commitConfigInput(token, input, { silent: true });
   }
 
+  /** Before the first per-keystroke commit, or there is nothing to restore. */
+  private rememberEditOrigin(token: { nodeId: number; path: string }): void {
+    const key = `${token.nodeId}:${token.path}`;
+
+    if (this.editOrigin?.key !== key) {
+      const node = this.editor.nodeById(token.nodeId);
+
+      this.editOrigin = { key, value: node ? readConfigValue(node.config, token.path) : undefined };
+    }
+  }
+
   private endTyping(): void {
+    // A blur means the edit stood; Escape restored the origin before blurring.
+    this.editOrigin = undefined;
+    this.reverting = false;
+
     if (this.typing === undefined) {
       return;
     }
@@ -1414,6 +1454,18 @@ export class FbFlowDocumentElement extends LitElement {
       // Cancel the edit — and only the edit: without stopPropagation the
       // host app's own Escape handling would close the whole document view.
       event.stopPropagation();
+
+      // The per-keystroke commits already wrote the edit; put the focus-time
+      // value back, the same promise a scrub's Escape keeps. The blur below
+      // fires a native change with the typed text still in the field —
+      // `reverting` swallows that one commit.
+      const key = `${token.nodeId}:${token.path}`;
+
+      if (this.editOrigin?.key === key) {
+        this.editor.setNodeConfigValue(token.nodeId, token.path, this.editOrigin.value);
+        this.reverting = true;
+      }
+
       input.blur();
       this.requestUpdate();
     } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
@@ -1433,6 +1485,8 @@ export class FbFlowDocumentElement extends LitElement {
     input: HTMLInputElement,
     event: KeyboardEvent,
   ): void {
+    this.rememberEditOrigin(token);
+
     const node = this.editor.nodeById(token.nodeId);
     const committed = node ? readConfigValue(node.config, token.path) : undefined;
 
@@ -1487,6 +1541,10 @@ export class FbFlowDocumentElement extends LitElement {
     input: HTMLInputElement,
     options: { silent?: boolean } = {},
   ): void {
+    if (this.reverting) {
+      return;
+    }
+
     const node = this.editor.nodeById(token.nodeId);
     const current = node ? readConfigValue(node.config, token.path) : undefined;
     const raw = input.value.trim();

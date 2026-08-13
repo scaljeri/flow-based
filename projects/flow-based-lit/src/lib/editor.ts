@@ -1536,6 +1536,16 @@ export class FbEditor {
     const found: { type: string; title: string; group?: string }[] = [];
 
     for (const [type, entry] of Object.entries(this.types)) {
+      /*
+       * The palette's policy holds here too. A reroute is made by
+       * double-clicking a wire, never picked; a flow-param only means
+       * something INSIDE a subflow (path length > 1), and picking one at the
+       * root planted a dead parameter. The picker offered both.
+       */
+      if (type === 'reroute' || (type === 'flow-param' && this.path.length <= 1)) {
+        continue;
+      }
+
       if (this.pickerTarget(type)) {
         found.push({
           type,
@@ -1615,6 +1625,14 @@ export class FbEditor {
 
     return sockets.find(socket => {
       if (socket.type === pendingType) {
+        return false;
+      }
+
+      // The same rule the ordinary click enforces (see completePending): a
+      // fan-off socket that already holds its one wire is full. The picker
+      // skipped this check, offered the node, and the pick landed UNWIRED
+      // with the pending line still armed.
+      if (this.isTaken(socket) || this.isTaken(pending.socket)) {
         return false;
       }
 

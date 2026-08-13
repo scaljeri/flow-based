@@ -788,6 +788,14 @@ export class FbConnectionsElement extends LitElement {
       // same path whether the hold completed or was abandoned.
       timer: window.setTimeout(() => {
         this.cancelArming();
+
+        // Checked at FIRE time: a pinch whose finger landed on a wire and
+        // stayed inside the slop deleted the wire under the zoom. The node's
+        // long-press makes the same check.
+        if (this.editor?.pinchActive) {
+          return;
+        }
+
         this.dispatchEvent(new CustomEvent('connection-remove', {
           detail: connection,
           bubbles: true,

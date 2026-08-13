@@ -680,8 +680,17 @@ export class FbFlowCanvasElement extends LitElement {
        * zoom the user chose. The view size, by contrast, follows every resize.
        */
       if (this.editor?.viewport.planeSize.width === 0) {
+        const floor = this.fitFloor();
+
+        // The standing touch floor, same as the visible-mount path above — a
+        // hidden-tab mount got the floored FIT but not the floor itself, so
+        // the first pinch dived straight back under it.
+        if (floor !== undefined) {
+          this.editor.viewport.setZoomFloor(floor);
+        }
+
         this.editor.viewport.setPlaneSize(measured.width, measured.height);
-        this.editor.viewport.fitPlane(measured, this.fitFloor());
+        this.editor.viewport.fitPlane(measured, floor);
       }
 
       this.editor?.viewport.setViewSize(measured.width, measured.height);
@@ -987,6 +996,20 @@ export class FbFlowCanvasElement extends LitElement {
       this.editor.setPointer(this.editor.viewport.toPlane(this.toLocal(event)));
     }
 
+    /*
+     * A move with no button down while a gesture is armed means the release
+     * happened where this element could not hear it (over another window, on
+     * a context menu). Without this, the ghost pan/draft followed the bare
+     * hover until the next unrelated click committed it. A touch in contact
+     * always reports buttons=1, so touches never trip this.
+     */
+    if (event.buttons === 0
+      && (this.panPointerId !== null || this.framePointerId !== null || this.framePress)) {
+      this.onPointerUp();
+
+      return;
+    }
+
     // Travel during the hold means this was a pan after all.
     if (this.framePress && event.pointerId === this.framePress.pointerId
       && Math.hypot(event.clientX - this.framePress.client.x, event.clientY - this.framePress.client.y) > 6) {
@@ -1051,6 +1074,20 @@ export class FbFlowCanvasElement extends LitElement {
   };
 
   private onPointerUp = (event?: PointerEvent): void => {
+    /*
+     * Only the pointer that OWNS a gesture may end it. Every lift used to run
+     * the whole body, so releasing one finger of a pinch tore down the other
+     * finger's pan and frame state mid-gesture. An event-less call (the
+     * window fallback after an off-element release) still clears everything —
+     * there is no pointer left to own anything.
+     */
+    if (event
+      && event.pointerId !== this.panPointerId
+      && event.pointerId !== this.framePointerId
+      && event.pointerId !== this.framePress?.pointerId) {
+      return;
+    }
+
     this.cancelFramePress();
 
     /*
@@ -1175,6 +1212,12 @@ export class FbFlowCanvasElement extends LitElement {
         this.cancelFramePress();
         this.frameDraft = null;
         this.framePointerId = null;
+        // A marquee too: the drag has an exit, matching the frame draft — the
+        // pan bookkeeping goes with it or the next move revives the box.
+        this.marqueeFrom = null;
+        this.marquee = null;
+        this.panPointerId = null;
+        this.panFrom = null;
         this.editor.cancelPending();
         this.editor.clearSelection();
         this.requestUpdate();
