@@ -141,11 +141,10 @@ export class FbNodeSettingsElement extends LitElement {
       white-space: nowrap;
     }
 
-    .kind .raw {
+    .raw {
       font-family: ui-monospace, monospace;
-      font-size: 10px;
-      opacity: 0.5;
-      padding-left: 6px;
+      font-size: 11px;
+      opacity: 0.6;
     }
 
     /*
@@ -323,6 +322,15 @@ export class FbNodeSettingsElement extends LitElement {
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       margin-top: 10px;
       opacity: 0.6;
+      padding-top: 8px;
+    }
+
+    /* The type key, for whoever is authoring or debugging — out of the header,
+       where it was noise, and here where it is a footnote. */
+    .help-dialog p.type {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      margin-top: 10px;
+      opacity: 0.5;
       padding-top: 8px;
     }
 
@@ -729,6 +737,9 @@ export class FbNodeSettingsElement extends LitElement {
         ${this.mountOwn
           ? html`<p class="how">Long press the node to open its settings.</p>`
           : nothing}
+        ${this.state?.type && this.state.type !== this.kindName
+          ? html`<p class="type"><span class="raw">${this.state.type}</span></p>`
+          : nothing}
       </dialog>
     `;
   }
@@ -855,7 +866,7 @@ export class FbNodeSettingsElement extends LitElement {
         <header>
           <strong>Settings</strong>
           <span class="kind">
-            ${this.kindName}<span class="raw">${this.state?.type ?? ''}</span>
+            ${this.kindName}
           </span>
           <button type="button" class="info" title="What this node does"
                   aria-label="What this node does"

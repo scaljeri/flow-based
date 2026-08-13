@@ -3679,3 +3679,43 @@ test('holding a wire to delete it does not also draw a frame', async ({ page }) 
   // ...and no frame was born from the same press.
   expect(await page.evaluate(() => window.fbEditor.children.length)).toBe(before.children);
 });
+
+/**
+ * The settings panel shows a node's NAME, not its raw type key.
+ *
+ * The header used to print the type key (crypto-gate, source, …) beside the
+ * title — noise for a reader, who cares what the node is called and does, not how
+ * the registry keys it. It is gone from the header now (a known node falls back
+ * to the key only when it has no name), and tucked behind the info mark for
+ * whoever is authoring or debugging.
+ */
+test('the settings panel shows a name, not the type key — which moves behind info', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+  // A long press opens config only for a non-subflow node.
+  const target = await page.evaluate(() => {
+    const index = window.fbEditor.children.findIndex(c => c.type !== 'flow');
+    return { index, type: window.fbEditor.children[index].type };
+  });
+  const type = target.type;
+
+  // Long-press the node to open its settings.
+  const box = page.locator('fb-flow-canvas fb-node-box').nth(target.index);
+  const rect = (await box.boundingBox())!;
+  await page.mouse.move(rect.x + rect.width * 0.3, rect.y + 6);
+  await page.mouse.down();
+  await page.waitForTimeout(650);
+  await page.mouse.up();
+
+  // Every node renders a (closed) settings element; scope to the OPEN dialog.
+  const panel = page.locator('fb-node-settings dialog[open]');
+  await expect(panel.locator('.kind')).toBeVisible();
+  // The header names the node (a real title), and the raw key is nowhere on show.
+  await expect(panel.locator('.kind')).not.toHaveText(type!);
+  await expect(panel.locator('.raw')).toHaveCount(0);
+
+  // The key lives behind the info mark instead.
+  await panel.locator('button.info').click();
+  await expect(page.locator('.help-dialog .raw')).toHaveText(type!);
+});
