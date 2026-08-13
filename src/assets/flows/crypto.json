@@ -1364,7 +1364,6 @@
       },
       {
         "type": "crypto-gate",
-        "title": "price < lower band",
         "id": 400,
         "config": {
           "op": "<"
@@ -1373,7 +1372,8 @@
           {
             "id": 410,
             "type": "in",
-            "name": "a",
+            "aux": "a",
+            "name": "price",
             "formats": [
               "point",
               "number"
@@ -1382,7 +1382,8 @@
           {
             "id": 411,
             "type": "in",
-            "name": "b",
+            "aux": "b",
+            "name": "lower band",
             "formats": [
               "point",
               "number"

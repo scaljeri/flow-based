@@ -329,8 +329,12 @@ class GateWorker implements FbNodeWorker {
   getStream(): Observable<boolean> { return this.subject.asObservable(); }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection?: { id: number }): void {
-    const key = connection?.id ?? (socket?.name === 'b' ? -2 : -1);
-    const side: 'a' | 'b' = socket?.name === 'b' ? 'b' : 'a';
+    // Which operand this wire feeds is read from the socket's AUX, its stable
+    // machine identity — NOT its name, which a flow renames to something the
+    // reader understands ("price", "lower band"). Keyed the way the stats node
+    // keys its outputs, so a rename cannot silently swap the two sides.
+    const key = connection?.id ?? (socket?.aux === 'b' ? -2 : -1);
+    const side: 'a' | 'b' = socket?.aux === 'b' ? 'b' : 'a';
 
     this.wires.get(key)?.unsubscribe();
     const sub = stream.subscribe(value => {
@@ -615,12 +619,19 @@ const bandsNode: FbNodeMount = (host, { api }) => {
 const gateNode: FbNodeMount = (host, { api }) => {
   const worker = api.worker as GateWorker | undefined;
 
+  // The comparison reads out in the reader's own words: the operand names come
+  // from the sockets (aux → name), falling back to a/b when a socket is unnamed.
+  // So a flow that calls its inputs "price" and "lower band" makes the node say
+  // "price < lower band" — the terms live on the sockets, not in a loose title.
+  const nameOf = (aux: 'a' | 'b'): string =>
+    api.state.sockets?.find(s => s.type === 'in' && s.aux === aux)?.name || aux;
+
   return valueNode(host, (value, sub) => {
     const state = worker?.state;
 
     value.textContent = state === undefined ? '—' : (state ? 'true' : 'false');
     value.className = `crypto-value crypto-bool ${state ? 'is-true' : 'is-false'}`;
-    sub.textContent = worker ? `a ${worker.op} b` : '';
+    sub.textContent = worker ? `${nameOf('a')} ${worker.op} ${nameOf('b')}` : '';
   }, worker?.changes);
 };
 
@@ -757,12 +768,16 @@ export default {
         title: 'Compare',
         group: 'Crypto',
         config: { op: '<' },
+        // Exactly two inputs and one output, fixed: a comparison has no more
+        // sides to it, so the panel offers no +in/+out. The operand identity is
+        // the AUX (a, b); a flow gives each socket a NAME a reader recognises.
+        addableSockets: 'none',
         sockets: [
-          { type: 'in', name: 'a', formats: ['point', 'number'] },
-          { type: 'in', name: 'b', formats: ['point', 'number'] },
+          { type: 'in', aux: 'a', formats: ['point', 'number'] },
+          { type: 'in', aux: 'b', formats: ['point', 'number'] },
           { type: 'out', format: 'boolean' },
         ],
-        help: 'The "if": takes the latest value on each input and answers a < b (or >, <=, >=). Wire the price to a and a band or average to b, and it says whether the price is under it — a buy zone.',
+        help: 'The "if": takes the latest value on each input and answers whether the first is < the second (or >, <=, >=). Name the inputs for what they carry, wire a price to the first and a band or average to the second, and it says whether the price is under it — a buy zone.',
       },
       worker: GateWorker,
     },

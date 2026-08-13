@@ -826,11 +826,10 @@ test('a node type contributes its own settings to the panel', async ({ page }) =
   expect(own).toEqual({ sliders: ['Start', 'End', 'Interval'], switches: 1 });
 
   /*
-   * And the panel says which KIND of node it is opened on. Everything else in
-   * it — title, sockets, delete — is identical for every type, so a panel
-   * opened on the wrong node looks exactly like one opened on the right node.
-   * The registered name sits beside the friendly one because that is what a
-   * flow file says, and what names the module it came from.
+   * And the panel NAMES the node it is opened on — its friendly title, so a
+   * panel opened on the wrong node does not look like the right one. Not the raw
+   * type key: that was noise in the header, and now sits behind the info mark for
+   * whoever is authoring or debugging.
    */
   const heading = await page.evaluate(() => {
     const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
@@ -841,7 +840,17 @@ test('a node type contributes its own settings to the panel', async ({ page }) =
   });
 
   expect(heading).toContain('Random number generator');
-  expect(heading).toContain('random-numbers');
+  expect(heading).not.toContain('random-numbers');
+
+  // The type key is a footnote in the info dialog now, not in the header.
+  await page.evaluate(() => {
+    const box = [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
+      .find(n => (n as unknown as { state?: { type?: string } }).state?.type === 'random-numbers')!;
+
+    (box.shadowRoot!.querySelector('fb-node-settings')!.shadowRoot!
+      .querySelector('button.info') as HTMLButtonElement).click();
+  });
+  await expect(page.locator('.help-dialog .raw')).toHaveText('random-numbers');
 
   /*
    * And it drives the same worker the node's drawing reads. The settings
@@ -5952,4 +5961,50 @@ test('a node view keeps redrawing from its worker after it leaves the app-wide t
   // The detached view followed its worker.
   await expect.poll(async () => (await cell.textContent())?.trim(), { timeout: 10_000 }).not.toBe(before);
   await expect(cell).toContainText('-0.123');
+});
+
+/**
+ * The crypto compare reads its operands from its sockets, and its sockets are fixed.
+ *
+ * The node used to say "a < b" with the meaning ("price", "lower band") stranded
+ * in a loose title, and the panel let you add sockets and change their types —
+ * knobs a two-input comparison does not have. Now the operand names come from the
+ * sockets (aux → name, so a rename cannot swap the sides), the title is gone, and
+ * the socket contract is fixed: no +in/+out, the type reads read-only, no remove.
+ */
+test('the crypto compare reads its operands from its sockets, which are fixed', async ({ page }) => {
+  await page.goto('/?fbnoseed');
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title), { timeout: 15_000 }).toBe('Bitcoin');
+
+  // The comparison reads out in the flow's own words, from the socket names.
+  await expect(page.locator('.crypto-sub', { hasText: 'price < lower band' })).toBeVisible({ timeout: 15_000 });
+  // And it computes: both operands are found by aux (not name), so it reaches a
+  // verdict rather than staying '—' — proof the sides did not get swapped.
+  await expect(page.locator('.crypto-bool')).toHaveText(/true|false/, { timeout: 15_000 });
+
+  // Open the compare node's settings.
+  const idx = await page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: { children: { type: string }[] } })
+      .editor.children.findIndex(c => c.type === 'crypto-gate'));
+  expect(idx).toBeGreaterThanOrEqual(0);
+  const box = page.locator('fb-flow-canvas fb-node-box').nth(idx);
+  const rect = (await box.boundingBox())!;
+  await page.mouse.move(rect.x + rect.width * 0.3, rect.y + 6);
+  await page.mouse.down();
+  await page.waitForTimeout(650);
+  await page.mouse.up();
+
+  const panel = page.locator('fb-node-settings dialog[open]');
+  await expect(panel.locator('.kind')).toHaveText('Compare');
+  // Fixed sockets: no +in/+out.
+  await expect(panel.locator('.add-socket')).toHaveCount(0);
+
+  // Tap an input socket: its type is read-only, and it cannot be removed.
+  await panel.locator('.dot.in').first().click();
+  const socketEditor = page.locator('fb-node-settings dialog.socket-editor');
+  await expect(socketEditor.locator('.readonly')).toBeVisible();
+  await expect(socketEditor.locator('.formats')).toHaveCount(0);
+  await expect(socketEditor.locator('button.delete')).toHaveCount(0);
 });

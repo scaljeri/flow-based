@@ -469,6 +469,14 @@ export class FbNodeSettingsElement extends LitElement {
       width: 100%;
     }
 
+    /* A fixed socket's type, shown not offered: no border, no pointer, plainly
+       not a control. */
+    .socket-editor .readonly {
+      font-family: ui-monospace, monospace;
+      margin: 0 0 12px;
+      opacity: 0.7;
+    }
+
     .socket-editor .formats option {
       background: var(--fb-node-background, rgba(0, 0, 0, 0.95));
       padding: 3px 6px;
@@ -1268,13 +1276,29 @@ export class FbNodeSettingsElement extends LitElement {
         <label for=${`${this.formatsId}`}>Type</label>
         ${this.renderFormats(socket)}
 
-        <div class="danger">
-          <button type="button" class="delete" @click=${() => this.removeSocket(socket)}>
-            ${ICON_TRASH} Remove socket
-          </button>
-        </div>
+        ${this.socketsFixed ? nothing : html`
+          <div class="danger">
+            <button type="button" class="delete" @click=${() => this.removeSocket(socket)}>
+              ${ICON_TRASH} Remove socket
+            </button>
+          </div>
+        `}
       </dialog>
     `;
+  }
+
+  /**
+   * A type that declares `addableSockets: 'none'` has a FIXED socket contract:
+   * no adding (the +in/+out are already gone), no removing, and its data types
+   * are the worker's, not the author's to change. A compare is exactly two
+   * inputs and a boolean out — nothing there is a knob. So the type reads
+   * read-only and the remove button is gone. The name stays editable: what a
+   * socket is CALLED is the flow's to decide ("price", "lower band").
+   */
+  private get socketsFixed(): boolean {
+    const type = this.state?.type;
+
+    return !!type && this.editor?.types?.[type]?.settings?.addableSockets === 'none';
   }
 
   private removeSocket(socket: FbSocket): void {
@@ -1301,6 +1325,12 @@ export class FbNodeSettingsElement extends LitElement {
    */
   private renderFormats(socket: FbSocket) {
     const mine = formatsOf(socket);
+
+    // A fixed-socket node shows its type, it does not offer to change it.
+    if (this.socketsFixed) {
+      return html`<p class="readonly">${mine.join(' · ') || socket.format || 'any'}</p>`;
+    }
+
     const offered = this.state ? this.editor.formatsFor(this.state, socket) : [];
     /*
      * Every type the app knows, not only the ones already in this graph.
