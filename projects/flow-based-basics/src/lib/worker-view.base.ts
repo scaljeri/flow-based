@@ -1,31 +1,15 @@
-import { ChangeDetectorRef, Directive, OnDestroy, OnInit, inject } from '@angular/core';
-import { Observable, Subscription } from 'rxjs';
-import { NodeService } from '@scaljeri/flow-based';
+import { Directive } from '@angular/core';
+import { Observable } from 'rxjs';
+import { FbWorkerView } from '@scaljeri/flow-based';
 
 /**
- * Shared plumbing for a node drawing: get the worker, redraw when it changes,
- * and write a config value back the way the value/gate controls do (straight to
- * the worker, whose config IS the node's saved config). Abstract and undeclared;
- * a small component extends it and supplies only its template.
+ * A node drawing that writes config back the way the value/gate controls do:
+ * straight to the worker, whose config IS the node's saved config. The shared
+ * plumbing (get the worker, redraw on its changes) is `FbWorkerView`; this adds
+ * only the write helpers. Abstract and undeclared; a small component extends it.
  */
 @Directive()
-export abstract class WorkerView<T extends { changes: Observable<void> }> implements OnInit, OnDestroy {
-  protected readonly service = inject(NodeService);
-  protected readonly cdr = inject(ChangeDetectorRef);
-
-  worker?: T;
-
-  private subscription?: Subscription;
-
-  ngOnInit(): void {
-    this.worker = this.service.worker as T | undefined;
-    this.subscription = this.worker?.changes.subscribe(() => this.cdr.detectChanges());
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-  }
-
+export abstract class WorkerView<T extends { changes: Observable<void> }> extends FbWorkerView<T> {
   /** Write a config field from a <select> or <input> change. */
   protected write(path: string, value: unknown): void {
     (this.worker as { setConfigValue?(path: string, value: unknown): void } | undefined)?.setConfigValue?.(path, value);

@@ -23,6 +23,7 @@ export * from './lib/flow-based.service';
 
 // Node authoring surface
 export * from './lib/node/node-service';
+export * from './lib/worker-view.base';
 export * from './lib/angular-node';
 
 // Controls that behave inside a node, where a plain one drags the graph away

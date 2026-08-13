@@ -1,29 +1,16 @@
-import { ChangeDetectorRef, Component, Directive, OnDestroy, OnInit, inject } from '@angular/core';
-import { Observable, Subscription } from 'rxjs';
-import { FbNoDragDirective, NodeService } from '@scaljeri/flow-based';
+import { Component, Directive } from '@angular/core';
+import { Observable } from 'rxjs';
+import { FbNoDragDirective, FbWorkerView } from '@scaljeri/flow-based';
 import { AggregateWorker } from './aggregate.worker';
 import { ListWorker } from './list.worker';
 import { ComposeWorker } from './compose.worker';
 
-/** Shared plumbing for the data-reshape drawings. */
+/**
+ * The data-reshape drawings share the plumbing of every worker view (FbWorkerView);
+ * this adds only their control write, which reads a numeric input by its type.
+ */
 @Directive()
-abstract class DataView<T extends { changes: Observable<void> }> implements OnInit, OnDestroy {
-  protected readonly service = inject(NodeService);
-  protected readonly cdr = inject(ChangeDetectorRef);
-
-  worker?: T;
-
-  private subscription?: Subscription;
-
-  ngOnInit(): void {
-    this.worker = this.service.worker as T | undefined;
-    this.subscription = this.worker?.changes.subscribe(() => this.cdr.detectChanges());
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-  }
-
+abstract class DataView<T extends { changes: Observable<void> }> extends FbWorkerView<T> {
   protected write(path: string, event: Event): void {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
     const raw = target.value;

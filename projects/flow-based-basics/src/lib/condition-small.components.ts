@@ -1,14 +1,14 @@
-import { ChangeDetectorRef, Component, Directive, OnDestroy, OnInit, inject } from '@angular/core';
-import { Observable, Subscription } from 'rxjs';
-import { FbNoDragDirective, NodeService } from '@scaljeri/flow-based';
+import { Component, Directive } from '@angular/core';
+import { Observable } from 'rxjs';
+import { FbNoDragDirective, FbWorkerView } from '@scaljeri/flow-based';
 import { COMPARE_OPS, CompareOp, CompareWorker } from './compare.worker';
 import { LogicWorker } from './logic.worker';
 
 /*
  * The condition nodes' drawings. Each is an operator picker and the last answer
  * it produced — the reading is a 0 or a 1, the whole point of these nodes. The
- * plumbing (subscribe to the worker, redraw on its changes, write the operator
- * back) is shared.
+ * plumbing (subscribe to the worker, redraw on its changes) is FbWorkerView; this
+ * adds only writing the operator back.
  */
 
 interface ConditionWorker {
@@ -19,23 +19,7 @@ interface ConditionWorker {
 }
 
 @Directive()
-abstract class ConditionView<TWorker extends ConditionWorker> implements OnInit, OnDestroy {
-  protected readonly service = inject(NodeService);
-  protected readonly cdr = inject(ChangeDetectorRef);
-
-  worker?: TWorker;
-
-  private subscription?: Subscription;
-
-  ngOnInit(): void {
-    this.worker = this.service.worker as TWorker | undefined;
-    this.subscription = this.worker?.changes.subscribe(() => this.cdr.detectChanges());
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-  }
-
+abstract class ConditionView<TWorker extends ConditionWorker> extends FbWorkerView<TWorker> {
   setOp(event: Event): void {
     this.worker?.setConfigValue('op', (event.target as HTMLSelectElement).value);
     this.cdr.detectChanges();
