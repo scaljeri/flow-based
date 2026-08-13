@@ -585,7 +585,31 @@ export class FbEditor {
     return socket;
   }
 
+  private socketExists(socketId: number | undefined): boolean {
+    if (socketId === undefined) {
+      return false;
+    }
+
+    const walk = (node: FbNodeState): boolean =>
+      (node.sockets?.some(candidate => candidate.id === socketId) ?? false)
+      || (node.children?.some(walk) ?? false);
+
+    return walk(this.root);
+  }
+
   removeSocket(socket: FbSocket): void {
+    /*
+     * The pending wire may be ANCHORED on this socket. Removal emits only
+     * 'sockets' (no wire was cut for an unwired socket), which does not cancel
+     * pending — the ghost then passed every buildConnection check against the
+     * dead object, and the next click persisted a connection to a deleted
+     * socket id: invisible, gesture-undeletable, and it blocked fan:false
+     * targets as "taken".
+     */
+    if (this.pending?.socket.id === socket.id) {
+      this.cancelPending();
+    }
+
     this.history.capture(this.root);
     this.flow.removeSocket(socket);
   }
@@ -1332,6 +1356,17 @@ export class FbEditor {
 
     if (this.pending.socket.id === socket.id) {
       this.cancelPending();
+
+      return;
+    }
+
+    // A pending source that no longer resolves (its socket or node was removed
+    // through a path the cancel above does not see — a helper, an undo edge)
+    // must not become a connection to a ghost.
+    if (!this.socketExists(this.pending.socket.id)) {
+      this.cancelPending();
+      this.pending = { socket, nodeId };
+      this.changes.emit({ kind: 'interaction' });
 
       return;
     }

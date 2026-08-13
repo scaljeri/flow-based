@@ -192,7 +192,18 @@ export class FlowStoreService {
    * choices (`fb-modules`) are left alone: which modules you trust is not a
    * flow, and re-enabling them is not the point of a reset.
    */
+  /**
+   * True once reset() ran: the app's beforeunload/pagehide handlers check it.
+   * Without this, the unload that follows the reset FLUSHED THE DRAFT BACK
+   * into the storage that was just wiped (an orphan key no index ever lists)
+   * and raised a "changes may not be saved" prompt about data the person had
+   * just ordered destroyed.
+   */
+  resetting = false;
+
   reset(): void {
+    this.resetting = true;
+
     const keys: string[] = [];
 
     for (let i = 0; i < localStorage.length; i += 1) {

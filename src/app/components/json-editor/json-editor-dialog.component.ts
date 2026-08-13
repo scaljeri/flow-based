@@ -36,7 +36,7 @@ export interface FbJsonEditorData {
 
     <mat-dialog-actions>
       <span class="spacer"></span>
-      <button type="button" mat-button mat-dialog-close>{{ data.readonly ? 'Close' : 'Cancel' }}</button>
+      <button type="button" mat-button (click)="requestClose()">{{ data.readonly ? 'Close' : 'Cancel' }}</button>
       @if (!data.readonly) {
         <button type="button" mat-flat-button color="primary" (click)="save()">Save</button>
       }
@@ -71,6 +71,34 @@ export interface FbJsonEditorData {
 export class JsonEditorDialogComponent implements AfterViewInit, OnDestroy {
   readonly data = inject<FbJsonEditorData>(MAT_DIALOG_DATA);
   private readonly ref = inject(MatDialogRef<JsonEditorDialogComponent, string>);
+
+  constructor() {
+    /*
+     * Escape and a backdrop click used to close the dialog UNCONDITIONALLY —
+     * ten minutes of hand-editing gone on a reflex keypress, silently. The
+     * dialog now owns its closing: an untouched buffer closes freely, a dirty
+     * one asks first. (disableClose also stops Monaco's own Escape uses — the
+     * find widget — from bubbling into a dismissal.)
+     */
+    this.ref.disableClose = true;
+    this.ref.keydownEvents().subscribe(event => {
+      if (event.key === 'Escape') {
+        this.requestClose();
+      }
+    });
+    this.ref.backdropClick().subscribe(() => this.requestClose());
+  }
+
+  requestClose(): void {
+    if (this.data.readonly || !this.dirtyBuffer()
+      || confirm('Discard your JSON edits?')) {
+      this.ref.close();
+    }
+  }
+
+  private dirtyBuffer(): boolean {
+    return this.editor !== undefined && this.editor.getValue() !== this.data.json;
+  }
 
   @ViewChild('host') private host?: ElementRef<HTMLElement>;
 

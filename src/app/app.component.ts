@@ -78,7 +78,21 @@ export class AppComponent implements OnInit, AfterViewInit {
    * changes" and the only retry was a throwaway edit. While set, Save retries the
    * push even with nothing new to write. Cleared by a successful push.
    */
-  private readonly remoteBehindIds = new Set<string>();
+  /**
+   * Restored from localStorage: a failed push used to be forgotten on reload —
+   * dirty false, set empty — and Save answered "No changes yet" while the
+   * endpoint stayed behind, the exact dead end the retry mechanism exists for.
+   */
+  private readonly remoteBehindIds = new Set<string>(
+    JSON.parse(localStorage.getItem('fb-remote-behind') ?? '[]') as string[]);
+
+  private persistRemoteBehind(): void {
+    try {
+      localStorage.setItem('fb-remote-behind', JSON.stringify([...this.remoteBehindIds]));
+    } catch {
+      // Quota: the mark survives in memory for this session; nothing worse.
+    }
+  }
 
   /** Whether the flow ON SCREEN is behind its endpoint — see remoteBehindIds. */
   get remoteBehind(): boolean {
@@ -332,7 +346,16 @@ export class AppComponent implements OnInit, AfterViewInit {
     return this.editingDoc || this.showJson
       || !!target?.isContentEditable
       || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')
-      || !!(event.target as HTMLElement | null)?.closest?.('mat-dialog-container');
+      || !!(event.target as HTMLElement | null)?.closest?.('mat-dialog-container')
+      /*
+       * ANY overlay counts, not only Material dialogs: the mat-menu and the
+       * add-node palette are CDK overlays, and Ctrl+Z with one open popped the
+       * graph history invisibly BEHIND it — the palette's next "add" then
+       * landed on a flow one step older than the person last saw.
+       */
+      || !!(event.target as HTMLElement | null)?.closest?.('.cdk-overlay-container')
+      || this.activeOverlay !== null
+      || this.dialog.openDialogs.length > 0;
   }
 
   /** Whether a keyboard event already travelled through the canvas element. */
@@ -555,6 +578,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       }
 
       this.loadError = moduleError ?? this.takeStorageWarning();
+      this.dismissShareState();
       this.reflectUrl();
       this.cdr.detectChanges();
     });
@@ -674,6 +698,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.loadedJson = null;
       this.captureBaselineSoon();
       this.loadError = this.takeStorageWarning();
+      this.dismissShareState();
       this.reflectUrl();
       this.cdr.detectChanges();
     });
@@ -724,7 +749,10 @@ export class AppComponent implements OnInit, AfterViewInit {
     // Embedded, this is somebody else's page: it has no shelf entry to flush and
     // must not raise a "leave site?" prompt inside their iframe when a reader
     // merely scrubbed a figure.
-    if (this.embed) {
+    // And after a RESET, the storage was just wiped on purpose: flushing the
+    // draft back would orphan a key no index lists, and the prompt would argue
+    // about data the person ordered destroyed.
+    if (this.embed || this.store.resetting) {
       return;
     }
 
@@ -740,6 +768,10 @@ export class AppComponent implements OnInit, AfterViewInit {
   // tab), and only needs to keep the draft — the last line of defence for it.
   @HostListener('window:pagehide')
   onPageHide(): void {
+    if (this.store.resetting) {
+      return;
+    }
+
     if (this.embed) {
       return;
     }
@@ -921,6 +953,17 @@ export class AppComponent implements OnInit, AfterViewInit {
   /** A storage-full draft failure waiting to be shown by the next load. */
   private pendingStorageWarning: string | null = null;
 
+  /**
+   * Share banners describe ONE flow. Left standing across a switch, "which
+   * version do you want to share?" answered about the previous flow with the
+   * next one's links — a mislabelled URL one click away.
+   */
+  private dismissShareState(): void {
+    this.shareNotice = null;
+    this.shareLink = null;
+    this.shareChoosing = false;
+  }
+
   private takeStorageWarning(): string | null {
     const warning = this.pendingStorageWarning;
 
@@ -1028,6 +1071,35 @@ export class AppComponent implements OnInit, AfterViewInit {
    * flow. On success the endpoint may hand back a canonical readable URL, which
    * then becomes the flow's source so its share link points at the saved copy.
    */
+  /**
+   * Publish a REPLACED flow's saved copy to its endpoint — replace works on
+   * the shelf, so the JSON to push is the stored one, not the screen's.
+   */
+  private async pushReplaced(id: string, url: string): Promise<void> {
+    const flow = this.store.load(id);
+
+    if (!flow) {
+      return;
+    }
+
+    try {
+      this.modules.stamp(flow);
+      await this.remote.save(url, serializeFlowToJson(flow));
+      this.zone.run(() => {
+        this.remoteBehindIds.delete(id);
+        this.persistRemoteBehind();
+        this.notify(`Saved to ${this.hostOf(url)}.`);
+        this.cdr.detectChanges();
+      });
+    } catch {
+      // The behind-mark stays; the next Save on that flow retries the push.
+      this.zone.run(() => {
+        this.notify(`The endpoint did not take the replacement — press Save on that flow to retry.`);
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
   private async pushRemote(url: string): Promise<void> {
     /*
      * Captured BEFORE the await: the push can be slow, and the person can open
@@ -1053,6 +1125,7 @@ export class AppComponent implements OnInit, AfterViewInit {
          */
         if (id) {
           this.remoteBehindIds.delete(id);
+          this.persistRemoteBehind();
         }
 
         this.shareNotice = `Saved to ${this.hostOf(url)}.`;
@@ -1086,6 +1159,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         // there is nothing to save.
         if (id) {
           this.remoteBehindIds.add(id);
+          this.persistRemoteBehind();
         }
 
         const auth = err instanceof FbRemoteSaveError && err.kind === 'auth';
@@ -1193,6 +1267,20 @@ export class AppComponent implements OnInit, AfterViewInit {
         // A quota failure silently discarded the Monaco edit before — the write
         // has to say it failed, the same as persist() does.
         throw new Error('the browser storage is full, nothing was written');
+      }
+
+      /*
+       * A remote-destined flow publishes the replacement too. Without this,
+       * fixing a flow's JSON in Monaco wrote only the shelf, and the next Save
+       * said "No changes yet" while the endpoint stayed stale indefinitely —
+       * the doc-save path (persistNow) got this treatment, replace didn't.
+       */
+      const destination = this.store.destinationOf(id);
+
+      if (destination.kind === 'remote') {
+        this.remoteBehindIds.add(id);
+        this.persistRemoteBehind();
+        void this.pushReplaced(id, destination.url);
       }
 
       if (id === this.currentFlowId) {
@@ -1601,8 +1689,24 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   get flowJson(): string {
-    return serializeFlowToJson(this.flow);
+    /*
+     * Cached, refreshed at most twice a second. As a bare getter this
+     * serialised the WHOLE flow (a structuredClone) on every change-detection
+     * tick while the JSON view was open — visible jank on a live flow like the
+     * crypto ticker.
+     */
+    const now = Date.now();
+
+    if (now - this.flowJsonAt > 500) {
+      this.flowJsonAt = now;
+      this.flowJsonCache = serializeFlowToJson(this.flow);
+    }
+
+    return this.flowJsonCache;
   }
+
+  private flowJsonCache = '';
+  private flowJsonAt = 0;
 
   @HostListener('document:keydown.escape')
   escape(): void {

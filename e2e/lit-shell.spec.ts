@@ -3724,3 +3724,39 @@ test('the settings panel shows a name, not the type key — which moves behind i
   await panel.locator('button.info').click();
   await expect(page.locator('.help-dialog .raw')).toHaveText(type!);
 });
+
+/**
+ * Removing the pending wire's source socket cancels the pending — it must not
+ * become a connection to a deleted socket id.
+ *
+ * removeSocket emits only 'sockets' (nothing was wired), which never cancelled
+ * pending; the ghost then passed every check against the dead object and the
+ * next click persisted an invisible, gesture-undeletable connection.
+ */
+test('removing the pending source socket cancels the pending wire', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+  const out = await page.evaluate(() => {
+    const ed = window.fbEditor;
+    const source = ed.children.find(n => n.title === 'Source')!;
+
+    ed.socketClicked(source.sockets![0], source.id!);
+
+    const armed = !!ed.pending;
+
+    ed.removeSocket(source.sockets![0]);
+
+    const after = !!ed.pending;
+    // And the model gained no ghost connection on a follow-up click.
+    const sink = ed.children.find(n => n.title === 'Sink')!;
+
+    ed.socketClicked(sink.sockets![0], sink.id!);
+
+    return { armed, after, connections: ed.connections.length, ghost: ed.connections.some((c: any) => c.out === source.sockets![0].id) };
+  });
+
+  expect(out.armed).toBe(true);
+  expect(out.after).toBe(false);
+  expect(out.ghost).toBe(false);
+});

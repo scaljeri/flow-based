@@ -332,7 +332,13 @@ export class FlowsDialogComponent {
       return;
     }
 
-    const flow = this.store.load(this.details.id);
+    /*
+     * The flow's NOW — draft first, exactly like Edit beside it. Download used
+     * to hand out the stale SAVED copy: a "backup" taken before a risky
+     * Replace lacked the very unsaved work it was meant to protect, while the
+     * sibling button showed the newer content.
+     */
+    const flow = this.store.loadDraft(this.details.id) ?? this.store.load(this.details.id);
 
     if (!flow) {
       this.detailsError = 'This flow has no saved copy to download.';
@@ -365,10 +371,17 @@ export class FlowsDialogComponent {
      *   two versions of one flow on screen at once;
      * - any other flow may carry a DRAFT (unsaved edits from last time), which
      *   is that flow's "now" for the same reason.
-     * Saving from Monaco replaces the saved copy AND the draft — the same
-     * moment Delete already warns about, so Edit warns too (see the confirm in
-     * the replace handler and onReplaceFile below).
+     *
+     * The draft warning comes BEFORE Monaco opens. It used to run in
+     * afterClosed — the editor already destroyed — so pressing Cancel on the
+     * warning threw away the very Monaco work it appeared to protect.
      */
+    if (this.store.hasDraft(id) && id !== this.currentId
+      && !confirm('This flow has unsaved changes from an earlier session. '
+        + 'Saving edited JSON will replace them. Continue?')) {
+      return;
+    }
+
     const flow = this.store.loadDraft(id) ?? this.store.load(id);
 
     this.dialog.open(JsonEditorDialogComponent, {
@@ -379,11 +392,6 @@ export class FlowsDialogComponent {
       } as FbJsonEditorData,
     }).afterClosed().subscribe((json?: string) => {
       if (json) {
-        if (this.store.hasDraft(id) && id !== this.currentId
-          && !confirm('This flow has unsaved changes from an earlier session. Replacing its JSON discards them. Continue?')) {
-          return;
-        }
-
         this.ref.close({ kind: 'replace', id, json });
       }
     });
@@ -399,9 +407,16 @@ export class FlowsDialogComponent {
 
     const id = this.details.id;
 
-    // The same courtesy Delete extends: replacing wipes this flow's draft too.
-    if (this.store.hasDraft(id) && id !== this.currentId
-      && !confirm('This flow has unsaved changes from an earlier session. Replacing its JSON discards them. Continue?')) {
+    /*
+     * The same courtesy Delete extends: replacing wipes this flow's unsaved
+     * work. For the CURRENT flow the app-level confirm used to promise "your
+     * changes stay as a draft" — false for a file replace, whose content has
+     * nothing to do with the canvas edits — so the honest words live here.
+     */
+    if (this.store.hasDraft(id)
+      && !confirm(id === this.currentId
+        ? 'This flow has unsaved changes on the canvas. Replacing its JSON from a file DISCARDS them. Continue?'
+        : 'This flow has unsaved changes from an earlier session. Replacing its JSON discards them. Continue?')) {
       input.value = '';
 
       return;
@@ -438,11 +453,17 @@ export class FlowsDialogComponent {
   }
 
   onDelete(flow: FbStoredFlow): void {
-    // Delete destroys the saved copy AND any unsaved draft, from one tap sitting
-    // ~6px from the settings gear. Confirm when there is unsaved work to lose —
-    // a mis-tap should not be able to take edits with it.
-    if (this.store.hasDraft(flow.id)
-      && !confirm(`“${flow.title}” has unsaved changes. Delete it and lose them?`)) {
+    /*
+     * ALWAYS confirmed, from one tap sitting ~6px from the settings gear.
+     * The old draft-only guard protected the unsaved minutes but not the
+     * saved months: a fully saved flow — the common case — was one mis-tap
+     * from permanent deletion with no undo, no trash, no export.
+     */
+    const question = this.store.hasDraft(flow.id)
+      ? `“${flow.title}” has unsaved changes. Delete it and lose them?`
+      : `Delete “${flow.title}”? This cannot be undone.`;
+
+    if (!confirm(question)) {
       return;
     }
 
