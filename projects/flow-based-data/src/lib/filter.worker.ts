@@ -84,6 +84,7 @@ export class FilterWorker implements FbNodeWorker {
     // The socket says which question it answers: what to filter, or what to
     // filter FOR.
     if ((socket.aux ?? socket.name) === 'value') {
+      this.valueWires.add(connection.id);
       this.subscriptions[connection.id] = stream.subscribe(value => {
         this.wired = value === null || value === undefined ? undefined : String(unwrap(value));
         this.emit();
@@ -108,9 +109,20 @@ export class FilterWorker implements FbNodeWorker {
     });
   }
 
+  /** Which wires feed `value`; losing the last releases the override. */
+  private readonly valueWires = new Set<number>();
+
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // Losing the wire hands the comparison value back to the panel — the
+    // override used to survive it, and a retyped panel value was ignored
+    // until reload (the pick/request class of ghost).
+    if (this.valueWires.delete(connection.id) && this.valueWires.size === 0 && this.wired !== undefined) {
+      this.wired = undefined;
+      this.emit();
+    }
   }
 
   /** What the rule is being tested against, wired or typed. */

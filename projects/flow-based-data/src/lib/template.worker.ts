@@ -82,6 +82,7 @@ export class TemplateWorker implements FbNodeWorker {
     const id = socket.id ?? -connection.id;
 
     this.names.set(id, (socket.name ?? '').trim());
+    this.wireSockets.set(connection.id, id);
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
       const [name] = (this.names.get(id) ?? '').split('|');
@@ -134,9 +135,35 @@ export class TemplateWorker implements FbNodeWorker {
     });
   }
 
+  /** Which socket each wire fed, so removal can release what it filled. */
+  private readonly wireSockets = new Map<number, number>();
+
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    /*
+     * The removed wire's contribution leaves with it. It used to stay: the
+     * pattern kept completing with a ghost value whose wire no longer existed
+     * — and a downstream Request FETCHED that address — and a removed
+     * `pattern` wire's override kept beating the panel until reload.
+     */
+    const socketId = this.wireSockets.get(connection.id);
+
+    this.wireSockets.delete(connection.id);
+
+    if (socketId !== undefined) {
+      const label = this.names.get(socketId) ?? '';
+      const [name] = label.split('|');
+
+      if (name === 'pattern') {
+        this.wired = undefined;
+      } else if (name) {
+        this.values.delete(name);
+      }
+
+      this.emit();
+    }
   }
 
   /** What the node is filling in. The wire wins over the panel. */

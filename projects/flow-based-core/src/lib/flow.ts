@@ -188,6 +188,14 @@ export class Flow {
     this.changes.emit('connections');
   }
 
+  /**
+   * The rebuild a caller runs ONCE after a batch of doRebuild=false removals —
+   * deleting k selected nodes used to pay k full reset-and-propagate passes.
+   */
+  rebuildAfterRemovals(): void {
+    this.rebuildNodeConnections();
+  }
+
   private rebuildNodeConnections(): void {
     Object.keys(this.nodes).forEach(key => {
       const node = this.nodes[key].state;
@@ -630,9 +638,16 @@ export class Flow {
         continue;
       }
 
-      // path doubles as the "on current stack" set, via index lookup.
+      /*
+       * The path array keeps the ORDER (a reported cycle is a walk), and the
+       * Set beside it answers "is this on the current stack" in O(1) — the
+       * bare indexOf was O(depth) per edge, O(V·E) on chain-shaped graphs,
+       * and this runs on every propagation pass: tens of ms per wire drawn on
+       * a long chain.
+       */
       const stack: { node: string; next: number }[] = [{ node: start, next: 0 }];
       const path = [start];
+      const onPath = new Set([start]);
 
       while (stack.length) {
         const frame = stack[stack.length - 1];
@@ -641,12 +656,12 @@ export class Flow {
         if (frame.next >= targets.length) {
           seen.add(frame.node);
           stack.pop();
-          path.pop();
+          onPath.delete(path.pop()!);
           continue;
         }
 
         const target = targets[frame.next++];
-        const at = path.indexOf(target);
+        const at = onPath.has(target) ? path.indexOf(target) : -1;
 
         if (at !== -1) {
           cycles.push([...path.slice(at), target]);
@@ -656,6 +671,7 @@ export class Flow {
         if (!seen.has(target)) {
           stack.push({ node: target, next: 0 });
           path.push(target);
+          onPath.add(target);
         }
       }
     }

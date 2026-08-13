@@ -730,13 +730,23 @@ export class FbNodeElement extends LitElement {
     switch (change.kind) {
       case 'sockets':
         /*
-         * A socket rename/add reaches the mounted CONTENT too: drawings that
-         * render socket names (switch's rows, compose's key count) are detached
-         * from the app tick, and a rename otherwise showed up only when the
-         * worker next happened to emit — on a static dataset, never.
+         * ADDRESSED events reach only the owner — a rename fires per keystroke
+         * and every node on the canvas used to re-render AND re-check its
+         * Angular content for someone else's socket. An UNADDRESSED event (a
+         * type-colour change, engine-wide renegotiation) still re-renders the
+         * chrome everywhere, but the mounted content — which draws names, not
+         * colours — is pushed only for the owner.
          */
+        if (change.nodeId !== undefined && change.nodeId !== this.state?.id) {
+          break;
+        }
+
         this.requestUpdate();
-        this.handle?.update?.();
+
+        if (change.nodeId !== undefined) {
+          this.handle?.update?.();
+        }
+
         break;
 
       case 'structure':

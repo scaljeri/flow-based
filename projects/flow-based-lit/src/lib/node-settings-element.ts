@@ -1238,7 +1238,7 @@ export class FbNodeSettingsElement extends LitElement {
             placeholder=${socket.format ?? 'name'}
             @input=${(e: Event) => {
               this.captureOnce();
-              this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value });
+              this.editor.updateSocket(socket, { name: (e.target as HTMLInputElement).value }, this.state?.id);
             }}>
         </label>
 
@@ -1250,7 +1250,7 @@ export class FbNodeSettingsElement extends LitElement {
             placeholder="what travels through here"
             @input=${(e: Event) => {
               this.captureOnce();
-              this.editor.updateSocket(socket, { description: (e.target as HTMLInputElement).value });
+              this.editor.updateSocket(socket, { description: (e.target as HTMLInputElement).value }, this.state?.id);
             }}>
         </label>
 
@@ -1268,7 +1268,7 @@ export class FbNodeSettingsElement extends LitElement {
             .checked=${socket.fan !== false}
             @change=${(e: Event) => {
               this.captureOnce();
-              this.editor.updateSocket(socket, { fan: (e.target as HTMLInputElement).checked });
+              this.editor.updateSocket(socket, { fan: (e.target as HTMLInputElement).checked }, this.state?.id);
             }}>
           ${socket.type === 'in' ? 'Fan-in — accepts several connections' : 'Fan-out — feeds several connections'}
         </label>

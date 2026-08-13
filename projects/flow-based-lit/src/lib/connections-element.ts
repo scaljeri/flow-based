@@ -235,9 +235,18 @@ export class FbConnectionsElement extends LitElement {
       }
 
       // Selecting a node repaints the path around it — which wire is upstream
-      // and which is downstream is baked into each curve's key.
+      // and which is downstream is baked into each curve's key. Only when the
+      // HIGHLIGHT actually changed: a marquee emits selection per pointermove,
+      // and multi-select has no highlight at all, so wiping every curve's key
+      // per frame re-keyed the whole graph for nothing — the exact
+      // O(graph)-per-frame cost the drag path was cured of.
       if (change.kind === 'selection') {
-        this.keyCache.clear();
+        const focus = this.editor?.flowHighlight?.focus ?? null;
+
+        if (focus !== this.lastHighlightFocus) {
+          this.lastHighlightFocus = focus;
+          this.keyCache.clear();
+        }
       }
 
       if (change.kind === 'viewport') {
@@ -357,6 +366,9 @@ export class FbConnectionsElement extends LitElement {
         : nothing}
     `;
   }
+
+  /** The focus the last selection-keyed cache wipe was for. */
+  private lastHighlightFocus: number | null = null;
 
   /** The hovered wire's reading; null when nothing is hovered. */
   private peek: { x: number; y: number; text: string } | null = null;

@@ -79,7 +79,11 @@ export class StatsWorker implements FbNodeWorker {
     delete this.subscriptions[connection.id];
   }
 
+  /** Bin zero's value — the histogram's coordinate origin. */
+  private binBase?: number;
+
   reset(): void {
+    this.binBase = undefined;
     // Everything, min and histogram included: a reset that kept the old
     // minimum showed a reading no arrived value could explain.
     this.min = null;
@@ -134,31 +138,54 @@ export class StatsWorker implements FbNodeWorker {
       }
 
       /*
-       * Clamped into a bounded histogram. The raw index was value/width: a
-       * crypto price at width 1 asked for slot 60,000 (a sparse array iterated
-       * on EVERY arrival), and a negative value wrote below zero, invisible to
-       * the chart while still counted. 4096 bins is more than any drawing
-       * resolves; the edges collect the overflow.
+       * Binned RELATIVE TO THE RUNNING MIN, bounded at 4096 bins. Absolute
+       * value/width indexing broke twice over: a crypto price at width 1 asked
+       * for slot 60,000 (a sparse array iterated per arrival — frozen tab),
+       * and after the clamp every such value piled into bin 4095 while the
+       * chart still drew bins as offsets from `start` — bars displaced by
+       * +min, or one spike in the wrong place. The worker owns the coordinate
+       * contract now: `start` IS bin zero. A new minimum shifts the existing
+       * bins right so nothing already counted moves relative to its value.
        */
-      const index = Math.min(4095, Math.max(0, Math.round(val / this.columnWidth)));
+      const base = Math.floor(this.min! / this.columnWidth) * this.columnWidth;
+
+      if (this.binBase === undefined) {
+        this.binBase = base;
+      } else if (base < this.binBase) {
+        const shift = Math.round((this.binBase - base) / this.columnWidth);
+
+        this.values = [...new Array(shift).fill(0), ...this.values];
+        this.binBase = base;
+      }
+
+      const index = Math.min(4095, Math.max(0, Math.round((val - this.binBase) / this.columnWidth)));
 
       this.values[index] = (this.values[index] || 0) + 1;
 
-      const mean = calcMean(this.values);
-      const averageMax = calcMax(this.values, mean);
-      const sd = calcStandardDeviation(mean, this.values);
-      let gauss: number[] | undefined;
-      if (averageMax) { // TODO: Maximum required
-        gauss = getGaussian(mean, sd, averageMax, this.values.length);
-      }
+      /*
+       * The distribution is computed only when something LISTENS. Three
+       * O(bins) passes plus two array allocations ran per arrival even with
+       * the node closed to its small view, which shows only min/max/avg.
+       */
+      if (this.updatedSubject.observed) {
+        const mean = calcMean(this.values);
+        const averageMax = calcMax(this.values, mean);
+        const sd = calcStandardDeviation(mean, this.values);
+        let gauss: number[] | undefined;
 
-      this.updatedSubject.next({
-        values: this.values,
-        gauss,
-        // Both were assigned from `val` above, so neither is null here.
-        start: this.min!,
-        end: this.max!,
-      });
+        if (averageMax) {
+          gauss = getGaussian(mean, sd, averageMax, this.values.length);
+        }
+
+        this.updatedSubject.next({
+          values: this.values,
+          gauss,
+          // Bin zero's VALUE — the chart draws bin i at start + i*width, so
+          // this must be the binning origin, not the running min.
+          start: this.binBase!,
+          end: this.max!,
+        });
+      }
     });
   }
 

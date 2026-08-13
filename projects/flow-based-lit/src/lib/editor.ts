@@ -635,7 +635,7 @@ export class FbEditor {
     this.history.capture(this.root);
 
     if (moveSocket(node, socketId, toIndex, toSide)) {
-      this.changes.emit({ kind: 'sockets' });
+      this.changes.emit({ kind: 'sockets', nodeId });
     } else {
       // Nothing moved, so the snapshot is void. Undoing it instead — the old
       // rollback — pushed the un-move onto the REDO stack.
@@ -643,7 +643,7 @@ export class FbEditor {
     }
   }
 
-  updateSocket(socket: FbSocket, patch: { name?: string; color?: string; description?: string; fan?: boolean }): void {
+  updateSocket(socket: FbSocket, patch: { name?: string; color?: string; description?: string; fan?: boolean }, nodeId?: number): void {
     Object.assign(socket, patch);
 
     // Absent means true, so switching fan back ON removes the key — the saved
@@ -653,7 +653,14 @@ export class FbEditor {
       delete socket.fan;
     }
 
-    this.changes.emit({ kind: 'sockets' });
+    /*
+     * ADDRESSED when the caller knows the owner: the socket dialog's name and
+     * description fields fire this per keystroke, and an unaddressed 'sockets'
+     * event made every node on the canvas re-render AND re-check its Angular
+     * content — 3000 detectChanges for one 15-character description on a
+     * 200-node graph. With the id, only the owner pays.
+     */
+    this.changes.emit({ kind: 'sockets', nodeId });
   }
 
   /**
@@ -1071,12 +1078,19 @@ export class FbEditor {
 
     this.history.capture(this.root);
 
+    /*
+     * ONE rebuild after the loop, not one per node: each removal's default
+     * rebuild re-resets every socket and re-propagates every connection, so
+     * deleting k nodes was k full graph passes — seconds on a large selection.
+     * The batching flag exists for exactly this.
+     */
     for (const id of [...this.selection]) {
-      this.flow.removeNode(id);
+      this.flow.removeNode(id, false);
       this.geometry.forgetNode(id);
       this.events.unregisterAll(id);
     }
 
+    this.flow.rebuildAfterRemovals();
     this.selection.clear();
     this.changes.emit({ kind: 'selection' });
   }

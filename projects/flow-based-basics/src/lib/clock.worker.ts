@@ -14,7 +14,7 @@ export const CLOCK_SETTINGS: FbNodeSettings = {
   sockets: [
     // 0 pauses, anything else runs. Wired, it overrides the config without
     // being saved — the same convention iterate's `c` and request's `url` use.
-    { type: 'in', name: 'run', format: 'number' },
+    { type: 'in', aux: 'run', name: 'run', format: 'number' },
     { type: 'out', format: 'number' },
   ],
 };
@@ -60,7 +60,7 @@ export class ClockWorker implements FbNodeWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    if (socket.name !== 'run') {
+    if ((socket.aux ?? socket.name) !== 'run') {
       return;
     }
 

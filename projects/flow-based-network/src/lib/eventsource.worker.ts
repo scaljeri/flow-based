@@ -14,7 +14,7 @@ export const EVENTSOURCE_SETTINGS: FbNodeSettings = {
   config: { url: '', title: '' },
   sockets: [
     // The wire beats the field and is never saved — the request's own rule.
-    { type: 'in', name: 'url', format: 'string' },
+    { type: 'in', aux: 'url', name: 'url', format: 'string' },
     { type: 'out', format: 'data' },
   ],
 };

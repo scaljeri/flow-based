@@ -293,11 +293,21 @@ export class ModulesService {
      * the reader added is theirs, and a module they switched off should still
      * be in the dialog to switch back on rather than having to be found again.
      */
+    /*
+     * Own libs are re-stamped to THIS build before anything loads. The store
+     * holds the URL of whatever deploy last ran, and restoring it verbatim
+     * executed the stale lib on every boot after a redeploy — the exact
+     * staleness the ?v= stamp exists to prevent. The enabled ids are mapped
+     * through the same rewrite, or they would name rows that no longer exist.
+     */
+    const restamp = (url: string) => this.isOwnLib(url) ? this.withBuild(url) : url;
+
     for (const entry of stored.urls) {
-      this.remember(entry);
+      this.remember(entry.url ? { ...entry, url: restamp(entry.url) } : entry);
     }
 
-    await Promise.all(stored.enabled.map(id => this.enable(id)));
+    await Promise.all(stored.enabled.map(id =>
+      this.enable(id.startsWith('url:') ? `url:${restamp(id.slice(4))}` : id)));
   }
 
   /**
@@ -343,11 +353,15 @@ export class ModulesService {
    */
   async addFromUrl(url: string): Promise<FbModuleInfo> {
     const href = ModulesService.absolute(url);
-    const id = `url:${href}`;
-    const existing = this.modules.find(info => info.id === id);
+    // Matched per LIB, not per deploy: the same URL under a different build
+    // stamp is the same module, and an exact-id miss minted a second row
+    // beside the consented one.
+    const base = ModulesService.unversioned(href);
+    const existing = this.modules.find(info =>
+      info.url && ModulesService.unversioned(info.url) === base);
     const info = existing ?? this.remember({ url: href, title: href, description: 'Not loaded yet' });
 
-    await this.enable(id);
+    await this.enable(info.id);
 
     if (info.error) {
       throw new Error(info.error);
@@ -389,7 +403,13 @@ export class ModulesService {
       // trusting the origin would run it.
       const own = this.isOwnLib(href);
       const target = own ? this.withBuild(href) : href;
-      const existing = this.modules.find(info => info.id === `url:${target}`);
+      // Consent is per LIB: a declaration that differs from the remembered row
+      // only by build stamp is the same module, and an exact-id miss superseded
+      // the ENABLED row with a switched-off twin — the module kept running
+      // while its switch showed off, then drew empty boxes after reload.
+      const base = ModulesService.unversioned(target);
+      const existing = this.modules.find(info =>
+        info.url && ModulesService.unversioned(info.url) === base);
 
       /*
        * A module this browser has CONSENTED to is loaded; one it has never seen
@@ -467,7 +487,17 @@ export class ModulesService {
      * came back. A stale duplicate URL is a far smaller cost than that.
      */
     const kept = (config.modules ?? []).filter(entry => {
-      const href = ModulesService.absolute(entry.url);
+      let href: string;
+
+      try {
+        href = ModulesService.absolute(entry.url);
+      } catch {
+        // A hand-broken entry (the JSON is user-editable) must not make the
+        // flow unsaveable — stamp sits on every save/download/share path.
+        // Kept verbatim: unaccounted-for declarations survive, garbage or not.
+        return true;
+      }
+
       // Own libs are remembered with a build stamp, remote ones bare — match either.
       const info = this.fetched.find(candidate =>
         candidate.url === href || candidate.url === this.withBuild(href));
@@ -674,6 +704,7 @@ export class ModulesService {
 
   /** List a fetched module without loading it. */
   private remember(entry: { url: string; title: string; description: string; prefix?: string }): FbModuleInfo {
+    let transfer = false;
     /*
      * One row per LIB, not per deploy. Our own libs are fetched with a build
      * stamp (?v=1.2.3), and every redeploy minted a fresh id beside the old
@@ -686,10 +717,18 @@ export class ModulesService {
       const stale = this.modules.filter(info =>
         info.url && info.url !== entry.url && ModulesService.unversioned(info.url) === base);
 
+      // Consent follows the lib. Superseding an ENABLED twin used to leave the
+      // fresh row switched off: the old build's types kept running while the
+      // dialog showed the module off, and the next reload drew empty boxes.
+      const consented = stale.some(twin => twin.enabled);
+
       for (const twin of stale) {
         this.loadedTypes.delete(twin.id);
         this.modules.splice(this.modules.indexOf(twin), 1);
       }
+
+      // The enable happens below, once the fresh row is in the list.
+      transfer = consented;
     }
 
     const info: FbModuleInfo = {
@@ -701,6 +740,14 @@ export class ModulesService {
     };
 
     this.modules.push(info);
+
+    if (transfer) {
+      // Async on purpose: remember() is sync and callers do not wait. The
+      // successor build loads and re-registers the lib's types over the
+      // stale ones.
+      void this.enable(info.id);
+    }
+
     this.changed.emit();
 
     return info;

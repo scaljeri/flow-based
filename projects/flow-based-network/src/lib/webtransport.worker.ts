@@ -13,8 +13,8 @@ export const WEBTRANSPORT_SETTINGS: FbNodeSettings = {
   group: 'Network',
   config: { url: '', title: '' },
   sockets: [
-    { type: 'in', name: 'send' },
-    { type: 'in', name: 'url', format: 'string' },
+    { type: 'in', aux: 'send', name: 'send' },
+    { type: 'in', aux: 'url', name: 'url', format: 'string' },
     { type: 'out', format: 'data' },
   ],
 };
@@ -84,8 +84,12 @@ export class WebTransportWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
+  /** Which wires feed `url`; losing the last releases the override. */
+  private readonly urlWires = new Set<number>();
+
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
     if ((socket.aux ?? socket.name) === 'url') {
+      this.urlWires.add(connection.id);
       this.subscriptions[connection.id] = stream.subscribe(value => {
         this.wiredUrl = value === null || value === undefined ? undefined : String(value);
         this.reconnect();
@@ -102,6 +106,14 @@ export class WebTransportWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // The one network node the urlWires batch missed: it kept auto-redialling
+    // the removed wire's address on the doubling retry timer, forever, and the
+    // panel's own URL was ignored until reload.
+    if (this.urlWires.delete(connection.id) && this.urlWires.size === 0 && this.wiredUrl !== undefined) {
+      this.wiredUrl = undefined;
+      this.reconnect();
+    }
   }
 
   get url(): string {

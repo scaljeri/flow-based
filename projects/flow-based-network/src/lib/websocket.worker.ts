@@ -14,9 +14,9 @@ export const WEBSOCKET_SETTINGS: FbNodeSettings = {
   sockets: [
     // Whatever arrives here is sent: a string as itself, anything else as
     // JSON — the mirror of how messages come in.
-    { type: 'in', name: 'send' },
+    { type: 'in', aux: 'send', name: 'send' },
     // The wire beats the field and is never saved — the request's own rule.
-    { type: 'in', name: 'url', format: 'string' },
+    { type: 'in', aux: 'url', name: 'url', format: 'string' },
     { type: 'out', format: 'data' },
   ],
 };
