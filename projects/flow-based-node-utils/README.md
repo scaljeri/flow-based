@@ -18,6 +18,11 @@ npm i -D @scaljeri/flow-based-node-utils
 npm i rxjs
 ```
 
+> **Not on npm yet.** Until it is published, build it from this repository
+> (`npm run build:lib`) and point your bundler at
+> `dist/flow-based-node-utils` — the in-repo libs alias it exactly that way
+> (see `scripts/build-libs.mjs`).
+
 > Types come from here; so does `@scaljeri/flow-based-core`, which this package
 > re-exports the authoring half of. Type against **this** package — never the
 > Angular one (`@scaljeri/flow-based`), which would drag `@angular/core` into your
@@ -114,6 +119,25 @@ but **off** until a reader consents, so opening a flow never runs unseen code.
 - `injectStyleOnce(id, css)` — add a `<style>` to the page once per id, for a view
   that ships its own CSS and mounts many instances.
 - `FbSeries` — `number[][]`, the `[x,y]` shape a plot draws as one layer.
+
+## Declaring the contract version
+
+A module may stamp the contract it was built against:
+
+```ts
+import { FB_MODULE_CONTRACT_VERSION } from '@scaljeri/flow-based-node-utils';
+
+export default {
+  name: 'Doubler',
+  prefix: 'demo',
+  contract: FB_MODULE_CONTRACT_VERSION,
+  // ...
+} satisfies FbModule;
+```
+
+Optional — an unstamped module reads as version 1 and always loads. A host that
+speaks an OLDER contract than the module declares warns (it never blocks), so
+your module degrades visibly instead of mysteriously.
 
 ## Two rules that make a URL lib safe
 

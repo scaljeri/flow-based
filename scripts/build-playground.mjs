@@ -47,6 +47,16 @@ for (const source of sources) {
     platform: 'browser',
     minify: true,
     /*
+     * The same alias build-libs.mjs has, so a playground module can import the
+     * node-utils helpers the README recommends. Without it the worked example
+     * had to hand-roll the drag-ignore string — the exact anti-pattern the
+     * package documents against — and an import broke the build.
+     */
+    alias: {
+      '@scaljeri/flow-based-node-utils': resolve('dist/flow-based-node-utils/fesm2022/scaljeri-flow-based-node-utils.mjs'),
+      '@scaljeri/flow-based-core': resolve('dist/flow-based-core/fesm2022/scaljeri-flow-based-core.mjs'),
+    },
+    /*
      * rxjs travels WITH the module. It is the one runtime a node may genuinely
      * need, the editor never tests an Observable with instanceof, and the
      * alternative — expecting the host page to share its copy — is an import

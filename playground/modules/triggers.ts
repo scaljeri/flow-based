@@ -21,8 +21,9 @@ import { Observable, ReplaySubject } from 'rxjs';
  * runtime — which is what lets it be loaded from a URL at all.
  */
 
-/** Class the shell reads to leave a control alone; the string IS the contract. */
-const DRAG_IGNORE = 'fb-drag-ignore';
+// Imported, not re-typed: a hand-typed copy of this class fails silently on a
+// typo. The build bundles the constant (bytes), never the editor.
+import { FB_DRAG_IGNORE as DRAG_IGNORE } from '@scaljeri/flow-based-node-utils';
 
 interface TimerConfig {
   /** Milliseconds between ticks. Zero stands still. */
