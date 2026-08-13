@@ -140,8 +140,9 @@ function looksLikeModule(value: unknown): boolean {
  * adapter map is derived from it — so enabling a module mutates that object
  * and patches the active editors, rather than rebuilding either.
  *
- * Modules come from two places, and deliberately down one path: the four that
- * ship with this build, and any number fetched from a URL. Everything after
+ * Modules come from two places, and deliberately down one path: the ones that
+ * ship with this build (`LOADERS` is the list), and any number fetched from a
+ * URL. Everything after
  * the fetch — settling formats, patching editors, persisting the choice — is
  * the same code, because a module from the internet is not a lesser kind of
  * module.

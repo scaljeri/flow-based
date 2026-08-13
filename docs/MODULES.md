@@ -6,13 +6,22 @@ Graphs, Network, Data are modules; so is whatever you write next.
 You export **one thing**:
 
 ```ts
-export const MY_MODULE: FbModule = {
+export const MY_MODULE = {
   name: 'Weather',        // how it introduces itself to a human
   prefix: 'weather',      // disambiguates its data types on a collision
+  contract: FB_MODULE_CONTRACT_VERSION,  // optional: what it was built against
   formats: [ ... ],       // optional: the data types it defines
   types: { ... },         // the node types themselves
-};
+} satisfies FbMountModule;
 ```
+
+`satisfies FbMountModule` rather than a plain `FbModule` annotation: `FbModule`
+is generic in the component type and defaults to `unknown`, which absorbs the
+whole `component` union — a typo'd `{ small: { mont: ... } }` compiled clean
+and mounted as a blank box. The alias is the same module with its views
+actually checked. `contract` is optional (absent reads as pre-versioning); a
+host that speaks an older contract warns but still loads, so the module
+degrades visibly instead of mysteriously.
 
 That is the entire contract. Everything else on this page is either what goes
 *inside* `types`, or how the module gets built and reaches the app.
@@ -29,7 +38,7 @@ One node type, no formats, no settings panel, no framework. This block is
 compiled by `npm run check:docs`, so it is known to be true:
 
 ```ts check
-import { FbModule, FbNodeMount, FbNodeWorker, nodeMount } from '@scaljeri/flow-based';
+import type { FbMountModule, FbNodeMount, FbNodeWorker } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject } from 'rxjs';
 
 class ClockWorker implements FbNodeWorker {
@@ -55,12 +64,12 @@ const clockView: FbNodeMount = (host, { api }) => {
   return { destroy: () => subscription.unsubscribe() };
 };
 
-export const CLOCK_MODULE: FbModule = {
+export const CLOCK_MODULE = {
   name: 'Clock',
   prefix: 'clock',
   types: {
     'clock-now': {
-      component: { small: nodeMount(clockView) },
+      component: { small: { mount: clockView } },
       settings: {
         title: 'Now',
         group: 'Clock',
@@ -69,14 +78,17 @@ export const CLOCK_MODULE: FbModule = {
       worker: ClockWorker,
     },
   },
-};
+} satisfies FbMountModule;
 ```
 
 No Angular API appears in that file: the drawing is plain DOM and the worker is
-plain rxjs. It imports from `@scaljeri/flow-based` because that is where
-`FbModule` lives, and that package re-exports all of `@scaljeri/flow-based-core`
-— a module that draws with Angular components imports from exactly the same
-place.
+plain rxjs. It types against `@scaljeri/flow-based-node-utils`, the authoring
+package — the whole contract plus a handful of framework-free helpers
+(`lastValue`, `toNumber`, `injectStyleOnce`, the envelope), and nothing that
+would drag `@angular/core` into the type graph. A module that draws with
+Angular components — one added to THIS build — imports from
+`@scaljeri/flow-based` instead, where `nodeMount` and the Angular mounting
+live; that package re-exports the same contract.
 
 ---
 
@@ -98,7 +110,7 @@ place.
 | `settings.title` | The name in the palette and on the node. |
 | `settings.group` | Which palette group it is listed under. Presentation only — the engine never reads it. |
 | `settings.config` | The default configuration object. The worker is handed **this very object**, so writing into it is what persists. |
-| `settings.sockets` | The inputs and outputs, in drawing order. |
+| `settings.sockets` | The inputs and outputs, in drawing order. A socket has two names: `aux` is its stable machine identity, `name` a display label a flow may edit. **Route on `aux`, never on `name`** — a worker keyed on the label misroutes the moment a reader renames it. |
 | `settings.resizable` | Opt in for a hand-resizable `normal` view. Your component must be written to fill the size it is given. |
 | `settings.addableSockets` | `'in' \| 'out' \| 'both' \| 'none'`. A plot whose every input is a layer takes as many as you like; a derivative has exactly one function to differentiate. |
 | `settings.views` / `defaultView` | Which sizes are offered, and which one it opens at. |
@@ -125,7 +137,11 @@ Four methods, one optional. Two things are easy to get wrong:
   `state.config` from outside persists — the worker holds that same object — but
   tells the running worker nothing. Only the worker knows whether a changed value
   means recompute, re-emit, or restart. A type without it is simply not tunable
-  from the document view.
+  from the document view. It is also the announce channel: the engine wraps it,
+  so a worker's OWN mutators (a `set()`, a `write()`) should route through it —
+  a direct config write is invisible to the host and never marks the flow dirty.
+- **`setStream(stream, socket)` decides by `socket.aux ?? socket.name`.** The
+  `aux` is yours and stable; the `name` belongs to the flow and its reader.
 
 `destroy()` must undo everything: timers, subscriptions, listeners.
 
@@ -216,13 +232,15 @@ that lives on the internet needs none of it: no package, no `angular.json`, no
 entry in any list. Paste the URL into the Modules dialog and it loads.
 
 The catch is what such a module may depend on at runtime, and the answer is
-pleasant: **nothing**. `FbModule`, `FbNodeMount` and `FbNodeWorker` are
-interfaces, so they compile away. `nodeMount(fn)` returns `{ mount: fn }` — an
-object literal does the same. `FB_DRAG_IGNORE` is the string `'fb-drag-ignore'`.
+pleasant: **almost nothing**. `FbMountModule`, `FbNodeMount` and `FbNodeWorker`
+are types, so they compile away. The few runtime values worth having —
+`FB_DRAG_IGNORE`, `FB_MODULE_CONTRACT_VERSION`, the value helpers — come from
+`@scaljeri/flow-based-node-utils` and are BUNDLED into your file, the way rxjs
+is; import them rather than re-typing them, which fails silently on a typo.
 So a whole module can be one self-contained file:
 
 ```ts check
-import type { FbModule } from '@scaljeri/flow-based';
+import type { FbMountModule } from '@scaljeri/flow-based-node-utils';
 
 // A type-only import: erased at compile time, so the built file imports nothing
 // and the browser needs no import map to load it.
@@ -251,7 +269,7 @@ export default {
       },
     },
   },
-} satisfies FbModule;
+} satisfies FbMountModule;
 ```
 
 Rules for a module served over the web:
@@ -317,10 +335,14 @@ needs none of it.
 
 ## Checklist
 
-- [ ] `index.ts` exports one `FbModule` with `name`, `prefix`, `types`
+- [ ] `index.ts` exports one module with `name`, `prefix`, `types` —
+      `satisfies FbMountModule` for a framework-free lib, so the views are checked
+- [ ] `contract: FB_MODULE_CONTRACT_VERSION` stamped, so a future host can warn
 - [ ] every type has `settings.title`, `settings.sockets`, and a `group`
 - [ ] every worker implements `destroy()` and actually releases everything
-- [ ] `setConfigValue` implemented if the values are worth tuning from a document
+- [ ] `setConfigValue` implemented if the values are worth tuning from a
+      document, and the worker's own mutators route through it
+- [ ] workers route inputs on `aux`, never on the editable `name`
 - [ ] new formats carry a `description` — it is their identity
 - [ ] controls inside a node carry `FB_DRAG_IGNORE`, or handle drag-versus-tap
       themselves (see [NODE-AUTHORING.md](NODE-AUTHORING.md))

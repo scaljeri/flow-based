@@ -10,7 +10,7 @@
  * config references:
  *
  *   **bold**   *italic*   `code`   [text](href)   $x^2$   $$\sum_i x_i$$
- *   {{400:params.a}}   {{!flow:Show the flow}}
+ *   {{400:params.a}}   {{!flow:Show the flow}}   \$ for a literal dollar
  */
 export type FbInline =
   | { type: 'text'; text: string }

@@ -892,13 +892,6 @@ export class FbNodeSettingsElement extends LitElement {
 
         ${this.renderHelp()}
 
-        <!--
-          Autofocused, so the panel opens ready to be typed into. It matters most
-          for a new subflow, which opens this by itself and is called "Subflow"
-          until told otherwise — but a panel whose first field is focused is the
-          right behaviour for every node. Without it the browser focuses the
-          first focusable thing, which is the close button.
-        -->
         <label>
           Title
           <input

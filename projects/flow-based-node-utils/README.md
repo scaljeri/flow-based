@@ -31,7 +31,7 @@ npm i rxjs
 ## A minimal module
 
 ```ts
-import type { FbModule, FbNodeWorker, FbNodeMount } from '@scaljeri/flow-based-node-utils';
+import type { FbMountModule, FbNodeWorker, FbNodeMount } from '@scaljeri/flow-based-node-utils';
 import { lastValue } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject } from 'rxjs';
 
@@ -78,8 +78,13 @@ export default {
       worker: DoubleWorker,
     },
   },
-} satisfies FbModule;
+} satisfies FbMountModule;
 ```
+
+`FbMountModule`, not a plain `FbModule` annotation: `FbModule` is generic in
+the component type and defaults to `unknown`, which absorbs the whole
+`component` union — a typo'd `{ small: { mont: ... } }` compiled clean and
+mounted as a blank box. The alias is the same module with its views checked.
 
 Bundle it to one self-contained ES module and serve it anywhere with a JS
 content-type and CORS open to the editor's origin:
@@ -95,7 +100,7 @@ but **off** until a reader consents, so opening a flow never runs unseen code.
 ## What's in the box
 
 **The contract (types — erased at build):**
-`FbModule`, `FbFormatDef`, `FbNodeWorker`, `FbNodeWorkerCtor`, `FbNodeMount`,
+`FbMountModule` (author against this one), `FbModule`, `FbFormatDef`, `FbNodeWorker`, `FbNodeWorkerCtor`, `FbNodeMount`,
 `FbNodeContext`, `FbNodeApi`, `FbNodeHandle`, `FbNodeSettings`, `FbNodeType`,
 `FbNodeTypes`, `FbViewComponents`, `FbSocket`, `FbSocketType`, `FbSocketSide`,
 `FbAddableSockets`.
@@ -132,7 +137,7 @@ export default {
   prefix: 'demo',
   contract: FB_MODULE_CONTRACT_VERSION,
   // ...
-} satisfies FbModule;
+} satisfies FbMountModule;
 ```
 
 Optional — an unstamped module reads as version 1 and always loads. A host that

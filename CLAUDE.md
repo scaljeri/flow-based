@@ -2,7 +2,7 @@
 
 An Angular library for flow-based programming (`projects/flow-based*`), a
 framework-free web-component shell (`flow-based-lit`), lazily loaded node
-modules (`-math`, `-graphs`, `-network`, `-data`), and a demo application in
+modules (`-math`, `-complex`, `-graphs`, `-network`, `-data`), and a demo application in
 `src/app`, deployed at <https://playground.calje.eu/fbp/>. The app bundles no
 demo flow: it opens one it ships as a file (`src/assets/flows/`), the same way
 anyone loads a flow. Those files are the demos — imaginary numbers, a crypto
@@ -21,14 +21,15 @@ behind individual decisions belong in the code comments and in `docs/`.
 | Engine | `projects/flow-based-core` | Framework-free: the flow graph (`flow.ts`), save/load and migrations (`serialization.ts`, `FB_FLOW_FORMAT_VERSION`), the inline prose parser (`inline.ts`). |
 | Shell | `projects/flow-based-lit` | Web components on core alone — canvas, nodes, connections, the document renderer (`document-element.ts`). No Angular. |
 | Angular wrapper | `projects/flow-based` | Hosts the shell; owns the module and format registry (`module-registry.ts`). Never duplicate what the shell already does. |
+| Authoring kit | `projects/flow-based-node-utils` | What a node LIBRARY types against: the contract re-exported framework-free (`FbMountModule` is the checked alias) plus the small runtime helpers a URL lib bundles. Never import the Angular package from a lib. |
 | Standard palette | `projects/flow-based-basics` | The set every editor starts with — value, clock/trigger/gate, tap, script, stats, meter, the state cells, the subflow and its flow-param. A host spreads `BASICS_TYPES` into its registry; not a lazily loaded module. |
 | Node modules | `projects/flow-based-{math,complex,graphs,network,data}` | Lazily loaded chunks, registered via `src/app/modules.service.ts`. `complex` is the imaginary-numbers article's machinery — the proof that one subject's nodes ship as a module a flow asks for. |
 | Demo | `src/app` | The application. Opens on a shipped flow; `fixtures.ts` holds only the `basic` starter it falls back to. |
 | Demo flows | `src/assets/flows` | The flows the app ships as files: `crypto.json` (the default it opens on), `imaginary-numbers.json`, `tno.json`. Loaded, not bundled. |
 | Flow libs | `libs` → `src/assets/modules` | Framework-free node modules a demo flow loads by URL (`config.modules`). `libs/crypto.ts` builds to `assets/modules/crypto.js` via `scripts/build-libs.mjs`; must stay framework-free, like `playground/modules/`. |
 
-Build order is core → lit → flow-based → basics → modules; `npm run build:lib` encodes
-it. End-to-end tests use two servers: port 4200 serves the Angular demo
+Build order is core → lit → node-utils → flow-based → basics → modules;
+`npm run build:lib` encodes it. End-to-end tests use two servers: port 4200 serves the Angular demo
 (`e2e/smoke.spec.ts`), port 4400 the lit harness (`e2e/lit-shell.spec.ts`).
 
 ## Commands
@@ -38,7 +39,7 @@ it. End-to-end tests use two servers: port 4200 serves the Angular demo
 | `npm start` | Builds the libraries, then serves the demo on port 4200. |
 | `npm run build:lib` | Builds the libraries in dependency order. Required before the demo can build or its tests can resolve them — including on a fresh clone. |
 | `npm run build:demo` | Libraries, demo application and playground modules into `dist/demo/browser`. |
-| `npm test` | Unit tests (core, flow-based, demo). |
+| `npm test` | Unit tests, every project with a suite, then `check:libs` — a plain tsc over `libs/` and `playground/modules/`, which `ng build` never type-checks. |
 | `npm run lint` | Every project. |
 | `npx playwright test` | End-to-end tests. `-g "<name>"` runs one. |
 | `npm run check:docs` | Compiles the `ts check` blocks in `docs/MODULES.md` — the only file it reads; a new doc with checked blocks joins `DOCS` in `scripts/check-doc-examples.mjs`. |

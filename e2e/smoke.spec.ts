@@ -1668,6 +1668,47 @@ test('the document can send an embedded reader to the flow, and back', async ({ 
 });
 
 /**
+ * The pill's keyboard contract, exactly: Shift coarsens a step by a decade,
+ * Alt refines it by one, and Escape hands back the value the edit STARTED
+ * from. The signs have been wrong once (Shift refined), and Escape used to
+ * keep the excursion because every keystroke had already committed it.
+ */
+test('a pill steps by decades with Shift and Alt, and Escape restores the start value', async ({ page }) => {
+  await page.goto('/');
+  await waitUntilReady(page);
+
+  await menuAction(page, 'doc');
+
+  const doc = page.locator('fb-flow-document');
+
+  await expect(doc.locator('h1')).toBeVisible();
+
+  const arc = doc.locator('.config-input').nth(1);
+
+  await expect(arc).toHaveValue('6.3');
+
+  const committed = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: any })
+      .editor.nodeById(1000).config.x.to);
+
+  // "6.3" steps by 0.1; Shift lifts that a decade to 1.
+  await arc.click();
+  await arc.press('Shift+ArrowUp');
+  await expect(arc).toHaveValue('7.3');
+  await expect.poll(committed).toBe(7.3);
+
+  // And Alt refines a decade below the shown precision: 0.01.
+  await arc.press('Alt+ArrowDown');
+  await expect(arc).toHaveValue('7.29');
+  await expect.poll(committed).toBe(7.29);
+
+  // Escape: the whole excursion is undone to the focus-time value.
+  await arc.press('Escape');
+  await expect.poll(committed).toBe(6.3);
+  await expect(arc).toHaveValue('6.3');
+});
+
+/**
  * No flash of the editor before the article.
  *
  * Opening the document awaits a dynamic KaTeX import, and while that resolved

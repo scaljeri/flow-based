@@ -757,6 +757,47 @@ test('renders inline formatting in a document, without letting it become markup'
   expect(injected.text).toContain('<img src=x');
 });
 
+/*
+ * Prose is written the way prose is typed: one Enter is a line break, a blank
+ * line is a new paragraph. Before this a single \n vanished into a space, so
+ * an author's deliberate break — an address, a verse, a caption line — was
+ * silently reflowed.
+ */
+test('a single newline in document prose is a line break, a blank line a paragraph', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect(canvas(page)).toBeVisible();
+  await page.locator('#view').click();
+  await expect(page.locator('fb-flow-document')).toBeVisible();
+
+  const doc = await page.evaluate(() => {
+    const editor = window.fbEditor as unknown as {
+      children: { doc?: { body?: string } }[];
+      changes: { emit(c: { kind: string }): void };
+    };
+
+    editor.children[2].doc!.body = 'line one\nline two\n\nnext paragraph';
+    editor.changes.emit({ kind: 'structure' });
+
+    return new Promise<{ breaks: number; first: string; second: string }>(resolve => {
+      setTimeout(() => {
+        const root = document.querySelector('fb-flow-document')!.shadowRoot!;
+        const paragraphs = [...root.querySelectorAll('p')];
+
+        resolve({
+          breaks: paragraphs[0]?.querySelectorAll('br').length ?? 0,
+          first: paragraphs[0]?.textContent ?? '',
+          second: paragraphs[1]?.textContent ?? '',
+        });
+      }, 50);
+    });
+  });
+
+  expect(doc.breaks).toBe(1);
+  expect(doc.first).toContain('line one');
+  expect(doc.first).toContain('line two');
+  expect(doc.second).toContain('next paragraph');
+});
+
 test('hosts a node written in React, in an editor that has never heard of React', async ({ page }) => {
   const problems: string[] = [];
   page.on('pageerror', err => problems.push(err.message));

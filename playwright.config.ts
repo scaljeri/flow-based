@@ -49,7 +49,15 @@ export default defineConfig({
   workers: 2,
   webServer: [
     {
-      command: 'npm run build:e2e && npx ng serve',
+      /*
+       * `--watch false`: nothing may recompile this server mid-run. The other
+       * server's command used to rebuild dist/flow-based-lit after this one was
+       * already serving, and the watcher's incremental rebuild against the
+       * half-written library failed with a spurious TS7006 — leaving the vite
+       * error overlay over the page, where it swallowed every click until the
+       * suite ran out of retries.
+       */
+      command: 'npm run build:e2e && npx ng serve --watch false',
       url: 'http://localhost:4200',
       reuseExistingServer: !process.env['CI'],
       /*
@@ -69,13 +77,16 @@ export default defineConfig({
     },
     {
       /*
-       * Builds what it serves. `build:e2e` sits in the OTHER server's command,
-       * which `reuseExistingServer` skips whenever a server is already up — so
-       * a harness built once stayed built, and this suite spent a day testing
-       * a shell from the day before. It caught nothing that changed, which is
-       * the worst way for a test to pass.
+       * Serves, never builds. It DID build (the stale-harness trap: a shell
+       * from the day before passing everything) — but that build ran in
+       * PARALLEL with the other server's `build:e2e`, and two `ng build`s
+       * writing dist/flow-based-lit at once corrupted whichever compile read
+       * it mid-write. `build:e2e` ends with the lit-demo bundle, so when the
+       * servers boot together the harness is fresh by construction. The trap
+       * that remains is the documented one: with a REUSED :4200 server no
+       * build runs at all — after a lit change, run build:lit-demo by hand.
        */
-      command: 'npm run serve:lit-demo',
+      command: 'node scripts/serve-static.mjs dist/lit-demo 4400',
       url: 'http://localhost:4400/',
       reuseExistingServer: !process.env['CI'],
       timeout: 360_000,
