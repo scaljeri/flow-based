@@ -232,6 +232,42 @@ export class FbEditor {
       this.viewport.changes.subscribe(() => this.changes.emit({ kind: 'viewport' })),
       this.history.changes.subscribe(() => this.changes.emit({ kind: 'history' })),
     );
+
+    // Asked while clamping a zoom, never pushed per change: the box around
+    // every node on screen is what lets zooming out reach the WHOLE flow —
+    // nodes overhang the plane — without costing a drag anything.
+    this.viewport.contentExtent(() => this.contentExtent());
+  }
+
+  /** The box around every node on screen, in plane pixels. */
+  private contentExtent(): { x: number; y: number; width: number; height: number } | null {
+    const plane = this.viewport.planeSize;
+
+    if (!plane.width) {
+      return null;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    for (const node of this.state?.children ?? []) {
+      if (node.id === undefined) {
+        continue;
+      }
+
+      const origin = this.geometry.nodeOrigin(node, plane);
+      // An unmeasured node (first render) counts as a point: better a floor
+      // that loosens a beat later than one computed from a guessed size.
+      const size = this.geometry.getNodeSize(node.id) ?? { width: 0, height: 0 };
+
+      minX = Math.min(minX, origin.x);
+      minY = Math.min(minY, origin.y);
+      maxX = Math.max(maxX, origin.x + size.width);
+      maxY = Math.max(maxY, origin.y + size.height);
+    }
+
+    return minX === Infinity
+      ? null
+      : { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }
 
   private readonly coreUnsubscribes: (() => void)[] = [];

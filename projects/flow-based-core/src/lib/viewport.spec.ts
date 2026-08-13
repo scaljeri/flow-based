@@ -153,6 +153,22 @@ describe('the standing zoom floor', () => {
     expect(viewport.zoom).toBeCloseTo(380 / 1200, 5);
   });
 
+  // Fitting the plane is not fitting the flow: nodes overhang the plane
+  // (percent positions, pixel sizes), and at the plane fit a phone still had
+  // nodes cut off both sides with no way to reach them.
+  it('the floor yields further when nodes overhang the plane', () => {
+    const viewport = new FbViewport();
+
+    viewport.setPlaneSize(1200, 600);
+    viewport.setViewSize(380, 650);
+    viewport.setZoomFloor(0.6);
+    viewport.contentExtent(() => ({ x: -100, y: 0, width: 1500, height: 600 }));
+    viewport.setZoom(0.01);
+
+    // The span is min(0, -100) to max(1200, 1400): 1500 plane px wide.
+    expect(viewport.zoom).toBeCloseTo(380 / 1500, 5);
+  });
+
   it('the floor holds when the whole plane already fits above it', () => {
     const viewport = new FbViewport();
 

@@ -3641,20 +3641,34 @@ test.describe('the initial fit on a finger', () => {
 
   // The floor guards tappability, not overview. Held rigid, a phone could
   // never see a large flow whole: zoom-out stopped at 0.6 with part of the
-  // graph forever off-screen, and pinning was the only way around.
+  // graph forever off-screen. And the fit is the FLOW's, not the plane's —
+  // nodes overhang the plane, and the plane fit still cut them off.
   test('zooming out goes exactly far enough to fit the whole flow', async ({ page }) => {
     await page.goto(HARNESS);
     await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
 
     // The same clamp every zoom path shares — buttons, wheel and pinch all
     // land in viewport.setZoom.
-    const zoom = await page.evaluate(() => {
+    const result = await page.evaluate(() => {
       window.fbEditor.viewport.setZoom(0.01);
 
-      return window.fbEditor.viewport.zoom;
+      const zoom = window.fbEditor.viewport.zoom as number;
+      const view = window.fbEditor.viewport.viewSize as { width: number; height: number };
+      const plane = window.fbEditor.viewport.planeSize as { width: number; height: number };
+      const boxes = [...document.querySelectorAll<HTMLElement>('fb-flow-canvas fb-node-box')];
+      const spanW = Math.max(plane.width, ...boxes.map(b => b.offsetLeft + b.offsetWidth))
+        - Math.min(0, ...boxes.map(b => b.offsetLeft));
+      const spanH = Math.max(plane.height, ...boxes.map(b => b.offsetTop + b.offsetHeight))
+        - Math.min(0, ...boxes.map(b => b.offsetTop));
+
+      return {
+        zoom,
+        expected: Math.max(0.2, Math.min(0.6, Math.min(view.width / spanW, view.height / spanH))),
+      };
     });
 
-    expect(zoom).toBeCloseTo(380 / 1200, 2);
+    expect(result.zoom).toBeLessThan(0.6);
+    expect(result.zoom).toBeCloseTo(result.expected, 3);
   });
 });
 
