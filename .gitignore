@@ -17,6 +17,9 @@
 
 # dependencies
 /node_modules
+# node_modules anywhere: a vitest cache under projects/*/node_modules slipped
+# into a commit once — the leading slash above only guards the root.
+node_modules/
 
 # IDEs and editors
 /.idea
