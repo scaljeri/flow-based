@@ -2,6 +2,18 @@ import { FbShape, shapeFits, typeScriptOf } from './shapes';
 import { FbNodeTypes } from './types';
 
 /**
+ * The version of the module contract this build of core speaks.
+ *
+ * A module MAY stamp the version it was built against in `FbModule.contract`; the
+ * host warns (never blocks) when a module expects a newer contract than it speaks
+ * — the same posture `FB_FLOW_FORMAT_VERSION` takes for a saved flow. Absent means
+ * "pre-versioning", read as 1 and never rejected, so every module written so far
+ * keeps loading. Bump this the day the contract changes in a way a module can
+ * feel.
+ */
+export const FB_MODULE_CONTRACT_VERSION = 1;
+
+/**
  * A data type a module brings with it: the format names its sockets speak.
  *
  * Two modules may declare the same name. They are the SAME type when their
@@ -64,6 +76,12 @@ export interface FbModule<TComponent = unknown> {
   prefix: string;
   /** The data types this module defines; used sockets need no declaration. */
   formats?: FbFormatDef[];
+  /**
+   * The module contract this was built against (`FB_MODULE_CONTRACT_VERSION`).
+   * Optional: absent reads as pre-versioning. A host warns, but still loads, when
+   * it is newer than the host speaks.
+   */
+  contract?: number;
   types: FbNodeTypes<TComponent>;
 }
 

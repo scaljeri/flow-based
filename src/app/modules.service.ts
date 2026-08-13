@@ -10,7 +10,7 @@ import {
   angularNodeTypes,
   prepareModule,
 } from '@scaljeri/flow-based';
-import { FB_BASE_SHAPES, FbSocketColors } from '@scaljeri/flow-based-core';
+import { FB_BASE_SHAPES, FB_MODULE_CONTRACT_VERSION, FbSocketColors } from '@scaljeri/flow-based-core';
 import { FB_SOCKET_PALETTE } from './fb-settings';
 import { APP_VERSION } from './version';
 
@@ -498,6 +498,19 @@ export class ModulesService {
 
       if (!mod) {
         throw new Error(`No such module: ${id}`);
+      }
+
+      /*
+       * A module built against a NEWER contract than this host speaks may use
+       * something the host has not learned yet. Warned, never blocked — the same
+       * posture a flow's format version takes, so an old host still loads a newer
+       * module and simply degrades where it cannot follow. Absent = pre-versioning.
+       */
+      if (mod.contract && mod.contract > FB_MODULE_CONTRACT_VERSION) {
+        console.warn(
+          `Module "${mod.name}" was built against contract v${mod.contract}, but this `
+          + `editor speaks v${FB_MODULE_CONTRACT_VERSION}; parts of it may not work.`,
+        );
       }
 
       /*

@@ -1,35 +1,11 @@
 /**
- * What a request puts on the wire: what it got, and what it is.
+ * The shared wire formats this module speaks — the envelope a request wraps its
+ * reply in, and the geo point a map draws.
  *
- * Declared here rather than imported from the Network module, and unwrapped in
- * one place rather than in every node that might be fed by a request. The two
- * modules share a wire format, not a package — a flow may well have one and
- * not the other.
+ * Their home is now the framework-free @scaljeri/flow-based-node-utils, so a data
+ * node, a network request and a framework-free lib of your own all read the SAME
+ * shape and guards from one place — they were hand-rolled in four files before.
+ * Re-exported here so this module's own nodes keep importing from './envelope'.
  */
-export interface FbEnvelope {
-  meta: { title?: string; description?: string };
-  value: unknown;
-}
-
-export function isEnvelope(value: unknown): value is FbEnvelope {
-  return !!value && typeof value === 'object' && 'meta' in value && 'value' in value;
-}
-
-/** The value itself, whether or not it arrived wearing its source's name. */
-export function unwrap(value: unknown): unknown {
-  return isEnvelope(value) ? value.value : value;
-}
-
-/**
- * A spot on the earth, as it travels.
- *
- * Declared here rather than imported from the Graphs module for the same
- * reason as the envelope above: the two modules share a wire format, not a
- * package, and a flow may well have one and not the other.
- */
-export interface Place {
-  lat: number;
-  lon: number;
-  label?: string;
-  ref?: string;
-}
+export type { FbEnvelope, Place } from '@scaljeri/flow-based-node-utils';
+export { isEnvelope, unwrap } from '@scaljeri/flow-based-node-utils';

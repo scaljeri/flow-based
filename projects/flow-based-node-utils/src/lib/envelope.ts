@@ -21,3 +21,14 @@ export function isEnvelope(value: unknown): value is FbEnvelope {
 export function unwrap(value: unknown): unknown {
   return isEnvelope(value) ? value.value : value;
 }
+
+/**
+ * A spot on the earth, as it travels — another shared WIRE FORMAT, so a map node
+ * and a data node speak the same shape without one importing the other's package.
+ */
+export interface Place {
+  lat: number;
+  lon: number;
+  label?: string;
+  ref?: string;
+}

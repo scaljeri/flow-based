@@ -1,0 +1,22 @@
+/*
+ * Type-checks the framework-free libs that ship as single-file URL modules —
+ * libs/ (built into the app's assets) and playground/modules/ (the catalogue).
+ *
+ * esbuild bundles these WITHOUT a type check, and no other tsconfig includes
+ * them (tsconfig.app covers only src/), so a type error would ship silently.
+ * This is the check that makes authoring a module against the contract actually
+ * bite. Needs the libraries built first (paths resolve to dist/) — run
+ * `npm run build:lib` before `npm run check:libs`.
+ */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": [
+    "libs/**/*.ts",
+    "playground/modules/**/*.ts"
+  ]
+}

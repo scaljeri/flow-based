@@ -1,4 +1,5 @@
 import { FbConnection, FbNodeWorker, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
+import { unwrap } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export type RequestMethod = 'GET' | 'POST';
@@ -56,12 +57,6 @@ export interface RequestConfig {
  * into a field would travel with all three. Anything needing one belongs
  * behind a server you control.
  */
-/** The value itself, whether or not it arrived wearing its source's name. */
-function unwrapValue(value: unknown): unknown {
-  return value && typeof value === 'object' && 'meta' in value && 'value' in value
-    ? (value as FetchedValue).value
-    : value;
-}
 
 export class RequestWorker implements FbNodeWorker {
   private readonly subject = new ReplaySubject<unknown>(1);
@@ -134,7 +129,7 @@ export class RequestWorker implements FbNodeWorker {
        * that is meant to follow the current one.
        */
       if (named === 'url') {
-        const next = value === undefined || value === null ? '' : String(unwrapValue(value));
+        const next = value === undefined || value === null ? '' : String(unwrap(value));
 
         if (next && next !== this.wiredUrl) {
           this.wiredUrl = next;

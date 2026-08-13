@@ -34,4 +34,4 @@ export type {
  * (import it rather than re-typing the string, which fails silently on a typo);
  * `readConfigValue`/`writeConfigValue` walk a dotted path in a config object.
  */
-export { FB_DRAG_IGNORE, readConfigValue, writeConfigValue } from '@scaljeri/flow-based-core';
+export { FB_DRAG_IGNORE, FB_MODULE_CONTRACT_VERSION, readConfigValue, writeConfigValue } from '@scaljeri/flow-based-core';
