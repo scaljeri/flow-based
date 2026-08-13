@@ -169,6 +169,21 @@ describe('the standing zoom floor', () => {
     expect(viewport.zoom).toBeCloseTo(380 / 1500, 5);
   });
 
+  // A flow's size is unbounded (a drag clamps nothing), so the fit must win
+  // from FB_ZOOM_MIN too — bounded at 0.2, the cannot-see-it-whole bug came
+  // straight back as soon as the flow outgrew ~1.6 planes.
+  it('the fit goes under FB_ZOOM_MIN when the flow has outgrown it', () => {
+    const viewport = new FbViewport();
+
+    viewport.setPlaneSize(1200, 600);
+    viewport.setViewSize(380, 650);
+    viewport.setZoomFloor(0.6);
+    viewport.contentExtent(() => ({ x: 0, y: 0, width: 4000, height: 600 }));
+    viewport.setZoom(0.01);
+
+    expect(viewport.zoom).toBeCloseTo(380 / 4000, 5);
+  });
+
   it('the floor holds when the whole plane already fits above it', () => {
     const viewport = new FbViewport();
 

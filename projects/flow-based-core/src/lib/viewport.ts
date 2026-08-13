@@ -2,6 +2,14 @@ import { FbEmitter } from './change-emitter';
 import { FbPosition, FbSize } from './types';
 
 export const FB_ZOOM_MIN = 0.2;
+
+/**
+ * The absolute end of zooming out, against degenerate zoom levels only.
+ * FB_ZOOM_MIN is the DEFAULT floor; the whole-flow fit may go under it — a
+ * flow dragged wide simply needs a smaller zoom to be seen whole, and holding
+ * 0.2 there brought the original bug straight back one screenful later.
+ */
+export const FB_ZOOM_HARD_MIN = 0.02;
 export const FB_ZOOM_MAX = 4;
 
 /**
@@ -243,7 +251,7 @@ export class FbViewport {
    */
   private effectiveFloor(): number {
     if (!this.view.width || !this.plane.width) {
-      return Math.max(FB_ZOOM_MIN, this.zoomFloor);
+      return Math.max(FB_ZOOM_HARD_MIN, this.zoomFloor);
     }
 
     const content = this.content?.() ?? null;
@@ -253,7 +261,10 @@ export class FbViewport {
       - Math.min(0, content?.y ?? 0);
     const fit = Math.min(this.view.width / spanWidth, this.view.height / spanHeight);
 
-    return Math.max(FB_ZOOM_MIN, Math.min(this.zoomFloor, fit));
+    // The fit wins from FB_ZOOM_MIN too: the flow's size is not bounded (a
+    // drag clamps nothing), so a floor bounded at 0.2 re-created the
+    // cannot-see-it-whole bug as soon as the flow outgrew ~1.6 planes.
+    return Math.max(FB_ZOOM_HARD_MIN, Math.min(this.zoomFloor, fit));
   }
 
   private clamp(zoom: number): number {

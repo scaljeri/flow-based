@@ -3670,6 +3670,39 @@ test.describe('the initial fit on a finger', () => {
     expect(result.zoom).toBeLessThan(0.6);
     expect(result.zoom).toBeCloseTo(result.expected, 3);
   });
+
+  // The flow's size is unbounded — dragging a node out simply grows it. The
+  // floor followed the fit only down to FB_ZOOM_MIN, so a flow wider than
+  // ~1.6 planes could not be seen whole again: the original bug, one
+  // screenful later.
+  test('growing the flow lets zooming out follow it', async ({ page }) => {
+    await page.goto(HARNESS);
+    await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+    const result = await page.evaluate(() => {
+      const editor = window.fbEditor;
+      const node = editor.children.find(c => c.id !== undefined)!;
+
+      // What a long drag to the right does: a position far beyond the plane.
+      node.ui = { ...node.ui, position: { x: 400, y: 10 } };
+      editor.geometry.emitMoved(node.id!);
+
+      editor.viewport.setZoom(0.001);
+
+      const zoom = editor.viewport.zoom as number;
+      const view = editor.viewport.viewSize as { width: number };
+      const plane = editor.viewport.planeSize as { width: number };
+      const boxes = [...document.querySelectorAll<HTMLElement>('fb-flow-canvas fb-node-box')];
+      const spanW = Math.max(plane.width, ...boxes.map(b => b.offsetLeft + b.offsetWidth))
+        - Math.min(0, ...boxes.map(b => b.offsetLeft));
+
+      return { zoom, fits: spanW * zoom <= view.width + 1 };
+    });
+
+    // Under FB_ZOOM_MIN, and the whole span inside the view.
+    expect(result.zoom).toBeLessThan(0.2);
+    expect(result.fits).toBe(true);
+  });
 });
 
 /**
