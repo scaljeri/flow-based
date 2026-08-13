@@ -1128,20 +1128,67 @@ describe('config-write announcement', () => {
     setConfigValue(path: string, value: unknown) { this.config[path] = value; }
   }
 
-  it('a worker setConfigValue emits a config change from the engine itself', () => {
+  it('a worker setConfigValue is announced by the engine, with the node id', () => {
     const types = { tunable: { worker: Tunable, settings: { isFlow: false, title: 'T', config: {}, sockets: [] } } };
     const flow = new Flow(types as any).initialize({
       id: 1, children: [{ id: 2, type: 'tunable', sockets: [] }], connections: [],
     } as any);
 
-    const kinds: string[] = [];
-    flow.changes.subscribe(kind => kinds.push(kind));
+    const announced: number[] = [];
+    flow.configChanges.subscribe(id => announced.push(id));
 
     flow.getWorker(2)!.setConfigValue!('speed', 9);
 
-    // The write landed AND was announced — the caller did nothing extra.
+    // The write landed AND was announced, ADDRESSED — the caller did nothing
+    // extra, and the bare unaddressed kind (which made the document flash
+    // every figure) is gone.
     expect((flow.getWorker(2) as any).config.speed).toBe(9);
-    expect(kinds).toContain('config');
+    expect(announced).toContain(2);
+  });
+
+  // The flagship the first wrap missed: a Value slider's worker.set() used to
+  // assign config directly, invisible to the engine. The house rule now is
+  // that every mutator ROUTES through setConfigValue — sugar over the one
+  // announced method — which the wrap then addresses and announces.
+  it('a worker mutator routed through setConfigValue is announced', () => {
+    class Sugared extends Tunable {
+      set(value: unknown) { this.setConfigValue('value', value); }
+    }
+
+    const types = { tunable: { worker: Sugared, settings: { isFlow: false, title: 'T', config: {}, sockets: [] } } };
+    const root: any = { id: 1, children: [{ id: 2, type: 'tunable', sockets: [] }], connections: [] };
+    const flow = new Flow(types as any).initialize(root);
+
+    const announced: number[] = [];
+    flow.configChanges.subscribe(id => announced.push(id));
+
+    (flow.getWorker(2) as any).set(42);
+
+    expect(announced).toContain(2);
+    expect(root.children[0].config.value).toBe(42);
+  });
+
+  // The subflow-params face follows a named child's own edits: dragging the
+  // param's slider inside the subflow used to leave the pill (which reads the
+  // subflow's config.params) at the stale value.
+  it('writing a named child\'s value updates the parent subflow\'s params face', () => {
+    const types = {
+      tunable: { worker: Tunable, settings: { isFlow: false, title: 'T', config: {}, sockets: [] } },
+      flow: { settings: { isFlow: true, title: 'Sub', config: {}, sockets: [] } },
+    };
+    const root: any = {
+      id: 1, children: [{
+        id: 10, type: 'flow', sockets: [],
+        children: [{ id: 20, type: 'tunable', config: { name: 'top', value: 5 }, sockets: [] }],
+        connections: [],
+      }], connections: [],
+    };
+    const flow = new Flow(types as any).initialize(root);
+
+    // The child's own control writes, as the slider does (via setConfigValue).
+    flow.getWorker(20)!.setConfigValue!('value', 9);
+
+    expect(root.children[0].config.params.top).toBe(9);
   });
 });
 
@@ -1230,5 +1277,34 @@ describe('boundary narrowing', () => {
     // ['number','string'] ∩ ['string','point'] = string — uniquely determined.
     expect(root.children[0].sockets[0].format).toBe('string');
     expect(root.children[1].sockets[0].format).toBe('string');
+  });
+});
+
+// The provenance used to live on the ENGINE INSTANCE and died on every rebuild:
+// after an undo/paste/reload the negotiated format read as declared, and the
+// ghost bug this guards returned on every non-fresh path. Now it is state.
+describe('adopted-format provenance survives a rebuild', () => {
+  it('a negotiated format is forgotten even after clone + reinitialize', () => {
+    const types = {
+      src: { worker: RecordingWorker, settings: { isFlow: false, title: 'S', config: {}, sockets: [] } },
+      bare: { worker: RecordingWorker, settings: { isFlow: false, title: 'B', config: {}, sockets: [] } },
+    };
+    const root: any = {
+      id: 1, children: [
+        { id: 2, type: 'src', sockets: [{ id: 20, type: 'out', format: 'number' }] },
+        { id: 3, type: 'bare', sockets: [{ id: 30, type: 'in' }] },
+      ], connections: [{ id: 100, from: 2, to: 3, out: 20, in: 30 }],
+    };
+
+    new Flow(types as any).initialize(root);
+    expect(root.children[1].sockets[0].format).toBe('number');   // adopted
+
+    // The rebuild every undo/paste/reload performs.
+    const restored = structuredClone(root);
+    const flow2 = new Flow(types as any).initialize(restored);
+
+    flow2.removeConnection(restored.connections[0], restored);
+    expect(restored.children[1].sockets[0].format ?? null).toBe(null);
+    expect(restored.children[1].sockets[0].adopted).toBeUndefined();
   });
 });

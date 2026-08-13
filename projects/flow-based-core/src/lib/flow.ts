@@ -9,7 +9,8 @@ import {
 import { FbAssignable, commonFormats, formatsCompatible, sameName } from './formats';
 import { FlowWorker } from './flow-worker';
 import { IdGenerator } from './id-generator';
-import { FbChangeEmitter } from './change-emitter';
+import { FbChangeEmitter, FbEmitter } from './change-emitter';
+
 import { ReplaySubject, Subscription } from 'rxjs';
 
 interface Node {
@@ -69,6 +70,14 @@ export class Flow {
    */
   readonly changes = new FbChangeEmitter();
 
+  /**
+   * A node's config was written — by a pill, a panel, its own control, or the
+   * engine's proxy catching a direct assignment. Carries the NODE id, which the
+   * plain FbChangeKind channel cannot. Subscribed by the shell, which forwards
+   * it as {kind:'config', nodeId}.
+   */
+  readonly configChanges = new FbEmitter<number>();
+
   constructor(private flowTypes: FbNodeTypes,
               private helpers?: FbNodeHelpers,
               private ids: IdGenerator = new IdGenerator(),
@@ -117,6 +126,9 @@ export class Flow {
     if (!this.workers[flow.id!] && flow.sockets?.length
       && connections.some(c => c.from === flow.id || c.to === flow.id)) {
       this.workers[flow.id!] = new FlowWorker(flow, childId => this.workers[childId]);
+      // The root worker takes the same announce treatment createWorker gives
+      // every child — without it, a root-param pill edit never marked dirty.
+      this.wrapSetConfigValue(flow);
     }
 
     this.propagateFormats();
@@ -200,7 +212,7 @@ export class Flow {
         node.sockets.forEach(socket => {
           if (socket.formats?.length) {
             socket.format = socket.formats.length === 1 ? socket.formats[0] : null;
-          } else if (socket.id !== undefined && this.adoptedSockets.has(socket.id)) {
+          } else if (socket.adopted) {
             /*
              * A bare socket whose type was only ever negotiated forgets it too
              * — propagation re-adopts whatever is STILL wired. Without this a
@@ -208,7 +220,7 @@ export class Flow {
              * of another type was refused with no feedback.
              */
             socket.format = null;
-            this.adoptedSockets.delete(socket.id);
+            delete socket.adopted;
           }
         });
 
@@ -754,10 +766,11 @@ export class Flow {
       for (const socket of [outSocket, inSocket]) {
         if (socket.format !== common[0]) {
           // A bare socket (no declared set, no prior format) is being TYPED BY
-          // THE WIRE here — remember that, so removing the wire can forget it.
-          // A socket that already carried a format keeps its provenance.
-          if (!socket.format && !socket.formats?.length && socket.id !== undefined) {
-            this.adoptedSockets.add(socket.id);
+          // THE WIRE here — mark it in the state, so removing the wire (in any
+          // session) can forget it. A socket already carrying a format keeps
+          // its provenance.
+          if (!socket.format && !socket.formats?.length) {
+            socket.adopted = true;
           }
 
           socket.format = common[0];
@@ -776,17 +789,6 @@ export class Flow {
    * means it may hold anything, which is what an empty declaration has always
    * meant here.
    */
-  /**
-   * Sockets whose format is purely NEGOTIATED — adopted onto a socket that
-   * declared nothing. Remembered so a wire removal can forget it again: an
-   * undeclared subflow-boundary socket kept the `number` its first wire gave it
-   * forever, then refused a `string` source on the strength of a ghost. Only
-   * declared-SET sockets were being reset, because for them "declared" and
-   * "negotiated" are distinguishable; for bare sockets this set is what
-   * distinguishes.
-   */
-  private readonly adoptedSockets = new Set<number>();
-
   private adopt(socket: FbSocket, format: string | null | undefined): boolean {
     if (!format) {
       return false;
@@ -798,8 +800,14 @@ export class Flow {
       return false;
     }
 
-    if (!declared.length && !socket.format && socket.id !== undefined) {
-      this.adoptedSockets.add(socket.id);
+    /*
+     * Mark the provenance IN THE STATE: a bare socket being typed by its wire.
+     * The flag survives serialization, undo snapshots and paste — a Set on this
+     * instance did not, and after any rebuild the negotiated format read as
+     * declared, resurrecting the ghost this exists to kill.
+     */
+    if (!declared.length && !socket.format) {
+      socket.adopted = true;
     }
 
     socket.format = format;
@@ -869,8 +877,16 @@ export class Flow {
       return;
     }
 
-    const {worker} = entry,
-      id = state.id!;
+    const id = state.id!;
+    const {worker} = entry;
+
+    /*
+     * The config exists BEFORE the worker sees it. Workers default a missing
+     * config (`config = {}`), which detaches them: every write landed on the
+     * worker's private object while the state serialized nothing — a node
+     * created without config silently lost all its edits.
+     */
+    state.config ??= {};
 
     if (worker) {
       this.workers[id] = new worker(state.config, state.sockets);
@@ -878,16 +894,30 @@ export class Flow {
       this.workers[id] = new FlowWorker(state, childId => this.workers[childId]);
     }
 
-    /*
-     * Every config write announces itself, from HERE, not from the callers.
-     *
-     * A worker's setConfigValue is called by the node's own controls, by the
-     * type's settings panel and by a document pill — and all but the pill wrote
-     * straight to the worker, invisible to whoever tracks unsaved changes:
-     * slide a Value slider, reload, and the edit was silently gone because no
-     * dirty flag ever rose and no draft was ever written. Wrapping the one
-     * method every path funnels through beats asking each caller to remember.
-     */
+    this.wrapSetConfigValue(state);
+  }
+
+  /**
+   * Every config write announces itself, from the ENGINE, not from the callers.
+   *
+   * setConfigValue is THE config-write contract: the doc pill calls it, the
+   * panels call it, and every worker's own sugar (a Value's set(), a panel
+   * write()) must route through it — a mutator that assigns config directly is
+   * invisible here, and its edits are silently lost on reload (no dirty flag,
+   * no draft). A Proxy on the config object was tried instead, to catch direct
+   * assignments too, and REJECTED: structuredClone cannot clone a Proxy, so
+   * the first history capture — every drag — would have thrown.
+   *
+   * The announcement carries the NODE id (configChanges): the earlier bare
+   * 'config' kind had no address, and the document view answered it by
+   * flashing every figure on the page per keystroke.
+   *
+   * A named child's `value` is a subflow PARAMETER: the write is mirrored onto
+   * the parent's `config.params` face, so the pill reading the subflow and the
+   * slider editing the child can never disagree.
+   */
+  private wrapSetConfigValue(state: FbNodeState): void {
+    const id = state.id!;
     const created = this.workers[id];
 
     if (created?.setConfigValue) {
@@ -895,8 +925,36 @@ export class Flow {
 
       created.setConfigValue = (path: string, value: unknown) => {
         write(path, value);
-        this.changes.emit('config');
+        this.syncParamFace(state, path);
+        this.configChanges.emit(id);
       };
+    }
+  }
+
+  /**
+   * A named child's `value` is a subflow PARAMETER — mirror the write onto the
+   * parent's `config.params` face, so a pill reading the subflow and the panel
+   * editing the child can never disagree. Before this, dragging the param's own
+   * slider left the pill at the old value and the saved JSON at odds with
+   * itself.
+   */
+  private syncParamFace(state: FbNodeState, path: string): void {
+    if (path !== 'value') {
+      return;
+    }
+
+    const name = (state.config as { name?: string } | undefined)?.name;
+
+    if (!name) {
+      return;
+    }
+
+    const parent = this.nodes[this.nodes[state.id!]?.parentId ?? -1]?.state;
+
+    if (parent?.children) {
+      const face = ((parent.config ??= {}) as { params?: Record<string, unknown> });
+
+      (face.params ??= {})[name] = (state.config as { value?: unknown }).value;
     }
   }
 

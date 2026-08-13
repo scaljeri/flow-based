@@ -111,13 +111,8 @@ export class WebSocketWorker implements FbNodeWorker {
   }
 
   write(key: keyof WebSocketConfig, value: string): void {
-    this.config[key] = value;
-
-    if (key === 'url') {
-      this.reconnect();
-    }
-
-    this.ticks.next();
+    // Sugar over setConfigValue — the engine's announce wrap sees only that.
+    this.setConfigValue(key, value);
   }
 
   setConfigValue(path: string, value: unknown): void {
@@ -128,6 +123,8 @@ export class WebSocketWorker implements FbNodeWorker {
       if (path === 'url') {
         this.reconnect();
       }
+
+      this.ticks.next();
     }
   }
 

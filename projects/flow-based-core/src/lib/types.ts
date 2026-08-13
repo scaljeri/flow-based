@@ -57,6 +57,16 @@ export interface FbSocket {
   description?: string;
   aux?: string;
   /**
+   * This socket's `format` was NEGOTIATED — adopted from a wire onto a socket
+   * that declared nothing — rather than authored. In the STATE (and therefore
+   * in saved JSON, undo snapshots and pastes) deliberately: it lived on the
+   * engine instance first, and died on every rebuild — after an undo or a
+   * reload the ghost format was indistinguishable from a declared one and the
+   * bug it marks returned. Cleared, together with the format, when the wires
+   * that justified it are gone.
+   */
+  adopted?: boolean;
+  /**
    * Whether this socket takes more than one connection: fan-in on an `in`,
    * fan-out on an `out`. Absent means true — the default, and what every flow
    * saved before this existed means. `false` caps the socket at ONE connection.

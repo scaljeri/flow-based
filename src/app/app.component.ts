@@ -377,7 +377,25 @@ export class AppComponent implements OnInit, AfterViewInit {
      */
     const fromData = params.get('flowdata');
 
-    if (fromData && await this.loadFromData(fromData)) {
+    if (fromData) {
+      if (await this.loadFromData(fromData)) {
+        return;
+      }
+
+      /*
+       * The packed link did not unpack — truncated by a chat app, mangled by a
+       * mailer. Same sticky treatment as a broken ?flow=: the fallback opens
+       * SOMETHING, and the failure survives it — every fallback path nulls
+       * loadError, so without this the recipient silently got a different flow
+       * and edited it believing the link had worked.
+       */
+      await this.openFallback();
+      this.zone.run(() => {
+        this.loadError = 'Could not open the shared flow — the link\'s data did not unpack '
+          + '(links can be truncated in transit). Showing your own flows instead.';
+        this.cdr.detectChanges();
+      });
+
       return;
     }
 
@@ -523,7 +541,9 @@ export class AppComponent implements OnInit, AfterViewInit {
       if (draft) {
         // A restored draft is unsaved by definition; its baseline is the SAVED
         // copy, so it reads dirty and STAYS dirty (until edited back or Saved).
+        // Stamped, like every comparison side — see captureBaselineSoon.
         this.dirty = true;
+        this.modules.stamp(saved);
         this.loadedJson = serializeFlowToJson(saved);
       } else {
         // A clean load: baseline once the engine settles, NOT now — loading
@@ -534,7 +554,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.captureBaselineSoon();
       }
 
-      this.loadError = moduleError;
+      this.loadError = moduleError ?? this.takeStorageWarning();
       this.reflectUrl();
       this.cdr.detectChanges();
     });
@@ -653,7 +673,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       // Baseline once the load settles, not now — see watchEdits.
       this.loadedJson = null;
       this.captureBaselineSoon();
-      this.loadError = null;
+      this.loadError = this.takeStorageWarning();
       this.reflectUrl();
       this.cdr.detectChanges();
     });
@@ -735,10 +755,15 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.modules.stamp(this.flow);
 
       if (!this.store.saveDraft(this.currentFlowId, this.flow)) {
-        // Storage is full and the promised draft was NOT written. Said out
-        // loud — silently dropping it turned "your changes stay as a draft"
-        // into data loss at the worst moment.
-        this.loadError = 'Storage is full — the unsaved changes could not be kept as a draft.';
+        /*
+         * Storage is full and the promised draft was NOT written. Said out
+         * loud — and REMEMBERED: flushDraft's two switch-time callers write
+         * loadError themselves a few microtasks later, which used to clobber
+         * this exact warning, making the loss it reports silent after all.
+         * They pick the pending warning up (see openStored/applyLoadedFlow).
+         */
+        this.pendingStorageWarning = 'Storage is full — the unsaved changes of the previous flow could not be kept as a draft.';
+        this.loadError = this.pendingStorageWarning;
       }
     }
   }
@@ -843,14 +868,65 @@ export class AppComponent implements OnInit, AfterViewInit {
    * for two real data-loss holes; see watchEdits.)
    */
   private captureBaselineSoon(): void {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    const generation = ++this.baselineGeneration;
+
+    const capture = () => {
+      /*
+       * A NEWER load supersedes this capture. Without the generation check, a
+       * capture scheduled for flow A could fire after flow B (with a draft)
+       * opened, overwrite the baseline with B's on-screen state, and the next
+       * reconcile deleted B's draft while marking it clean — unsaved edits on
+       * screen with no unload warning.
+       */
+      if (generation !== this.baselineGeneration) {
+        return;
+      }
+
       // In the zone, so the template binding (data-baseline='ready' on the
       // toolbar) actually re-renders — RAF fires outside Angular.
       this.zone.run(() => {
+        /*
+         * STAMPED, because every later comparison side is stamped too
+         * (saveDraftSoon, persist). Unstamped, a flow whose authored module
+         * URLs differ from stamp's output — the crypto showcase — could never
+         * reconcile: the dot stayed lit forever on the URL difference alone.
+         */
+        this.modules.stamp(this.flow);
         this.loadedJson = serializeFlowToJson(this.flow);
         this.cdr.detectChanges();
       });
-    }));
+    };
+
+    /*
+     * Two frames after the load — OR 400ms, whichever comes first. The timeout
+     * matters in hidden tabs, where requestAnimationFrame never fires: a flow
+     * opened in a background tab otherwise sat baseline-less until focus, with
+     * everything that happened meanwhile absorbed as load echo.
+     */
+    let done = false;
+    const once = () => {
+      if (!done) {
+        done = true;
+        capture();
+      }
+    };
+
+    requestAnimationFrame(() => requestAnimationFrame(once));
+    setTimeout(once, 400);
+  }
+
+  /** Bumped per load; a pending capture from an older load must not fire. */
+  private baselineGeneration = 0;
+
+  /** A storage-full draft failure waiting to be shown by the next load. */
+  private pendingStorageWarning: string | null = null;
+
+  private takeStorageWarning(): string | null {
+    const warning = this.pendingStorageWarning;
+
+    this.pendingStorageWarning = null;
+
+    return warning;
   }
 
   /**
@@ -953,6 +1029,16 @@ export class AppComponent implements OnInit, AfterViewInit {
    * then becomes the flow's source so its share link points at the saved copy.
    */
   private async pushRemote(url: string): Promise<void> {
+    /*
+     * Captured BEFORE the await: the push can be slow, and the person can open
+     * another flow while it flies. The completion used to act on whatever was
+     * current at RESOLUTION — stamping flow A's canonical URL onto flow B's
+     * shelf entry (a reload of that URL then opened B), and marking the wrong
+     * flow behind. Everything below books against `id`; the parts that touch
+     * what is ON SCREEN run only if the flow is still current.
+     */
+    const id = this.currentFlowId;
+
     this.notify(`Saving to ${this.hostOf(url)}…`);
 
     try {
@@ -962,12 +1048,11 @@ export class AppComponent implements OnInit, AfterViewInit {
 
       this.zone.run(() => {
         /*
-         * Cleared for THIS flow only. As one global boolean, flow A's failed
-         * push lit flow B's dot, and B's successful push then cleared it —
-         * masking that A was still behind; A's endpoint was never retried.
+         * Cleared for THE PUSHED flow — not whatever is current when the
+         * promise lands.
          */
-        if (this.currentFlowId) {
-          this.remoteBehindIds.delete(this.currentFlowId);
+        if (id) {
+          this.remoteBehindIds.delete(id);
         }
 
         this.shareNotice = `Saved to ${this.hostOf(url)}.`;
@@ -975,30 +1060,32 @@ export class AppComponent implements OnInit, AfterViewInit {
         this.shareChoosing = false;
 
         if (canonicalUrl) {
-          this.currentSourceUrl = canonicalUrl;
-
           /*
-           * Onto the SHELF too. In memory only, a reload saw ?flow=<canonical>
-           * in the address bar, found no entry mirroring it, re-fetched, and
+           * Onto the SHELF of the PUSHED flow. In memory only, a reload saw
+           * ?flow=<canonical>, found no entry mirroring it, re-fetched, and
            * minted a DUPLICATE entry with no endpoint — every later Save said
            * "Saved." locally and the published copy silently went stale.
            */
-          if (this.currentFlowId) {
-            this.store.rememberSource(this.currentFlowId, canonicalUrl);
+          if (id) {
+            this.store.rememberSource(id, canonicalUrl);
           }
 
-          this.reflectUrl();
+          // The address bar reflects the flow ON SCREEN only.
+          if (id === this.currentFlowId) {
+            this.currentSourceUrl = canonicalUrl;
+            this.reflectUrl();
+          }
         }
 
         this.cdr.detectChanges();
       });
     } catch (err) {
       this.zone.run(() => {
-        // The local copy is saved; the endpoint is behind. Mark THIS flow so
-        // Save can retry the push directly, instead of insisting there is
-        // nothing to save.
-        if (this.currentFlowId) {
-          this.remoteBehindIds.add(this.currentFlowId);
+        // The local copy is saved; the endpoint is behind. Mark THE PUSHED
+        // flow so Save can retry the push directly, instead of insisting
+        // there is nothing to save.
+        if (id) {
+          this.remoteBehindIds.add(id);
         }
 
         const auth = err instanceof FbRemoteSaveError && err.kind === 'auth';

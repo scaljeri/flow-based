@@ -76,8 +76,9 @@ export class TriggerWorker implements FbNodeWorker {
   }
 
   write(key: keyof TriggerConfig, value: string): void {
-    this.config[key] = value;
-    this.ticks.next();
+    // Sugar over setConfigValue: a direct assignment bypasses the engine's
+    // announce wrap and the edit is lost on reload.
+    this.setConfigValue(key, value);
   }
 
   setConfigValue(path: string, value: unknown): void {

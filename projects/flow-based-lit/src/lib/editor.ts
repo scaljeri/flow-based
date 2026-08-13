@@ -301,7 +301,15 @@ export class FbEditor {
     // with an interval, say, would tick on unobserved forever.
     this.flow?.destroy();
     this.flow = new Flow(this.types, this.helpers, this.ids, this.assignable);
-    this.unbind = this.flow.changes.subscribe(kind => {
+
+    // Config writes arrive on their own channel WITH the node id — the plain
+    // kind channel cannot carry one, and an unaddressed 'config' made the
+    // document flash every figure per keystroke.
+    const unbindConfig = this.flow.configChanges.subscribe(nodeId => {
+      this.changes.emit({ kind: 'config', nodeId });
+    });
+
+    const unbindKinds = this.flow.changes.subscribe(kind => {
       /*
        * A half-drawn connection does not survive a change to the graph.
        *
@@ -322,6 +330,12 @@ export class FbEditor {
 
       this.changes.emit({ kind });
     });
+
+    this.unbind = () => {
+      unbindConfig();
+      unbindKinds();
+    };
+
     this.flow.initialize(this.root);
 
     this.pending = null;
@@ -517,13 +531,15 @@ export class FbEditor {
     let written = true;
 
     if (worker?.setConfigValue) {
+      // The engine announces this write itself (configChanges, with the id) —
+      // emitting here too doubled every pill keystroke.
       worker.setConfigValue(path, value);
     } else {
       written = writeConfigValue((node.config ??= {}) as Record<string, unknown>, path, value);
-    }
 
-    if (written) {
-      this.changes.emit({ kind: 'config', nodeId });
+      if (written) {
+        this.changes.emit({ kind: 'config', nodeId });
+      }
     }
 
     return written;

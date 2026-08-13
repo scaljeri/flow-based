@@ -75,7 +75,9 @@ export abstract class ScriptEditorView implements OnInit, AfterViewInit, OnDestr
      * stop because a brace is missing for a second.
      */
     editor.onDidChangeModelContent(() => {
-      this.worker?.setSource(editor.getValue());
+      // Through setConfigValue (its 'source' branch IS setSource), so the
+      // engine's announce wrap sees the edit — typed code must mark dirty.
+      this.worker?.setConfigValue?.('source', editor.getValue());
       this.cdr.detectChanges();
     });
 

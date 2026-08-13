@@ -201,17 +201,8 @@ export class RequestWorker implements FbNodeWorker {
   }
 
   set(key: keyof RequestConfig, value: string | number): void {
-    (this.config as Record<string, unknown>)[key] = value;
-
-    if (key === 'every') {
-      this.restart();
-    } else if (key === 'title' || key === 'description') {
-      // Naming a source is not a reason to ask for it again; re-send what is
-      // already held, wearing the new name.
-      this.resend();
-    } else {
-      void this.send();
-    }
+    // Sugar over setConfigValue — the engine's announce wrap sees only that.
+    this.setConfigValue(key, value);
   }
 
   read(key: keyof RequestConfig): string | number | undefined {
@@ -225,6 +216,10 @@ export class RequestWorker implements FbNodeWorker {
 
     if (path === 'every') {
       this.restart();
+    } else if (path === 'title' || path === 'description') {
+      // Naming a source is not a reason to ask for it again; re-send what is
+      // already held, wearing the new name.
+      this.resend();
     } else {
       void this.send();
     }

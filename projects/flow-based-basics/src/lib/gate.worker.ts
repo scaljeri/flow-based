@@ -108,7 +108,9 @@ export class GateWorker implements FbNodeWorker {
 
   /** The toggle on the node. A wired `open` outranks it — the wire is data. */
   toggle(): void {
-    this.setOpen(!this.open, 'config');
+    // Through setConfigValue, so the engine's announce wrap sees the flip —
+    // a toggle is an edit like any other and must mark the flow dirty.
+    this.setConfigValue('open', !this.open);
   }
 
   setConfigValue(path: string, value: unknown): void {

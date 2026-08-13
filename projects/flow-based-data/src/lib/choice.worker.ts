@@ -110,8 +110,8 @@ export class ChoiceWorker implements FbNodeWorker {
   }
 
   set(which: number): void {
-    this.config.which = Math.max(0, Math.round(which));
-    this.emit();
+    // Sugar over setConfigValue (the engine's announce wrap sees only that).
+    this.setConfigValue('which', Math.max(0, Math.round(which)));
   }
 
   /** Tunable from a document: which of a published list is exactly that kind. */
@@ -127,9 +127,7 @@ export class ChoiceWorker implements FbNodeWorker {
   }
 
   write(key: keyof ChoiceConfig, value: string): void {
-    (this.config as Record<string, unknown>)[key] = value;
-    this.declareOutput();
-    this.emit();
+    this.setConfigValue(key, value);
   }
 
   /**

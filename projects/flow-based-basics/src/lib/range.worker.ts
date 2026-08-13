@@ -97,8 +97,8 @@ export class RangeWorker implements FbNodeWorker {
   }
 
   write(key: keyof RangeConfig, value: number | boolean): void {
-    (this.config as Record<string, unknown>)[key] = value;
-    this.replay();
+    // Sugar over setConfigValue — the engine's announce wrap sees only that.
+    this.setConfigValue(key, value);
   }
 
   /** Tunable from a document: an article can scrub the target interval. */

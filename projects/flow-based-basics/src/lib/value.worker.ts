@@ -114,9 +114,13 @@ export class ValueWorker implements FbNodeWorker {
     return this.config.label || this.config.name || '';
   }
 
+  /**
+   * Sugar over setConfigValue — the HOUSE RULE for every mutator. A direct
+   * config assignment is invisible to the engine's announce wrap: sliding the
+   * slider never marked the flow dirty, and the edit was gone on reload.
+   */
   set(value: number | string): void {
-    this.config.value = value;
-    this.emit();
+    this.setConfigValue('value', value);
   }
 
   read(key: keyof ValueConfig): string {
@@ -126,13 +130,7 @@ export class ValueWorker implements FbNodeWorker {
   }
 
   write(key: keyof ValueConfig, value: string | number): void {
-    (this.config as Record<string, unknown>)[key] = value;
-
-    if (key === 'kind') {
-      this.declareOutput();
-    }
-
-    this.emit();
+    this.setConfigValue(key, value);
   }
 
   /** Tunable from a document — that is this node's whole reason to exist. */

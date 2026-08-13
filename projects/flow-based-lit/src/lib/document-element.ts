@@ -1778,12 +1778,16 @@ export class FbFlowDocumentElement extends LitElement {
    * dead-but-correct silence claiming nothing did.
    */
   private dependentFigures(nodeId?: number): number[] {
-    const mounted = [...this.hosts.keys()];
-
+    /*
+     * No address, no flash. Every config event now carries its node id (the
+     * engine's configChanges channel); an unaddressed one is a stray, and
+     * answering it with ALL figures strobed the whole page per keystroke.
+     */
     if (nodeId === undefined) {
-      return mounted;
+      return [];
     }
 
+    const mounted = [...this.hosts.keys()];
     const dependents = this.dependentsOf(nodeId);
     const hit = mounted.filter(id => dependents.has(id));
 
