@@ -809,6 +809,27 @@ export class Flow {
     } else if (this.flowTypes[state.type].settings.isFlow) {
       this.workers[id] = new FlowWorker(state, childId => this.workers[childId]);
     }
+
+    /*
+     * Every config write announces itself, from HERE, not from the callers.
+     *
+     * A worker's setConfigValue is called by the node's own controls, by the
+     * type's settings panel and by a document pill — and all but the pill wrote
+     * straight to the worker, invisible to whoever tracks unsaved changes:
+     * slide a Value slider, reload, and the edit was silently gone because no
+     * dirty flag ever rose and no draft was ever written. Wrapping the one
+     * method every path funnels through beats asking each caller to remember.
+     */
+    const created = this.workers[id];
+
+    if (created?.setConfigValue) {
+      const write = created.setConfigValue.bind(created);
+
+      created.setConfigValue = (path: string, value: unknown) => {
+        write(path, value);
+        this.changes.emit('config');
+      };
+    }
   }
 
   /*

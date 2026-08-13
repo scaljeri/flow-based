@@ -458,8 +458,30 @@ export class ModulesService {
 
     const config = (flow.config ??= {});
 
-    if (needed.length) {
-      config.modules = needed;
+    /*
+     * KEEP any declaration this pass cannot account for. A module whose load
+     * FAILED (a 404 after a redeploy, an offline open) was remembered without a
+     * prefix, so it can never appear in `needed` — and dropping it here deleted
+     * the flow's only record of which lib it needs: one draft flush during an
+     * outage and the flow could never find its nodes again, even after the lib
+     * came back. A stale duplicate URL is a far smaller cost than that.
+     */
+    const kept = (config.modules ?? []).filter(entry => {
+      const href = ModulesService.absolute(entry.url);
+      // Own libs are remembered with a build stamp, remote ones bare — match either.
+      const info = this.fetched.find(candidate =>
+        candidate.url === href || candidate.url === this.withBuild(href));
+
+      // A LOADED module is fully accounted for: used → it is in `needed`,
+      // unused → dropping it is stamp's cleanup job. Only the unaccountable
+      // (failed or never-seen) declaration is kept.
+      return !info || !info.prefix;
+    });
+
+    const modules = [...needed, ...kept];
+
+    if (modules.length) {
+      config.modules = modules;
     } else {
       delete config.modules;
     }

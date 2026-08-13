@@ -6008,3 +6008,124 @@ test('the crypto compare reads its operands from its sockets, which are fixed', 
   await expect(socketEditor.locator('.formats')).toHaveCount(0);
   await expect(socketEditor.locator('button.delete')).toHaveCount(0);
 });
+
+/**
+ * A config edit alone lights the dot and survives a reload as a draft.
+ *
+ * The dot and the draft listen to editor.changes, but node controls wrote
+ * straight to the worker (or, for worker-less notes, straight into state) —
+ * so a typed note or a slid slider raised no dot, wrote no draft, and was
+ * silently gone on reload. The engine now announces every worker config write
+ * itself, and refresh() is the worker-less channel.
+ */
+test('a config edit alone lights the dot, and survives a reload as a draft', async ({ page }) => {
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/?fbnoseed');
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+  await expect(page.locator('mat-toolbar')).toHaveAttribute('data-baseline', 'ready', { timeout: 15_000 });
+
+  // A note to type into (structure change — expected to light the dot).
+  await page.evaluate(() => (document.querySelector('fb-flow-canvas') as any).editor
+    .addNode('note', { x: 10, y: 70 }));
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).toHaveClass(/has-changes/);
+
+  // Save: the dot goes out. From here, only a CONFIG write can light it.
+  await save.click();
+  await expect(save).not.toHaveClass(/has-changes/);
+
+  await page.locator('fb-flow-canvas textarea').first().pressSequentially('remember me');
+  await expect(save).toHaveClass(/has-changes/, { timeout: 5_000 });
+
+  // The debounced draft caught it, so a reload resumes the text unsaved.
+  await page.waitForTimeout(900);
+  await page.reload();
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+  // The note ships with starter text; the typed suffix is what must survive.
+  await expect(page.locator('fb-flow-canvas textarea').first()).toHaveValue(/remember me/, { timeout: 10_000 });
+  await expect(save).toHaveClass(/has-changes/);
+});
+
+/**
+ * Replacing a dirty current flow shows the REPLACEMENT, not the old flow.
+ *
+ * replaceFlow wrote the new JSON, then openStored's flushDraft wrote the still
+ * -dirty OLD flow back as the entry's draft and reopened that — the screen kept
+ * the old flow and the next Save destroyed the JSON edit. The person already
+ * confirmed discarding; now the on-screen dirty state is dropped first.
+ */
+test('replacing a dirty current flow shows the replacement, not the old flow', async ({ page }) => {
+  const titleOf = () => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
+      ?.editor?.state?.title);
+
+  await page.goto('/?fbnoseed');
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Bitcoin');
+  await expect(page.locator('mat-toolbar')).toHaveAttribute('data-baseline', 'ready', { timeout: 15_000 });
+
+  // Dirty the flow.
+  await page.evaluate(() => (document.querySelector('fb-flow-canvas') as any).editor
+    .addNode('note', { x: 10, y: 70 }));
+  await expect(page.locator('mat-toolbar button.save-flow')).toHaveClass(/has-changes/);
+
+  // Replace its JSON, as the details dialog would.
+  await page.evaluate(() => {
+    const cmp = (window as any).ng.getComponent(document.querySelector('fb-root'));
+    const json = JSON.stringify({ version: 5, flow: {
+      type: 'flow', title: 'Replaced', sockets: [], connections: [],
+      children: [{ type: 'note', title: 'N', id: 2, sockets: [] }],
+    } });
+    return cmp.replaceFlow(cmp.currentFlowId, json);
+  });
+
+  await expect.poll(titleOf, { timeout: 10_000 }).toBe('Replaced');
+  // And it STAYS the replacement across a reload — no resurrected draft.
+  await page.reload();
+  await expect.poll(titleOf, { timeout: 15_000 }).toBe('Replaced');
+});
+
+/**
+ * Saving while a flow's module is unreachable keeps its modules declaration.
+ *
+ * `stamp` kept only loaded modules; one whose load FAILED was remembered
+ * without a prefix and could never match, so stamp deleted `config.modules` —
+ * one draft flush during an outage and the flow permanently forgot which lib
+ * its nodes need, even after the lib came back.
+ */
+test('saving while a module is unreachable keeps the flow\'s modules declaration', async ({ page }) => {
+  await page.route('**/assets/modules/broken.js*', route =>
+    route.fulfill({ status: 404, contentType: 'text/javascript', body: 'gone' }));
+
+  await page.addInitScript(() => {
+    const flow = {
+      type: 'flow', title: 'Broken lib',
+      config: { modules: [{ url: 'assets/modules/broken.js', prefix: 'brk' }] },
+      sockets: [], connections: [],
+      children: [{ type: 'note', title: 'N', id: 2, sockets: [] }],
+    };
+    localStorage.setItem('fb-flow-brk', JSON.stringify({ version: 5, flow }));
+    localStorage.setItem('fb-flows', JSON.stringify([{ id: 'brk', title: 'Broken lib' }]));
+    localStorage.setItem('fb-flow-current', 'brk');
+  });
+
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as any)?.editor?.state?.title), { timeout: 20_000 }).toBe('Broken lib');
+  await expect(page.locator('mat-toolbar')).toHaveAttribute('data-baseline', 'ready', { timeout: 15_000 });
+
+  // Edit and Save while the module is down.
+  await page.evaluate(() => (document.querySelector('fb-flow-canvas') as any).editor
+    .addNode('note', { x: 10, y: 70 }));
+  const save = page.locator('mat-toolbar button.save-flow');
+  await expect(save).toHaveClass(/has-changes/);
+  await save.click();
+  await expect(save).not.toHaveClass(/has-changes/);
+
+  // The saved copy still declares the lib it could not load.
+  const modules = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('fb-flow-brk')!).flow?.config?.modules);
+  expect(modules?.some((entry: { url: string }) => entry.url.includes('broken.js'))).toBe(true);
+});

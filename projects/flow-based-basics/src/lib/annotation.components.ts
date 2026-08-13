@@ -40,10 +40,16 @@ export const FRAME_SETTINGS: FbNodeSettings = {
   standalone: true,
   selector: 'fb-note-small',
   template: `
+    <!--
+      Committed per keystroke, not on blur: a note whose tab closes mid-thought
+      relied on a blur that never came, and the text was gone — (change) only
+      fires on leaving the field. Per-keystroke also keeps the draft buffer and
+      the unsaved dot honest while the person is still typing.
+    -->
     <textarea
       spellcheck="false"
       [value]="text"
-      (change)="onText($event)"
+      (input)="onText($event)"
       (keydown)="$event.stopPropagation()"
       (pointerdown)="$event.stopPropagation()"></textarea>
   `,
@@ -85,6 +91,10 @@ export class NoteSmallComponent {
     ((this.service.state.config ??= {}) as { text?: string }).text =
       (event.target as HTMLTextAreaElement).value;
     this.cdr.detectChanges();
+    // The note has no worker, so this write is invisible to the engine's
+    // config-wrap; refresh() is the worker-less channel that reports it (and
+    // marks the flow dirty). Without it a typed note was gone on reload.
+    this.service.refresh();
   }
 }
 

@@ -45,7 +45,17 @@ export type FbChangeKind =
   /** Sockets added or removed. */
   | 'sockets'
   /** Socket formats renegotiated. */
-  | 'formats';
+  | 'formats'
+  /**
+   * A node's config was written through its worker's `setConfigValue`.
+   *
+   * Emitted by the engine itself, from a wrap around every worker's method —
+   * NOT left to each caller. The callers are legion (a node's own controls, a
+   * type's settings panel, a document pill) and all but the pill wrote straight
+   * to the worker, so the app's unsaved-changes tracking never heard about
+   * them: slide a Value slider, reload, and the edit was silently gone.
+   */
+  | 'config';
 
 export type FbChangeListener = (kind: FbChangeKind) => void;
 

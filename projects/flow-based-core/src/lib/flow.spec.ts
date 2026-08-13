@@ -1080,3 +1080,37 @@ describe('duplicate connection ids', () => {
     expect(warnings.some(message => message.includes('share id 900'))).toBe(true);
   });
 });
+
+/*
+ * The engine announces config writes itself, from a wrap around every worker's
+ * setConfigValue — because the callers (a node's own controls, a settings
+ * panel, a document pill) mostly wrote straight to the worker, and whoever
+ * tracks unsaved changes never heard: slide a slider, reload, edit gone.
+ */
+describe('config-write announcement', () => {
+  class Tunable {
+    config: any;
+    constructor(config: any) { this.config = config ?? {}; }
+    getStream() { return new Subject<any>().asObservable(); }
+    setStream() {}
+    removeStream() {}
+    destroy() {}
+    setConfigValue(path: string, value: unknown) { this.config[path] = value; }
+  }
+
+  it('a worker setConfigValue emits a config change from the engine itself', () => {
+    const types = { tunable: { worker: Tunable, settings: { isFlow: false, title: 'T', config: {}, sockets: [] } } };
+    const flow = new Flow(types as any).initialize({
+      id: 1, children: [{ id: 2, type: 'tunable', sockets: [] }], connections: [],
+    } as any);
+
+    const kinds: string[] = [];
+    flow.changes.subscribe(kind => kinds.push(kind));
+
+    flow.getWorker(2)!.setConfigValue!('speed', 9);
+
+    // The write landed AND was announced — the caller did nothing extra.
+    expect((flow.getWorker(2) as any).config.speed).toBe(9);
+    expect(kinds).toContain('config');
+  });
+});

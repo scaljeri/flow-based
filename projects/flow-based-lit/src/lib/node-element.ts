@@ -996,7 +996,18 @@ export class FbNodeElement extends LitElement {
        * settings panel changing `config.preview` changes which child this node
        * draws, and nothing else would notice.
        */
-      refresh: () => this.requestUpdate(),
+      /*
+       * "Look at me again" is also "my state changed": every caller of refresh
+       * (a note's text, a frame's label, a subflow's preview pick) has just
+       * written into the node's config — these are the worker-LESS nodes, whose
+       * writes the engine's setConfigValue wrap can never see. Emitting config
+       * here is what lets the app's unsaved-changes tracking hear them; without
+       * it a retitled frame was silently gone on reload.
+       */
+      refresh: () => {
+        this.requestUpdate();
+        this.editor?.changes.emit({ kind: 'config', nodeId: this.state?.id });
+      },
       retype: () => editor.retypeNode(state),
       register: (callback, type) => editor.events.register(state.id!, callback, type),
       unregister: type => editor.events.unregister(state.id!, type),

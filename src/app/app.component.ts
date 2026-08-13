@@ -994,9 +994,23 @@ export class AppComponent implements OnInit, AfterViewInit {
 
       // It may name modules; register (consent-gated) before it could be drawn.
       await this.modules.enableFor(flow);
-      this.store.save(id, flow);
+
+      if (!this.store.save(id, flow)) {
+        // A quota failure silently discarded the Monaco edit before — the write
+        // has to say it failed, the same as persist() does.
+        throw new Error('the browser storage is full, nothing was written');
+      }
 
       if (id === this.currentFlowId) {
+        /*
+         * Replacing the flow ON SCREEN: the on-screen state is now the OLD
+         * content, and the person already confirmed discarding it. Left dirty,
+         * openStored's flushDraft wrote that old flow back as the new entry's
+         * draft and reopened it — the screen showed the old flow, and the next
+         * Save overwrote the replacement: the JSON edit was silently lost.
+         */
+        this.dirty = false;
+        clearTimeout(this.draftTimer);
         await this.openStored(id);
       }
     } catch (err) {
