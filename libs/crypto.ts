@@ -1,7 +1,10 @@
-// Types only, and from CORE — the framework-free contract. A URL-loaded lib has
-// no business typing against the Angular package (it would drag @angular/core
-// into the type graph, and nothing of the editor may reach this bundle anyway).
-import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket } from '@scaljeri/flow-based-core';
+// The authoring contract and helpers, from ONE framework-free package. The types
+// are erased at build; the helpers (FB_DRAG_IGNORE, injectStyleOnce, lastValue)
+// are bundled into this single file, the way rxjs is — the editor shares nothing
+// with a URL-loaded module at runtime, so a module carries what it needs.
+import type { FbModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket, FbSeries as Series }
+  from '@scaljeri/flow-based-node-utils';
+import { FB_DRAG_IGNORE, injectStyleOnce, lastValue } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject } from 'rxjs';
 
 /**
@@ -24,32 +27,6 @@ import { Observable, ReplaySubject } from 'rxjs';
  * whether now is cheap, are what the indicators answer.
  */
 
-/** Class the shell reads to leave a control alone; the string IS the contract. */
-const DRAG_IGNORE = 'fb-drag-ignore';
-
-/** A series of [x, y] points — the shape a plot draws as one layer. */
-type Series = number[][];
-
-/** The latest y of whatever arrived: a whole sweep, one point, or a number. */
-function lastValue(value: unknown): number | undefined {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : undefined;
-  }
-
-  if (Array.isArray(value)) {
-    const last = value[value.length - 1];
-
-    if (Array.isArray(last)) {
-      return typeof last[1] === 'number' ? last[1] : undefined;
-    }
-
-    if (typeof last === 'number') {
-      return typeof value[1] === 'number' ? value[1] : undefined;
-    }
-  }
-
-  return undefined;
-}
 
 /** A price, written the way a person reads it rather than to the cent. */
 function money(value: number | undefined): string {
@@ -536,7 +513,7 @@ function valueNode(host: HTMLElement, draw: (value: HTMLElement, sub: HTMLElemen
 function numberField(label: string, get: () => number, set: (n: number) => void, min = 1): HTMLElement {
   const field = document.createElement('label');
 
-  field.className = `crypto-field ${DRAG_IGNORE}`;
+  field.className = `crypto-field ${FB_DRAG_IGNORE}`;
   field.innerHTML = `<span>${label}</span>`;
 
   const input = document.createElement('input');
@@ -706,13 +683,7 @@ const STYLE = `
 @keyframes crypto-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 `;
 
-if (typeof document !== 'undefined' && !document.getElementById('crypto-style')) {
-  const style = document.createElement('style');
-
-  style.id = 'crypto-style';
-  style.textContent = STYLE;
-  document.head.appendChild(style);
-}
+injectStyleOnce('crypto-style', STYLE);
 
 /* ------------------------------------------------------------------ module */
 

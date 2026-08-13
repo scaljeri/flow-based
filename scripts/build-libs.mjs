@@ -15,10 +15,24 @@
  */
 import { build } from 'esbuild';
 import { mkdir, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const SOURCE = 'libs';
 const OUT = 'src/assets/modules';
+
+/*
+ * A lib may RUNTIME-import the framework-free node-utils package (its small
+ * helpers get bundled in, the way rxjs is). esbuild doesn't read the workspace's
+ * tsconfig paths, so point the package names at their built ESM by hand. Core is
+ * here too because node-utils re-exports a couple of core's runtime constants —
+ * tree-shaking (sideEffects:false) keeps only what a lib actually reaches, so the
+ * engine does NOT come along; a type-only import of either is erased before this
+ * ever runs.
+ */
+const ALIAS = {
+  '@scaljeri/flow-based-node-utils': resolve('dist/flow-based-node-utils/fesm2022/scaljeri-flow-based-node-utils.mjs'),
+  '@scaljeri/flow-based-core': resolve('dist/flow-based-core/fesm2022/scaljeri-flow-based-core.mjs'),
+};
 
 await mkdir(OUT, { recursive: true });
 
@@ -42,6 +56,7 @@ for (const source of sources) {
     platform: 'browser',
     minify: true,
     legalComments: 'none',
+    alias: ALIAS,
   });
 
   console.log(`${source} → ${file}`);

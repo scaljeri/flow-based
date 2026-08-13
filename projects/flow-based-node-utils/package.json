@@ -1,0 +1,24 @@
+{
+  "name": "@scaljeri/flow-based-node-utils",
+  "version": "0.1.0",
+  "description": "Framework-free helpers and the authoring contract for writing flow-based node libraries: types, wire formats and small runtime utilities, bundled into a module.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scaljeri/flow-based"
+  },
+  "keywords": [
+    "flow-based-programming",
+    "fbp",
+    "dataflow",
+    "node-editor",
+    "module"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@scaljeri/flow-based-core": "^0.1.0"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  }
+}

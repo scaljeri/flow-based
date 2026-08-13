@@ -42,6 +42,9 @@
       "@scaljeri/flow-based-core": [
         "./dist/flow-based-core"
       ],
+      "@scaljeri/flow-based-node-utils": [
+        "./dist/flow-based-node-utils"
+      ],
       "@scaljeri/flow-based-lit": [
         "./dist/flow-based-lit"
       ]

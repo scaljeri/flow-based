@@ -193,6 +193,40 @@
         }
       }
     },
+    "@scaljeri/flow-based-node-utils": {
+      "projectType": "library",
+      "root": "projects/flow-based-node-utils",
+      "sourceRoot": "projects/flow-based-node-utils/src",
+      "prefix": "fbu",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/flow-based-node-utils/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/flow-based-node-utils/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/flow-based-node-utils/tsconfig.spec.json"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/flow-based-node-utils/**/*.ts"
+            ]
+          }
+        }
+      }
+    },
     "@scaljeri/flow-based-lit": {
       "projectType": "library",
       "root": "projects/flow-based-lit",
