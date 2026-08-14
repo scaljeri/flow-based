@@ -758,6 +758,113 @@ test('renders inline formatting in a document, without letting it become markup'
 });
 
 /*
+ * An engine rebuild under the SAME state objects — paste, duplicate, a module
+ * arriving over an open flow — destroys every worker and builds new ones. The
+ * views only remounted on state identity, so every mounted face kept its
+ * subscription to the DESTROYED worker: the whole editor froze at its last
+ * values while the new engine hummed on invisibly.
+ */
+test('duplicating a node does not freeze the other faces', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+  await page.evaluate(() => {
+    const editor = window.fbEditor as any;
+
+    /*
+     * A ticking source and a printing sink, duck-typed rxjs (the engine only
+     * calls subscribe/unsubscribe — the same contract a URL lib relies on).
+     * Injected here because the harness types carry no workers at all.
+     */
+    const channel = () => {
+      const subs: ((v: unknown) => void)[] = [];
+
+      return {
+        next(v: unknown) { subs.forEach(f => f(v)); },
+        subscribe(f: (v: unknown) => void) {
+          subs.push(f);
+
+          return { unsubscribe() { subs.splice(subs.indexOf(f), 1); } };
+        },
+      };
+    };
+
+    class CounterWorker {
+      out = channel();
+      n = 0;
+      timer = window.setInterval(() => this.out.next(this.n++), 150);
+      constructor(public config: unknown) {}
+      getStream() { return this.out; }
+      setStream() {}
+      removeStream() {}
+      destroy() { clearInterval(this.timer); }
+    }
+
+    class ReadoutWorker {
+      out = channel();
+      sub?: { unsubscribe(): void };
+      constructor(public config: unknown) {}
+      getStream() { return this.out; }
+      setStream(stream: { subscribe(f: (v: unknown) => void): { unsubscribe(): void } }) {
+        this.sub = stream.subscribe(v => this.out.next(v));
+      }
+      removeStream() { this.sub?.unsubscribe(); }
+      destroy() { this.sub?.unsubscribe(); }
+    }
+
+    const face = (cls: string) =>
+      (host: HTMLElement, { api }: { api: { worker?: { getStream(): { subscribe(f: (v: unknown) => void): { unsubscribe(): void } } } } }) => {
+        const el = document.createElement('span');
+
+        el.className = cls;
+        el.textContent = '—';
+        host.appendChild(el);
+
+        const sub = api.worker?.getStream().subscribe(v => { el.textContent = String(v); });
+
+        return { destroy: () => sub?.unsubscribe() };
+      };
+
+    editor.types['e2e-counter'] = {
+      component: face('counter-face'),
+      settings: { title: 'Counter', config: {}, sockets: [{ type: 'out', format: 'number' }] },
+      worker: CounterWorker,
+    };
+    editor.types['e2e-readout'] = {
+      component: face('readout-face'),
+      settings: { title: 'Readout', config: {}, sockets: [{ type: 'in', format: 'number' }] },
+      worker: ReadoutWorker,
+    };
+
+    editor.load({
+      id: 1, type: 'flow', title: 'Live', sockets: [], children: [
+        { id: 2, type: 'e2e-counter', sockets: [{ id: 20, type: 'out', format: 'number' }], ui: { position: { x: 10, y: 20 } } },
+        { id: 3, type: 'e2e-readout', sockets: [{ id: 30, type: 'in', format: 'number' }], ui: { position: { x: 50, y: 20 } } },
+      ],
+      connections: [{ id: 100, from: 2, to: 3, out: 20, in: 30 }],
+    });
+  });
+
+  const readout = page.locator('.readout-face').first();
+
+  // Alive before: the counter feeds the readout through the engine.
+  const first = await readout.textContent();
+  await expect.poll(() => readout.textContent(), { timeout: 5_000 }).not.toBe(first);
+
+  // Duplicate the readout — a paste-shaped rebuild under the same objects.
+  await page.evaluate(() => {
+    const editor = window.fbEditor as any;
+
+    editor.select(3);
+    editor.duplicateSelection();
+  });
+
+  // The ORIGINAL face must keep ticking against the new engine's workers.
+  const afterRebuild = await readout.textContent();
+  await expect.poll(() => readout.textContent(), { timeout: 5_000 }).not.toBe(afterRebuild);
+});
+
+/*
  * Prose is written the way prose is typed: one Enter is a line break, a blank
  * line is a new paragraph. Before this a single \n vanished into a space, so
  * an author's deliberate break — an address, a verse, a caption line — was

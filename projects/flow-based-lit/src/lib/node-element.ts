@@ -548,6 +548,9 @@ export class FbNodeElement extends LitElement {
   private contentHost?: HTMLElement;
   /** Whose content is mounted; see contentSource(). */
   private mountedFor?: FbNodeState;
+
+  /** The engine generation the current content mounted under. */
+  private mountedGeneration = -1;
   /** Which drawing is mounted; see mountFor(). Differs per view for some types. */
   private mountedMount?: FbNodeMount;
   private showLabel = true;
@@ -605,6 +608,15 @@ export class FbNodeElement extends LitElement {
 
   protected override updated(changed: PropertyValues<this>): void {
     if (changed.has('state') && changed.get('state')) {
+      this.unmountContent();
+      this.mountContent();
+    } else if (this.mountedFor && this.mountedGeneration !== this.editor?.engineGeneration) {
+      /*
+       * The engine was rebuilt under the SAME state object (paste, a module
+       * arriving over an open flow): the worker this content subscribed to is
+       * destroyed. Only a remount re-snapshots api.worker — without it the
+       * face froze at its last value.
+       */
       this.unmountContent();
       this.mountContent();
     } else if (
@@ -906,6 +918,10 @@ export class FbNodeElement extends LitElement {
   private mountContent(): void {
     const source = this.contentSource();
     const mount = this.mountFor();
+
+    // Recorded even for the no-content path, or the generation check in
+    // updated() would remount an empty node forever.
+    this.mountedGeneration = this.editor?.engineGeneration ?? -1;
 
     if (!source || typeof mount !== 'function') {
       this.mountedFor = source;

@@ -791,7 +791,19 @@ export class ModulesService {
        * the palette's new group and any empty boxes catch up.
        */
       if (this.containsAny(editor.root, names)) {
+        /*
+         * load() re-roots the editor, which would yank a reader OUT of the
+         * subflow they are looking at the moment a lazily loaded module
+         * lands. Remember the trail and walk back in — by id, because the
+         * reload keeps the same state objects.
+         */
+        const trail = editor.path.slice(1).map(node => node.id!);
+
         editor.load(editor.root);
+
+        for (const id of trail) {
+          editor.enter(id);
+        }
       } else {
         editor.changes.emit({ kind: 'structure' });
       }

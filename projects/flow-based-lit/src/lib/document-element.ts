@@ -866,6 +866,21 @@ export class FbFlowDocumentElement extends LitElement {
     const slots = [...this.renderRoot.querySelectorAll<HTMLSlotElement>('.figure-body slot')];
     const live = new Set<number>();
 
+    /*
+     * An engine rebuild under the SAME state objects (paste, a module
+     * arriving over the open flow) destroys every worker the mounted figures
+     * subscribed to — the state-identity check below cannot see it, and the
+     * figures froze. A moved generation remounts them all against the live
+     * workers.
+     */
+    if (this.figuresGeneration !== this.editor.engineGeneration) {
+      this.figuresGeneration = this.editor.engineGeneration;
+
+      for (const nodeId of [...this.handles.keys()]) {
+        this.dropFigure(nodeId);
+      }
+    }
+
     for (const slot of slots) {
       const nodeId = Number(slot.name.slice('fig-'.length));
       live.add(nodeId);
@@ -937,6 +952,9 @@ export class FbFlowDocumentElement extends LitElement {
       }
     }
   }
+
+  /** The engine generation the mounted figures belong to. */
+  private figuresGeneration = -1;
 
   private dropFigure(nodeId: number): void {
     this.handles.get(nodeId)?.destroy();

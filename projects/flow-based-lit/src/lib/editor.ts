@@ -331,7 +331,19 @@ export class FbEditor {
    * discarding everything above it. Loading is "here is a new document";
    * rebuilding is "the same document changed underneath the engine".
    */
+  /**
+   * Bumped on every engine rebuild. The rebuild destroys every worker and
+   * builds new ones, but paste and a module arriving over an open flow REUSE
+   * the state objects — so a mounted view, remounted only on state identity,
+   * kept its subscription to the destroyed worker: every face froze at its
+   * last value while the new engine hummed on invisibly, and a slider wrote
+   * into the void. Views compare this against the generation they mounted
+   * under and remount when it moved.
+   */
+  engineGeneration = 0;
+
   private rebuildEngine(): void {
+    this.engineGeneration++;
     this.unbind?.();
     // The old engine's workers keep running until told otherwise — a worker
     // with an interval, say, would tick on unobserved forever.
