@@ -1365,10 +1365,10 @@
         }
       },
       {
-        "type": "crypto-gate",
+        "type": "compare",
         "id": 400,
         "config": {
-          "op": "<"
+          "op": "lt"
         },
         "sockets": [
           {
@@ -1394,7 +1394,7 @@
           {
             "id": 412,
             "type": "out",
-            "format": "boolean"
+            "format": "number"
           }
         ],
         "ui": {
@@ -1417,7 +1417,8 @@
             "id": 510,
             "type": "in",
             "formats": [
-              "boolean"
+              "boolean",
+              "number"
             ]
           }
         ],

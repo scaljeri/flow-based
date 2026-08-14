@@ -30,10 +30,12 @@ export const COMPARE_SETTINGS: FbNodeSettings = {
   // routes by aux, so the panel's invitation to rename ("threshold", "price")
   // cannot silently swap the sides — the crypto gate's lesson, applied here.
   sockets: [
-    { type: 'in', aux: 'a', name: 'a', format: 'number' },
+    // number OR point: the worker reads a series as its latest value, so a
+    // chart line is a legal operand — the same pair the plot's layers accept.
+    { type: 'in', aux: 'a', name: 'a', formats: ['number', 'point'] },
     // The threshold. Wired, it overrides the config without being saved — the
     // run/url convention every other node here follows.
-    { type: 'in', aux: 'b', name: 'b', format: 'number' },
+    { type: 'in', aux: 'b', name: 'b', formats: ['number', 'point'] },
     { type: 'out', format: 'number' },
   ],
 };

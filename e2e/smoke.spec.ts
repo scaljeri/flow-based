@@ -1166,12 +1166,14 @@ test('a fresh browser opens the crypto showcase, its lib loaded by URL', async (
   const types = await page.evaluate(() =>
     [...document.querySelectorAll('fb-flow-canvas fb-node-box')]
       .map(n => (n as unknown as { state?: { type?: string } }).state?.type));
-  for (const type of ['crypto-prices', 'crypto-sma', 'crypto-bands', 'crypto-gate', 'crypto-light']) {
+  // The gate is deliberately absent: the CORE Compare judges the buy signal
+  // now, and the lib brings only what the palette lacks.
+  for (const type of ['crypto-prices', 'crypto-sma', 'crypto-bands', 'compare', 'crypto-light']) {
     expect(types).toContain(type);
   }
 
   // And the data flowed all the way through: the plot buffered the price series
-  // its source sent, and the gate resolved to a boolean the signal can light.
+  // its source sent, and the compare resolved to a verdict the signal can light.
   const points = await page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as
       { editor?: { flow?: { getWorker(id: number): { buffer?: { points: number[][] } } } } })
@@ -6033,33 +6035,35 @@ test('a node view keeps redrawing from its worker after it leaves the app-wide t
 });
 
 /**
- * The crypto compare reads its operands from its sockets, and its sockets are fixed.
+ * The CORE Compare judges the crypto flow's buy signal.
  *
- * The node used to say "a < b" with the meaning ("price", "lower band") stranded
- * in a loose title, and the panel let you add sockets and change their types —
- * knobs a two-input comparison does not have. Now the operand names come from the
- * sockets (aux → name, so a rename cannot swap the sides), the title is gone, and
- * the socket contract is fixed: no +in/+out, the type reads read-only, no remove.
+ * The lib carried its own gate until the core node learned to read a series
+ * as its latest value — a lib should bring only what the palette lacks. The
+ * claims that mattered carry over: the operator is a control on the face,
+ * both operands are found by AUX (a rename cannot swap the sides), and the
+ * socket contract is fixed: no +in/+out, the type reads read-only, no remove.
  */
-test('the crypto compare reads its operands from its sockets, which are fixed', async ({ page }) => {
+test('the core Compare judges the crypto buy signal, with fixed sockets', async ({ page }) => {
   await page.goto('/?fbnoseed');
   await expect.poll(() => page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
       ?.editor?.state?.title), { timeout: 15_000 }).toBe('Bitcoin');
 
-  // The comparison reads out in the flow's own words, from the socket names —
-  // and the operator between them is a CONTROL now, not baked text.
-  const sub = page.locator('.crypto-sub', { hasText: 'price' }).filter({ hasText: 'lower band' });
-  await expect(sub).toBeVisible({ timeout: 15_000 });
-  await expect(sub.locator('select.crypto-op')).toHaveValue('<');
-  // And it computes: both operands are found by aux (not name), so it reaches a
-  // verdict rather than staying '—' — proof the sides did not get swapped.
-  await expect(page.locator('.crypto-bool')).toHaveText(/true|false/, { timeout: 15_000 });
+  // The operator is a CONTROL on the face, preset by the flow ('<' = lt).
+  // The Angular view mounts INTO the content host, so the box's type
+  // attribute is the address, not a selector tag.
+  const face = page.locator('fb-node-box[type="compare"] .fb-node-content');
+  await expect(face).toBeVisible({ timeout: 15_000 });
+  await expect(face.locator('select')).toHaveValue('lt');
+
+  // And it computes: two series wired in, judged on their LATEST values —
+  // a verdict, not the '—' of a compare that could not read its operands.
+  await expect(face.locator('.reading')).toHaveText(/^[01]$/, { timeout: 15_000 });
 
   // Open the compare node's settings.
   const idx = await page.evaluate(() =>
     (document.querySelector('fb-flow-canvas') as unknown as { editor: { children: { type: string }[] } })
-      .editor.children.findIndex(c => c.type === 'crypto-gate'));
+      .editor.children.findIndex(c => c.type === 'compare'));
   expect(idx).toBeGreaterThanOrEqual(0);
   const box = page.locator('fb-flow-canvas fb-node-box').nth(idx);
   const rect = (await box.boundingBox())!;

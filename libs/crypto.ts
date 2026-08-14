@@ -1,10 +1,10 @@
 // The authoring contract and helpers, from ONE framework-free package. The types
-// are erased at build; the helpers (FB_DRAG_IGNORE, injectStyleOnce, lastValue)
+// are erased at build; the helpers (FB_DRAG_IGNORE, injectStyleOnce)
 // are bundled into this single file, the way rxjs is — the editor shares nothing
 // with a URL-loaded module at runtime, so a module carries what it needs.
 import type { FbMountModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket, FbSeries as Series }
   from '@scaljeri/flow-based-node-utils';
-import { FB_DRAG_IGNORE, injectStyleOnce, lastValue, writeConfigValue } from '@scaljeri/flow-based-node-utils';
+import { FB_DRAG_IGNORE, injectStyleOnce, writeConfigValue } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject } from 'rxjs';
 
 /**
@@ -20,9 +20,11 @@ import { Observable, ReplaySubject } from 'rxjs';
  * The chain the demo builds: a price series (`crypto-prices`, the readings live
  * IN the flow), its long moving average (`crypto-sma`, the 200-week line every
  * Bitcoin chart draws), a Bollinger band around a shorter average
- * (`crypto-bands`, upper and lower), and a buy signal — a comparison
- * (`crypto-gate`, the "if": is the price under the band?) lit green or red by
- * `crypto-light`. The average is the reason the module exists: a plot could
+ * (`crypto-bands`, upper and lower), and a buy signal — the CORE palette's
+ * Compare (is the price under the band? — it reads a series as its latest
+ * value) lit green or red by `crypto-light`. The lib once carried its own
+ * gate; the core node covers it, and a lib should bring only what the
+ * palette lacks. The average is the reason the module exists: a plot could
  * draw the price, but whether the trend is up or down under the noise, and
  * whether now is cheap, are what the indicators answer.
  */
@@ -252,8 +254,7 @@ class BandsWorker implements FbNodeWorker {
   // Two outputs, told apart by AUX — the stable machine identity. Told apart
   // by NAME before, and the name is the reader-facing label a flow renames:
   // rename 'lower' and both wires silently delivered the upper band — the
-  // buy light compared price against the wrong line, no error anywhere. The
-  // gate below already routed on aux; this is the sibling that missed it.
+  // buy light compared price against the wrong line, no error anywhere.
   getStream(socket?: FbSocket): Observable<Series> {
     return (socket?.aux ?? socket?.name) === 'lower' ? this.lower.asObservable() : this.upper.asObservable();
   }
@@ -289,107 +290,6 @@ class BandsWorker implements FbNodeWorker {
 
     this.upper.next(b.upper);
     this.lower.next(b.lower);
-    this.ticks.next();
-  }
-}
-
-/* -------------------------------------------------------------------- gate */
-
-type Op = '<' | '>' | '<=' | '>=';
-
-interface GateConfig { op?: Op; }
-
-const OPS: Record<Op, (a: number, b: number) => boolean> = {
-  '<': (a, b) => a < b,
-  '>': (a, b) => a > b,
-  '<=': (a, b) => a <= b,
-  '>=': (a, b) => a >= b,
-};
-
-class GateWorker implements FbNodeWorker {
-  private readonly subject = new ReplaySubject<boolean>(1);
-  private readonly ticks = new ReplaySubject<void>(1);
-  // Keyed by connection so a disconnect can find its input again; each wire
-  // remembers which side ('a' or 'b') it feeds.
-  private readonly wires = new Map<number, { side: 'a' | 'b'; unsubscribe(): void }>();
-  private a?: number;
-  private b?: number;
-
-  constructor(private readonly config: GateConfig = {}) {}
-
-  get changes(): Observable<void> { return this.ticks.asObservable(); }
-  get op(): Op { return this.config.op ?? '<'; }
-
-  /** The current answer, for the node — and the light — to show. */
-  get state(): boolean | undefined {
-    return this.a === undefined || this.b === undefined ? undefined : OPS[this.op](this.a, this.b);
-  }
-
-  destroy(): void {
-    this.wires.forEach(w => w.unsubscribe());
-    this.wires.clear();
-    this.subject.complete();
-    this.ticks.complete();
-  }
-
-  getStream(): Observable<boolean> { return this.subject.asObservable(); }
-
-  setStream(stream: Observable<unknown>, socket: FbSocket, connection?: { id: number }): void {
-    // Which operand this wire feeds is read from the socket's AUX, its stable
-    // machine identity — NOT its name, which a flow renames to something the
-    // reader understands ("price", "lower band"). Keyed the way the stats node
-    // keys its outputs, so a rename cannot silently swap the two sides.
-    const key = connection?.id ?? (socket?.aux === 'b' ? -2 : -1);
-    const side: 'a' | 'b' = socket?.aux === 'b' ? 'b' : 'a';
-
-    this.wires.get(key)?.unsubscribe();
-    const sub = stream.subscribe(value => {
-      this[side] = lastValue(value);
-      this.emit();
-    });
-
-    this.wires.set(key, Object.assign(sub, { side }));
-  }
-
-  removeStream(connection?: { id: number }): void {
-    // The connection-less fallback keys are -1/-2 (see setStream); looking a
-    // missing connection up as 0 leaked the subscription and kept a stale
-    // operand. The engine always passes the connection — this guards hosts
-    // that do not, by releasing every fallback-keyed wire.
-    const keys = connection?.id !== undefined ? [connection.id] : [-1, -2];
-
-    for (const key of keys) {
-      const wire = this.wires.get(key);
-
-      if (wire) {
-        wire.unsubscribe();
-        this[wire.side] = undefined;
-        this.wires.delete(key);
-        this.emit();
-      }
-    }
-  }
-
-  setConfigValue(path: string, value: unknown): void {
-    if (path !== 'op') {
-      writeConfigValue(this.config as Record<string, unknown>, path, value);
-
-      return;
-    }
-
-    if (typeof value === 'string' && value in OPS) {
-      this.config.op = value as Op;
-      this.emit();
-    }
-  }
-
-  private emit(): void {
-    // Nothing to say until both sides have arrived; a half-answered comparison
-    // is not "false", it is "not yet".
-    if (this.state !== undefined) {
-      this.subject.next(this.state);
-    }
-
     this.ticks.next();
   }
 }
@@ -638,50 +538,6 @@ const bandsNode: FbNodeMount = (host, { api }) => {
   };
 };
 
-const gateNode: FbNodeMount = (host, { api }) => {
-  const worker = api.worker as GateWorker | undefined;
-
-  // The comparison reads out in the reader's own words: the operand names come
-  // from the sockets (aux → name), falling back to a/b when a socket is unnamed.
-  // So a flow that calls its inputs "price" and "lower band" makes the node say
-  // "price < lower band" — the terms live on the sockets, not in a loose title.
-  const nameOf = (aux: 'a' | 'b'): string =>
-    api.state.sockets?.find(s => s.type === 'in' && s.aux === aux)?.name || aux;
-
-  const mounted = valueNode(host, (value, sub) => {
-    const state = worker?.state;
-
-    value.textContent = state === undefined ? '—' : (state ? 'true' : 'false');
-    value.className = `crypto-value crypto-bool ${state ? 'is-true' : 'is-false'}`;
-    sub.textContent = worker ? `${nameOf('a')} ` : '';
-
-    /*
-     * The operator is a CONTROL on the face, the same gesture the general
-     * Compare offers — the help promised >, <= and >= and nothing anywhere let
-     * you pick them; only hand-editing the JSON changed the op.
-     */
-    const select = document.createElement('select');
-
-    select.className = `crypto-op ${FB_DRAG_IGNORE}`;
-    select.setAttribute('aria-label', 'Operator');
-
-    for (const op of Object.keys(OPS) as Op[]) {
-      const option = document.createElement('option');
-
-      option.value = op;
-      option.textContent = op;
-      option.selected = worker?.op === op;
-      select.appendChild(option);
-    }
-
-    select.addEventListener('change', () => worker?.setConfigValue?.('op', select.value));
-    sub.appendChild(select);
-    sub.appendChild(document.createTextNode(` ${nameOf('b')}`));
-  }, worker?.changes);
-
-  return mounted;
-};
-
 const lightNode: FbNodeMount = (host, { api }) => {
   const worker = api.worker as LightWorker | undefined;
   const root = document.createElement('div');
@@ -722,19 +578,6 @@ const STYLE = `
 }
 .crypto-value { color: #f7931a; font-size: 26px; font-weight: 600; white-space: nowrap; }
 .crypto-sub { font-size: 13px; opacity: 0.6; text-align: center; }
-.crypto-bool { font-size: 24px; }
-.crypto-bool.is-true { color: #22c55e; }
-.crypto-bool.is-false { color: #ef4444; }
-.crypto-op {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  color: #fff;
-  font: inherit;
-  margin: 0 2px;
-  padding: 1px 2px;
-}
-.crypto-op option { color: #000; }
 .crypto-field { display: flex; flex-direction: column; font-size: 13px; gap: 4px; margin-bottom: 8px; }
 .crypto-field input { padding: 6px 8px; }
 .crypto-light { flex-direction: row; gap: 12px; padding: 16px 22px; }
@@ -811,26 +654,6 @@ export default {
         help: 'A moving average with a line N standard deviations above and below it. The band widens where the price has been volatile and pinches where it has been calm. Upper and lower come out separately, each drawn as its own layer.',
       },
       worker: BandsWorker,
-    },
-
-    'crypto-gate': {
-      component: { small: { mount: gateNode } },
-      settings: {
-        title: 'Compare',
-        group: 'Crypto',
-        config: { op: '<' },
-        // Exactly two inputs and one output, fixed: a comparison has no more
-        // sides to it, so the panel offers no +in/+out. The operand identity is
-        // the AUX (a, b); a flow gives each socket a NAME a reader recognises.
-        addableSockets: 'none',
-        sockets: [
-          { type: 'in', aux: 'a', formats: ['point', 'number'] },
-          { type: 'in', aux: 'b', formats: ['point', 'number'] },
-          { type: 'out', format: 'boolean' },
-        ],
-        help: 'The "if": takes the latest value on each input and answers whether the first is < the second (or >, <=, >=). Name the inputs for what they carry, wire a price to the first and a band or average to the second, and it says whether the price is under it — a buy zone.',
-      },
-      worker: GateWorker,
     },
 
     'crypto-light': {
