@@ -194,6 +194,31 @@ test.beforeEach(async ({ page }) => {
   }, { demo: DEMO_JSON, tno: TNO_JSON });
 });
 
+/*
+ * A FRESH browser first shows the basic starter, then swaps the crypto demo
+ * in when its module arrives. The engine-generation remount used to fire on
+ * that swap BEFORE each element got its new state — remounting the old face
+ * against whatever worker the new flow keeps under the same id (the starter
+ * and the demo share ids): a random-numbers view subscribed to a crypto
+ * Series and threw on toFixed, on every fresh visit. The seeded suite never
+ * boots fresh, which is why no other test could see it.
+ */
+test('a fresh browser swaps the starter for the demo without a single error', async ({ page }) => {
+  const errors: string[] = [];
+
+  page.on('pageerror', err => errors.push(err.message));
+
+  await page.goto('/?fbnoseed');
+  // The swap is what is under test: wait for the crypto demo to arrive.
+  await expect.poll(() => page.evaluate(() =>
+    (document.querySelector('fb-flow-canvas') as unknown as { editor: { children: { type?: string }[] } })
+      ?.editor?.children?.some(c => c.type === 'crypto-prices') ?? false,
+  ), { timeout: 30_000 }).toBe(true);
+  await page.waitForTimeout(1500);
+
+  expect(errors).toEqual([]);
+});
+
 test('renders the flow editor and draws connections, with no console errors', async ({ page }) => {
   const errors: string[] = [];
 

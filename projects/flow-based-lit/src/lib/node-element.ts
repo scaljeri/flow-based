@@ -610,12 +610,22 @@ export class FbNodeElement extends LitElement {
     if (changed.has('state') && changed.get('state')) {
       this.unmountContent();
       this.mountContent();
-    } else if (this.mountedFor && this.mountedGeneration !== this.editor?.engineGeneration) {
+    } else if (this.mountedFor && this.mountedGeneration !== this.editor?.engineGeneration
+      && this.state?.id !== undefined && this.editor?.nodeById(this.state.id) === this.state) {
       /*
        * The engine was rebuilt under the SAME state object (paste, a module
        * arriving over an open flow): the worker this content subscribed to is
        * destroyed. Only a remount re-snapshots api.worker — without it the
        * face froze at its last value.
+       *
+       * ONLY while the state still belongs to the current flow. A whole-flow
+       * swap (open another flow) rebuilds too, and this branch fired before
+       * the canvas handed the element its new state — remounting the OLD
+       * face against whatever worker the NEW flow keeps under the same id
+       * (the basic starter and the crypto demo share ids): a random-numbers
+       * view subscribed to a crypto Series and crashed on toFixed. A state
+       * that is no longer in the flow is about to be replaced or dropped;
+       * the state-identity branch above handles the replacement.
        */
       this.unmountContent();
       this.mountContent();
