@@ -145,6 +145,26 @@ Four methods, one optional. Two things are easy to get wrong:
 
 `destroy()` must undo everything: timers, subscriptions, listeners.
 
+### The stream discipline
+
+Six rules, each one a bug that shipped before it was a rule:
+
+1. **Who caches input clears it in `removeStream`** — kept, a config change
+   later re-emits data whose wire no longer exists. And **whose config shapes
+   the output caches the input**, so a panel edit can re-run it: an upstream
+   fetch emits exactly once.
+2. **`ReplaySubject(1)` for value carriers, plain `Subject` for moments.** A
+   wire drawn after data flowed must still hear the last value — but a
+   replayed trigger fires a ghost action the instant the wire lands.
+3. **A wire must not rewrite what a flow saves.** A wired value lives beside
+   the config (`wired`, released in `removeStream`), never in it.
+4. **Read a socket's `name` live off the held socket object** — copied at
+   wire time, a rename keeps routing under the dead name.
+5. **Route on `aux ?? name`**, and declare `aux` on the sockets your worker
+   routes by.
+6. **Only a changed `url` redials a connection.** Reconnecting on any config
+   write tears a live stream down to change a label.
+
 ---
 
 ## Formats: the data types a module brings
