@@ -5335,8 +5335,8 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
   await expect(save).toBeVisible();
   await expect(save).not.toHaveClass(/has-changes/);
   await save.click();
-  await expect(page.locator('.share-notice')).toContainText('No changes yet');
-  await page.locator('.share-notice button.dismiss').click();
+  // A snackbar now — it asks nothing and leaves by itself; no dismiss to click.
+  await expect(page.locator('simple-snack-bar').filter({ hasText: 'No changes yet' })).toBeVisible();
 
   // Change it — add a node — and the Save dot lights and STAYS (no autosave).
   const before = await page.locator('fb-node-box').count();
@@ -5355,7 +5355,7 @@ test('a flow opened from a URL keeps that URL, and Saves into the shelf', async 
   // no naming dialog — clears the dot, and confirms. The source URL is still
   // there, so its share link still points home.
   await save.click();
-  await expect(page.locator('.share-notice')).toContainText('Saved');
+  await expect(page.locator('simple-snack-bar').filter({ hasText: 'Saved' })).toBeVisible();
   await expect(save).not.toHaveClass(/has-changes/);
   await expect(page.locator('fb-flows-dialog')).toHaveCount(0);
   expect(page.url()).toContain(`flow=${encodeURIComponent(source)}`);
@@ -5827,7 +5827,10 @@ test('a failed remote push can be retried with Save', async ({ page }) => {
   // Endpoint recovers; Save retries and succeeds.
   fail = false;
   await save.click();
-  await expect(page.locator('.share-notice')).toContainText(/Saved to/i, { timeout: 10_000 });
+  // filter, not a bare locator: the "Saving to…" snackbar can still be
+  // animating out when this one opens, and two matches break strict mode.
+  await expect(page.locator('simple-snack-bar').filter({ hasText: /Saved to/i }))
+    .toBeVisible({ timeout: 10_000 });
   await expect(save).not.toHaveClass(/has-changes/);
 });
 

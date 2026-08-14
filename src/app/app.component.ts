@@ -1,5 +1,6 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostBinding, HostListener, NgZone, OnInit, ViewChild, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { TypeColorsComponent } from './components/type-colors/type-colors.component';
 import { SocketTypesDialogComponent } from './components/socket-types/socket-types-dialog.component';
 import { ModulesDialogComponent } from './components/modules/modules-dialog.component';
@@ -41,6 +42,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   history = inject(FbHistoryService);
   private overlay = inject(Overlay);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
   private modules = inject(ModulesService);
   private store = inject(FlowStoreService);
   private remote = inject(RemoteFlowService);
@@ -1022,6 +1024,25 @@ export class AppComponent implements OnInit, AfterViewInit {
   }
 
   /**
+   * A confirmation that goes away by itself — a snackbar at the bottom.
+   *
+   * For the messages that ask nothing of the reader: "Saved.", "no changes".
+   * These lived in the notice bar, where each one had to be clicked away —
+   * a tax on the most routine act in the app. Anything that needs an action
+   * (a failure, a retry, a choice) stays in the notice bar, which does not
+   * disappear from under the person reading it.
+   */
+  private toast(message: string): void {
+    // A fresh confirmation also retires whatever the notice bar still shows —
+    // a "Save failed" from a minute ago must not outlive the save that worked.
+    this.shareChoosing = false;
+    this.shareLink = null;
+    this.shareNotice = null;
+    this.snackBar.open(message, undefined, { duration: 2500 });
+    this.cdr.detectChanges();
+  }
+
+  /**
    * The Save button — the conscious act, since there is no autosave.
    *
    * Every flow has an entry on the shelf, so Save always has somewhere to write.
@@ -1032,7 +1053,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   saveToShelf(): void {
     // Nothing to write, and nothing still owed to an endpoint.
     if (!this.dirty && !this.remoteBehind) {
-      this.notify('No changes yet — nothing to save.');
+      this.toast('No changes yet — nothing to save.');
 
       return;
     }
@@ -1059,7 +1080,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     if (dest.kind === 'remote') {
       void this.pushRemote(dest.url);
     } else {
-      this.notify('Saved.');
+      this.toast('Saved.');
     }
   }
 
@@ -1088,7 +1109,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       this.zone.run(() => {
         this.remoteBehindIds.delete(id);
         this.persistRemoteBehind();
-        this.notify(`Saved to ${this.hostOf(url)}.`);
+        this.toast(`Saved to ${this.hostOf(url)}.`);
         this.cdr.detectChanges();
       });
     } catch {
@@ -1111,7 +1132,7 @@ export class AppComponent implements OnInit, AfterViewInit {
      */
     const id = this.currentFlowId;
 
-    this.notify(`Saving to ${this.hostOf(url)}…`);
+    this.toast(`Saving to ${this.hostOf(url)}…`);
 
     try {
       this.modules.stamp(this.flow);
@@ -1128,9 +1149,7 @@ export class AppComponent implements OnInit, AfterViewInit {
           this.persistRemoteBehind();
         }
 
-        this.shareNotice = `Saved to ${this.hostOf(url)}.`;
-        this.shareLink = null;
-        this.shareChoosing = false;
+        this.toast(`Saved to ${this.hostOf(url)}.`);
 
         if (canonicalUrl) {
           /*
