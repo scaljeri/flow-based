@@ -1,8 +1,19 @@
-import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
+import { Observable, Subject, Subscription } from 'rxjs';
 import { FbConnection, FbSocket, FbNodeWorker, FbNodeState } from './types';
 
 export class FlowWorker implements FbNodeWorker {
-  private subjects: { [key: number]: Subject<any> } = {};
+  /*
+   * One channel per boundary socket: a plain Subject plus a HAND-HELD replay
+   * (`last`/`has`) instead of a ReplaySubject(1). The replay is needed — a
+   * replaying source wired THROUGH a subflow must reach an inner bridge that
+   * subscribes later (subscribe order follows connection id, and a plain
+   * Subject made the same graph work or fail by which wire got the lower id).
+   * But a ReplaySubject cannot FORGET: after the outer wire was removed, a
+   * newly drawn inner wire still received the dead wire's last value, and
+   * with no live source it could never be corrected until reload. The manual
+   * replay is cleared in removeStream; existing subscribers are untouched.
+   */
+  private channels: { [key: number]: { subject: Subject<any>; last?: unknown; has: boolean } } = {};
   private subscriptions: { [key: number]: Subscription } = {};
 
   constructor(
@@ -93,8 +104,12 @@ export class FlowWorker implements FbNodeWorker {
   setStream(stream: Observable<any>, socket: FbSocket, connection: FbConnection): void {
     const id = connection.to === this.state.id ? connection.in : connection.out;
 
+    const channel = this.channel(id!);
+
     this.subscriptions[id!] = stream.subscribe(val => {
-      this.getSubject(id!).next(val);
+      channel.last = val;
+      channel.has = true;
+      channel.subject.next(val);
     });
   }
 
@@ -108,30 +123,33 @@ export class FlowWorker implements FbNodeWorker {
 
     this.subscriptions = {};
 
-    for (const subject of Object.values(this.subjects)) {
-      subject.complete();
+    for (const channel of Object.values(this.channels)) {
+      channel.subject.complete();
     }
 
-    this.subjects = {};
+    this.channels = {};
   }
 
   getStream(socket: FbSocket): Observable<any> {
-    return this.getSubject(socket.id!).asObservable();
+    const id = socket.id!;
+
+    // Replay by hand, then follow live — see the channels comment for why
+    // this is not a ReplaySubject.
+    return new Observable<any>(observer => {
+      const channel = this.channel(id);
+
+      if (channel.has) {
+        observer.next(channel.last);
+      }
+
+      const subscription = channel.subject.subscribe(observer);
+
+      return () => subscription.unsubscribe();
+    });
   }
 
-  getSubject(socketId: number): Subject<any> {
-    if (!this.subjects[socketId]) {
-      // ReplaySubject(1), not a plain Subject: a replaying source (Value/Reroute
-      // emit on construction) wired THROUGH a subflow forwards across this
-      // boundary, and if the inner bridge subscribes after the outer one pushed
-      // the initial value, a plain Subject dropped it — the inner node sat empty.
-      // Subscribe order follows ascending connection id, so the same graph
-      // worked or failed by which wire got the lower id. Every other input bridge
-      // already replays its latest value; this one now does too.
-      this.subjects[socketId] = new ReplaySubject<any>(1);
-    }
-
-    return this.subjects[socketId];
+  private channel(socketId: number): { subject: Subject<any>; last?: unknown; has: boolean } {
+    return this.channels[socketId] ??= { subject: new Subject<any>(), has: false };
   }
 
   removeStream(connection: FbConnection): void {
@@ -142,6 +160,13 @@ export class FlowWorker implements FbNodeWorker {
     if (id !== undefined && this.subscriptions[id]) {
       this.subscriptions[id].unsubscribe();
       delete this.subscriptions[id];
+    }
+
+    // Forget the replay: what the removed wire last carried must not greet
+    // the next subscriber as if a live source stood behind it.
+    if (id !== undefined && this.channels[id]) {
+      this.channels[id].has = false;
+      this.channels[id].last = undefined;
     }
   }
 

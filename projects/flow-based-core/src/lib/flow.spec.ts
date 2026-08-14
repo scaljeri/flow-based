@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Subject } from 'rxjs';
 import { Flow } from './flow';
+import { FlowWorker } from './flow-worker';
 
 /**
  * Behavioural baseline for the graph engine (projects/flow-based/src/lib/utils/flow.ts).
@@ -1250,6 +1251,57 @@ describe('deep-dive engine fixes', () => {
 
     expect(flow.getWorker(1)).toBeDefined();
   });
+
+  /*
+   * Existence is not delivery. The worker above existed while getSocket()
+   * still answered undefined for the root's own sockets — they were indexed
+   * for every child but never for the root — so connectWorkers returned
+   * silently and the flow-as-subflow, opened standalone, drew empty forever.
+   */
+  it('a value crossing the root boundary reaches the inner node', () => {
+    RecordingWorker.instances = [];
+    const types = flowTypes();
+    const root: any = {
+      id: 1, sockets: [{ id: 10, type: 'in' }, { id: 11, type: 'out' }],
+      children: [
+        { id: 2, type: 'source', sockets: [{ id: 20, type: 'out' }] },
+        { id: 3, type: 'sink', sockets: [{ id: 30, type: 'in' }] },
+      ],
+      connections: [
+        // Inside → the root's own out socket, and the root's in socket → inside:
+        // both directions cross the boundary of the flow ON SCREEN.
+        { id: 100, from: 2, to: 1, out: 20, in: 11 },
+        { id: 101, from: 1, to: 3, out: 10, in: 30 },
+      ],
+    };
+    const flow = new Flow(types as any).initialize(root);
+    const source = RecordingWorker.instances[0];
+    const sink = RecordingWorker.instances[1];
+
+    // The boundary's own passthrough: what the root takes IN reaches the sink.
+    (flow.getWorker(1) as any).setStream(source.subject.asObservable(), { id: 10 }, { id: 999, to: 1, in: 10 });
+    source.subject.next(42);
+
+    expect(sink.received).toEqual([42]);
+  });
+
+  it('the first root-boundary wire drawn in-session gets a worker too', () => {
+    RecordingWorker.instances = [];
+    const types = flowTypes();
+    const root: any = {
+      id: 1, sockets: [{ id: 10, type: 'in' }],
+      children: [{ id: 3, type: 'sink', sockets: [{ id: 30, type: 'in' }] }],
+      connections: [],
+    };
+    const flow = new Flow(types as any).initialize(root);
+
+    // No root wire at load, so initialize() made no root worker — the wire
+    // drawn NOW must not land on a boundary nobody answers on.
+    flow.addConnection(root, { id: 101, from: 1, to: 3, out: 10, in: 30 });
+
+    expect(flow.getWorker(1)).toBeDefined();
+    expect(RecordingWorker.instances[0].setStreamCalls.length).toBe(1);
+  });
 });
 
 // A subflow boundary between two declared sets whose intersection is exactly
@@ -1277,6 +1329,86 @@ describe('boundary narrowing', () => {
     // ['number','string'] ∩ ['string','point'] = string — uniquely determined.
     expect(root.children[0].sockets[0].format).toBe('string');
     expect(root.children[1].sockets[0].format).toBe('string');
+  });
+});
+
+/*
+ * The boundary's replay could not FORGET: after the outer wire was removed, a
+ * newly drawn inner wire still received the dead wire's last value — and with
+ * no live source behind it, nothing could ever correct it until reload.
+ */
+describe('the subflow boundary after an unwire', () => {
+  it('a removed wire\'s last value does not greet the next subscriber', () => {
+    const state: any = { id: 5, sockets: [{ id: 50, type: 'in' }], children: [], connections: [] };
+    const worker = new FlowWorker(state, () => undefined);
+    const source = new Subject<any>();
+
+    worker.setStream(source.asObservable(), { id: 50 } as any, { id: 100, to: 5, in: 50 } as any);
+    source.next('stale');
+
+    // A subscriber while the wire lives gets the replay — that part must stay:
+    // subscribe order follows connection id, and without the replay the same
+    // graph worked or failed by which wire got the lower id.
+    const before: any[] = [];
+    worker.getStream({ id: 50 } as any).subscribe(v => before.push(v));
+    expect(before).toEqual(['stale']);
+
+    worker.removeStream({ id: 100, to: 5, in: 50 } as any);
+
+    const after: any[] = [];
+    worker.getStream({ id: 50 } as any).subscribe(v => after.push(v));
+    expect(after).toEqual([]);
+
+    // A NEW wire through the boundary reaches both old and new subscribers.
+    const fresh = new Subject<any>();
+    worker.setStream(fresh.asObservable(), { id: 50 } as any, { id: 101, to: 5, in: 50 } as any);
+    fresh.next('live');
+    expect(after).toEqual(['live']);
+    expect(before).toEqual(['stale', 'live']);
+  });
+});
+
+/*
+ * getStream is a worker's own code and may throw — a node keying its outputs
+ * on `aux` answers undefined.asObservable() for a hand-added socket. The
+ * throw used to escape addConnection AFTER the fan count was bumped and the
+ * connection stored: the count leaked forever and the 'connections' emit
+ * never fired, so the drawing and the model disagreed.
+ */
+describe('a worker whose getStream throws', () => {
+  class ThrowingSource {
+    constructor(public config: any) {}
+    getStream(): any { throw new TypeError('no subject for that socket'); }
+    setStream() {}
+    removeStream() {}
+    destroy() {}
+  }
+
+  it('does not wire, does not leak state, and the engine survives', () => {
+    RecordingWorker.instances = [];
+    const types = {
+      ...flowTypes(),
+      thrower: { worker: ThrowingSource, settings: { isFlow: false, title: 'T', config: {}, sockets: [] } },
+    };
+    const root: any = {
+      id: 1, children: [
+        { id: 2, type: 'thrower', sockets: [{ id: 20, type: 'out' }] },
+        { id: 3, type: 'sink', sockets: [{ id: 30, type: 'in' }] },
+      ],
+      connections: [],
+    };
+    const flow = new Flow(types as any).initialize(root);
+    const events: string[] = [];
+
+    flow.changes.subscribe(kind => events.push(kind));
+
+    expect(() => flow.addConnection(root, { id: 100, from: 2, to: 3, out: 20, in: 30 }))
+      .not.toThrow();
+    // The model still records the wire (it exists in the JSON) and announces
+    // it, so the drawing matches the state even though no data can flow.
+    expect(events).toContain('connections');
+    // And removing it cleans up without a residue.
+    expect(() => flow.removeConnection(root.connections[0], root)).not.toThrow();
   });
 });
 

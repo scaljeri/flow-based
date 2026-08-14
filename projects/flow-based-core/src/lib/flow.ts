@@ -94,6 +94,16 @@ export class Flow {
     const connections = flow.connections!,
       children = flow.children!;
 
+    /*
+     * The root's OWN boundary sockets, indexed like every child's. The
+     * children's loop below cannot do it — the root appears in no children
+     * list — and without the index getSocket() answered undefined for a root
+     * socket, so both connectWorkers and format propagation early-returned:
+     * every connection touching the root boundary was silently dead, data
+     * and formats alike, while the root worker (created below) sat unwired.
+     */
+    flow.sockets?.forEach(s => this.sockets[s.id!] = flow.id!);
+
     connections.forEach(c => {
       /*
        * Two wires with one id is one wire, and the flow is not the one the
@@ -167,6 +177,16 @@ export class Flow {
 
     state.connections = [connection, ...state.connections!];
     this.connections[connection.id] = {connection, state};
+
+    // The first wire drawn to the root's boundary IN-SESSION: initialize()
+    // only creates the root worker when a root wire already exists at load,
+    // so without this the socket was indexed but nobody answered on it.
+    if (!this.workers[this.state.id!]
+      && (connection.from === this.state.id || connection.to === this.state.id)) {
+      this.workers[this.state.id!] = new FlowWorker(this.state, childId => this.workers[childId]);
+      this.wrapSetConfigValue(this.state);
+    }
+
     this.connectWorkers(connection);
 
     /*
@@ -1016,9 +1036,32 @@ export class Flow {
       toWorker.setStream(bridge.subject.asObservable(), inSocket, connection);
     }
 
+    /*
+     * getStream is a WORKER's code and may throw — a node type that keys its
+     * outputs on `aux` answers `undefined.asObservable()` for a socket the
+     * author added by hand. The throw used to escape AFTER the fan count was
+     * bumped and the connection stored: the count leaked forever, and the
+     * 'connections' emit never fired, so the drawing and the model disagreed.
+     * Ask for the stream FIRST; only a stream that exists mutates anything.
+     */
+    let stream;
+
+    try {
+      stream = fromWorker.getStream(outSocket);
+    } catch (err) {
+      console.warn(`[flow-based] getStream failed for socket ${outSocket.id} — connection not wired.`, err);
+
+      return;
+    }
+
+    // A reused connection id (a host mistake the editor cannot make) would
+    // otherwise overwrite this entry and leave the old subscription delivering
+    // forever, unsubscribable.
+    bridge.wires[connection.id]?.unsubscribe();
+
     this.outFan[outSocket.id!] = (this.outFan[outSocket.id!] ?? 0) + 1;
 
-    bridge.wires[connection.id] = fromWorker.getStream(outSocket)
+    bridge.wires[connection.id] = stream
       .subscribe(value => {
         const delivered = this.copyForFanOut(outSocket.id!, value);
 
@@ -1085,6 +1128,11 @@ export class Flow {
     delete bridge.wires[connection.id];
 
     if (Object.keys(bridge.wires).length) {
+      // The held value may have come from the wire just removed — showing it
+      // on hover claimed a deleted wire still carried data. "Nothing yet" is
+      // the honest reading until a surviving wire speaks again.
+      bridge.latest = undefined;
+
       return;
     }
 
