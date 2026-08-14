@@ -66,6 +66,8 @@ export class TimestampWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    // The face's reading described the removed wire's last arrival.
+    this.reading = undefined;
   }
 
   setConfigValue(path: string, value: unknown): void {

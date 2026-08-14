@@ -127,4 +127,27 @@ describe('ViewpointsWorker', () => {
 
     worker.destroy();
   });
+
+  /*
+   * Why this matters: the wire wrote the region straight into config.view, so
+   * a saved flow carried a region nobody typed, and deleting the wire kept
+   * rendering the ghost — iterate states the rule this broke: a wire must not
+   * rewrite what a flow saves.
+   */
+  it('a wired region does not rewrite the saved view, and leaves with its wire', () => {
+    const config: Record<string, unknown> = {};
+    const worker = new MandelbrotWorker(config as never);
+    const source = new Subject<unknown>();
+
+    worker.setStream(source, { id: 1, type: 'in' }, { id: 10, from: 0, to: 1 });
+    source.next({ re: -0.5, im: 0.1, span: 0.01 });
+
+    expect(worker.view.span).toBe(0.01);   // the wire wins while it is wired
+    expect(config['view']).toBeUndefined(); // but the flow file is untouched
+
+    worker.removeStream({ id: 10, from: 0, to: 1 });
+
+    expect(worker.view.span).not.toBe(0.01); // back to the written-down view
+    worker.destroy();
+  });
 });

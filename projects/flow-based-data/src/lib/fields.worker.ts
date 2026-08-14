@@ -54,6 +54,11 @@ export class FieldsWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // The record came off that wire; kept, a socket rename after the unwire
+    // answered fresh readings from ghost data.
+    this.latest = undefined;
+    this.emit();
   }
 
   /** Re-read every named socket — also called when a socket is renamed. */

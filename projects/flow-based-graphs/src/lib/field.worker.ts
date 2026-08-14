@@ -75,6 +75,10 @@ export class FieldPlotWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    // "Nothing is an answer too" — the node's own rule; a disconnected field
+    // kept drawing its last picture indefinitely.
+    this.field = undefined;
+    this.ticks.next('field');
   }
 
   get scale(): 'linear' | 'log' {

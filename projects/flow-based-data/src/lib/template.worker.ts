@@ -52,7 +52,12 @@ export class TemplateWorker implements FbNodeWorker {
   /** The latest value per input name. */
   private readonly values = new Map<string, string>();
   /** The socket id each name came from, so a rename does not orphan a value. */
-  private readonly names = new Map<number, string>();
+  private readonly sockets = new Map<number, FbSocket>();
+
+  /** The live socket's name — renamed sockets re-key on the next emission. */
+  private nameOf(id: number): string {
+    return (this.sockets.get(id)?.name ?? '').trim();
+  }
 
   /** A pattern that arrived on a wire beats the one in the panel. */
   private wired?: string;
@@ -81,11 +86,16 @@ export class TemplateWorker implements FbNodeWorker {
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
     const id = socket.id ?? -connection.id;
 
-    this.names.set(id, (socket.name ?? '').trim());
+    /*
+     * The SOCKET, not a copy of its name: compose documents this exact defect
+     * — renaming an input kept composing under the old key until the wire was
+     * re-made. The name is read at emission time off the live socket.
+     */
+    this.sockets.set(id, socket);
     this.wireSockets.set(connection.id, id);
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
-      const [name] = (this.names.get(id) ?? '').split('|');
+      const [name] = this.nameOf(id).split('|');
       const plain = unwrap(value);
 
       /*
@@ -107,7 +117,7 @@ export class TemplateWorker implements FbNodeWorker {
          * flow has to be able to say so WITHOUT editing the fetched pattern,
          * or it is back to keeping a copy of somebody else's URL.
          */
-        const [, modifier] = (this.names.get(id) ?? '').split('|');
+        const [, modifier] = this.nameOf(id).split('|');
 
         /*
          * Nothing arriving is NOT an empty value — and an empty string is how
@@ -153,7 +163,7 @@ export class TemplateWorker implements FbNodeWorker {
     this.wireSockets.delete(connection.id);
 
     if (socketId !== undefined) {
-      const label = this.names.get(socketId) ?? '';
+      const label = this.nameOf(socketId);
       const [name] = label.split('|');
 
       if (name === 'pattern') {

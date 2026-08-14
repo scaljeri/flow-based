@@ -80,6 +80,14 @@ export class WindowWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // The buffer belongs to the wire that filled it. Kept, the first N-1
+    // folds after a REWIRE averaged the old feed into the new one — a crypto
+    // price blended into a 0..1 percentage spiked the downstream chart.
+    this.buffer = [];
+    this.reading = undefined;
+    this.emit();
+    this.ticks.next();
   }
 
   setConfigValue(path: string, value: unknown): void {

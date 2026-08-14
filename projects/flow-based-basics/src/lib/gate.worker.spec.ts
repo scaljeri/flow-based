@@ -49,4 +49,23 @@ describe('GateWorker', () => {
     open.next(1);          // reopen releases what arrived while shut
     expect(seen).toEqual(['held']);
   });
+
+  /*
+   * Why this matters: a value parked behind a closed gate survived its wire;
+   * opening the gate later emitted a value from a deleted wire.
+   */
+  it('a held value dies with its wire', () => {
+    const worker = new GateWorker({ open: false });
+    const seen: unknown[] = [];
+    const source = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(source, { type: 'in' }, { id: 1, from: 0, to: 0 });
+    source.next('parked');
+    worker.removeStream({ id: 1, from: 0, to: 0 });
+
+    worker.toggle();   // open it
+
+    expect(seen).toEqual([]);
+  });
 });

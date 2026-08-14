@@ -106,4 +106,32 @@ describe('SamplerWorker', () => {
 
     worker.destroy();
   });
+
+  /*
+   * Why this matters: removeStream stopped the timer but kept the compiled
+   * function, and restart() — called by the settings panel for every bounds
+   * nudge — resumed sampling the DISCONNECTED function as if still wired.
+   */
+  it('a panel nudge cannot restart a disconnected function', () => {
+    vi.useFakeTimers();
+
+    const worker = new SamplerWorker({ from: 0, to: 1, step: 0.25, interval: 10, mode: 'sweep' });
+    const seen: unknown[] = [];
+    const source = new Subject<FnValue>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(source, inn, wire(10));
+    source.next({ expr: 'x', tex: 'x' });
+    vi.advanceTimersByTime(50);
+
+    const before = seen.length;
+
+    worker.removeStream(wire(10));
+    worker.restart();
+    vi.advanceTimersByTime(100);
+
+    expect(seen.length).toBe(before);
+    worker.destroy();
+    vi.useRealTimers();
+  });
 });

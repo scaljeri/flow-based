@@ -106,6 +106,11 @@ export class SamplerWorker implements FbNodeWorker {
     delete this.subscriptions[connection.id];
     clearInterval(this.timer);
     this.timer = undefined;
+    // The function came off that wire. Kept, a bounds nudge in the panel
+    // (restart() checks `fn`) resumed sampling the disconnected function as
+    // if it were still wired.
+    this.fn = undefined;
+    this.evaluate = undefined;
   }
 
   /** Called by the settings panel too: new bounds mean a new sweep. */

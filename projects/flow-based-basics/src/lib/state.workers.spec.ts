@@ -101,4 +101,24 @@ describe('DelayWorker', () => {
     step.next(3);
     expect(seen).toEqual(['a', 'b']);
   });
+
+  /*
+   * Why this matters: `current` survived the wire, so a latch after the
+   * unwire froze — and emitted — a value from a wire that no longer exists.
+   */
+  it('a hold cannot latch a removed wire\'s value', () => {
+    const worker = new HoldWorker();
+    const seen: unknown[] = [];
+    const source = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(source, { id: 1, type: 'in' }, { id: 10, from: 0, to: 0 });
+    source.next(7);
+    worker.removeStream({ id: 10, from: 0, to: 0 });
+
+    worker.latch();
+
+    expect(seen).toEqual([]);
+    worker.destroy();
+  });
 });

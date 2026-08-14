@@ -52,4 +52,29 @@ describe('SwitchWorker', () => {
     expect(seen).toEqual([7]);
     expect(worker.which).toBe(0);
   });
+
+  /*
+   * Why this matters: disconnect IS "there is nothing here". The removed
+   * wire's value stayed selectable (a ghost source), and removing the
+   * SELECTED wire left its last value drawn with no empty() sent.
+   */
+  it('a removed wire\'s value is neither kept nor selectable', () => {
+    const sockets: FbSocket[] = [
+      { id: 1, type: 'in', format: 'geo' },
+      { id: 2, type: 'in', format: 'geo' },
+      { id: 9, type: 'out', format: 'geo' },
+    ];
+    const worker = new SwitchWorker({ which: 1 }, sockets);
+    const seen: unknown[] = [];
+    const source = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(source, sockets[0], { id: 10, from: 0, to: 1, in: 1 });
+    source.next({ places: [{ lat: 1, lon: 2, name: 'x' }] });
+
+    worker.removeStream({ id: 10, from: 0, to: 1, in: 1 });
+
+    // The chosen wire left: the consumer is told "nothing", in the geo shape.
+    expect(seen.at(-1)).toEqual({ places: [] });
+  });
 });

@@ -68,7 +68,7 @@ export class GateWorker implements FbNodeWorker {
     if ((socket.aux ?? socket.name) === 'open') {
       this.openWires.add(connection.id);
       this.subscriptions[connection.id] = stream.subscribe(value => {
-        this.setOpen(!!value && value !== 0, 'wire');
+        this.setOpen(!!value && value !== 0);
       });
 
       return;
@@ -99,7 +99,14 @@ export class GateWorker implements FbNodeWorker {
       this.wired = undefined;
       this.release();
       this.ticks.next();
+
+      return;
     }
+
+    // The DATA wire left: what it parked behind a closed gate goes with it,
+    // or opening the gate later emitted a value from a deleted wire.
+    this.held = undefined;
+    this.ticks.next();
   }
 
   get open(): boolean {
@@ -120,13 +127,10 @@ export class GateWorker implements FbNodeWorker {
     }
   }
 
-  private setOpen(open: boolean, by: 'wire' | 'config'): void {
-    if (by === 'wire') {
-      this.wired = open;
-    } else {
-      this.config.open = open;
-    }
-
+  // Only ever wire-driven: the face's toggle goes through setConfigValue, and
+  // a 'config' arm here would write config PAST the engine's announce wrap.
+  private setOpen(open: boolean): void {
+    this.wired = open;
     this.release();
     this.ticks.next();
   }

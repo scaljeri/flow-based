@@ -77,17 +77,28 @@ export class AggregateWorker implements FbNodeWorker {
     return this.config.value ?? '';
   }
 
+  /** The last input, kept to re-run on a config change — see ListWorker. */
+  private latest: unknown;
+
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection: FbConnection): void {
-    this.subscriptions[connection.id] = stream.subscribe(value => this.aggregate(value));
+    this.subscriptions[connection.id] = stream.subscribe(value => {
+      this.latest = value;
+      this.aggregate(value);
+    });
   }
 
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    this.latest = undefined;
   }
 
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
+      if (this.latest !== undefined) {
+        this.aggregate(this.latest);
+      }
+
       this.ticks.next();
     }
   }

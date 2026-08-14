@@ -46,4 +46,26 @@ describe('WindowWorker', () => {
     expect(seen.at(-1)).toBe(4);
     expect(out.at(-1)).toBe(4);   // mean of [4,4], not [4,0,4]
   });
+
+  /*
+   * Why this matters: the buffer survived the wire, so the first N-1 folds
+   * after a REWIRE averaged the old feed into the new one — a crypto price
+   * blended into a 0..1 percentage spiked the chart absurdly.
+   */
+  it('the buffer dies with its wire, so a rewire cannot blend two feeds', () => {
+    const worker = new WindowWorker({ size: 3, op: 'mean' });
+    const seen: number[] = [];
+    const feedA = new Subject<number>();
+    const feedB = new Subject<number>();
+
+    worker.getStream().subscribe(v => seen.push(v as number));
+    worker.setStream(feedA, { type: 'in' }, { id: 1, from: 0, to: 0 });
+    feedA.next(60000);
+    worker.removeStream({ id: 1, from: 0, to: 0 });
+
+    worker.setStream(feedB, { type: 'in' }, { id: 2, from: 0, to: 0 });
+    feedB.next(0.5);
+
+    expect(seen.at(-1)).toBe(0.5);
+  });
 });

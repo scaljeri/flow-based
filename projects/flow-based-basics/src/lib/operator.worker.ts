@@ -40,6 +40,9 @@ export class OperatorWorker implements FbNodeWorker {
 
   removeStream(connection: FbConnection): void {
     delete this.inputs[connection.in!];
+    // The shown result mixed the removed operand; the face goes honest
+    // rather than stale until the survivors speak again.
+    this.result = undefined;
     this.resubscribe();
   }
 
@@ -97,6 +100,9 @@ export class SumWorker implements FbNodeWorker {
 
   removeStream(connection: FbConnection): void {
     delete this.inputs[connection.in!];
+    // The shown result mixed the removed operand; the face goes honest
+    // rather than stale until the survivors speak again.
+    this.result = undefined;
     this.resubscribe();
   }
 

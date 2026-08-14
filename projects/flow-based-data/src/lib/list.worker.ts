@@ -64,17 +64,33 @@ export class ListWorker implements FbNodeWorker {
     return this.config.n ?? 10;
   }
 
+  /*
+   * The last input, kept to RE-RUN on a config change: the upstream (a fetch,
+   * a file) often emits exactly once, so without this a "top 10" changed to
+   * "top 3" in the panel — or dragged in a document pill — kept showing 10
+   * forever. Cleared with the wire, like every cached input.
+   */
+  private latest: unknown;
+
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection: FbConnection): void {
-    this.subscriptions[connection.id] = stream.subscribe(value => this.transform(value));
+    this.subscriptions[connection.id] = stream.subscribe(value => {
+      this.latest = value;
+      this.transform(value);
+    });
   }
 
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    this.latest = undefined;
   }
 
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
+      if (this.latest !== undefined) {
+        this.transform(this.latest);
+      }
+
       this.ticks.next();
     }
   }

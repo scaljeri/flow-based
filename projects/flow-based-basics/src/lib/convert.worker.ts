@@ -80,6 +80,9 @@ export class ConvertWorker implements FbNodeWorker {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
     this.last = undefined;
+    // The badge described the removed wire's data; kept, "Not a number"
+    // outlived the wire that carried the offending value.
+    this.error = null;
   }
 
   setConfigValue(path: string, value: unknown): void {

@@ -75,6 +75,14 @@ export class DeferWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // What is still in the air belongs to the removed wire: a pending
+    // debounce or an in-flight delay fired up to `ms` later, emitting a
+    // value whose wire no longer existed. destroy() already knew this.
+    clearTimeout(this.debounceTimer);
+    this.latest = undefined;
+    this.delayTimers.forEach(timer => clearTimeout(timer));
+    this.delayTimers.clear();
   }
 
   setConfigValue(path: string, value: unknown): void {

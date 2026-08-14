@@ -54,6 +54,9 @@ export class DerivativeWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    // Kept, setVariable after the unwire emitted a fresh derivative of a
+    // function whose wire no longer existed.
+    this.source = undefined;
   }
 
   /** Called by the settings panel too: a new variable is a new derivative. */

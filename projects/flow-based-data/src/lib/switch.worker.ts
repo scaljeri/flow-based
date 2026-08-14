@@ -89,6 +89,23 @@ export class SwitchWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    /*
+     * Forget the wire's value: kept, selecting that input later emitted the
+     * ghost as if the source were live. And when the SELECTED wire is the one
+     * leaving, the consumer has to be told there is nothing now — the class
+     * comment's own rule; disconnect is exactly the case it describes.
+     */
+    if (connection.in !== undefined && this.latest.has(connection.in)) {
+      const wasChosen = connection.in === this.chosenId;
+
+      this.latest.delete(connection.in);
+      this.ticks.next();
+
+      if (wasChosen) {
+        this.emit();
+      }
+    }
   }
 
   get which(): number {

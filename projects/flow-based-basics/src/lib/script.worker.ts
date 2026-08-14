@@ -82,7 +82,18 @@ export class ScriptWorker implements FbNodeWorker {
   last: unknown;
 
   /** Per wire: the input name it fills. Latest value + freshness, per name. */
-  private readonly wires = new Map<number, string>();
+  /*
+   * The SOCKET per wire, not a copy of its name: the name IS the script's API
+   * (`value.a`), and captured at wire time a rename in the panel kept
+   * arrivals landing under the old key until the wire was redrawn.
+   */
+  private readonly wires = new Map<number, FbSocket>();
+
+  private wireName(connectionId: number): string | undefined {
+    const socket = this.wires.get(connectionId);
+
+    return socket ? (socket.name || 'in') : undefined;
+  }
   private readonly latest = new Map<string, unknown>();
   private readonly fresh = new Set<string>();
 
@@ -109,9 +120,7 @@ export class ScriptWorker implements FbNodeWorker {
   }
 
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
-    const name = socket.name || 'in';
-
-    this.wires.set(connection.id, name);
+    this.wires.set(connection.id, socket);
     this.subscriptions[connection.id] = stream.subscribe(value => this.arrive(connection.id, value));
   }
 
@@ -119,7 +128,7 @@ export class ScriptWorker implements FbNodeWorker {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
 
-    const name = this.wires.get(connection.id);
+    const name = this.wireName(connection.id);
 
     this.wires.delete(connection.id);
 
@@ -129,7 +138,7 @@ export class ScriptWorker implements FbNodeWorker {
      * received the ghost's last value forever, computing with an input whose
      * wire no longer existed on the canvas.
      */
-    if (name && ![...this.wires.values()].includes(name)) {
+    if (name && ![...this.wires.keys()].some(id => this.wireName(id) === name)) {
       this.latest.delete(name);
       this.fresh.delete(name);
     }
@@ -186,7 +195,7 @@ export class ScriptWorker implements FbNodeWorker {
 
   /** A value landed on one wire; combine per mode and maybe run. */
   private arrive(connectionId: number, value: unknown): void {
-    const name = this.wires.get(connectionId) ?? 'in';
+    const name = this.wireName(connectionId) ?? 'in';
 
     this.latest.set(name, value);
     this.fresh.add(name);
@@ -204,7 +213,7 @@ export class ScriptWorker implements FbNodeWorker {
     }
 
     // zip: run only once EVERY wired input has a fresh value, then wait again.
-    const names = new Set(this.wires.values());
+    const names = new Set([...this.wires.keys()].map(id => this.wireName(id)!));
 
     if ([...names].every(n => this.fresh.has(n))) {
       this.invoke(this.snapshot(), undefined);

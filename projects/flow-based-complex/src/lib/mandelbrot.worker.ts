@@ -73,6 +73,18 @@ export class MandelbrotWorker implements FbNodeWorker {
     return this.subject.asObservable();
   }
 
+  /*
+   * A region that arrived on the wire, kept apart from the one in the config.
+   *
+   * A wire must not rewrite what a flow SAVES — iterate states the rule for
+   * its `c` and this node broke it for its view: wire a viewpoints node in,
+   * step to a place, save, and the flow file carried a region nobody typed;
+   * delete the wire and it still rendered the ghost, reload included. What is
+   * wired wins while it is wired; a hand gesture on the picture (setView)
+   * still persists, because that IS the author exploring.
+   */
+  private wiredView?: Region;
+
   /** A region from elsewhere: a named viewpoint, wired in. */
   setStream(stream: Observable<unknown>, socket: FbSocket, connection: FbConnection): void {
     this.subscriptions[connection.id] = stream.subscribe(value => {
@@ -80,7 +92,7 @@ export class MandelbrotWorker implements FbNodeWorker {
 
       if (region && typeof region.re === 'number' && typeof region.im === 'number'
         && typeof region.span === 'number' && region.span > 0) {
-        this.config.view = { re: region.re, im: region.im, span: region.span };
+        this.wiredView = { re: region.re, im: region.im, span: region.span };
         this.restart();
       }
     });
@@ -89,10 +101,16 @@ export class MandelbrotWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // The written-down region is still underneath; back to it.
+    if (this.wiredView) {
+      this.wiredView = undefined;
+      this.restart();
+    }
   }
 
   get view(): Region {
-    return this.config.view ?? WHOLE_SET;
+    return this.wiredView ?? this.config.view ?? WHOLE_SET;
   }
 
   get resolution(): number {
@@ -122,6 +140,8 @@ export class MandelbrotWorker implements FbNodeWorker {
   }
 
   setView(view: Region): void {
+    // The hand outranks the wire: panning the picture is the author speaking.
+    this.wiredView = undefined;
     this.config.view = view;
     this.restart();
   }

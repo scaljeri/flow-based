@@ -51,4 +51,26 @@ describe('RangeWorker', () => {
 
     expect(seen).toEqual([0]);
   });
+
+  /*
+   * Why this matters: `latest` survived the wire, and replay() re-emits on
+   * any config change — a document-pill scrub after the unwire emitted a
+   * fresh mapping of an input whose wire no longer existed.
+   */
+  it('a config scrub after the unwire cannot re-emit the ghost input', () => {
+    const worker = new RangeWorker({ fromA: 0, toA: 10, fromB: 0, toB: 100 });
+    const seen: unknown[] = [];
+    const source = new Subject<number>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(source, { type: 'in' }, { id: 1, from: 0, to: 0 });
+    source.next(5);
+
+    const before = seen.length;
+
+    worker.removeStream({ id: 1, from: 0, to: 0 });
+    worker.setConfigValue('toB', 50);
+
+    expect(seen.length).toBe(before);
+  });
 });

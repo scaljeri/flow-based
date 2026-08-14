@@ -197,6 +197,13 @@ export class PickWorker implements FbNodeWorker {
 
     this.controlWires.delete(connection.id);
 
+    // Not a control wire: the DATA wire left, and its payload goes with it —
+    // kept, any later settings change re-picked from the ghost.
+    if (role === undefined) {
+      this.latest = undefined;
+      this.emit();
+    }
+
     if (role === 'path') {
       this.wiredPath = undefined;
       this.emit();

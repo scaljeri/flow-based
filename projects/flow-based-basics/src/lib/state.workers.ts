@@ -16,6 +16,10 @@ abstract class StateWorker implements FbNodeWorker {
   protected readonly ticks = new ReplaySubject<void>(1);
   protected readonly subscriptions: Record<number, Subscription> = {};
 
+  /** What is flowing now; undefined until anything arrived. On the BASE so
+   *  removeStream can clear it — see there. */
+  current?: unknown;
+
   get changes(): Observable<void> {
     return this.ticks.asObservable();
   }
@@ -35,6 +39,11 @@ abstract class StateWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // A state cell's pending input dies with its wire: latching after the
+    // unwire froze — and emitted — a value from a wire that no longer exists.
+    this.current = undefined;
+    this.ticks.next();
   }
 }
 
@@ -60,8 +69,6 @@ export const HOLD_SETTINGS: FbNodeSettings = {
  * a script node with hidden state.
  */
 export class HoldWorker extends StateWorker {
-  /** What is flowing now; undefined until anything arrived. */
-  current?: unknown;
   /** What was frozen; undefined until the first latch. */
   held?: unknown;
 
@@ -181,8 +188,6 @@ export const DELAY_SETTINGS: FbNodeSettings = {
  * step per tick — visible, boundable, stoppable.
  */
 export class DelayWorker extends StateWorker {
-  /** What arrived since the last step. */
-  current?: unknown;
   /** What the last step stored — the value one step behind. */
   stored?: unknown;
 

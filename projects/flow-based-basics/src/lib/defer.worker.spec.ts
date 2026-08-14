@@ -63,4 +63,28 @@ describe('DeferWorker', () => {
     vi.advanceTimersByTime(100);
     expect(seen).toEqual(['a', 'b']);
   });
+
+  /*
+   * Why this matters: a pending debounce or in-flight delay outlived its
+   * wire by up to `ms`, emitting a removed wire's value. destroy() already
+   * cancelled them; removeStream did not.
+   */
+  it('pending timers die with their wire', () => {
+    vi.useFakeTimers();
+
+    const worker = new DeferWorker({ mode: 'delay', ms: 100 });
+    const seen: unknown[] = [];
+    const source = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(source, { type: 'in' }, { id: 1, from: 0, to: 0 });
+    source.next('late');
+    worker.removeStream({ id: 1, from: 0, to: 0 });
+
+    vi.advanceTimersByTime(200);
+
+    expect(seen).toEqual([]);
+    worker.destroy();
+    vi.useRealTimers();
+  });
 });

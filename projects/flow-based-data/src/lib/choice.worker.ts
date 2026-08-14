@@ -69,6 +69,11 @@ export class ChoiceWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // The options came off that wire; kept, turning the knob after the
+    // unwire emitted picks from a list that no longer exists.
+    this.items = [];
+    this.emit();
   }
 
   /** What the node draws: one line per option. */

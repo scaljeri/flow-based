@@ -68,6 +68,11 @@ export class RangeWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // Cleared, or a later config scrub re-emitted a fresh mapping of an
+    // input whose wire no longer exists (replay() reads `latest`).
+    this.latest = undefined;
+    this.ticks.next();
   }
 
   get fromA(): number {

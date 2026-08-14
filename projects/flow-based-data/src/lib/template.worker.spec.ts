@@ -92,4 +92,29 @@ describe('TemplateWorker', () => {
     a.next('z');
     expect(seen).toEqual(['x/y', '']);
   });
+
+  /*
+   * Why this matters: the placeholder key was a COPY of the socket's name,
+   * frozen at wire time — compose documents the same defect. Renaming a
+   * wired socket kept filling the dead name and reported the new one
+   * missing until the wire was redrawn.
+   */
+  it('a renamed socket re-keys on the next arrival', () => {
+    const worker = new TemplateWorker({ pattern: '{kind}' });
+    const seen: string[] = [];
+    const socket = named(1, 'region');
+    const source = new Subject<string>();
+
+    worker.getStream().subscribe(value => seen.push(value));
+    worker.setStream(source, socket, wire(10));
+
+    source.next('nox');
+    expect(seen).toEqual([]);   // {kind} is not filled by `region`
+
+    // The panel renames the socket — the SAME object the worker holds.
+    socket.name = 'kind';
+    source.next('pm10');
+
+    expect(seen).toEqual(['pm10']);
+  });
 });
