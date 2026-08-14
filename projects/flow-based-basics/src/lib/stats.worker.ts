@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
 import { toNumber } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './gauss';
@@ -205,8 +205,24 @@ export class StatsWorker implements FbNodeWorker {
   }
 
   set columnWidth(width: number) {
-    this.config.columnWidth = width;
-    this.reset();
+    // Through the announce channel: assigned directly, the panel edit never
+    // marked the flow dirty and was gone on reload.
+    this.setConfigValue('columnWidth', width);
+  }
+
+  setConfigValue(path: string, value: unknown): void {
+    if (path === 'columnWidth') {
+      if (value === this.config.columnWidth) {
+        return;
+      }
+
+      this.config.columnWidth = value as number;
+      this.reset();
+
+      return;
+    }
+
+    writeConfigValue(this.config, path, value);
   }
 
   connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {

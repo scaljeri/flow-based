@@ -99,6 +99,7 @@ export class RequestWorker implements FbNodeWorker {
   destroy(): void {
     this.ticks.complete();
     clearInterval(this.timer);
+    clearTimeout(this.restartSoon);
     Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
     this.subject.complete();
   }
@@ -215,7 +216,15 @@ export class RequestWorker implements FbNodeWorker {
     }
 
     if (path === 'every') {
-      this.restart();
+      /*
+       * DEBOUNCED: a document pill commits per keystroke, so typing "60000"
+       * passed through every=6 — a few real requests at the 250ms floor to
+       * someone else's server before the number was finished. Held briefly,
+       * only the settled value arms the timer; the panel commits on change
+       * and never notices the delay.
+       */
+      clearTimeout(this.restartSoon);
+      this.restartSoon = setTimeout(() => this.restart(), 400);
     } else if (path === 'title' || path === 'description') {
       // Naming a source is not a reason to ask for it again; re-send what is
       // already held, wearing the new name.
@@ -310,6 +319,14 @@ export class RequestWorker implements FbNodeWorker {
         : message;
 
       /*
+       * The pre-failure answer is gone from the wire (null went out below);
+       * kept in `last`, a retitle's resend() pushed it back wearing the new
+       * name, as if current — the very staleness null-on-failure exists to
+       * prevent.
+       */
+      this.last = undefined;
+
+      /*
        * A failure travels too, and it has to.
        *
        * This used to fail quietly downstream: the node went red, and every
@@ -396,6 +413,9 @@ export class RequestWorker implements FbNodeWorker {
         ? `${Math.round(this.bytes / 1024)} kB`
         : `${(this.bytes / 1024 / 1024).toFixed(1)} MB`;
   }
+
+  /** The pending debounced restart; see setConfigValue('every'). */
+  private restartSoon?: ReturnType<typeof setTimeout>;
 
   private restart(): void {
     clearInterval(this.timer);

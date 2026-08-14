@@ -104,6 +104,11 @@ function meterNode(
               // very config object the flow was loaded with.
               (api.state.config ??= {})[key] = value;
               redraw();
+              // And ANNOUNCED: a meter has no worker setConfigValue for its
+              // range, so without refresh() this edit never marked the flow
+              // dirty and was gone on reload — the worker-less write channel
+              // the notes and frames already use.
+              api.refresh();
             }
           });
 

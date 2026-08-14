@@ -108,4 +108,27 @@ describe('GateWorker', () => {
     control.next(1);
     expect(seen).toEqual(['x']);
   });
+
+  /*
+   * Why this matters: pausing a clock is an edit like any other. toggle()
+   * assigned config.running directly, past the engine's announce wrap — no
+   * dirty dot, and the pause was lost on reload. The gate's toggle was fixed
+   * for exactly this; the clock had the same defect.
+   */
+  it('pausing the clock routes through the announce channel', () => {
+    const worker = new ClockWorker({ running: true, interval: 1000 });
+    const written: string[] = [];
+    const original = worker.setConfigValue.bind(worker);
+
+    worker.setConfigValue = (path: string, value: unknown) => {
+      written.push(path);
+      original(path, value);
+    };
+
+    worker.toggle();
+
+    expect(written).toEqual(['running']);
+    expect(worker.running).toBe(false);
+    worker.destroy();
+  });
 });

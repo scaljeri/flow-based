@@ -92,7 +92,13 @@ export class EventSourceWorker implements FbNodeWorker {
 
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
-      this.connect();
+      // Only a changed ADDRESS reconnects — websocket and webtransport make
+      // the same distinction. Reconnecting for a retitle dropped a live SSE
+      // stream per keystroke of a document pill editing the label.
+      if (path === 'url') {
+        this.connect();
+      }
+
       this.ticks.next();
     }
   }

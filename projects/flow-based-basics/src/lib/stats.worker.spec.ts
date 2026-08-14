@@ -61,4 +61,22 @@ describe('StatsWorker', () => {
 
     expect(() => worker.getStream({ type: 'out' } as never).subscribe()).not.toThrow();
   });
+
+  // The ngModel setter assigned config directly, past the announce wrap —
+  // the histogram width edit never marked the flow dirty.
+  it('the column-width setter routes through the announce channel', () => {
+    const worker = new StatsWorker({ columnWidth: 1 });
+    const written: string[] = [];
+    const original = worker.setConfigValue.bind(worker);
+
+    worker.setConfigValue = (path: string, value: unknown) => {
+      written.push(path);
+      original(path, value);
+    };
+
+    worker.columnWidth = 2;
+
+    expect(written).toEqual(['columnWidth']);
+    expect(worker.columnWidth).toBe(2);
+  });
 });

@@ -100,8 +100,11 @@ export class ClockWorker implements FbNodeWorker {
 
   /** The play/pause on the node. A wired `run` outranks it — the wire is data. */
   toggle(): void {
-    this.config.running = !this.running;
-    this.arm();
+    // Through setConfigValue, the engine's announce wrap: pausing a clock is
+    // an edit like any other — assigned directly it never marked the flow
+    // dirty, and the pause was lost on reload. The gate's toggle had the
+    // same fix.
+    this.setConfigValue('running', !this.running);
   }
 
   setConfigValue(path: string, value: unknown): void {

@@ -70,4 +70,24 @@ describe('EventSourceWorker', () => {
 
     worker.destroy();
   });
+
+  /*
+   * Why this matters: setConfigValue reconnected UNCONDITIONALLY — a document
+   * pill retitling a live SSE node tore the stream down once per keystroke,
+   * losing whatever was in flight. websocket and webtransport already only
+   * redial on a changed address; this is the sibling that missed the fix.
+   */
+  it('a retitle does not drop a live stream', () => {
+    const worker = new EventSourceWorker({ url: 'https://x/stream' });
+    const live = FakeEventSource.last!;
+
+    worker.setConfigValue('title', 'Air quality');
+
+    expect(live.closed).toBe(false);
+
+    worker.setConfigValue('url', 'https://x/other');
+
+    expect(live.closed).toBe(true);
+    worker.destroy();
+  });
 });

@@ -133,4 +133,34 @@ describe('RequestWorker', () => {
 
     worker.destroy();
   });
+
+  /*
+   * Why this matters: resend() emitted `last`, which a FAILED fetch never
+   * cleared — so a retitle after an outage pushed the pre-failure answer
+   * back onto the wire wearing the new name, as if current. Null went out at
+   * the failure precisely so downstream would clear.
+   */
+  it('a retitle after a failed fetch does not revive stale data', async () => {
+    stubFetch({ 'https://x/data.json': { price: 100 } });
+
+    const worker = new RequestWorker({ url: 'https://x/data.json', title: 'Feed' });
+    const seen: unknown[] = [];
+
+    worker.getStream().subscribe(v => seen.push(v));
+    await flush();
+
+    // The endpoint goes away; the fetch fails; null goes out.
+    stubFetch({});
+    worker.setConfigValue('url', 'https://x/data.json?v=2');
+    await flush();
+
+    const afterFailure = seen.length;
+
+    worker.setConfigValue('title', 'Renamed');
+    await flush();
+
+    // Nothing new: there is no current answer to re-send.
+    expect(seen.length).toBe(afterFailure);
+    worker.destroy();
+  });
 });
