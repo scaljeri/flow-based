@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, NgZone } from '@angular/core';
 import { FbModuleInfo, ModulesService } from '../../modules.service';
 
 /**
@@ -211,13 +211,23 @@ import { FbModuleInfo, ModulesService } from '../../modules.service';
 export class ModulesDialogComponent {
   readonly modules = inject(ModulesService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly zone = inject(NgZone);
 
   url = '';
   adding = false;
   addError: string | null = null;
 
   constructor() {
-    this.modules.changed.subscribe(() => this.cdr.markForCheck());
+    /*
+     * zone.run + markForCheck: `changed` fires after a dynamic import(),
+     * which zone.js does not patch — so a bare markForCheck scheduled no
+     * tick and the mark sat until the next unrelated event, leaving a module
+     * showing "loading" after it had finished. A bare detectChanges is no
+     * good either: `changed` also fires synchronously mid-cycle (enable from
+     * a click), and re-entering CD throws detectChangesInViewWhileDirty.
+     * Entering the zone schedules the tick; the mark does the rest.
+     */
+    this.modules.changed.subscribe(() => this.zone.run(() => this.cdr.markForCheck()));
 
     // Fetched when the dialog opens rather than at startup: a reader who never
     // opens this never pays for it.

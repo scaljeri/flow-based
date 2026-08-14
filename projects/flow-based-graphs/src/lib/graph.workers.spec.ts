@@ -99,4 +99,28 @@ describe('PlacesWorker', () => {
 
     worker.destroy();
   });
+
+  /*
+   * Why this matters: the layer buffer survives a disconnect on purpose (a
+   * chart must not blank), but a DIFFERENT source rewired to the same socket
+   * appended into the old buffer — sensor B's rolling numbers continued
+   * sensor A's curve as one unbroken line, no seam.
+   */
+  it('a rewired socket starts a fresh curve instead of splicing two sources', () => {
+    const worker = new PlotWorker({});
+    const socket = { id: 1, type: 'in' } as never;
+    const feedA = new Subject<unknown>();
+    const feedB = new Subject<unknown>();
+
+    worker.setStream(feedA, socket, { id: 10, from: 0, to: 0, in: 1 });
+    feedA.next(100);
+    feedA.next(101);
+
+    worker.removeStream({ id: 10, from: 0, to: 0, in: 1 });
+    worker.setStream(feedB, socket, { id: 11, from: 0, to: 0, in: 1 });
+    feedB.next(7);
+
+    // One point, starting at index 0 — not a third point at index 2.
+    expect(worker.layerFor(1)?.points).toEqual([[0, 7]]);
+  });
 });

@@ -1289,13 +1289,15 @@
             "id": 311,
             "type": "out",
             "name": "upper",
-            "format": "point"
+            "format": "point",
+            "aux": "upper"
           },
           {
             "id": 312,
             "type": "out",
             "name": "lower",
-            "format": "point"
+            "format": "point",
+            "aux": "lower"
           }
         ],
         "ui": {

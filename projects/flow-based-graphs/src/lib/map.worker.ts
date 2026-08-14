@@ -174,6 +174,12 @@ export class MapWorker implements FbNodeWorker {
     if (!layer) {
       layer = { places: [] };
       this.bySocket.set(key, layer);
+    } else if (this.orphaned.delete(key)) {
+      // Same rule as the plot: a NEW wire on an unwired socket starts a
+      // fresh layer — appended into, source B's places joined source A's.
+      layer.places = [];
+      this.reconsider();
+      this.subject.next();
     }
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
@@ -184,9 +190,16 @@ export class MapWorker implements FbNodeWorker {
     });
   }
 
+  /** Sockets whose wire left; see the plot's identical set. */
+  private readonly orphaned = new Set<number>();
+
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    if (connection.in !== undefined) {
+      this.orphaned.add(connection.in);
+    }
   }
 
   /**

@@ -132,6 +132,17 @@ export class PlotWorker implements FbNodeWorker {
     if (!buffer) {
       buffer = { xy: false, points: [] };
       this.bySocket.set(key, buffer);
+    } else if (this.orphaned.delete(key)) {
+      /*
+       * A NEW wire on a socket whose old wire was removed: the buffer is the
+       * OLD source's data. Appended into, sensor B's readings continued
+       * sensor A's curve as one unbroken line — the rolling index carried on
+       * from the old series with no seam. A reconnect of the SAME source
+       * costs its history here, which its own replay partly restores; a
+       * spliced lie cost more.
+       */
+      buffer.points = [];
+      this.subject.next();
     }
 
     this.subscriptions[connection.id] = stream.subscribe(value => {
@@ -141,9 +152,18 @@ export class PlotWorker implements FbNodeWorker {
     });
   }
 
+  /** Sockets whose wire was removed — their buffer is a dead source's. */
+  private readonly orphaned = new Set<number>();
+
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+
+    // The layer keeps DRAWING (deliberate: a disconnect must not blank the
+    // chart), but the next wire on this socket starts a fresh curve.
+    if (connection.in !== undefined) {
+      this.orphaned.add(connection.in);
+    }
   }
 
   private ingest(buffer: SeriesBuffer, value: unknown): boolean {

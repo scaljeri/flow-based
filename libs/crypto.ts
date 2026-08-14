@@ -4,7 +4,7 @@
 // with a URL-loaded module at runtime, so a module carries what it needs.
 import type { FbMountModule, FbNodeApi, FbNodeMount, FbNodeWorker, FbSocket, FbSeries as Series }
   from '@scaljeri/flow-based-node-utils';
-import { FB_DRAG_IGNORE, injectStyleOnce, lastValue } from '@scaljeri/flow-based-node-utils';
+import { FB_DRAG_IGNORE, injectStyleOnce, lastValue, writeConfigValue } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject } from 'rxjs';
 
 /**
@@ -88,7 +88,14 @@ class PricesWorker implements FbNodeWorker {
     if (path === 'refresh') {
       this.config.refresh = Number(value);
       this.start();
+
+      return;
     }
+
+    // Unknown paths still PERSIST. Because this method exists, the editor
+    // never falls back to its own config write — so a document pill on
+    // `endpoint` or `path` was dropped entirely and appeared to snap back.
+    writeConfigValue(this.config as Record<string, unknown>, path, value);
   }
 
   private start(): void {
@@ -109,6 +116,9 @@ class PricesWorker implements FbNodeWorker {
   }
 
   /** Move the last point to the current price — the newest bar, still forming. */
+  /** Stamp per pull, so a slow answer cannot overwrite a newer one. */
+  private pullAttempt = 0;
+
   private async pull(): Promise<void> {
     const { endpoint, path } = this.config;
 
@@ -116,8 +126,15 @@ class PricesWorker implements FbNodeWorker {
       return;
     }
 
+    const mine = ++this.pullAttempt;
+
     try {
       const reply = await fetch(endpoint).then(r => r.json());
+
+      if (mine !== this.pullAttempt) {
+        return;   // a newer pull already answered
+      }
+
       const price = Number(path ? path.split('.').reduce((o: unknown, key) =>
         (o as Record<string, unknown> | undefined)?.[key], reply) : reply);
 
@@ -187,7 +204,11 @@ class SmaWorker implements FbNodeWorker {
     if (path === 'window') {
       this.config.window = Number(value);
       this.emit();
+
+      return;
     }
+
+    writeConfigValue(this.config as Record<string, unknown>, path, value);
   }
 
   private emit(): void {
@@ -228,10 +249,13 @@ class BandsWorker implements FbNodeWorker {
     this.ticks.complete();
   }
 
-  // Two outputs, told apart by socket NAME — the flow names them 'upper' and
-  // 'lower', and the engine hands getStream the very socket being subscribed.
+  // Two outputs, told apart by AUX — the stable machine identity. Told apart
+  // by NAME before, and the name is the reader-facing label a flow renames:
+  // rename 'lower' and both wires silently delivered the upper band — the
+  // buy light compared price against the wrong line, no error anywhere. The
+  // gate below already routed on aux; this is the sibling that missed it.
   getStream(socket?: FbSocket): Observable<Series> {
-    return socket?.name === 'lower' ? this.lower.asObservable() : this.upper.asObservable();
+    return (socket?.aux ?? socket?.name) === 'lower' ? this.lower.asObservable() : this.upper.asObservable();
   }
 
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection?: { id: number }): void {
@@ -254,8 +278,10 @@ class BandsWorker implements FbNodeWorker {
   }
 
   setConfigValue(path: string, value: unknown): void {
-    if (path === 'window') { this.config.window = Number(value); this.emit(); }
-    if (path === 'k') { this.config.k = Number(value); this.emit(); }
+    if (path === 'window') { this.config.window = Number(value); this.emit(); return; }
+    if (path === 'k') { this.config.k = Number(value); this.emit(); return; }
+
+    writeConfigValue(this.config as Record<string, unknown>, path, value);
   }
 
   private emit(): void {
@@ -326,19 +352,32 @@ class GateWorker implements FbNodeWorker {
   }
 
   removeStream(connection?: { id: number }): void {
-    const key = connection?.id ?? 0;
-    const wire = this.wires.get(key);
+    // The connection-less fallback keys are -1/-2 (see setStream); looking a
+    // missing connection up as 0 leaked the subscription and kept a stale
+    // operand. The engine always passes the connection — this guards hosts
+    // that do not, by releasing every fallback-keyed wire.
+    const keys = connection?.id !== undefined ? [connection.id] : [-1, -2];
 
-    if (wire) {
-      wire.unsubscribe();
-      this[wire.side] = undefined;
-      this.wires.delete(key);
-      this.emit();
+    for (const key of keys) {
+      const wire = this.wires.get(key);
+
+      if (wire) {
+        wire.unsubscribe();
+        this[wire.side] = undefined;
+        this.wires.delete(key);
+        this.emit();
+      }
     }
   }
 
   setConfigValue(path: string, value: unknown): void {
-    if (path === 'op' && typeof value === 'string' && value in OPS) {
+    if (path !== 'op') {
+      writeConfigValue(this.config as Record<string, unknown>, path, value);
+
+      return;
+    }
+
+    if (typeof value === 'string' && value in OPS) {
       this.config.op = value as Op;
       this.emit();
     }
@@ -766,8 +805,8 @@ export default {
         config: { window: 20, k: 2 },
         sockets: [
           { type: 'in', formats: ['point'] },
-          { type: 'out', name: 'upper', format: 'point' },
-          { type: 'out', name: 'lower', format: 'point' },
+          { type: 'out', aux: 'upper', name: 'upper', format: 'point' },
+          { type: 'out', aux: 'lower', name: 'lower', format: 'point' },
         ],
         help: 'A moving average with a line N standard deviations above and below it. The band widens where the price has been volatile and pinches where it has been calm. Upper and lower come out separately, each drawn as its own layer.',
       },

@@ -40,4 +40,36 @@ describe('FilterWorker', () => {
 
     expect(seen.at(-1)).toEqual(['a']);
   });
+
+  /*
+   * Why this matters: `latest` initialised to [] made a panel keystroke
+   * BEFORE the list wire fired push an empty answer downstream — compose and
+   * template deliberately stay silent until every input has spoken.
+   */
+  it('a rule edit before any list arrived emits nothing', () => {
+    const worker = new FilterWorker({ test: 'is', value: 'x' });
+    const seen: unknown[] = [];
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setConfigValue('value', 'y');
+
+    expect(seen).toEqual([]);
+  });
+
+  it('the cached list dies with its wire', () => {
+    const worker = new FilterWorker({ test: 'is', value: 'a' });
+    const seen: unknown[] = [];
+    const source = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(source, { id: 1, type: 'in' }, { id: 10, from: 0, to: 0 });
+    source.next(['a', 'b']);
+
+    const before = seen.length;
+
+    worker.removeStream({ id: 10, from: 0, to: 0 });
+    worker.setConfigValue('value', 'b');
+
+    expect(seen.length).toBe(before);
+  });
 });

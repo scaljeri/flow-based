@@ -1,6 +1,6 @@
 // Types from the authoring package — FbMountModule is node-utils' checked alias.
 import type { FbMountModule, FbNodeApi, FbNodeMount, FbNodeWorker } from '@scaljeri/flow-based-node-utils';
-import { Observable, ReplaySubject } from 'rxjs';
+import { Observable, ReplaySubject, Subject } from 'rxjs';
 
 /**
  * Triggers: the two nodes that make something else happen.
@@ -31,7 +31,11 @@ interface TimerConfig {
 }
 
 class TimerWorker implements FbNodeWorker {
-  private readonly subject = new ReplaySubject<number>(1);
+  // A plain Subject on purpose: a trigger is a MOMENT, not a value. Replayed,
+  // wiring an already-running timer into a request fired a fetch the instant
+  // the wire landed, with nobody asking. The redraw channel below still
+  // replays — a view mounting late should see the count.
+  private readonly subject = new Subject<number>();
   private timer?: ReturnType<typeof setInterval>;
 
   /** Ticks so far, which is what the node draws. */
@@ -105,7 +109,9 @@ class TimerWorker implements FbNodeWorker {
 }
 
 class ButtonWorker implements FbNodeWorker {
-  private readonly subject = new ReplaySubject<number>(1);
+  // A plain Subject, same reason as the timer: replaying the LAST press made
+  // a new wire fire as if the button had just been pressed.
+  private readonly subject = new Subject<number>();
 
   count = 0;
 

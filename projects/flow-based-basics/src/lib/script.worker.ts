@@ -1,5 +1,5 @@
 import { FbConnection, FbNodeSettings, FbNodeWorker, FbSocket } from '@scaljeri/flow-based';
-import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
+import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export type ScriptMode = 'merge' | 'latest' | 'zip';
 

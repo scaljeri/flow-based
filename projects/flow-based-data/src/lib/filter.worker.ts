@@ -54,8 +54,11 @@ export class FilterWorker implements FbNodeWorker {
     return this.ticks.asObservable();
   }
 
-  /** The last list, so changing the rule needs no new fetch. */
-  private latest: unknown[] = [];
+  /** The last list, so changing the rule needs no new fetch. Undefined until
+   *  one ARRIVED: initialised to [], a panel keystroke before the list wire
+   *  fired pushed an empty answer downstream — a premature emission where
+   *  compose and template deliberately stay silent. */
+  private latest?: unknown[];
 
   /**
    * A rule that arrived rather than one that was typed.
@@ -122,7 +125,16 @@ export class FilterWorker implements FbNodeWorker {
     if (this.valueWires.delete(connection.id) && this.valueWires.size === 0 && this.wired !== undefined) {
       this.wired = undefined;
       this.emit();
+
+      return;
     }
+
+    // The DATA wire left: the cached list goes with it — the house rule every
+    // caching worker now follows.
+    this.latest = undefined;
+    this.incoming = 0;
+    this.kept = 0;
+    this.ticks.next();
   }
 
   /** What the rule is being tested against, wired or typed. */
@@ -142,7 +154,9 @@ export class FilterWorker implements FbNodeWorker {
    * both look like that. The names are the answer.
    */
   get labels(): string[] {
-    return this.name(this.latest.filter(item => this.judge(item) !== !!this.config.negate));
+    const rule = this.compileRule();
+
+    return this.name((this.latest ?? []).filter(item => this.judge(item, rule) !== !!this.config.negate));
   }
 
   /**
@@ -155,7 +169,9 @@ export class FilterWorker implements FbNodeWorker {
    * a mystery.
    */
   get dropped(): string[] {
-    return this.name(this.latest.filter(item => this.judge(item) === !!this.config.negate));
+    const rule = this.compileRule();
+
+    return this.name((this.latest ?? []).filter(item => this.judge(item, rule) === !!this.config.negate));
   }
 
   /** What to call an item: the field being judged, or its place in the list. */
@@ -199,34 +215,60 @@ export class FilterWorker implements FbNodeWorker {
    * stop and not a reason to throw at every item. It reports and keeps
    * everything, which is the answer that loses no data.
    */
-  private judge(item: unknown): boolean {
+  /** What one emission judges every item against; compiled once per pass. */
+  private compileRule(): { against: string; pattern?: RegExp; set?: string[] } {
+    const against = this.wired ?? this.config.value ?? '';
+
+    if (this.test === 'matches') {
+      try {
+        return { against, pattern: new RegExp(against) };
+      } catch (error) {
+        this.error = `That pattern does not compile: ${(error as Error).message}`;
+
+        return { against };
+      }
+    }
+
+    if (this.test === 'oneOf') {
+      return { against, set: against.split(',').map(one => one.trim()).filter(Boolean) };
+    }
+
+    return { against };
+  }
+
+  private judge(item: unknown, rule: { against: string; pattern?: RegExp; set?: string[] }): boolean {
     const field = this.config.path ? readConfigValue(item, this.config.path) : item;
     const text = field === undefined || field === null ? '' : String(field);
-    const against = this.wired ?? this.config.value ?? '';
 
     switch (this.test) {
       case 'is':
-        return text === against;
+        return text === rule.against;
 
       case 'has':
-        return text.toLowerCase().includes(against.toLowerCase());
+        return text.toLowerCase().includes(rule.against.toLowerCase());
 
       case 'matches':
-        try {
-          return new RegExp(against).test(text);
-        } catch (error) {
-          this.error = `That pattern does not compile: ${(error as Error).message}`;
-
-          return true;
-        }
+        // A pattern that does not compile keeps everything — losing no data
+        // is the answer while it is being typed.
+        return rule.pattern ? rule.pattern.test(text) : true;
 
       default:
-        return against.split(',').map(one => one.trim()).filter(Boolean).includes(text);
+        return (rule.set ?? []).includes(text);
     }
   }
 
   private emit(): void {
-    const kept = this.latest.filter(item => this.judge(item) !== !!this.config.negate);
+    if (this.latest === undefined) {
+      return;   // nothing arrived yet — nothing to say
+    }
+
+    /*
+     * ONE compiled rule per pass, not one per item: `matches` built a fresh
+     * RegExp for every row of every emission — thousands of compiles per
+     * keystroke on a real dataset.
+     */
+    const rule = this.compileRule();
+    const kept = this.latest.filter(item => this.judge(item, rule) !== !!this.config.negate);
 
     this.kept = kept.length;
     this.ticks.next();
