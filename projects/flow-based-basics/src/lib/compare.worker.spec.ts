@@ -102,4 +102,27 @@ describe('CompareWorker — wire removal', () => {
     a.next(50);
     expect(seen.at(-1)).toBe(0);   // 50 > 100 — the rename did not swap sides
   });
+
+  /*
+   * Why this matters: a chart line is a series, and "price below the band"
+   * is a comparison of two series' LATEST readings. Wired directly, toNumber
+   * made an array undefined and the compare sat silent — the crypto gate
+   * could do this and the core one could not.
+   */
+  it('a series wired in reads as its latest value', () => {
+    const worker = new CompareWorker({ op: 'lt' });
+    const seen: unknown[] = [];
+    const price = new Subject<unknown>();
+    const band = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(price, { type: 'in', aux: 'a' }, { id: 1, from: 0, to: 0 });
+    worker.setStream(band, { type: 'in', aux: 'b' }, { id: 2, from: 0, to: 0 });
+
+    price.next([[0, 100], [1, 60]]);
+    band.next([[0, 90], [1, 70]]);
+
+    // 60 < 70 — judged on the latest points, not on the arrays.
+    expect(seen.at(-1)).toBe(1);
+  });
 });

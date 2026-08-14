@@ -1,5 +1,5 @@
 import { FbConnection, FbNodeSettings, FbNodeWorker, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
-import { toNumber } from '@scaljeri/flow-based-node-utils';
+import { lastValue, toNumber } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export type CompareOp = 'gt' | 'lt' | 'ge' | 'le' | 'eq' | 'ne';
@@ -22,7 +22,7 @@ export const COMPARE_OPS: Record<CompareOp, { symbol: string; test: (a: number, 
 
 export const COMPARE_SETTINGS: FbNodeSettings = {
   title: 'Compare',
-  help: 'Turns a condition into a 0 or a 1 — the one thing the palette could not do, so a gate or an on/off light had no honest way to be driven. `a` against `b` (`b` is a config, or wire it), operator picked in the panel; out is 1 when it holds, 0 when it does not.',
+  help: 'Turns a condition into a 0 or a 1 — the one thing the palette could not do, so a gate or an on/off light had no honest way to be driven. `a` against `b` (`b` is a config, or wire it), operator picked on the node; out is 1 when it holds, 0 when it does not. A series wired in reads as its latest value.',
   config: { op: 'gt', b: 0 },
   // A comparison is exactly two inputs and one answer; nothing there is addable.
   addableSockets: 'none',
@@ -97,10 +97,19 @@ export class CompareWorker implements FbNodeWorker {
     const side: 'a' | 'b' = (socket.aux ?? socket.name) === 'b' ? 'b' : 'a';
 
     const subscription = stream.subscribe(value => {
+      /*
+       * toNumber first (numbers, numeric strings, blank = undecided), then
+       * lastValue for a SERIES: a plot line wired straight into a comparison
+       * reads as its latest reading — "price below the band" without an
+       * extract-the-last-point node in between. The crypto gate reads its
+       * operands the same way.
+       */
+      const reading = toNumber(value) ?? lastValue(value);
+
       if (side === 'b') {
-        this.bWired = toNumber(value);
+        this.bWired = reading;
       } else {
-        this.a = toNumber(value);
+        this.a = reading;
       }
 
       this.recompute();
