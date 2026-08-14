@@ -1,5 +1,5 @@
 import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Observable, ReplaySubject, Subscription } from 'rxjs';
 
 export const TAP_SETTINGS: FbNodeSettings = {
   title: 'Tap',
@@ -23,7 +23,11 @@ export const TAP_SETTINGS: FbNodeSettings = {
 export class TapWorker implements FbNodeWorker {
   private stream!: Observable<any>;
   private subscriptions: { [id: string]: Subscription } = {};
-  private subject = new Subject<any>();
+  // ReplaySubject(1), the value-carrier convention (reroute states it): a tap
+  // passes values through, and with a plain Subject a wire drawn AFTER data
+  // flowed heard nothing until the source spoke again — on a static upstream,
+  // never. Only moment sources (clock, trigger) may refuse to replay.
+  private subject = new ReplaySubject<any>(1);
 
   public history: unknown[] = [];
   public currentValue: unknown;
@@ -51,6 +55,7 @@ export class TapWorker implements FbNodeWorker {
 
   destroy(): void {
     Object.keys(this.subscriptions).forEach(key => this.subscriptions[key].unsubscribe());
+    this.subject.complete();
   }
 
   getStream(): Observable<any> {
@@ -79,7 +84,7 @@ export class TapWorker implements FbNodeWorker {
   }
 
   removeStream(connection: FbConnection): void {
-    this.subscriptions[connection.id].unsubscribe();
+    this.subscriptions[connection.id]?.unsubscribe();
 
     delete this.subscriptions[connection.id];
   }

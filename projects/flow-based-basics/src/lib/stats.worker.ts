@@ -1,6 +1,6 @@
 import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
 import { toNumber } from '@scaljeri/flow-based-node-utils';
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './gauss';
 
 export const STATS_SETTINGS: FbNodeSettings = {
@@ -36,7 +36,10 @@ export interface StatsDistribution {
 
 export class StatsWorker implements FbNodeWorker {
   // Keyed by FbSocket.aux, so this needs an index signature, not a literal type.
-  private subjects: Record<string, Subject<any>> = {min: new Subject<any>(), max: new Subject<any>()};
+  // ReplaySubject(1): min/max are VALUES, and they are only emitted when they
+  // CHANGE — a wire drawn after 100 readings heard nothing until a new
+  // extreme arrived, which on a rising feed is never for the minimum.
+  private subjects: Record<string, Subject<any>> = {min: new ReplaySubject<any>(1), max: new ReplaySubject<any>(1)};
   // Keyed by connection id — this was typed as an array, which happened to
   // work because an array takes any numeric index, and lied about the shape.
   private subscriptions: Record<number, Subscription> = {};
@@ -64,7 +67,11 @@ export class StatsWorker implements FbNodeWorker {
   }
 
   getStream(socket: FbSocket): Observable<any> {
-    return this.subjects[socket.aux!].asObservable();
+    // aux ?? name: aux is the stable identity, but a socket added by hand in
+    // the editor carries none — indexing with it bare threw inside the
+    // engine's wiring, after state had already mutated.
+    return this.subjects[socket.aux ?? socket.name ?? '']?.asObservable()
+      ?? new Observable<never>(observer => observer.complete());
   }
 
   // getSockets(): FbSocket[] {
@@ -74,8 +81,8 @@ export class StatsWorker implements FbNodeWorker {
   initialize(): void {
   }
 
-  removeStream(connection: FbConnection): void { /* not used */
-    this.subscriptions[connection.id].unsubscribe();
+  removeStream(connection: FbConnection): void {
+    this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
   }
 

@@ -1,4 +1,4 @@
-import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket } from '@scaljeri/flow-based';
+import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
 import { Observable, Subject } from 'rxjs';
 
 export const RANDOM_NUMBER_SETTINGS: FbNodeSettings = {
@@ -36,6 +36,35 @@ export class RandomNumbersWorker implements FbNodeWorker {
 
   destroy(): void {
     clearInterval(this.intervalId);
+    this.subject.complete();
+  }
+
+  /*
+   * The announce channel — the engine wraps this, so a write through it marks
+   * the flow dirty and reaches the document's pills. The property setters
+   * below delegate here; they used to assign config directly, and a panel
+   * edit was silently gone on reload.
+   */
+  setConfigValue(path: string, value: unknown): void {
+    if (path === 'interval') {
+      /*
+       * Only a CHANGE restarts the timer (the settings form assigns every
+       * field on every valueChanges tick), and never faster than the clock's
+       * floor: a hand-edited interval of 0 span the timer flat out.
+       */
+      const floored = Math.max(50, Number(value) || 0);
+
+      if (floored === this.config.interval) {
+        return;
+      }
+
+      this.config.interval = floored;
+      this.initialize();
+
+      return;
+    }
+
+    writeConfigValue(this.config, path, value);
   }
 
   getStream(): Observable<any> {
@@ -64,7 +93,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
   }
 
   set start(value: number) {
-    this.config.start = value;
+    this.setConfigValue('start', value);
   }
 
   get end(): number {
@@ -72,7 +101,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
   }
 
   set end(value: number) {
-    this.config.end = value;
+    this.setConfigValue('end', value);
   }
 
   get interval(): number {
@@ -80,18 +109,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
   }
 
   set interval(val: number) {
-    /*
-     * Only a CHANGE restarts the timer. The settings form assigns every field
-     * on every valueChanges tick, so moving the Start slider used to re-assign
-     * the same interval and reset the timer with it — the stream went quiet
-     * for a whole period each time any other setting moved.
-     */
-    if (val === this.config.interval) {
-      return;
-    }
-
-    this.config.interval = val;
-    this.initialize();
+    this.setConfigValue('interval', val);
   }
 
   get integer(): boolean {
@@ -103,7 +121,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
   }
 
   set integer(val: boolean) {
-    this.config.integer = val;
+    this.setConfigValue('integer', val);
   }
 
   connect(conn: FbConnection, sockets: FbKeyValues<FbSocket>): void {

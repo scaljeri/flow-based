@@ -64,7 +64,9 @@ export class ScriptWorker implements FbNodeWorker {
   private readonly subscriptions: { [id: number]: Subscription } = {};
 
   /** Told about anything the node should redraw for. */
-  private readonly ticks = new Subject<void>();
+  // ReplaySubject(1), the tick convention every data worker follows: a view
+  // that mounts after the last kick would otherwise wait for the next one.
+  private readonly ticks = new ReplaySubject<void>(1);
 
   get changes(): Observable<void> {
     return this.ticks.asObservable();

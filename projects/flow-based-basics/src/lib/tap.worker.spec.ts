@@ -24,4 +24,24 @@ describe('TapWorker', () => {
     expect(worker.currentValue).toBe('3');
     expect(worker.history).toEqual(['3', 3.14159]);
   });
+
+  /*
+   * Why this matters: a tap is a value carrier, and with a plain Subject a
+   * wire drawn AFTER data flowed heard nothing until the source spoke again —
+   * on a static upstream, never. ReplaySubject(1) is the house convention;
+   * only moment sources (clock, trigger) may refuse to replay.
+   */
+  it('a wire drawn after data flowed still hears the last value', () => {
+    const worker = new TapWorker();
+    const source = new Subject<unknown>();
+
+    worker.setStream(source.asObservable(), { type: 'in' }, { id: 1, from: 0, to: 0 });
+    source.next(42);
+
+    const late: unknown[] = [];
+
+    worker.getStream().subscribe(value => late.push(value));
+
+    expect(late).toEqual([42]);
+  });
 });

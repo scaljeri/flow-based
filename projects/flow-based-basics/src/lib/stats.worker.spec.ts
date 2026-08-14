@@ -29,4 +29,36 @@ describe('StatsWorker', () => {
     expect(worker.min).toBe(7);
     expect(worker.max).toBe(7);
   });
+
+  /*
+   * Why this matters: min/max are emitted only when they CHANGE, and they
+   * were plain Subjects — a meter wired after 100 readings showed nothing
+   * until a new extreme arrived, which on a rising feed is never for the
+   * minimum. The outputs replay their latest to a late wire now.
+   */
+  it('min and max reach a wire drawn after the readings', () => {
+    const worker = new StatsWorker({ columnWidth: 1 });
+    const source = new Subject<number>();
+
+    worker.setStream(source.asObservable(), { type: 'in' }, { id: 1, from: 0, to: 0 });
+    source.next(3);
+    source.next(9);
+
+    const min: unknown[] = [];
+    const max: unknown[] = [];
+
+    worker.getStream({ type: 'out', aux: 'min' } as never).subscribe(v => min.push(v));
+    worker.getStream({ type: 'out', aux: 'max' } as never).subscribe(v => max.push(v));
+
+    expect(min).toEqual([3]);
+    expect(max).toEqual([9]);
+  });
+
+  // A socket added by hand carries no aux; indexing with it bare threw inside
+  // the engine's wiring, after state had already mutated.
+  it('an unknown output socket answers an empty stream, not a throw', () => {
+    const worker = new StatsWorker({ columnWidth: 1 });
+
+    expect(() => worker.getStream({ type: 'out' } as never).subscribe()).not.toThrow();
+  });
 });
