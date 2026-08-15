@@ -865,6 +865,41 @@ test('duplicating a node does not freeze the other faces', async ({ page }) => {
 });
 
 /*
+ * A node whose drawing failed — an unknown type, a module that never loaded —
+ * collapsed to a capsule smaller than its own sockets: in and out dots nearly
+ * touching, wires overlapping, neither tappable. The body now floors at the
+ * socket count: a slot per socket along an edge, and room between opposite
+ * edges.
+ */
+test('a node without a drawing is still as big as its sockets need', async ({ page }) => {
+  await page.goto(HARNESS);
+  await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+
+  await page.evaluate(() => {
+    // The type is deliberately NOT in the registry — a missing module's node.
+    window.fbEditor.load({
+      id: 1, type: 'flow', title: 'Ghost', sockets: [], children: [
+        {
+          id: 2, type: 'gone-module-node', sockets: [
+            { id: 20, type: 'in' },
+            { id: 21, type: 'in' },
+            { id: 22, type: 'out' },
+          ], ui: { position: { x: 30, y: 30 } },
+        },
+      ],
+      connections: [],
+    });
+  });
+
+  const box = (await page.locator('fb-node-box').first().boundingBox())!;
+
+  // Two slots of width between in and out, two slots of height for two ins —
+  // plus the box's own border and padding.
+  expect(box.width).toBeGreaterThanOrEqual(48);
+  expect(box.height).toBeGreaterThanOrEqual(48);
+});
+
+/*
  * Prose is written the way prose is typed: one Enter is a line break, a blank
  * line is a new paragraph. Before this a single \n vanished into a space, so
  * an author's deliberate break — an address, a verse, a caption line — was

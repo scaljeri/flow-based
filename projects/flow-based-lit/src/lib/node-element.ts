@@ -877,14 +877,25 @@ export class FbNodeElement extends LitElement {
 
     const rows = Math.max(counts.left, counts.right);
     const cols = Math.max(counts.top, counts.bottom);
+
+    /*
+     * Two floors. Per-socket room along an edge (a column of three inputs
+     * needs three slots), and ROOM BETWEEN opposite edges: a node whose
+     * drawing failed — an unknown type from a missing module — collapsed to
+     * a capsule where the in and out dots nearly touched, wires overlapped
+     * and neither dot could be tapped. Real content exceeds both floors, so
+     * nothing else changes.
+     */
+    const minHeight = Math.max(rows * SLOT, counts.top && counts.bottom ? 2 * SLOT : 0);
+    const minWidth = Math.max(cols * SLOT, counts.left && counts.right ? 2 * SLOT : 0);
     const parts: string[] = [];
 
-    if (rows > 1) {
-      parts.push(`min-height:${rows * SLOT}px;`);
+    if (minHeight > SLOT) {
+      parts.push(`min-height:${minHeight}px;`);
     }
 
-    if (cols > 1) {
-      parts.push(`min-width:${cols * SLOT}px;`);
+    if (minWidth > SLOT) {
+      parts.push(`min-width:${minWidth}px;`);
     }
 
     return parts.join('');
