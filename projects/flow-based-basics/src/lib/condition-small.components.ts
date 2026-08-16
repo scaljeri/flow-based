@@ -51,6 +51,11 @@ const CONDITION_STYLES = `
     color: #000;
   }
 
+  .expr {
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+
   .reading {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
@@ -60,23 +65,33 @@ const CONDITION_STYLES = `
   }
 `;
 
-/** Two numbers and an operator, out 0 or 1. */
+/**
+ * Two numbers and an operator, out 0 or 1.
+ *
+ * The face READS, it does not edit: it says what is being compared, in the
+ * flow's own words — the socket names, top operand first — around the chosen
+ * operator. The operator select used to sit here, an editable control on a
+ * node at rest; it lives in the settings panel now, where every other
+ * configuration already is.
+ */
 @Component({
   standalone: true,
-  imports: [FbNoDragDirective],
   selector: 'fb-compare-small',
   template: `
-    <select fbNoDrag aria-label="Operator" (change)="setOp($event)">
-      @for (o of ops; track o.key) {
-        <option [value]="o.key" [selected]="o.key === worker?.op">{{ o.symbol }}</option>
-      }
-    </select>
+    <span class="expr">{{ nameOf('a') }} {{ symbol }} {{ nameOf('b') }}</span>
     <span class="reading">{{ worker?.result === undefined ? '—' : worker?.result }}</span>
   `,
   styles: [CONDITION_STYLES],
 })
 export class CompareSmallComponent extends ConditionView<CompareWorker> {
-  readonly ops = (Object.keys(COMPARE_OPS) as CompareOp[]).map(key => ({ key, symbol: COMPARE_OPS[key].symbol }));
+  get symbol(): string {
+    return COMPARE_OPS[(this.worker?.op ?? 'gt') as CompareOp]?.symbol ?? '?';
+  }
+
+  /** The operand's name as the FLOW gave it; aux is the identity, a/b the fallback. */
+  nameOf(aux: 'a' | 'b'): string {
+    return this.service.state.sockets?.find(s => s.type === 'in' && s.aux === aux)?.name || aux;
+  }
 }
 
 /** AND / OR / NOT over its wires, out 0 or 1. */

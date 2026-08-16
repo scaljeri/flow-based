@@ -22,7 +22,7 @@ export const COMPARE_OPS: Record<CompareOp, { symbol: string; test: (a: number, 
 
 export const COMPARE_SETTINGS: FbNodeSettings = {
   title: 'Compare',
-  help: 'Turns a condition into a 0 or a 1 — the one thing the palette could not do, so a gate or an on/off light had no honest way to be driven. `a` against `b` (`b` is a config, or wire it), operator picked on the node; out is 1 when it holds, 0 when it does not. A series wired in reads as its latest value.',
+  help: 'Turns a condition into a 0 or a 1 — the one thing the palette could not do, so a gate or an on/off light had no honest way to be driven. `a` against `b` (`b` is a config, or wire it), operator picked in its settings; the face reads as the comparison itself, socket names around the symbol. Out is 1 when it holds, 0 when it does not. A series wired in reads as its latest value.',
   config: { op: 'gt', b: 0 },
   // A comparison is exactly two inputs and one answer; nothing there is addable.
   addableSockets: 'none',

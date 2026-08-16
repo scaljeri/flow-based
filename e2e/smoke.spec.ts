@@ -5940,28 +5940,29 @@ test('an embedded article creates no shelf entry', async ({ page }) => {
  * 0/1 but nothing produced it. They ship in BASICS_TYPES, so a fresh editor has
  * them — no module to enable.
  */
-test('the compare and logic nodes are in the palette and draw their control', async ({ page }) => {
+test('the compare and logic nodes are in the palette and draw their face', async ({ page }) => {
   await page.goto('/');
   await waitUntilReady(page);
   await page.waitForTimeout(800);
 
   const palette = page.locator('.cdk-overlay-container fb-component-selection');
-  const selects = page.locator('fb-flow-canvas select');   // each condition node's operator picker
-  const before = await selects.count();
 
+  // Compare's face READS — the fresh node says "a > b" from its socket
+  // fallbacks; the operator select lives in its settings, not on the face.
   await page.locator('mat-toolbar button.add').click();
   await palette.locator('input[type="search"]').fill('compare');
   await expect(palette.locator('button.item', { hasText: /compare/i }).first()).toBeVisible();
   await palette.locator('button.item').first().click();
-  await expect(selects).toHaveCount(before + 1, { timeout: 10_000 });
+  const expr = page.locator('fb-flow-canvas .expr', { hasText: 'a > b' });
+  await expect(expr).toHaveCount(1, { timeout: 10_000 });
+  await expect(page.locator('fb-node-box[type="compare"] select')).toHaveCount(0);
 
+  // Logic still carries its face select, offering AND/OR/NOT.
   await page.locator('mat-toolbar button.add').click();
   await palette.locator('input[type="search"]').fill('logic');
   await expect(palette.locator('button.item', { hasText: /logic/i }).first()).toBeVisible();
   await palette.locator('button.item').first().click();
-  await expect(selects).toHaveCount(before + 2, { timeout: 10_000 });
-  // The logic node's picker offers AND/OR/NOT.
-  await expect(page.locator('fb-flow-canvas option').filter({ hasText: 'AND' })).toHaveCount(1);
+  await expect(page.locator('fb-flow-canvas option').filter({ hasText: 'AND' })).toHaveCount(1, { timeout: 10_000 });
 });
 
 /**
@@ -6049,12 +6050,14 @@ test('the core Compare judges the crypto buy signal, with fixed sockets', async 
     (document.querySelector('fb-flow-canvas') as unknown as { editor?: { state?: { title?: string } } })
       ?.editor?.state?.title), { timeout: 15_000 }).toBe('Bitcoin');
 
-  // The operator is a CONTROL on the face, preset by the flow ('<' = lt).
-  // The Angular view mounts INTO the content host, so the box's type
-  // attribute is the address, not a selector tag.
+  // The face READS, it does not edit: no control on a node at rest, and it
+  // says WHAT is compared — the socket names around the symbol, top operand
+  // first. (The Angular view mounts INTO the content host, so the box's
+  // type attribute is the address, not a selector tag.)
   const face = page.locator('fb-node-box[type="compare"] .fb-node-content');
   await expect(face).toBeVisible({ timeout: 15_000 });
-  await expect(face.locator('select')).toHaveValue('lt');
+  await expect(face.locator('select')).toHaveCount(0);
+  await expect(face.locator('.expr')).toHaveText('price < lower band');
 
   // And it computes: two series wired in, judged on their LATEST values —
   // a verdict, not the '—' of a compare that could not read its operands.
@@ -6074,6 +6077,9 @@ test('the core Compare judges the crypto buy signal, with fixed sockets', async 
 
   const panel = page.locator('fb-node-settings dialog[open]');
   await expect(panel.locator('.kind')).toHaveText('Compare');
+  // The operator moved off the face into the panel: the choice is made here
+  // (settings mount into the panel's .own host, tag-less like node faces).
+  await expect(panel.locator('.own select')).toHaveValue('lt');
   // Fixed sockets: no +in/+out.
   await expect(panel.locator('.add-socket')).toHaveCount(0);
 

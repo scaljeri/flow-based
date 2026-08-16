@@ -32,6 +32,7 @@ import { FlowParamSettingsComponent } from './flow-param-settings.component';
 import { COMPARE_SETTINGS, CompareWorker } from './compare.worker';
 import { LOGIC_SETTINGS, LogicWorker } from './logic.worker';
 import { CompareSmallComponent, LogicSmallComponent } from './condition-small.components';
+import { CompareSettingsComponent } from './compare-settings.component';
 import { CONVERT_SETTINGS, ConvertWorker } from './convert.worker';
 import { ConvertSmallComponent } from './convert-small.component';
 import { TIMESTAMP_SETTINGS, TimestampWorker } from './timestamp.worker';
@@ -130,6 +131,7 @@ export const BASICS_TYPES: FbNodeTypes = {
    */
   'compare': {
     component: { small: CompareSmallComponent },
+    settingsComponent: CompareSettingsComponent,
     settings: COMPARE_SETTINGS,
     worker: CompareWorker,
   },
