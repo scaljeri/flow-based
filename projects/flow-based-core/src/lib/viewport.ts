@@ -99,6 +99,22 @@ export class FbViewport {
   }
 
   /**
+   * Adopt a flow's stored AUTHORING plane (format v6, `root.ui.plane`).
+   *
+   * Unconditional, unlike setPlaneSize's freeze-once: a flow CARRIES the plane
+   * its %-positions were laid out against, so opening it on any screen — or
+   * switching to a second flow with a different stored plane — must use that
+   * plane, not the container it happens to open in. The pixel layout, and so
+   * the spacing between fixed-size nodes, is then identical everywhere.
+   */
+  setPlane(width: number, height: number): void {
+    if (width > 0 && height > 0 && (width !== this.plane.width || height !== this.plane.height)) {
+      this.plane = { width, height };
+      this.changes.emit();
+    }
+  }
+
+  /**
    * Zoom out far enough to show the whole plane, when it does not fit.
    *
    * Only ever out, never in: a screen with room to spare shows the graph at

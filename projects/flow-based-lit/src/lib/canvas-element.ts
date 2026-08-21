@@ -674,7 +674,12 @@ export class FbFlowCanvasElement extends LitElement {
         this.editor?.viewport.setZoomFloor(floor);
       }
 
-      this.editor?.viewport.setPlaneSize(rect.width, rect.height);
+      // A v6 flow carries its authoring plane (root.ui.plane); adopt it so the
+      // layout is portable. Only when it has none do we freeze the container.
+      if (!this.adoptStoredPlane()) {
+        this.editor?.viewport.setPlaneSize(rect.width, rect.height);
+      }
+
       this.editor?.viewport.setViewSize(rect.width, rect.height);
       // A plane bigger than the screen it opened on is shown whole, not
       // cropped to its top-left corner — but not so small it cannot be tapped.
@@ -717,6 +722,22 @@ export class FbFlowCanvasElement extends LitElement {
    * at FB_TOUCH_FIT_MIN so nothing shrinks below a tappable size; a mouse gets
    * the full FB_ZOOM_MIN (undefined → fitPlane's default), the whole-flow view.
    */
+  /**
+   * Adopt the flow's stored authoring plane (format v6), if it has one.
+   * Returns true when a stored plane was applied.
+   */
+  private adoptStoredPlane(): boolean {
+    const stored = this.editor?.root?.ui?.plane;
+
+    if (stored && stored.width > 0 && stored.height > 0) {
+      this.editor!.viewport.setPlane(stored.width, stored.height);
+
+      return true;
+    }
+
+    return false;
+  }
+
   private fitFloor(): number | undefined {
     return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
       ? FB_TOUCH_FIT_MIN
@@ -757,6 +778,16 @@ export class FbFlowCanvasElement extends LitElement {
        */
       if (change.kind === 'structure' || change.kind === 'viewport'
         || change.kind === 'interaction' || change.kind === 'sockets') {
+        // A flow LOADED with a different authoring plane (format v6) takes over
+        // the plane here — firstUpdated only ran for the first flow.
+        if (change.kind === 'structure' && this.adoptStoredPlane()) {
+          const rect = this.getBoundingClientRect();
+
+          if (rect.width && rect.height) {
+            this.editor.viewport.fitPlane(rect, this.fitFloor());
+          }
+        }
+
         /*
          * A newly created subflow asks to be named. Taken here rather than in
          * render, which runs for reasons that have nothing to do with it and
@@ -1275,6 +1306,21 @@ export class FbFlowCanvasElement extends LitElement {
   }
 
   resetView(): void {
+    /*
+     * On a FINGER, "reset" fits the whole flow: the plane is bigger than a
+     * phone screen, so 100%/top-left drops the reader onto empty canvas with
+     * the graph off to one side. On a mouse it stays 1:1 — the desktop meaning
+     * of "reset the zoom" — where the flow usually fits at 100% anyway.
+     */
+    const rect = this.getBoundingClientRect();
+
+    if (this.fitFloor() !== undefined && rect.width && rect.height) {
+      this.editor.viewport.reset();
+      this.editor.viewport.fitPlane(rect, this.fitFloor());
+
+      return;
+    }
+
     this.editor.viewport.reset();
   }
 

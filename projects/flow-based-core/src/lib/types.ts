@@ -132,6 +132,15 @@ export interface FbNodeUi {
   /** Where the node sits, as percentages of the graph plane. */
   position?: FbPosition;
   /**
+   * The AUTHORING plane size, on the ROOT flow only — the pixel surface the
+   * %-positions were laid out against. Stored so the layout is portable: a
+   * flow opened on a phone lays out the way it did on the desktop it was made
+   * on, rather than adopting whatever screen opens it first (nodes are pixel-
+   * sized, so a different plane changed their spacing). Absent on a pre-v6
+   * flow, which adopts its first screen until saved. See FbViewport.
+   */
+  plane?: FbSize;
+  /**
    * How much room this node is currently given. Serialised, so a flow reopens
    * looking the way it was left.
    */

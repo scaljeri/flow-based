@@ -211,3 +211,17 @@ describe('the standing zoom floor', () => {
     expect(viewport.zoom).toBeLessThanOrEqual(FB_ZOOM_MAX);
   });
 });
+
+describe('a flow-provided authoring plane (format v6)', () => {
+  it('setPlane adopts a plane unconditionally, unlike the freeze-once setPlaneSize', () => {
+    const viewport = new FbViewport();
+
+    viewport.setPlaneSize(2000, 900);          // frozen
+    expect(viewport.planeSize).toEqual({ width: 2000, height: 900 });
+
+    // A second flow with a DIFFERENT stored plane takes over — setPlaneSize
+    // would have refused (already frozen).
+    viewport.setPlane(1200, 600);
+    expect(viewport.planeSize).toEqual({ width: 1200, height: 600 });
+  });
+});

@@ -1036,12 +1036,29 @@ export class AppComponent implements OnInit, AfterViewInit {
    * baseline so the dot goes out. The caller pushes to a remote endpoint after,
    * if one is configured.
    */
+  /**
+   * Stamp the AUTHORING plane onto the flow before it is saved (format v6).
+   *
+   * The plane the %-positions were laid out against travels with the flow, so
+   * it lays out identically on every screen instead of adopting the container
+   * it opens in. `??=`: once stamped, the authoring plane is kept — re-stamping
+   * with a later screen's plane would relayout the flow it was saved from.
+   */
+  private stampPlane(): void {
+    const plane = this.editor?.viewport.planeSize;
+
+    if (plane?.width && plane.height && !(this.flow.ui?.plane)) {
+      (this.flow.ui ??= {}).plane = { width: plane.width, height: plane.height };
+    }
+  }
+
   private persist(): boolean {
     if (!this.currentFlowId) {
       return false;
     }
 
     this.modules.stamp(this.flow);
+    this.stampPlane();
 
     // Only clear the dot when the write actually happened. A failed write (quota,
     // private mode) that still reported "Saved." and dropped `dirty` disarmed the

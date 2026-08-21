@@ -26,7 +26,7 @@ import { FbNodeState } from './types';
  *     `math-add` is) are mapped onto their successors, and `data-choice`
  *     adopts data-switch's 1-based `which` with 0 meaning none.
  */
-export const FB_FLOW_FORMAT_VERSION = 5;
+export const FB_FLOW_FORMAT_VERSION = 6;
 
 export interface FbSerializedFlow {
   version: number;
@@ -299,6 +299,17 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
 
     return migrate(flow);
   },
+
+  /*
+   * 5 → 6: the plane became portable. Format 6 carries the AUTHORING plane
+   * size on the root (`ui.plane`), so a flow lays out identically on every
+   * screen instead of adopting the first container it opened in — nodes are
+   * %-positioned but pixel-sized, so a different plane changed their spacing
+   * relative to their own size. Structurally a no-op: a v5 flow has no plane
+   * yet and adopts the screen it first opens on (the old behaviour), and gets
+   * its plane stamped the next time it is saved.
+   */
+  5: flow => flow,
 };
 
 /** The highest id anywhere in a flow — nodes, sockets and connections alike. */

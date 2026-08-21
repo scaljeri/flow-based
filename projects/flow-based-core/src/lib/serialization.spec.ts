@@ -428,3 +428,19 @@ describe('hostile input is rejected, not mangled', () => {
     expect(() => deserializeFlow(bad as never)).toThrow();
   });
 });
+
+describe('format v6 (portable plane)', () => {
+  it('a v5 flow migrates to v6 unchanged (no plane yet)', () => {
+    const v5 = { id: 1, type: 'flow', children: [], connections: [] };
+    const flow = deserializeFlow({ version: 5, flow: v5 } as never);
+
+    expect(flow.ui?.plane).toBeUndefined();   // adopts its first screen until saved
+  });
+
+  it('a stored plane round-trips', () => {
+    const flow = { id: 1, type: 'flow', ui: { plane: { width: 1600, height: 900 } }, children: [], connections: [] };
+    const round = deserializeFlow(serializeFlow(flow as never));
+
+    expect(round.ui?.plane).toEqual({ width: 1600, height: 900 });
+  });
+});
