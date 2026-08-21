@@ -19,8 +19,15 @@ export class FbEmitter<T = void> {
 
   emit(value: T): void {
     // Iterate a copy: a listener may unsubscribe itself while being notified.
+    // Per-listener try/catch: this is the shell's single fan-out, and one
+    // listener throwing used to silence every listener registered after it —
+    // a stale canvas, a frozen panel, from an error two subscribers away.
     for (const listener of [...this.listeners]) {
-      listener(value);
+      try {
+        listener(value);
+      } catch (err) {
+        console.error('[flow-based] a change listener threw; the rest still ran.', err);
+      }
     }
   }
 

@@ -339,6 +339,13 @@ export function deserializeFlow(input: unknown): FbNodeState {
   const record = input as Record<string, unknown>;
   const envelope = typeof record['version'] === 'number' && typeof record['flow'] === 'object';
 
+  // States a version but carries no `flow`: it means to be an envelope and is
+  // broken. Read as a bare v1 flow it was silently re-migrated from scratch,
+  // mangling a file the reader expected to open as-is.
+  if (typeof record['version'] === 'number' && typeof record['flow'] !== 'object') {
+    throw new FbFlowFormatError('Flow states a version but has no `flow` object.');
+  }
+
   /*
    * A bare flow — no envelope — is a file from before versioning existed,
    * which makes it format 1 BY DEFINITION. It used to be read as the current
@@ -404,9 +411,24 @@ function assertFlowShape(flow: FbNodeState, path = 'flow'): void {
     throw new FbFlowFormatError(`${path}.type must be a non-empty string.`);
   }
 
+  // Ids must be NUMBERS. The engine keys `workers[id]` and `sockets[id]` by
+  // them, so a string id like "__proto__" or "constructor" wrote through the
+  // registry's prototype — a poisoned, undestroyable worker from a flow's own
+  // JSON. A missing id is allowed (the editor assigns one); a present one must
+  // be a number.
+  if (flow.id !== undefined && typeof flow.id !== 'number') {
+    throw new FbFlowFormatError(`${path}.id must be a number when present.`);
+  }
+
   if (flow.sockets !== undefined && !Array.isArray(flow.sockets)) {
     throw new FbFlowFormatError(`${path}.sockets must be an array when present.`);
   }
+
+  (flow.sockets ?? []).forEach((socket, i) => {
+    if (socket?.id !== undefined && typeof socket.id !== 'number') {
+      throw new FbFlowFormatError(`${path}.sockets[${i}].id must be a number when present.`);
+    }
+  });
 
   if (flow.connections !== undefined) {
     if (!Array.isArray(flow.connections)) {

@@ -10,7 +10,14 @@ import { FbNodeState, FbNodeUi, FbPosition } from './types';
  * there is exactly one place to look when that has to be read again.
  */
 export function uiOf(node: FbNodeState): FbNodeUi {
-  return (node.ui ??= {});
+  // A hand-edited flow can carry `ui: "left"` or `ui: 5`; `??=` leaves a
+  // non-null non-object in place, and the next `.position =` threw or silently
+  // dropped the edit. Replace anything that is not a plain object.
+  if (!node.ui || typeof node.ui !== 'object') {
+    node.ui = {};
+  }
+
+  return node.ui;
 }
 
 /**
@@ -21,7 +28,13 @@ export function uiOf(node: FbNodeState): FbNodeUi {
  * decision to the caller — every one of which would answer the same thing.
  */
 export function positionOf(node: FbNodeState): FbPosition {
-  return node.ui?.position ?? { x: 0, y: 0 };
+  const p = node.ui?.position;
+  // Coerced to finite numbers: a non-object position, or a NaN coordinate,
+  // otherwise flowed into the drag maths and was written back into the file.
+  const x = typeof p?.x === 'number' && Number.isFinite(p.x) ? p.x : 0;
+  const y = typeof p?.y === 'number' && Number.isFinite(p.y) ? p.y : 0;
+
+  return { x, y };
 }
 
 export function setPosition(node: FbNodeState, position: FbPosition): void {

@@ -73,4 +73,14 @@ describe('IdGenerator', () => {
 
     expect(next).toBe(1546892321367);
   });
+
+  // An id near 2^53 made `nextId = id + 1` round back to `id`, so create()
+  // handed out that same id forever. An unsafe or non-positive id is ignored.
+  it('ignores an unsafe or non-positive id', () => {
+    const gen = new IdGenerator();
+
+    gen.observe(Number.MAX_SAFE_INTEGER + 5);   // unsafe
+    gen.observe(-3);                             // non-positive
+    expect(gen.create()).toBe(1);                // counter never moved
+  });
 });

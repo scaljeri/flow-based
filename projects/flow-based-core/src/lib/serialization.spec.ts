@@ -416,3 +416,15 @@ describe('migration 3→4 rewires the region feed', () => {
     expect(feed.to).toBe(compute.id);
   });
 });
+
+describe('hostile input is rejected, not mangled', () => {
+  it('a version without a flow object is rejected, not re-migrated as v1', () => {
+    expect(() => deserializeFlow({ version: 3 } as never)).toThrow();
+  });
+
+  it('a string node id is rejected (it would poison the registry prototype)', () => {
+    const bad = { id: '__proto__', type: 'flow', children: [], connections: [] };
+
+    expect(() => deserializeFlow(bad as never)).toThrow();
+  });
+});

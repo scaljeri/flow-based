@@ -21,7 +21,11 @@ export class IdGenerator {
 
   /** Advance past `id` so it is never handed out again. */
   observe(id: number | undefined | null): void {
-    if (typeof id === 'number' && Number.isFinite(id) && id >= this.nextId) {
+    // SAFE integer, not merely finite: an id near 2^53 (a bad generator, a
+    // hand-edited flow) made `nextId = id + 1` round back to `id`, so create()
+    // then handed out that same id forever — every new node collided. A safe,
+    // positive id advances the counter; anything else is ignored.
+    if (typeof id === 'number' && Number.isSafeInteger(id) && id > 0 && id >= this.nextId) {
       this.nextId = id + 1;
     }
   }

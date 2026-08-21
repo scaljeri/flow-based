@@ -60,4 +60,17 @@ describe('FbChangeEmitter', () => {
 
     expect(emitter.size).toBe(0);
   });
+
+  it('a throwing listener does not silence the others', () => {
+    const emitter = new FbChangeEmitter();
+    const seen: string[] = [];
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    emitter.subscribe(() => { throw new Error('boom'); });
+    emitter.subscribe(k => seen.push(k));
+    emitter.emit('structure');
+
+    expect(seen).toEqual(['structure']);
+    err.mockRestore();
+  });
 });

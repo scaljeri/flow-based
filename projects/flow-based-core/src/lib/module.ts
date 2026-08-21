@@ -147,17 +147,18 @@ export class FbFormatRegistry {
 
     if (!this.formats.has(prefixed)) {
       this.formats.set(prefixed, { def: { ...def, name: prefixed }, owner: prefix });
-    }
 
-    /*
-     * Said out loud. A module whose `score` became `game:score` has had its
-     * sockets rewritten under it, which is the right outcome and a confusing
-     * one to meet for the first time in a dropdown.
-     */
-    this.collisions.push(
-      `${prefix} declares ${def.name} differently from the ${existing.owner ?? 'app'}'s, `
-      + `so its own sockets speak ${prefixed}.`,
-    );
+      /*
+       * Said out loud, ONCE. A module whose `score` became `game:score` has had
+       * its sockets rewritten under it — the right outcome, a confusing one to
+       * meet in a dropdown. Inside the guard: pushing on every register()
+       * duplicated the line each enable/disable/re-enable cycle.
+       */
+      this.collisions.push(
+        `${prefix} declares ${def.name} differently from the ${existing.owner ?? 'app'}'s, `
+        + `so its own sockets speak ${prefixed}.`,
+      );
+    }
 
     return prefixed;
   }
@@ -331,7 +332,10 @@ export function prepareModule<TComponent = unknown>(
       ...entry,
       settings: {
         ...entry.settings,
-        sockets: entry.settings.sockets?.map(socket => ({
+        // Optional-chained: a malformed module (a type with no `settings`)
+        // threw here mid-rewrite, with some of its formats already claimed in
+        // the registry — a half-registered module.
+        sockets: entry.settings?.sockets?.map(socket => ({
           ...socket,
           format: rename(socket.format),
           formats: socket.formats?.map(f => rename(f)!) ?? socket.formats,
