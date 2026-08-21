@@ -261,8 +261,17 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    const low = this.worker.min ?? Math.min(...numbers);
-    const high = this.worker.max ?? Math.max(...numbers);
+    // Loop-based, not `Math.min(...numbers)`: spreading a large place list
+    // threw a RangeError and blanked the map.
+    let lo = Infinity, hi = -Infinity;
+
+    for (const n of numbers) {
+      if (n < lo) { lo = n; }
+      if (n > hi) { hi = n; }
+    }
+
+    const low = this.worker.min ?? lo;
+    const high = this.worker.max ?? hi;
     const span = high - low || 1;
 
     /*

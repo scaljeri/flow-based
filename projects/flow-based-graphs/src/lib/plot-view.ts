@@ -4,6 +4,22 @@ import { CanvasView } from './canvas-view';
 import { BANDS, LAYER_COLOURS, LEGEND_COLUMN, LEGEND_ROW, legendHeight, niceTicks } from './plot-core';
 import { SeriesBuffer, PlotWorker } from './plot.worker';
 
+/*
+ * Loop-based min/max: `Math.min(...xs)` spreads the whole array as arguments
+ * and throws a RangeError past ~100k points — a large fetch or a fine sweep
+ * could reach it and blank the plot.
+ */
+function extent(nums: number[]): { min: number; max: number } {
+  let min = Infinity, max = -Infinity;
+
+  for (const n of nums) {
+    if (n < min) { min = n; }
+    if (n > max) { max = n; }
+  }
+
+  return { min, max };
+}
+
 /**
  * What one reading is drawn AS.
  *
@@ -136,11 +152,13 @@ export abstract class PlotView extends CanvasView {
     const ys = complex
       ? all.flatMap(p => [p[1], p[2] ?? p[1]])
       : all.map(p => p[1]);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
+    const ex = extent(xs);
+    const ey = extent(ys);
+    const minX = ex.min;
+    const maxX = ex.max;
     const spanX = maxX - minX || 1;
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
+    const minY = ey.min;
+    const maxY = ey.max;
     const spanY = maxY - minY || 1;
 
     // Room for the axes when they are drawn; a hair of padding otherwise.
@@ -269,7 +287,7 @@ export abstract class PlotView extends CanvasView {
     }
 
     const totals = rows.map(row => (row ? row.reduce((sum, part) => sum + (part || 0), 0) : 0));
-    const maxY = Math.max(...totals, 0) || 1;
+    const maxY = (extent(totals).max === -Infinity ? 0 : Math.max(extent(totals).max, 0)) || 1;
 
     const pad = 6;
     const left = this.axes ? 44 : pad;

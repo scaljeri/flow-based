@@ -130,8 +130,11 @@ export class MandelbrotWorker implements FbNodeWorker {
   get iterations(): number {
     const asked = Math.max(10, Math.round(this.config.iterations ?? 200));
     const zoom = Math.max(1, WHOLE_SET.span / this.view.span);
+    const boosted = Math.max(asked, Math.round(120 + 90 * Math.log10(zoom)));
 
-    return Math.max(asked, Math.round(120 + 90 * Math.log10(zoom)));
+    // Capped: a hand-edited `iterations` of 1e9 ran the inner loop a billion
+    // times PER PIXEL and froze the tab. No picture needs more than this.
+    return Math.min(20000, boosted);
   }
 
   /** How far the current answer has got, 0 to 1. */
@@ -147,8 +150,9 @@ export class MandelbrotWorker implements FbNodeWorker {
   }
 
   set(key: 'iterations' | 'resolution', value: number): void {
-    this.config[key] = value;
-    this.restart();
+    // Through setConfigValue (the engine's announce wrap): a panel edit must
+    // mark the flow dirty. Written straight to config, it was lost on reload.
+    this.setConfigValue(key, value);
   }
 
   setConfigValue(path: string, value: unknown): void {

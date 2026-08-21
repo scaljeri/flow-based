@@ -152,9 +152,8 @@ export class IterateWorker implements FbNodeWorker {
   }
 
   set(key: 'steps' | 'escape' | 'interval', value: number): void {
-    this.config[key] = value;
-    this.recompute();
-    this.restart();
+    // Through setConfigValue (the announce wrap) so a panel edit marks dirty.
+    this.setConfigValue(key, value);
   }
 
   /** Typing a number takes control back from whatever is wired in. */
