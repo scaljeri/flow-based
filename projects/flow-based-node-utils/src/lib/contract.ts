@@ -14,6 +14,9 @@ export type {
   FbFormatDef,
   FbNodeWorker,
   FbNodeWorkerCtor,
+  // A worker's setStream/removeStream receive an FbConnection; it was missing
+  // from the authoring re-exports, so a URL lib had to hand-type a stand-in.
+  FbConnection,
   FbNodeMount,
   FbNodeContext,
   FbNodeApi,

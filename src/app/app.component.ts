@@ -395,6 +395,21 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   private async restoreFlow(): Promise<void> {
     /*
+     * Prune the remote-behind marks against what is actually on the shelf: a
+     * flow deleted while its push was owed left its id in the set forever, a
+     * slow leak across every session.
+     */
+    const onShelf = new Set(this.store.list().map(entry => entry.id));
+
+    for (const id of [...this.remoteBehindIds]) {
+      if (!onShelf.has(id)) {
+        this.remoteBehindIds.delete(id);
+      }
+    }
+
+    this.persistRemoteBehind();
+
+    /*
      * Modules FIRST, flow second. A saved flow can speak module types, and
      * showing it before those download rendered every module node as an empty
      * circle until something forced a re-render.
@@ -620,7 +635,10 @@ export class AppComponent implements OnInit, AfterViewInit {
    */
   async loadFromUrl(url: string): Promise<boolean> {
     try {
-      const response = await fetch(url);
+      // A timeout: a ?flow= URL that hangs (a dead host, a slow CDN) otherwise
+      // left the app on the fallback flow forever with no error. 15s is long
+      // enough for a real fetch and short enough not to look frozen.
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -1783,6 +1801,13 @@ export class AppComponent implements OnInit, AfterViewInit {
     // Embedded there is nothing to go back TO: closing the document would
     // reveal the editor this mode exists to hide.
     if (this.embed) {
+      return;
+    }
+
+    // A MatDialog on top (Flows, the JSON editor, Modules) owns Escape: closing
+    // the document/JSON view UNDERNEATH it was a jarring double-dismiss that
+    // left the dialog floating over the editor.
+    if (this.dialog.openDialogs.length > 0) {
       return;
     }
 

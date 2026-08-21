@@ -149,17 +149,6 @@ export class FbViewport {
   reset(): void {
     this.zoomLevel = 1;
     this.panOffset = { x: 0, y: 0 };
-
-    // "Reset" means "show the whole flow", the same as opening it — not "100%
-    // pinned to the top-left corner", which on a phone (the plane is bigger
-    // than the screen) drops the reader onto empty canvas with the graph off
-    // to one side. Re-run the fit against the current view when there is one.
-    if (this.view.width && this.view.height) {
-      this.fitPlane(this.view);
-
-      return;
-    }
-
     this.changes.emit();
   }
 
