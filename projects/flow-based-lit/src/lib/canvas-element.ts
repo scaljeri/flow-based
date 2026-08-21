@@ -1101,8 +1101,12 @@ export class FbFlowCanvasElement extends LitElement {
     }
 
     // A pinch already moves the viewport; letting the first finger also pan
-    // makes the surface run away under the gesture.
+    // makes the surface run away under the gesture. But keep panFrom current:
+    // lifting one finger of a pinch used to resume the pan from where it was
+    // BEFORE the pinch, jumping the graph by the whole pinch travel in a frame.
     if (this.pointers.size > 1) {
+      this.panFrom = { x: event.clientX, y: event.clientY };
+
       return;
     }
 

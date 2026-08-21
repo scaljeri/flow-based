@@ -246,6 +246,12 @@ main {
   position: absolute;
   top: 16px;
   z-index: 50;
+
+  // Embed mode's only control: a real target on a finger.
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 18px;
+  }
 }
 
 .load-error {
@@ -290,6 +296,10 @@ main {
     color: var(--mat-sys-secondary-container, #dbe1ff);
     cursor: pointer;
     padding: 8px 16px;
+
+    @media (pointer: coarse) {
+      min-height: 44px;
+    }
   }
 
   .choice {
@@ -308,6 +318,11 @@ main {
     line-height: 1;
     opacity: 0.7;
     padding: 4px;
+
+    @media (pointer: coarse) {
+      min-height: 40px;
+      min-width: 40px;
+    }
   }
 
   .dismiss:hover {

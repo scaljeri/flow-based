@@ -235,6 +235,14 @@ export class FbFlowDocumentElement extends LitElement {
       transition: background-color 120ms ease, border-color 120ms ease;
     }
 
+    /* A finger needs more than a ~29px inline pill: extra vertical padding
+       grows the tap area without breaking the inline flow of the prose. */
+    @media (pointer: coarse) {
+      .config-input {
+        padding: 0.3em 0.5em;
+      }
+    }
+
     .config-input:hover {
       background-color: rgba(255, 64, 129, 0.16);
       border-bottom-color: rgba(255, 64, 129, 0.8);
