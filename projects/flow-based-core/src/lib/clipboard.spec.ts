@@ -191,4 +191,19 @@ describe('distributeNodes', () => {
 
     expect(nodes.map(n => n.ui?.position!.x)).toEqual([10, 30]);
   });
+
+  // A negotiated (adopted) format whose justifying wire was not copied must
+  // not travel: the pasted socket would claim a type it no longer earns and
+  // then refuse a legal wire. propagateFormats re-adopts from copied wires.
+  it('strips an adopted format from a pasted socket', () => {
+    const source: FbNodeState = {
+      id: 1, type: 'flow', sockets: [], connections: [],
+      children: [{ id: 2, type: 'x', sockets: [{ id: 20, type: 'in', format: 'number', adopted: true }] }],
+    } as never;
+    const clip = copyNodes(source, [2]);
+    const [node] = pasteNodes(source, clip, new IdGenerator());
+
+    expect(node.sockets![0].format ?? null).toBeNull();
+    expect((node.sockets![0] as { adopted?: boolean }).adopted).toBeUndefined();
+  });
 });

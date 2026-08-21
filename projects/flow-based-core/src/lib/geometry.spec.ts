@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FB_DEFAULT_SOCKET_LAYOUT, FbGeometry, boundarySocketPosition } from './geometry';
+import { FB_DEFAULT_SOCKET_LAYOUT, FbGeometry, boundarySocketPosition, sideOf } from './geometry';
 import { FbNodeState } from './types';
 
 const PLANE = { width: 1000, height: 800 };
@@ -352,5 +352,24 @@ describe('boundarySocketPosition', () => {
 
   it('is undefined for a socket the flow does not have', () => {
     expect(boundarySocketPosition(flow, { id: 99, type: 'in' }, PLANE)).toBeUndefined();
+  });
+});
+
+describe('hardening against a hand-edited flow', () => {
+  // A bogus `side` fell through the position maths and stacked every rim dot
+  // at the origin; an unknown side falls back to the type's default edge.
+  it('sideOf validates the side against the four edges', () => {
+    expect(sideOf({ id: 1, type: 'in', side: 'sideways' } as never)).toBe('left');
+    expect(sideOf({ id: 1, type: 'out' } as never)).toBe('right');
+    expect(sideOf({ id: 1, type: 'in', side: 'top' } as never)).toBe('top');
+  });
+
+  // A non-numeric coordinate becomes 0, not NaN — a NaN origin flows into
+  // every socket and a drag writes it back into the file.
+  it('nodeOrigin coerces a non-finite coordinate to 0', () => {
+    const g = new FbGeometry();
+    const node = { id: 1, type: 'x', ui: { position: { x: 'oops' as never, y: 10 } } } as never;
+
+    expect(g.nodeOrigin(node, { width: 1000, height: 1000 })).toEqual({ x: 0, y: 100 });
   });
 });

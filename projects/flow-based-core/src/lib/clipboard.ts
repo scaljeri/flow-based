@@ -75,7 +75,18 @@ export function pasteNodes(
 
       socketIds.set(socket.id!, id);
 
-      return { ...socket, id };
+      const clone: typeof socket = { ...socket, id };
+
+      // A NEGOTIATED format's justifying wire may not have been copied (it ran
+      // to a node outside the selection). Carried along, the pasted socket
+      // claimed a type it no longer earns and then refused a legal wire. Strip
+      // it; propagateFormats re-adopts from the wires that actually came.
+      if (clone.adopted) {
+        clone.format = null;
+        delete clone.adopted;
+      }
+
+      return clone;
     });
 
     (node.children ?? []).forEach(reissueIds);
@@ -126,6 +137,45 @@ export function pasteNodes(
   });
 
   nodes.forEach(rewireConnections);
+
+  /*
+   * A pasted subflow may carry a DOCUMENT, and its blocks and inline pills name
+   * nodes by id — the ORIGINAL ids, which the paste has just reissued. Left
+   * alone, a pasted article's figures and `{{id:path}}` pills pointed back at
+   * the nodes it was copied from (or at nothing). Remap both through nodeIds;
+   * a reference to a node outside the copy is dropped rather than left dangling.
+   */
+  const remapDocument = (node: FbNodeState): void => {
+    const doc = (node as { document?: { blocks: unknown[] } }).document;
+
+    if (doc?.blocks) {
+      doc.blocks = doc.blocks.filter(raw => {
+        const block = raw as { type?: string; nodeId?: number; text?: string };
+
+        if (block.type === 'node') {
+          const mapped = nodeIds.get(block.nodeId!);
+
+          if (mapped === undefined) {
+            return false;   // that node was not copied
+          }
+
+          block.nodeId = mapped;
+        } else if (typeof block.text === 'string') {
+          block.text = block.text.replace(/\{\{(\d+):/g, (whole, id: string) => {
+            const mapped = nodeIds.get(Number(id));
+
+            return mapped === undefined ? whole : `{{${mapped}:`;
+          });
+        }
+
+        return true;
+      });
+    }
+
+    (node.children ?? []).forEach(remapDocument);
+  };
+
+  nodes.forEach(remapDocument);
 
   const connections = structuredClone(clipboard.connections)
     .map(connection => ({

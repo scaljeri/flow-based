@@ -92,8 +92,14 @@ export class FbGeometry {
   /** A position-only change of one known node; see `movedNodeId`. */
   emitMoved(nodeId: number): void {
     this.movedNodeId = nodeId;
-    this.changes.emit(undefined);
-    this.movedNodeId = undefined;
+
+    // try/finally: a listener that throws must not leave movedNodeId pinned —
+    // the next unrelated emit would then be misread as this node moving.
+    try {
+      this.changes.emit(undefined);
+    } finally {
+      this.movedNodeId = undefined;
+    }
   }
 
   /** Report a node's rendered size. Called from a ResizeObserver. */
@@ -130,10 +136,14 @@ export class FbGeometry {
   /** Top-left of a node in plane pixels. */
   nodeOrigin(node: FbNodeState, planeSize: FbSize): FbPosition {
     const position = node.ui?.position ?? { x: 0, y: 0 };
+    // A hand-edited flow can carry a non-numeric coordinate; a NaN here flows
+    // into every socket position and a drag then writes NaN back into the file.
+    const x = Number.isFinite(position.x) ? position.x : 0;
+    const y = Number.isFinite(position.y) ? position.y : 0;
 
     return {
-      x: (position.x / 100) * planeSize.width,
-      y: (position.y / 100) * planeSize.height,
+      x: (x / 100) * planeSize.width,
+      y: (y / 100) * planeSize.height,
     };
   }
 
@@ -244,7 +254,15 @@ export function boundarySocketPosition(
  * flow saved before sockets had a side reads exactly as it did.
  */
 export function sideOf(socket: FbSocket): FbSocketSide {
-  return socket.side ?? (socket.type === 'in' ? 'left' : 'right');
+  // Validated: a hand-edited flow can carry `side: "sideways"`, and an
+  // unrecognised value fell through the position maths so every rim dot
+  // stacked at the origin. Fall back to the type's default edge.
+  if (socket.side === 'top' || socket.side === 'bottom'
+    || socket.side === 'left' || socket.side === 'right') {
+    return socket.side;
+  }
+
+  return socket.type === 'in' ? 'left' : 'right';
 }
 
 /** Whether an edge runs down the node's side rather than across it. */

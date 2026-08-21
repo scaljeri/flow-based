@@ -182,7 +182,10 @@ export class Flow {
       return;
     }
 
-    state.connections = [connection, ...state.connections!];
+    // `??= []` before the spread: a subflow hand-edited to drop its
+    // `connections` key crashed here on `...state.connections!`.
+    state.connections ??= [];
+    state.connections = [connection, ...state.connections];
     this.connections[connection.id] = {connection, state};
 
     // The first wire drawn to the root's boundary IN-SESSION: initialize()
@@ -404,14 +407,26 @@ export class Flow {
 
   destroy(): void {
     Object.keys(this.workers).forEach(key => this.destroyWorker(Number(key)));
+    // Both emitters — configChanges was never cleared, so an old engine's
+    // config announcements kept reaching a listener the editor had unbound.
     this.changes.clear();
+    this.configChanges.clear();
   }
 
   private destroyWorker(id: number): void {
     const worker = this.workers[id];
 
     if (worker) {
-      worker.destroy();
+      // A worker's destroy() is its own code and may throw (a bad teardown, a
+      // library that errors on close); one throw must not leave every LATER
+      // worker undestroyed, leaking its intervals and sockets. Deleted from
+      // the map regardless.
+      try {
+        worker.destroy();
+      } catch (err) {
+        console.warn(`[flow-based] worker ${id} threw on destroy.`, err);
+      }
+
       delete this.workers[id];
     }
   }
@@ -711,8 +726,12 @@ export class Flow {
      */
     return cycles.map(cycle => {
       const ids = cycle.map(vertex => Number(vertex.split('#')[0]));
+      const collapsed = ids.filter((id, index) => index === 0 || id !== ids[index - 1]);
 
-      return ids.filter((id, index) => index === 0 || id !== ids[index - 1]);
+      // A node wired to itself collapses to a single id, which no longer reads
+      // as a closed loop — re-append it so a self-loop is [A, A] like every
+      // other cycle, first entry repeated at the end.
+      return collapsed.length === 1 ? [collapsed[0], collapsed[0]] : collapsed;
     });
   }
 
@@ -941,10 +960,29 @@ export class Flow {
      */
     state.config ??= {};
 
-    if (worker) {
-      this.workers[id] = new worker(state.config, state.sockets);
-    } else if (entry.settings.isFlow) {
-      this.workers[id] = new FlowWorker(state, childId => this.workers[childId]);
+    // A duplicate node id (a hand-edited flow, a bad generator) would overwrite
+    // this slot and leak the shadowed worker's intervals/sockets forever, never
+    // destroyed. Take the old one down first, and warn like duplicate wires do.
+    if (this.workers[id]) {
+      console.warn(`[flow-based] Two nodes share id ${id}; the first is shadowed. Ids must be unique.`);
+      this.destroyWorker(id);
+    }
+
+    /*
+     * A worker's CONSTRUCTOR is its own code and may throw. Escaping here
+     * aborted initialize() after the old engine was already destroyed — one
+     * bad node lost the whole document — and escaped addNode too. Leave the
+     * node worker-less, exactly like an unknown type: it draws, it is
+     * selectable and deletable, it simply does not compute.
+     */
+    try {
+      if (worker) {
+        this.workers[id] = new worker(state.config, state.sockets);
+      } else if (entry.settings.isFlow) {
+        this.workers[id] = new FlowWorker(state, childId => this.workers[childId]);
+      }
+    } catch (err) {
+      console.warn(`[flow-based] worker for node ${id} (${state.type}) threw on construction.`, err);
     }
 
     this.wrapSetConfigValue(state);
@@ -1077,6 +1115,15 @@ export class Flow {
       stream = fromWorker.getStream(outSocket);
     } catch (err) {
       console.warn(`[flow-based] getStream failed for socket ${outSocket.id} — connection not wired.`, err);
+
+      return;
+    }
+
+    // A worker that returns a non-Observable (a bug, or a hand-written lib)
+    // otherwise threw on .subscribe below and aborted the whole load. Treat it
+    // like the throw above: skip this wire, roll nothing back.
+    if (typeof (stream as { subscribe?: unknown })?.subscribe !== 'function') {
+      console.warn(`[flow-based] getStream for socket ${outSocket.id} did not return an Observable — connection not wired.`);
 
       return;
     }

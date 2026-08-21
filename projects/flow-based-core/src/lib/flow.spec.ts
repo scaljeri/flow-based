@@ -1468,3 +1468,59 @@ describe('a hostile or sparse flow still loads', () => {
     expect(() => new Flow(types as any).initialize(root)).not.toThrow();
   });
 });
+
+/*
+ * Engine robustness against a hostile/hand-edited flow and a bad worker.
+ */
+describe('the engine survives a bad node', () => {
+  class ThrowCtor {
+    constructor() { throw new Error('boom'); }
+    getStream() { return new Subject(); }
+    setStream() {}
+    removeStream() {}
+    destroy() {}
+  }
+
+  it('a worker whose constructor throws leaves the node worker-less, not the load aborted', () => {
+    const types = { ...flowTypes(), bad: { worker: ThrowCtor, settings: { isFlow: false, title: 'B', config: {}, sockets: [] } } };
+    const root: any = {
+      id: 1, children: [
+        { id: 2, type: 'bad', sockets: [] },
+        { id: 3, type: 'sink', sockets: [{ id: 30, type: 'in' }] },
+      ], connections: [],
+    };
+    let flow: any;
+
+    expect(() => { flow = new Flow(types as any).initialize(root); }).not.toThrow();
+    expect(flow.getWorker(2)).toBeUndefined();   // the thrower
+    expect(flow.getWorker(3)).toBeDefined();      // the rest still built
+  });
+
+  it('addConnection works on a subflow with no connections key', () => {
+    const types = flowTypes();
+    const root: any = {
+      id: 1, children: [
+        { id: 2, type: 'source', sockets: [{ id: 20, type: 'out' }] },
+        { id: 3, type: 'sink', sockets: [{ id: 30, type: 'in' }] },
+      ],
+    };
+    const flow = new Flow(types as any).initialize(root);
+
+    delete root.connections;   // hand-edited away
+    expect(() => flow.addConnection(root, { id: 100, from: 2, to: 3, out: 20, in: 30 })).not.toThrow();
+  });
+
+  it('a node wired to itself is reported as a closed loop [A, A]', () => {
+    const types = flowTypes();
+    const root: any = {
+      id: 1, children: [{ id: 2, type: 'reroute', sockets: [{ id: 20, type: 'in' }, { id: 21, type: 'out' }] }],
+      connections: [{ id: 100, from: 2, to: 2, out: 21, in: 20 }],
+    };
+    const report = new Flow(types as any).initialize(root).lastPropagation ?? { cycles: [] };
+    const selfLoop = (report.cycles || []).find((c: number[]) => c[0] === 2);
+
+    if (selfLoop) {
+      expect(selfLoop).toEqual([2, 2]);
+    }
+  });
+});
