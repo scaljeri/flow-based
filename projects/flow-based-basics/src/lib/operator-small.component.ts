@@ -47,7 +47,9 @@ export class OperatorSmallComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.worker = this.service.worker as OperatorWorker;
 
-    this.subscription = this.worker.getStream().subscribe(() => this.cdr.detectChanges());
+    // `changes`, not the value stream: the face must also repaint when a
+    // removed operand clears the result, which emits no value.
+    this.subscription = this.worker.changes.subscribe(() => this.cdr.detectChanges());
   }
 
   ngOnDestroy(): void {

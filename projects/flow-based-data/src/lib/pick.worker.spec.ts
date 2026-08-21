@@ -145,4 +145,25 @@ describe('PickWorker shapes', () => {
 
     expect(seen.at(-1)).toBe(0);
   });
+
+  /*
+   * Why this matters: the panel calls set(), which wrote config directly and
+   * skipped the engine's announce wrap — a panel edit never raised the dirty
+   * dot and was lost on reload. set() routes through setConfigValue now.
+   */
+  it('a panel edit routes through the announce channel', () => {
+    const worker = new PickWorker({ shape: 'geo' });
+    const routed: [string, unknown][] = [];
+    const original = worker.setConfigValue.bind(worker);
+
+    worker.setConfigValue = (path: string, value: unknown) => {
+      routed.push([path, value]);
+      original(path, value);
+    };
+
+    worker.set('a', 'lat');
+
+    expect(routed).toEqual([['a', 'lat']]);
+    expect(worker.read('a')).toBe('lat');
+  });
 });

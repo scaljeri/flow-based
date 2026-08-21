@@ -99,7 +99,9 @@ export class TemplateSettingsComponent {
   // On input, not on blur: a pattern is something you feel your way to, and
   // the node redraws what it is still missing as you type.
   onPattern(event: Event): void {
-    this.worker?.setPattern((event.target as HTMLInputElement).value);
+    // setConfigValue, not setPattern: the engine wraps setConfigValue for the
+    // dirty-dot announce, and setPattern alone never marked the edit.
+    this.worker?.setConfigValue('pattern', (event.target as HTMLInputElement).value);
     this.cdr.detectChanges();
   }
 }

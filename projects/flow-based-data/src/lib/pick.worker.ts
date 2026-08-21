@@ -218,13 +218,9 @@ export class PickWorker implements FbNodeWorker {
   }
 
   set(key: keyof PickConfig, value: string | number): void {
-    (this.config as Record<string, unknown>)[key] = value;
-
-    if (key === 'shape') {
-      this.declareOutput();
-    }
-
-    this.emit();
+    // Through setConfigValue (the engine wraps it): a panel edit must mark the
+    // flow dirty. Written straight to config, it was lost on reload.
+    this.setConfigValue(key, value);
   }
 
   read(key: keyof PickConfig): string | number | undefined {
@@ -233,6 +229,10 @@ export class PickWorker implements FbNodeWorker {
 
   setConfigValue(path: string, value: unknown): void {
     if (writeConfigValue(this.config as Record<string, unknown>, path, value)) {
+      if (path === 'shape') {
+        this.declareOutput();
+      }
+
       this.emit();
     }
   }

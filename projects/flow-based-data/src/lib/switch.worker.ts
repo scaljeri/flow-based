@@ -138,8 +138,10 @@ export class SwitchWorker implements FbNodeWorker {
   }
 
   set(which: number): void {
-    this.config.which = Math.max(0, Math.min(this.order.length, Math.round(which)));
-    this.emit();
+    // Through setConfigValue (the engine wraps it): a face pick is an edit and
+    // must raise the dirty dot. Written straight to config, the choice was
+    // gone on reload.
+    this.setConfigValue('which', Math.max(0, Math.min(this.order.length, Math.round(which))));
   }
 
   setConfigValue(path: string, value: unknown): void {

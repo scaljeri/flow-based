@@ -11,10 +11,18 @@ import { Observable, ReplaySubject, Subscription, combineLatest } from 'rxjs';
 export class OperatorWorker implements FbNodeWorker {
   private readonly inputs: { [socketId: number]: Observable<number> } = {};
   private readonly subject = new ReplaySubject<number>(1);
+  // A redraw channel distinct from the value stream: the face has to repaint
+  // when a removed operand clears the result too, and clearing emits nothing
+  // on `subject` (it carries numbers). Every other node here uses this.
+  private readonly ticks = new ReplaySubject<void>(1);
   private subscription?: Subscription;
 
   /** The latest result, for the node's own drawing. */
   result?: number;
+
+  get changes(): Observable<void> {
+    return this.ticks.asObservable();
+  }
 
   /*
    * `undefined` from the operation means "no answer" and nothing is emitted —
@@ -27,6 +35,7 @@ export class OperatorWorker implements FbNodeWorker {
   destroy(): void {
     this.subscription?.unsubscribe();
     this.subject.complete();
+    this.ticks.complete();
   }
 
   getStream(): Observable<number> {
@@ -41,8 +50,10 @@ export class OperatorWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     delete this.inputs[connection.in!];
     // The shown result mixed the removed operand; the face goes honest
-    // rather than stale until the survivors speak again.
+    // rather than stale until the survivors speak again — announced, or the
+    // view kept the removed operand's answer on screen.
     this.result = undefined;
+    this.ticks.next();
     this.resubscribe();
   }
 
@@ -64,6 +75,7 @@ export class OperatorWorker implements FbNodeWorker {
 
       this.result = result;
       this.subject.next(result);
+      this.ticks.next();
     });
   }
 }
@@ -79,14 +91,23 @@ export class OperatorWorker implements FbNodeWorker {
 export class SumWorker implements FbNodeWorker {
   private readonly inputs: { [socketId: number]: Observable<number> } = {};
   private readonly subject = new ReplaySubject<number>(1);
+  // A redraw channel distinct from the value stream: the face has to repaint
+  // when a removed operand clears the result too, and clearing emits nothing
+  // on `subject` (it carries numbers). Every other node here uses this.
+  private readonly ticks = new ReplaySubject<void>(1);
   private subscription?: Subscription;
 
   /** The latest result, for the node's own drawing. */
   result?: number;
 
+  get changes(): Observable<void> {
+    return this.ticks.asObservable();
+  }
+
   destroy(): void {
     this.subscription?.unsubscribe();
     this.subject.complete();
+    this.ticks.complete();
   }
 
   getStream(): Observable<number> {
@@ -101,8 +122,10 @@ export class SumWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     delete this.inputs[connection.in!];
     // The shown result mixed the removed operand; the face goes honest
-    // rather than stale until the survivors speak again.
+    // rather than stale until the survivors speak again — announced, or the
+    // view kept the removed operand's answer on screen.
     this.result = undefined;
+    this.ticks.next();
     this.resubscribe();
   }
 
@@ -119,6 +142,7 @@ export class SumWorker implements FbNodeWorker {
     this.subscription = combineLatest(streams).subscribe(values => {
       this.result = values.reduce((total, value) => total + value, 0);
       this.subject.next(this.result);
+      this.ticks.next();
     });
   }
 }
