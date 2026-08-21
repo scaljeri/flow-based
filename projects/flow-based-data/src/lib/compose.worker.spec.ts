@@ -45,4 +45,17 @@ describe('ComposeWorker', () => {
     worker.removeStream(wire(11));
     expect(seen.at(-1)).toEqual({ a: 1 });
   });
+
+  // A socket named __proto__ must not write through the prototype.
+  it('a __proto__ socket name does not pollute the prototype', () => {
+    const worker = new ComposeWorker();
+    const seen: Record<string, unknown>[] = [];
+
+    worker.getStream().subscribe(v => seen.push(v as Record<string, unknown>));
+    const a = new Subject<unknown>();
+    worker.setStream(a, socket(1, '__proto__'), wire(10));
+    a.next({ polluted: true });
+
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
 });

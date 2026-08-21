@@ -24,10 +24,19 @@ const fold = (op: AggregateOp, values: number[]): number => {
 
   const sum = values.reduce((a, b) => a + b, 0);
 
-  return op === 'sum' ? sum
-    : op === 'min' ? Math.min(...values)
-      : op === 'max' ? Math.max(...values)
-        : sum / values.length;   // mean
+  // Folded with a loop, not `Math.min(...values)`: spreading a long list blew
+  // the call stack (RangeError) on a real dataset.
+  if (op === 'min' || op === 'max') {
+    let acc = values[0];
+
+    for (const v of values) {
+      acc = op === 'min' ? Math.min(acc, v) : Math.max(acc, v);
+    }
+
+    return acc;
+  }
+
+  return op === 'sum' ? sum : sum / values.length;   // mean
 };
 
 /**
@@ -90,7 +99,12 @@ export class AggregateWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    // The face's count/groups/error belonged to that wire; kept, they lingered
+    // after the list was gone, and nothing announced the clear.
     this.latest = undefined;
+    this.groups = 0;
+    this.error = null;
+    this.ticks.next();
   }
 
   setConfigValue(path: string, value: unknown): void {

@@ -71,7 +71,11 @@ export class ComposeWorker implements FbNodeWorker {
       return;
     }
 
-    const object: Record<string, unknown> = {};
+    // No prototype: a socket named `__proto__` (or `constructor`) would
+    // otherwise write THROUGH the object's prototype rather than onto it —
+    // prototype pollution from a flow's own socket names. A null-proto object
+    // has no such trap, and JSON.stringify treats it as a plain object.
+    const object: Record<string, unknown> = Object.create(null);
 
     for (const entry of entries) {
       object[entry.socket.name || entry.fallback] = entry.value;

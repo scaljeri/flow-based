@@ -196,8 +196,10 @@ export class FilterWorker implements FbNodeWorker {
   }
 
   write(key: keyof FilterConfig, value: string | boolean): void {
-    (this.config as Record<string, unknown>)[key] = value;
-    this.emit();
+    // Through setConfigValue (the engine wraps it for the dirty-dot announce):
+    // written straight to config, a panel edit never raised the dot and was
+    // lost on reload.
+    this.setConfigValue(key, value);
   }
 
   /** Tunable from a document: the rule is exactly the kind of thing to try. */

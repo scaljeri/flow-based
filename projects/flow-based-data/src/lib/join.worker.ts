@@ -112,8 +112,10 @@ export class JoinWorker implements FbNodeWorker {
   }
 
   write(key: keyof JoinConfig, value: string): void {
-    (this.config as Record<string, unknown>)[key] = value;
-    this.emit();
+    // Through setConfigValue (the engine wraps it for the dirty-dot announce):
+    // written straight to config, a panel edit never raised the dot and was
+    // lost on reload.
+    this.setConfigValue(key, value);
   }
 
   setConfigValue(path: string, value: unknown): void {

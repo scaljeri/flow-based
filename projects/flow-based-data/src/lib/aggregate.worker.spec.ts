@@ -50,4 +50,11 @@ describe('AggregateWorker', () => {
     run(worker, 42);
     expect(worker.error).toBeTruthy();
   });
+
+  // Math.min(...values) blew the call stack on a real dataset; folded now.
+  it('min over a very long list does not throw', () => {
+    const big = Array.from({ length: 200000 }, (_, i) => ({ n: i }));
+    expect(() => run(new AggregateWorker({ value: 'n', op: 'min' }), big)).not.toThrow();
+    expect(run(new AggregateWorker({ value: 'n', op: 'min' }), big)).toBe(0);
+  });
 });

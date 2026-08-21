@@ -72,4 +72,17 @@ describe('FilterWorker', () => {
 
     expect(seen.length).toBe(before);
   });
+
+  // The panel's write() must route through setConfigValue (the announce wrap),
+  // or a panel edit never marks the flow dirty and is lost on reload.
+  it('a panel write routes through the announce channel', () => {
+    const worker = new FilterWorker({ test: 'is', value: 'a' });
+    const routed: string[] = [];
+    const original = worker.setConfigValue.bind(worker);
+
+    worker.setConfigValue = (path: string, value: unknown) => { routed.push(path); original(path, value); };
+    worker.write('value', 'b');
+
+    expect(routed).toEqual(['value']);
+  });
 });
