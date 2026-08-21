@@ -947,7 +947,16 @@ export class FbFlowDocumentElement extends LitElement {
 
       // The api belongs to what is DRAWN: a worn child's own state and its own
       // live worker, which is what keeps the request in the figure ticking.
-      this.handles.set(nodeId, mount(host, { api: this.readingApi(drawn) }));
+      try {
+        this.handles.set(nodeId, mount(host, { api: this.readingApi(drawn) }));
+      } catch (err) {
+        // One figure's mount throwing used to stop every LATER figure and leak
+        // this host. The empty well is honest; the rest of the article draws.
+        console.error(`[flow-based] figure for node ${nodeId} threw while mounting.`, err);
+        host.remove();
+        this.hosts.delete(nodeId);
+        continue;
+      }
       this.figureStates.set(nodeId, node);
     }
 

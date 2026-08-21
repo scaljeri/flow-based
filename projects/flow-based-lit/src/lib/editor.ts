@@ -408,6 +408,11 @@ export class FbEditor {
 
     this.pending = null;
     this.pointer = null;
+    // A gesture in flight does not survive the graph being rebuilt: a touched
+    // socket or an open picker anchored to a node the rebuild may have removed
+    // fired against whatever graph is now current.
+    this.touchedSocket = null;
+    this.picker = null;
 
     // Drop anything selected that the reloaded flow does not contain — an undo
     // can remove the very nodes that were selected.
@@ -490,7 +495,11 @@ export class FbEditor {
 
   /** Jump to a level in `path`; 0 is the root. */
   goTo(depth: number): void {
-    while (this.ancestors.length > depth) {
+    // Clamped at 0: goTo(-1) — a bad breadcrumb index — spun forever, because
+    // leave() stops at the root but `ancestors.length > -1` stays true.
+    const target = Math.max(0, depth);
+
+    while (this.ancestors.length > target) {
       this.leave();
     }
   }

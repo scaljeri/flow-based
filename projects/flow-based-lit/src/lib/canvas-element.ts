@@ -894,11 +894,25 @@ export class FbFlowCanvasElement extends LitElement {
       return;
     }
 
+    // A horizontal scroll (a trackpad swipe, a tilt wheel) has deltaY 0 and used
+    // to read as "zoom out" from the `< 0` test — the graph shrank on a
+    // sideways gesture. Only a real vertical wheel zooms.
+    if (event.deltaY === 0) {
+      return;
+    }
+
     event.preventDefault();
     this.editor.viewport.zoomAt(event.deltaY < 0 ? 1.1 : 1 / 1.1, this.toLocal(event));
   };
 
   private onPointerDown = (event: PointerEvent): void => {
+    // Left button only. A right or middle press used to pan the graph and clear
+    // the selection — a right-click meant to open a context menu wiped what was
+    // selected on the way.
+    if (event.button !== 0) {
+      return;
+    }
+
     // A press beside an open picker answers the picker — dismissed — and
     // nothing else: turning it into a pan would move the surface under a
     // question the user was still reading.
@@ -1597,7 +1611,10 @@ export class FbFlowCanvasElement extends LitElement {
             this.requestUpdate();
           }}
           @keydown=${(e: KeyboardEvent) => {
-            if (e.key === 'Enter' && candidates.length) {
+            // isComposing: an IME's Enter COMMITS the composition, it does not
+            // pick — a Japanese/Chinese reader typing a search term created a
+            // node on every commit.
+            if (e.key === 'Enter' && !e.isComposing && candidates.length) {
               this.editor.completeWithNew(candidates[0].type);
             }
           }}>

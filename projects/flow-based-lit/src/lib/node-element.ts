@@ -973,7 +973,16 @@ export class FbNodeElement extends LitElement {
     this.appendChild(this.contentHost);
     this.mountedFor = source;
     this.mountedMount = mount;
-    this.handle = mount(this.contentHost, { api: this.api(source) });
+    // A node type's mount() is third-party code and may throw; unguarded it
+    // stranded THIS element (no handle, a half-built host) and could abort the
+    // render of everything after it. The node still draws its chrome, stays
+    // selectable and deletable — the same as a node with no drawing.
+    try {
+      this.handle = mount(this.contentHost, { api: this.api(source) });
+    } catch (err) {
+      console.error(`[flow-based] node ${source.id} (${source.type}) threw while mounting.`, err);
+      this.handle = undefined;
+    }
 
     /*
      * The handle is new, and the settings panel's mountOwn BINDING reads it.
