@@ -173,7 +173,14 @@ table {
 
   font-family: 'Source Code Pro', monospace;
 
-  *:focus {
+  /*
+   * Only a MOUSE press hides the ring — a keyboard user keeps it. `outline:
+   * none` on every :focus stripped focus indication from every control in all
+   * four dialogs, so a keyboard user could not tell what was focused: a
+   * WCAG-failing dead end. :focus-visible restores the ring exactly when the
+   * browser judges it useful (keyboard, not a mouse click on a button).
+   */
+  *:focus:not(:focus-visible) {
     outline: none;
   }
 }
