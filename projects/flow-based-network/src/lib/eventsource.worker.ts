@@ -151,9 +151,13 @@ export class EventSourceWorker implements FbNodeWorker {
       };
 
       source.onerror = () => {
-        // EventSource reconnects itself; the state just shows it stumbled.
+        // CLOSED means the browser GAVE UP (a 4xx, a bad content-type) — it is
+        // not reconnecting, and saying so was a lie the reader waited on. Any
+        // other state is a transient stumble it recovers from on its own.
         this.state = 'error';
-        this.error = 'Stream error — reconnecting';
+        this.error = source.readyState === EventSource.CLOSED
+          ? 'Stream closed — the server ended it or refused'
+          : 'Stream error — reconnecting';
         this.ticks.next();
       };
 

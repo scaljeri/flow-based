@@ -131,7 +131,13 @@ export class WebSocketWorker implements FbNodeWorker {
   send(value: unknown): void {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(typeof value === 'string' ? value : JSON.stringify(value));
+      return;
     }
+
+    // Not open: the message is DROPPED — say so, rather than swallow it. A node
+    // wired to send while the socket is connecting/closed looked like it worked.
+    this.error = 'Not connected — message dropped';
+    this.ticks.next();
   }
 
   /** A fresh start: whatever pause the old connection had earned is forgiven. */

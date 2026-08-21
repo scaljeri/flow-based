@@ -74,6 +74,7 @@ export class WebTransportWorker implements FbNodeWorker {
     this.destroyed = true;
     this.attempt++;
     clearTimeout(this.retryTimer);
+    this.releaseWriter();
     this.transport?.close();
     Object.values(this.subscriptions).forEach(subscription => subscription.unsubscribe());
     this.subject.complete();
@@ -148,15 +149,28 @@ export class WebTransportWorker implements FbNodeWorker {
     }
 
     const text = typeof value === 'string' ? value : JSON.stringify(value);
-    const writer = this.transport.datagrams.writable.getWriter();
 
     try {
-      await writer.write(new TextEncoder().encode(text));
+      // ONE writer, held for the transport's life: getWriter() throws when the
+      // writable is already locked, so a second datagram in the same tick
+      // rejected — unhandled, because callers fire send() without awaiting.
+      this.writer ??= this.transport.datagrams.writable.getWriter();
+      await this.writer.write(new TextEncoder().encode(text));
     } catch {
       // A datagram is allowed to vanish; that is its character.
-    } finally {
-      writer.releaseLock();
     }
+  }
+
+  private writer?: { write(chunk: Uint8Array): Promise<void>; releaseLock(): void };
+
+  private releaseWriter(): void {
+    try {
+      this.writer?.releaseLock();
+    } catch {
+      // Already released with the transport — nothing to do.
+    }
+
+    this.writer = undefined;
   }
 
   private reconnect(): void {
@@ -168,6 +182,9 @@ export class WebTransportWorker implements FbNodeWorker {
   private async connect(): Promise<void> {
     const mine = ++this.attempt;
 
+    // The old writer belonged to the old transport's writable; carrying it to
+    // the new one would write into a closed stream.
+    this.releaseWriter();
     this.transport?.close();
     this.transport = undefined;
 

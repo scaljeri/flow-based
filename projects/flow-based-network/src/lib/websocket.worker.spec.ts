@@ -105,4 +105,15 @@ describe('WebSocketWorker', () => {
 
     worker.destroy();
   });
+
+  // A send while the socket is not OPEN dropped the message silently; it sets
+  // a visible error now.
+  it('a send while not connected reports a dropped message', () => {
+    const worker = new WebSocketWorker({ url: 'wss://x/stream' });
+    // No open() called — readyState stays 0 (CONNECTING).
+    worker.send('hello');
+
+    expect(worker.error).toMatch(/dropped/i);
+    worker.destroy();
+  });
 });
