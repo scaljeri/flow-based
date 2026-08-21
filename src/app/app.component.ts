@@ -30,6 +30,25 @@ import { ComponentSelectionService } from './component-selection.service';
  * years and the Escape handler binds `keydown.escape` declaratively instead.
  */
 
+/**
+ * The remote-behind marks, read defensively.
+ *
+ * A field initializer that did `JSON.parse(localStorage.getItem(...))` threw
+ * from the constructor when storage access itself throws — which is exactly
+ * EMBED mode, where third-party storage is blocked — or when the key holds
+ * corrupt JSON, and either way the whole app failed to bootstrap: a blank
+ * page from one bad key. Any failure is an empty set; the app still runs.
+ */
+function readRemoteBehind(): Set<string> {
+  try {
+    const raw = JSON.parse(localStorage.getItem('fb-remote-behind') ?? '[]');
+
+    return new Set(Array.isArray(raw) ? (raw as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
 @Component({
   standalone: false,
   selector: 'fb-root',
@@ -85,8 +104,7 @@ export class AppComponent implements OnInit, AfterViewInit {
    * dirty false, set empty — and Save answered "No changes yet" while the
    * endpoint stayed behind, the exact dead end the retry mechanism exists for.
    */
-  private readonly remoteBehindIds = new Set<string>(
-    JSON.parse(localStorage.getItem('fb-remote-behind') ?? '[]') as string[]);
+  private readonly remoteBehindIds = readRemoteBehind();
 
   private persistRemoteBehind(): void {
     try {

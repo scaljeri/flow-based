@@ -98,7 +98,10 @@ export class FlowStoreService {
    */
   save(id: string, flow: FbNodeState, sourceUrl?: string): boolean {
     try {
-      localStorage.setItem(FLOW_PREFIX + id, serializeFlowToJson(flow));
+      // Compact (no indent): localStorage is machine storage, and pretty-
+      // printing wasted a third to three-quarters of a quota the app already
+      // runs out of. Downloads and the Monaco view keep the pretty default.
+      localStorage.setItem(FLOW_PREFIX + id, serializeFlowToJson(flow, false));
       this.touch(id, flow.title ?? 'Untitled', sourceUrl);
       this.clearDraft(id);
 
@@ -129,7 +132,7 @@ export class FlowStoreService {
    */
   saveDraft(id: string, flow: FbNodeState): boolean {
     try {
-      localStorage.setItem(draftKey(id), serializeFlowToJson(flow));
+      localStorage.setItem(draftKey(id), serializeFlowToJson(flow, false));
 
       return true;
     } catch {

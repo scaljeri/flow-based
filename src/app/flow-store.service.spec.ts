@@ -82,4 +82,17 @@ describe('FlowStoreService source URL', () => {
     expect(store.currentId()).toBeNull();
     expect(localStorage.getItem('fb-modules')).toBe('{"version":2,"enabled":["math"],"urls":[]}');
   });
+
+  // localStorage is machine storage: a saved flow is stored COMPACT, not
+  // pretty-printed — the indentation wasted a third to three-quarters of a
+  // quota the app already runs out of.
+  it('stores a flow as compact JSON, not indented', () => {
+    const id = store.create(aFlow('Compact'));
+    const stored = localStorage.getItem('fb-flow-' + id) ?? '';
+
+    expect(stored.length).toBeGreaterThan(0);
+    expect(stored).not.toContain('\n');
+    // Still a real flow — it round-trips.
+    expect(store.load(id)?.title).toBe('Compact');
+  });
 });
