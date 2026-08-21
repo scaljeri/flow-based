@@ -192,7 +192,15 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
         ];
       }
 
-      node.children = children;
+      // Only when a mandelbrot was actually split: assigning unconditionally
+      // stamped `children: []` onto every LEAF, and a node with an (empty)
+      // children array is an enterable subflow — so every node in a migrated
+      // v3 flow became a double-click-into empty graph. Recurse over the real
+      // children either way.
+      if (found.length) {
+        node.children = children;
+      }
+
       children.forEach(split);
 
       return node;
@@ -236,7 +244,10 @@ const MIGRATIONS: Record<number, (flow: FbNodeState) => FbNodeState> = {
          * number out — and the symbol is what the drawing shows.
          */
         if (child.type === 'merge-streams') {
-          child.type = 'math-add';
+          // 'add', the registry's actual key for the n-ary sum — 'math-add'
+          // is provided by no registry, so a migrated merge-streams loaded as
+          // an empty box.
+          child.type = 'add';
           child.config = { symbol: '+' };
         }
 

@@ -225,10 +225,11 @@ describe('deserializeFlow', () => {
     expect(read.connections!.map(c => c.id)).toEqual([900]);
   });
 
-  it('maps merge-streams onto math-add, wires and sockets untouched', () => {
-    // Both were the combineLatest sum of their inputs; math-add is the one
-    // that stays, n-ary since the fusion. Only the type and the drawn symbol
-    // change — the sockets carry over, so every wire still lands.
+  it('maps merge-streams onto the add node the registry provides, wires and sockets untouched', () => {
+    // Both were the combineLatest sum of their inputs; the surviving type is
+    // the registry's 'add' — the migration produced 'math-add', a type no
+    // registry has, so a migrated node loaded as an empty box. Only the type
+    // and the drawn symbol change — the sockets carry over, so every wire lands.
     const older = {
       id: 1,
       type: 'flow',
@@ -248,9 +249,24 @@ describe('deserializeFlow', () => {
     const read = deserializeFlow({ version: 4, flow: older });
     const add = read.children![0];
 
-    expect(add.type).toBe('math-add');
+    expect(add.type).toBe('add');
     expect(add.config).toEqual({ symbol: '+' });
     expect(add.sockets).toHaveLength(3);
+  });
+
+  // Migration 3 stamped `children: []` onto every node it walked, and a node
+  // with a children array is an enterable subflow — so every leaf in a v3
+  // flow became a double-click-into empty graph. A leaf stays a leaf.
+  it('does not turn a v3 leaf node into an empty subflow', () => {
+    const older = {
+      id: 1, type: 'flow',
+      children: [{ id: 10, type: 'value', config: {}, sockets: [] }],
+      connections: [],
+    } as unknown as FbNodeState;
+
+    const read = deserializeFlow({ version: 3, flow: older });
+
+    expect(read.children![0].children).toBeUndefined();
   });
 
   it('shifts a saved data-choice which to the 1-based convention', () => {
