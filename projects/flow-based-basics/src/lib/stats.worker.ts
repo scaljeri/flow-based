@@ -3,6 +3,9 @@ import { toNumber } from '@scaljeri/flow-based-node-utils';
 import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { calcMax, calcMean, calcStandardDeviation, getGaussian } from './gauss';
 
+/** The histogram's hard bin ceiling — both the index cap and the shift cap. */
+const MAX_BINS = 4096;
+
 export const STATS_SETTINGS: FbNodeSettings = {
   title: 'Statistics',
   help: 'Running min, max, average and a histogram over a stream of numbers, with a fitted bell curve. Two number outputs carry the min and max on.',
@@ -161,11 +164,26 @@ export class StatsWorker implements FbNodeWorker {
       } else if (base < this.binBase) {
         const shift = Math.round((this.binBase - base) / this.columnWidth);
 
-        this.values = [...new Array(shift).fill(0), ...this.values];
+        /*
+         * The INDEX was capped at MAX_BINS but the shift was not: one reading
+         * far below the running min unshifted millions of zeros and froze the
+         * tab — the very freeze the cap was meant to end. A shift beyond a
+         * full histogram means the new value is in a different regime than
+         * everything seen; at this width the range cannot be drawn, so re-base
+         * on the new minimum and start the distribution over rather than
+         * allocate an array the size of the gap.
+         */
+        if (shift >= MAX_BINS) {
+          this.values = [];
+        } else {
+          this.values = [...new Array(shift).fill(0), ...this.values];
+          this.values.length = Math.min(this.values.length, MAX_BINS);
+        }
+
         this.binBase = base;
       }
 
-      const index = Math.min(4095, Math.max(0, Math.round((val - this.binBase) / this.columnWidth)));
+      const index = Math.min(MAX_BINS - 1, Math.max(0, Math.round((val - this.binBase) / this.columnWidth)));
 
       this.values[index] = (this.values[index] || 0) + 1;
 

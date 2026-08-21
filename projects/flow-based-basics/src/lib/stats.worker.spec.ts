@@ -79,4 +79,24 @@ describe('StatsWorker', () => {
     expect(written).toEqual(['columnWidth']);
     expect(worker.columnWidth).toBe(2);
   });
+
+  /*
+   * Why this matters: the bin INDEX was capped but the down-shift was not.
+   * A reading far below the running min unshifted millions of zeros — the
+   * frozen tab the cap existed to prevent. The histogram is bounded now.
+   */
+  it('a reading far below the minimum does not allocate a giant array', () => {
+    const worker = new StatsWorker({ columnWidth: 1 });
+    const source = new Subject<number>();
+    let last: number[] = [];
+
+    worker.updated$.subscribe(d => { last = d.values; });
+    worker.setStream(source, { type: 'in' }, { id: 1, from: 0, to: 0 });
+
+    source.next(60000);
+    source.next(0);          // 60000 bins below — would have unshifted 60000 zeros
+    source.next(-1000000);   // a million below — the classic freeze
+
+    expect(last.length).toBeLessThanOrEqual(4096);
+  });
 });

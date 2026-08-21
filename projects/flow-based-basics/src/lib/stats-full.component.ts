@@ -27,7 +27,7 @@ import { StatsView } from './stats-view';
     <div #distribution class="chart"></div>
 
     <fb-slider label="Column width" class="column-width"
-               [min]="0" [max]="10" step="0.1"
+               [min]="0.1" [max]="10" step="0.1"
                [(ngModel)]="worker.columnWidth"></fb-slider>
   `,
   styles: [`
@@ -115,7 +115,15 @@ export class StatsFullComponent extends StatsView {
     const width = this.worker.columnWidth;
     let count = 0;
 
-    while ((count - 1) * width < data.end) {
+    /*
+     * Bounded by the number of BINS, not by the maximum VALUE. `data.end` is
+     * the largest reading, so `(count-1)*width < data.end` looped tens of
+     * thousands of times on a crypto-scale stream — each iteration a chart row
+     * reading past the end of a histogram that is at most MAX_BINS long — and
+     * froze the tab. The bins are relative to `start`, so their count is the
+     * length of the values array.
+     */
+    while (count < data.values.length) {
       /*
        * count is read for the row BEFORE stepping. The old inline `count++`
        * bumped it between the x and the y (arguments evaluate left to right),
