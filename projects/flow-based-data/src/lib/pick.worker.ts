@@ -289,8 +289,17 @@ export class PickWorker implements FbNodeWorker {
        * node promises is both honest and in type: an empty sweep, a map with
        * no places, a raster with no cells. The node itself still goes red and
        * says what went wrong, which is where the reason belongs.
+       *
+       * Except a shape with no empty (a number, a raster): empty() returns
+       * undefined for those, and its own comment says they KEEP QUIET rather
+       * than invent one — so publishing `undefined` down a `number` socket
+       * was the exact thing that comment forbids. Quiet means quiet.
        */
-      this.subject.next(this.empty());
+      const nothing = this.empty();
+
+      if (nothing !== undefined) {
+        this.subject.next(nothing);
+      }
     }
   }
 

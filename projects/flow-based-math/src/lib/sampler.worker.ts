@@ -3,6 +3,9 @@ import { Observable, ReplaySubject, Subscription } from 'rxjs';
 import { FnValue } from './function-value';
 import { FnResult, compileExpression } from './formula.worker';
 
+/** No plot draws more than a few thousand points; the sweep stops there. */
+const SAMPLER_MAX_POINTS = 20000;
+
 export type SamplerMode = 'point' | 'sweep';
 
 export interface SamplerConfig {
@@ -161,8 +164,20 @@ export class SamplerWorker implements FbNodeWorker {
   private emitSweep(): void {
     const points: SamplePoint[] = [];
 
-    for (let x = this.from; x <= this.to + 1e-9; x += this.step) {
-      const point = this.sampleAt(x);
+    /*
+     * BOUNDED. `step` is user-set — a document pill can drive it to 1e-7 —
+     * and `x += step` across a wide domain then loops billions of times and
+     * freezes the tab (the shipped article's own pill could do it). No plot
+     * draws more than a few thousand points, so the sweep caps there and
+     * indexes rather than accumulating float error across a huge count.
+     */
+    const span = this.to - this.from;
+    const count = this.step > 0 && span > 0
+      ? Math.min(SAMPLER_MAX_POINTS, Math.floor(span / this.step) + 1)
+      : 1;
+
+    for (let i = 0; i < count; i++) {
+      const point = this.sampleAt(this.from + i * this.step);
 
       if (point) {
         points.push(point);

@@ -134,4 +134,28 @@ describe('SamplerWorker', () => {
     worker.destroy();
     vi.useRealTimers();
   });
+
+  /*
+   * Why this matters: `step` is user-set and a document pill can drive it to
+   * 1e-7; `x += step` over a wide domain then looped billions of times and
+   * froze the tab. The sweep is bounded now.
+   */
+  it('a tiny step over a wide domain does not hang, and is bounded', () => {
+    const worker = new SamplerWorker({ from: 0, to: 1000, step: 0.0000001, mode: 'sweep' });
+    let last: unknown;
+
+    worker.getStream().subscribe(v => { last = v; });
+
+    const fn = new Subject<FnValue>();
+    worker.setStream(fn, inn, wire(10));
+
+    const start = performance.now();
+    fn.next({ expr: 'x', tex: 'x' });   // triggers the sweep
+    const ms = performance.now() - start;
+
+    expect(ms).toBeLessThan(500);
+    expect(Array.isArray(last)).toBe(true);
+    expect((last as unknown[]).length).toBeLessThanOrEqual(20000);
+    worker.destroy();
+  });
 });

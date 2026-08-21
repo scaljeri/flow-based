@@ -1049,8 +1049,18 @@ export class Flow {
       };
 
       // Before the wire below, so a source that replays its latest value on
-      // subscribe finds the worker already listening.
-      toWorker.setStream(bridge.subject.asObservable(), inSocket, connection);
+      // subscribe finds the worker already listening. Guarded like getStream
+      // below: setStream is a worker's own code, and a throw here escaped into
+      // the connect loop and aborted the WHOLE load — one bad node lost the
+      // file. Roll the just-built bridge back and skip this wire.
+      try {
+        toWorker.setStream(bridge.subject.asObservable(), inSocket, connection);
+      } catch (err) {
+        delete this.inputBridges[inSocket.id!];
+        console.warn(`[flow-based] setStream failed for socket ${inSocket.id} — connection not wired.`, err);
+
+        return;
+      }
     }
 
     /*
