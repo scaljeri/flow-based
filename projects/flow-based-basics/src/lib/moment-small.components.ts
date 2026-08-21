@@ -52,6 +52,14 @@ const MOMENT_STYLES = `
     padding: 4px 10px;
   }
 
+  /* A tappable target on a finger — desktop keeps its compact button. */
+  @media (pointer: coarse) {
+    button {
+      min-height: 44px;
+      padding: 8px 14px;
+    }
+  }
+
   .reading {
     font-variant-numeric: tabular-nums;
     opacity: 0.8;

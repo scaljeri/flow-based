@@ -51,6 +51,16 @@ const CONDITION_STYLES = `
     color: #000;
   }
 
+  /* A finger needs a real target: the operator select is ~24px on a mouse,
+     under every touch guideline. Only on a coarse pointer, so the desktop
+     face is unchanged. */
+  @media (pointer: coarse) {
+    select {
+      min-height: 44px;
+      padding: 6px 12px;
+    }
+  }
+
   .expr {
     opacity: 0.85;
     white-space: nowrap;
