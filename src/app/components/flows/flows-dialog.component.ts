@@ -122,6 +122,9 @@ export type FbFlowsAction =
             <!-- The token is kept apart from the flow, keyed by the endpoint's
                  origin; a flow is downloaded and shared, a credential is not. -->
             <p class="hint">The token is kept on this device only, never inside the flow.</p>
+            @if (hasToken) {
+              <button type="button" mat-button class="forget-token" (click)="forgetToken()">Forget token</button>
+            }
           }
 
           <div class="dest-actions">
@@ -327,6 +330,19 @@ export class FlowsDialogComponent {
     this.destSaved = true;
   }
 
+  /** Drop the stored token for this flow's endpoint. */
+  forgetToken(): void {
+    const dest = this.details ? this.store.destinationOf(this.details.id) : null;
+    const url = dest?.kind === 'remote' ? dest.url : this.endpoint.trim();
+
+    if (url) {
+      this.remote.forgetToken(url);
+    }
+
+    this.hasToken = false;
+    this.token = '';
+  }
+
   downloadJson(): void {
     if (!this.details) {
       return;
@@ -483,6 +499,10 @@ export class FlowsDialogComponent {
     }
 
     this.store.reset();
+    // Credentials go with the flows they authorised — a reset that wipes the
+    // shelf but keeps the tokens leaves secrets for endpoints nothing points
+    // at any more.
+    this.remote.forgetAll();
     location.reload();
   }
 

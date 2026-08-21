@@ -65,6 +65,11 @@ export class RemoteFlowService {
     localStorage.setItem(TOKENS_KEY, JSON.stringify(all));
   }
 
+  /** Drop every stored token — part of "Reset local flows". */
+  forgetAll(): void {
+    localStorage.removeItem(TOKENS_KEY);
+  }
+
   hasToken(url: string): boolean {
     return !!this.tokenFor(url);
   }
