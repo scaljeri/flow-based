@@ -722,6 +722,10 @@ export class FbFlowDocumentElement extends LitElement {
       return;
     }
 
+    // Captured BEFORE the write, so the doc save is its own undo step. Without
+    // it the write sat off the history stack: the next Ctrl+Z restored a state
+    // from before the document existed and threw the whole article away.
+    this.editor.history.capture(this.editor.root);
     this.editor.state.document = deepClone(this.draft);
     this.dispatchEvent(new CustomEvent('fb-doc-saved', { bubbles: true, composed: true }));
     this.editing = false;

@@ -315,10 +315,30 @@ export class FbEditor {
       state.connections = [];
     }
 
+    /*
+     * Keep the reader WHERE THEY WERE across an undo. restore() cleared the
+     * subflow trail, so pressing Ctrl+Z while editing inside a subflow threw
+     * you back to the root graph — jarring, and it lost your place. The trail
+     * is node ids; undo hands back a fresh clone, so the old ancestor OBJECTS
+     * are stale and must be re-descended by id. Only for the SAME document
+     * (same root id): a genuinely new document has a different root and resets
+     * to its own root, and a subflow the undo removed simply stops the descent.
+     */
+    const sameDoc = this.root?.id === state.id && this.ancestors.length > 0;
+    const trail = sameDoc ? this.path.slice(1).map(node => node.id!) : [];
+
     this.root = state;
     this.state = state;
     this.ancestors.length = 0;
     this.rebuildEngine();
+
+    for (const id of trail) {
+      if (!this.nodeById(id)?.children) {
+        break;
+      }
+
+      this.enter(id);
+    }
   }
 
   /**

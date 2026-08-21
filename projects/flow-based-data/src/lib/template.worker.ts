@@ -8,7 +8,10 @@ export interface TemplateConfig {
 }
 
 /** `{name}` or `{name|lower}` — a placeholder and what to do to it first. */
-const PLACEHOLDER = /\{([A-Za-z0-9_]+)(?:\|([a-z]+))?\}/g;
+// The name is anything but the delimiters: a socket may be called "lower band"
+// or "región", and `[A-Za-z0-9_]+` matched none of those — the placeholder was
+// unfillable and the node sat silently dead.
+const PLACEHOLDER = /\{([^}|]+)(?:\|([a-z]+))?\}/g;
 
 /**
  * The small differences between a value and the form a URL wants it in.

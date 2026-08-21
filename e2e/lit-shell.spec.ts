@@ -865,6 +865,40 @@ test('duplicating a node does not freeze the other faces', async ({ page }) => {
 });
 
 /*
+ * Undo must not eject the reader from a subflow. restore() (the undo path)
+ * cleared the trail, so Ctrl+Z while editing inside a subflow threw you back
+ * to the root graph — jarring, and it lost your place. The position is
+ * re-descended by id after the restore.
+ */
+test('undo inside a subflow keeps the reader inside it', async ({ page }) => {
+  await page.goto(`${HARNESS}?subflow=1`);
+  await expect(canvas(page)).toBeVisible();
+
+  const result = await page.evaluate(() => {
+    const ed = window.fbEditor as any;
+    const group = ed.children.find((n: any) => n.title === 'Group');
+
+    ed.enter(group.id);
+    const depthInside = ed.path.length;          // > 1
+
+    ed.addNode('source', { x: 20, y: 20 });      // captures history
+    ed.undo();
+
+    return {
+      depthInside,
+      depthAfter: ed.path.length,
+      stateId: ed.state.id,
+      groupId: group.id,
+    };
+  });
+
+  expect(result.depthInside).toBeGreaterThan(1);
+  // Still inside the same subflow, not ejected to the root.
+  expect(result.depthAfter).toBe(result.depthInside);
+  expect(result.stateId).toBe(result.groupId);
+});
+
+/*
  * A node whose drawing failed — an unknown type, a module that never loaded —
  * collapsed to a capsule smaller than its own sockets: in and out dots nearly
  * touching, wires overlapping, neither tappable. The body now floors at the
