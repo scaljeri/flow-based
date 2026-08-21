@@ -121,4 +121,29 @@ describe('DelayWorker', () => {
     expect(seen).toEqual([]);
     worker.destroy();
   });
+
+  /*
+   * Why this matters: `current` is fed by the DATA wire, not the aux control
+   * wire. Removing the `hold` trigger used to wipe `current` too — so a value
+   * still live on the data input was forgotten the moment you unplugged the
+   * button. Only the data wire's removal clears it now.
+   */
+  it('removing the control wire keeps the value still on the data input', () => {
+    const worker = new HoldWorker();
+    const seen: unknown[] = [];
+    const data = new Subject<unknown>();
+    const trigger = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(data, { id: 1, type: 'in' }, { id: 10, from: 0, to: 0 });
+    worker.setStream(trigger, { id: 2, type: 'in', aux: 'hold' }, { id: 11, from: 0, to: 0 });
+    data.next(42);
+
+    // Unplug the trigger — the data wire still feeds `current`.
+    worker.removeStream({ id: 11, from: 0, to: 0 });
+    worker.latch();
+
+    expect(seen).toEqual([42]);
+    worker.destroy();
+  });
 });

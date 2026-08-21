@@ -1,4 +1,5 @@
 import { LitElement, PropertyValues, css, html, nothing, render, svg } from 'lit';
+import { safeColor } from './css-safe';
 import {
   FB_DRAG_IGNORE,
   FbNodeState,
@@ -1325,7 +1326,8 @@ export class FbFlowCanvasElement extends LitElement {
 
     const isActive = pending?.socket.id === socket.id;
     const accepts = this.editor.accepts(socket, flow.id!);
-    const colour = this.editor.colorsEnabled && socket.color ? `border-color:${socket.color};` : '';
+    const safe = this.editor.colorsEnabled ? safeColor(socket.color) : undefined;
+    const colour = safe ? `border-color:${safe};` : '';
 
     return html`
       <div

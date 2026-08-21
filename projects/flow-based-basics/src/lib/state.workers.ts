@@ -20,6 +20,14 @@ abstract class StateWorker implements FbNodeWorker {
    *  removeStream can clear it — see there. */
   current?: unknown;
 
+  /**
+   * Which connections feed the DATA input, as opposed to the aux control wire
+   * (hold/step/reset). Only a data wire's removal clears `current`: wiping it
+   * for the control wire forgot a value still live on the data input — a
+   * trigger you unplug should not erase what it was about to freeze.
+   */
+  protected readonly dataWires = new Set<number>();
+
   get changes(): Observable<void> {
     return this.ticks.asObservable();
   }
@@ -42,6 +50,12 @@ abstract class StateWorker implements FbNodeWorker {
 
     // A state cell's pending input dies with its wire: latching after the
     // unwire froze — and emitted — a value from a wire that no longer exists.
+    // Only the DATA wire, though: the control wire (hold/step/reset) never fed
+    // `current`, and clearing it there forgot a value still on the data input.
+    if (!this.dataWires.delete(connection.id)) {
+      return;
+    }
+
     this.current = undefined;
     this.ticks.next();
   }
@@ -79,6 +93,7 @@ export class HoldWorker extends StateWorker {
       return;
     }
 
+    this.dataWires.add(connection.id);
     this.subscriptions[connection.id] = stream.subscribe(value => {
       this.current = value;
       this.ticks.next();
@@ -138,6 +153,7 @@ export class AccumulatorWorker extends StateWorker {
       return;
     }
 
+    this.dataWires.add(connection.id);
     this.subscriptions[connection.id] = stream.subscribe(value => {
       const numeric = Number(value);
 
@@ -198,6 +214,7 @@ export class DelayWorker extends StateWorker {
       return;
     }
 
+    this.dataWires.add(connection.id);
     this.subscriptions[connection.id] = stream.subscribe(value => {
       this.current = value;
       this.ticks.next();

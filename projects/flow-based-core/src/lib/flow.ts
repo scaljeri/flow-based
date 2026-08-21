@@ -91,8 +91,15 @@ export class Flow {
     this.ids.observeFlow(flow);
     this.nodes[flow.id!] = {state: flow, parentId: null};
 
-    const connections = flow.connections!,
-      children = flow.children!;
+    /*
+     * Both default to []. The format (assertFlowShape) allows either to be
+     * ABSENT — a hand-written or generated flow with nodes but no wires omits
+     * `connections` — and `flow.connections!.forEach` then threw on a file
+     * that is perfectly valid. Normalised here, at the one door every load,
+     * paste and undo passes through.
+     */
+    const connections = flow.connections ??= [],
+      children = flow.children ??= [];
 
     /*
      * The root's OWN boundary sockets, indexed like every child's. The
@@ -901,7 +908,17 @@ export class Flow {
   }
 
   private createWorker(state: FbNodeState): void {
-    const entry = this.flowTypes[state.type];
+    /*
+     * OWN property only. A flow's type name is untrusted text, and a plain
+     * object registry answers `toString`/`constructor`/`valueOf` with an
+     * inherited function — truthy, so the `!entry` guard passed and then
+     * `entry.settings.isFlow` threw from the middle of initialize(), and the
+     * whole document failed to open. A hand-typed or hostile name is now just
+     * an unknown type.
+     */
+    const entry = Object.prototype.hasOwnProperty.call(this.flowTypes, state.type)
+      ? this.flowTypes[state.type]
+      : undefined;
 
     /*
      * A saved flow can name a type this registry no longer has. Skipping the
@@ -926,7 +943,7 @@ export class Flow {
 
     if (worker) {
       this.workers[id] = new worker(state.config, state.sockets);
-    } else if (this.flowTypes[state.type].settings.isFlow) {
+    } else if (entry.settings.isFlow) {
       this.workers[id] = new FlowWorker(state, childId => this.workers[childId]);
     }
 

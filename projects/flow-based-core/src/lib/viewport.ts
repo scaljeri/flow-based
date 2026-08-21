@@ -268,6 +268,14 @@ export class FbViewport {
   }
 
   private clamp(zoom: number): number {
+    // A non-finite zoom is poison: it flows into toPlane and a node drag then
+    // writes NaN back into the flow's positions, corrupting the file. One
+    // non-numeric coordinate in a hand-edited flow could start the cascade.
+    // Refuse it here, the one door every zoom change passes through.
+    if (!Number.isFinite(zoom)) {
+      return this.zoomLevel;
+    }
+
     return Math.min(FB_ZOOM_MAX, Math.max(this.effectiveFloor(), zoom));
   }
 }

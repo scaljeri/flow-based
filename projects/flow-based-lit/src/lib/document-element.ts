@@ -1,4 +1,5 @@
 import { LitElement, PropertyValues, css, html, nothing } from 'lit';
+import { safeLength } from './css-safe';
 import {
   FbDocBlock,
   FbDocNodeBlock,
@@ -1152,7 +1153,7 @@ export class FbFlowDocumentElement extends LitElement {
     return html`
       <!-- The figure keeps drawing while it is arranged: this is the same slot
            the reading view uses, so the node is never unmounted for an edit. -->
-      <figure class="float-none" style="width:${block.width ?? '320px'}">
+      <figure class="float-none" style="width:${safeLength(block.width) ?? '320px'}">
         <div class="figure-body"><slot name="fig-${block.nodeId}"></slot></div>
       </figure>
 
@@ -1978,7 +1979,8 @@ export class FbFlowDocumentElement extends LitElement {
     }
 
     const float = block.float ?? 'none';
-    const width = block.width ? `width:${block.width};` : '';
+    const safeWidth = safeLength(block.width);
+    const width = safeWidth ? `width:${safeWidth};` : '';
     const loose = block.pin === false ? ' loose' : '';
 
     return html`

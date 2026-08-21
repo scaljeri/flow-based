@@ -1440,3 +1440,31 @@ describe('adopted-format provenance survives a rebuild', () => {
     expect(restored.children[1].sockets[0].adopted).toBeUndefined();
   });
 });
+
+/*
+ * A flow's type name and its arrays are UNTRUSTED. A plain-object registry
+ * answers `toString`/`constructor` with an inherited function (truthy), which
+ * slipped past the unknown-type guard and then threw `settings.isFlow` from
+ * the middle of initialize() — a hostile or hand-typed name lost the file.
+ * And the format allows `connections`/`children` to be absent, but the engine
+ * dereferenced them.
+ */
+describe('a hostile or sparse flow still loads', () => {
+  it('a node typed "toString" is an unknown type, not a crash', () => {
+    const types = flowTypes();
+    const root: any = {
+      id: 1, children: [{ id: 2, type: 'toString', sockets: [] }], connections: [],
+    };
+
+    expect(() => new Flow(types as any).initialize(root)).not.toThrow();
+    // No worker for it — the same as any unknown type.
+    expect(new Flow(types as any).initialize(root).getWorker(2)).toBeUndefined();
+  });
+
+  it('a flow with children but no connections key loads', () => {
+    const types = flowTypes();
+    const root: any = { id: 1, children: [{ id: 2, type: 'source', sockets: [] }] };
+
+    expect(() => new Flow(types as any).initialize(root)).not.toThrow();
+  });
+});

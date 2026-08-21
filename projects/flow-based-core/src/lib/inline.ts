@@ -58,7 +58,7 @@ const PATTERN = new RegExp(
     /`([^`]+?)`/.source,
     /\*\*([\s\S]+?)\*\*/.source,
     /\*([^*\n]+?)\*/.source,
-    /\[([^\]]*?)\]\(([^)\s]+)\)/.source,
+    /\[([^\][\n]*?)\]\(([^)\s]+)\)/.source,
   ].join('|'),
   'g',
 );

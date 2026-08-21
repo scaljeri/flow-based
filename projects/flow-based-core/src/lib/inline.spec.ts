@@ -124,4 +124,21 @@ describe('escaped dollars', () => {
     expect(tokens[0]).toEqual({ type: 'text', text: 'pay $2 for ' });
     expect(tokens[1]).toEqual({ type: 'math', tex: 'x^2', display: false });
   });
+
+  /*
+   * Why this matters: the link pattern was quadratic — a paragraph of
+   * unmatched '[' made the lazy link-text scan run to end-of-string at every
+   * bracket, O(n^2), freezing the tab. The class now excludes '[' and newline,
+   * so an unmatched run fails in O(1) per position.
+   */
+  it('a wall of unmatched brackets parses fast and as plain text', () => {
+    const brackets = '['.repeat(20000);
+    const start = performance.now();
+    const tokens = parseInline(brackets);
+    const ms = performance.now() - start;
+
+    expect(ms).toBeLessThan(200);
+    // No link matched: it is all one text token.
+    expect(tokens.every(t => t.type === 'text')).toBe(true);
+  });
 });
