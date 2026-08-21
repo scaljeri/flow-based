@@ -78,4 +78,12 @@ describe('RandomNumbersWorker', () => {
     expect(worker.interval).toBe(50);
     worker.destroy();
   });
+
+  // A hand-edited interval of 0 spun setInterval flat out; the getter floors it,
+  // and initialize() reads the getter.
+  it('an interval of 0 is floored to 50, not flat-out', () => {
+    const worker = new RandomNumbersWorker({ start: 0, end: 1, interval: 0, integer: false });
+    expect(worker.interval).toBe(50);
+    worker.destroy();
+  });
 });

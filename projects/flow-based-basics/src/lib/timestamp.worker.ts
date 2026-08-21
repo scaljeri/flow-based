@@ -68,6 +68,8 @@ export class TimestampWorker implements FbNodeWorker {
     delete this.subscriptions[connection.id];
     // The face's reading described the removed wire's last arrival.
     this.reading = undefined;
+    // Announced, or the stale reading stayed on the face.
+    this.ticks.next();
   }
 
   setConfigValue(path: string, value: unknown): void {

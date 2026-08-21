@@ -55,7 +55,11 @@ export class WindowWorker implements FbNodeWorker {
   }
 
   get size(): number {
-    return Math.max(1, Math.floor(this.config.size ?? 5));
+    // Coerced: a non-numeric size (hand-edited) made this NaN, and the buffer
+    // then never dropped anything — an unbounded window. Fallback 5.
+    const raw = Number(this.config.size);
+
+    return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 5;
   }
 
   setStream(stream: Observable<unknown>, _socket: FbSocket, connection: FbConnection): void {

@@ -81,7 +81,11 @@ export class CompareWorker implements FbNodeWorker {
   }
 
   get op(): CompareOp {
-    return this.config.op ?? 'gt';
+    // Validated: a hand-edited op fell through to COMPARE_OPS[op].test and
+    // threw on every arrival, killing the wire. Unknown falls back to 'gt'.
+    const op = this.config.op as CompareOp;
+
+    return op in COMPARE_OPS ? op : 'gt';
   }
 
   get symbol(): string {

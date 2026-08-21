@@ -1,5 +1,5 @@
 import { FbKeyValues, FbNodeSettings, FbNodeWorker, FbConnection, FbSocket, writeConfigValue } from '@scaljeri/flow-based';
-import { Observable, Subject } from 'rxjs';
+import { Observable, ReplaySubject } from 'rxjs';
 
 export const RANDOM_NUMBER_SETTINGS: FbNodeSettings = {
   title: 'Random number generator',
@@ -28,7 +28,9 @@ export const RANDOM_NUMBER_SETTINGS: FbNodeSettings = {
 
 export class RandomNumbersWorker implements FbNodeWorker {
   private intervalId = 0;
-  private subject = new Subject<any>();
+  // ReplaySubject(1): a generated value is a value, and a wire drawn after one
+  // was produced would otherwise wait a whole interval to see anything.
+  private subject = new ReplaySubject<any>(1);
 
   constructor(private config: any) {
     this.initialize();
@@ -78,7 +80,7 @@ export class RandomNumbersWorker implements FbNodeWorker {
       const random = Math.random() * (this.end - this.start) + this.start;
 
       this.subject.next(this.integer ? Math.round(random) : random);
-    }, this.config.interval);
+    }, this.interval);
 
   }
 
@@ -105,7 +107,11 @@ export class RandomNumbersWorker implements FbNodeWorker {
   }
 
   get interval(): number {
-    return this.config.interval;
+    // Floored like the clock: a hand-edited interval of 0 (or a non-number)
+    // spun setInterval flat out. initialize() reads THIS, not config directly.
+    const raw = Number(this.config.interval);
+
+    return Number.isFinite(raw) ? Math.max(50, raw) : 1000;
   }
 
   set interval(val: number) {

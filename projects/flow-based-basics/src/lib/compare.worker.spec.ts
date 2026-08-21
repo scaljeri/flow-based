@@ -125,4 +125,17 @@ describe('CompareWorker — wire removal', () => {
     // 60 < 70 — judged on the latest points, not on the arrays.
     expect(seen.at(-1)).toBe(1);
   });
+
+  // A hand-edited op fell through to COMPARE_OPS[op].test and threw on every
+  // arrival, killing the wire. Unknown falls back to 'gt', no throw.
+  it('an unknown operator does not throw, it falls back', () => {
+    const worker = new CompareWorker({ op: 'nonsense' as never, b: 0 });
+    const seen: unknown[] = [];
+    const a = new Subject<number>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(a, { type: 'in', aux: 'a' }, { id: 1, from: 0, to: 0 });
+    expect(() => a.next(5)).not.toThrow();
+    expect(seen.at(-1)).toBe(1);   // 5 > 0 under the gt fallback
+  });
 });

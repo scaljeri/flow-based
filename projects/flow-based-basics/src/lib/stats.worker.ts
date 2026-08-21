@@ -87,6 +87,9 @@ export class StatsWorker implements FbNodeWorker {
   removeStream(connection: FbConnection): void {
     this.subscriptions[connection.id]?.unsubscribe();
     delete this.subscriptions[connection.id];
+    // The accumulation belonged to that wire: kept, a rewire blended the old
+    // feed's min/max/histogram into the new one. reset() also clears the chart.
+    this.reset();
   }
 
   /** Bin zero's value — the histogram's coordinate origin. */

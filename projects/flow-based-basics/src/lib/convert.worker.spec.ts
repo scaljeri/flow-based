@@ -47,4 +47,16 @@ describe('ConvertWorker', () => {
     expect(seen).toHaveLength(0);
     expect(worker.error).toBeTruthy();
   });
+
+  // precision outside 0..100 threw a RangeError from toFixed and killed the
+  // wire; it is clamped now.
+  it('an out-of-range precision does not throw', () => {
+    const worker = new ConvertWorker({ to: 'number', precision: 999 });
+    const seen: unknown[] = [];
+    const src = new Subject<unknown>();
+
+    worker.getStream().subscribe(v => seen.push(v));
+    worker.setStream(src, { type: 'in' }, { id: 1, from: 0, to: 0 });
+    expect(() => src.next(3.14159)).not.toThrow();
+  });
 });

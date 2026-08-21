@@ -68,4 +68,11 @@ describe('WindowWorker', () => {
 
     expect(seen.at(-1)).toBe(0.5);
   });
+
+  // A non-numeric size made the getter NaN and the buffer never dropped
+  // anything — an unbounded window. Fallback 5.
+  it('a non-numeric size falls back instead of running unbounded', () => {
+    const worker = new WindowWorker({ size: 'lots' as never, op: 'mean' });
+    expect(worker.size).toBe(5);
+  });
 });

@@ -83,6 +83,8 @@ export class ConvertWorker implements FbNodeWorker {
     // The badge described the removed wire's data; kept, "Not a number"
     // outlived the wire that carried the offending value.
     this.error = null;
+    // Announced, or the face kept the removed wire's last reading on screen.
+    this.ticks.next();
   }
 
   setConfigValue(path: string, value: unknown): void {
@@ -117,7 +119,9 @@ export class ConvertWorker implements FbNodeWorker {
 
     if (this.to === 'text') {
       const text = typeof value === 'number' && this.config.precision !== undefined
-        ? value.toFixed(this.config.precision)
+        // Clamped 0..100: toFixed throws a RangeError outside that, which killed
+        // the wire on a hand-edited precision.
+        ? value.toFixed(Math.max(0, Math.min(100, Math.floor(this.config.precision))))
         : typeof value === 'object' ? JSON.stringify(value)
           : String(value);
 
