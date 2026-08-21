@@ -424,6 +424,19 @@ export class FbFlowCanvasElement extends LitElement {
       width: 100%;
     }
 
+    /* On a finger: a 16px input, or iOS zooms the whole page when it focuses;
+       and rows tall enough to hit. Desktop keeps the compact picker. */
+    @media (pointer: coarse) {
+      .picker input {
+        font-size: 16px;
+        padding: 10px 12px;
+      }
+
+      .picker li button {
+        min-height: 44px;
+      }
+    }
+
     .picker ul {
       flex: 1;
       list-style: none;

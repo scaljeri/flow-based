@@ -160,6 +160,11 @@ import { FbModuleInfo, ModulesService } from '../../modules.service';
       width: 18px;
     }
 
+    @media (pointer: coarse) {
+      input[type=checkbox] { height: 28px; width: 28px; }
+      .forget { min-height: 40px; min-width: 40px; }
+    }
+
     .forget {
       background: none;
       border: none;

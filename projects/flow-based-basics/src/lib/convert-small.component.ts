@@ -42,6 +42,10 @@ import { ConvertWorker } from './convert.worker';
 
     select option { color: #000; }
 
+    @media (pointer: coarse) {
+      select { min-height: 44px; padding: 8px 12px; }
+    }
+
     .error {
       color: #ff8a80;
       font-size: 11px;

@@ -61,6 +61,10 @@ const STATE_STYLES = `
     padding: 4px 10px;
   }
 
+  @media (pointer: coarse) {
+    button { min-height: 44px; padding: 8px 14px; }
+  }
+
   .reading {
     font-variant-numeric: tabular-nums;
   }

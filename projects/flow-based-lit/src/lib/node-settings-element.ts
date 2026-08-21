@@ -257,6 +257,17 @@ export class FbNodeSettingsElement extends LitElement {
       min-width: 32px;
     }
 
+    /* Every dialog close/info button gets a finger-sized target on touch —
+       the nested dialogs' ~21px was a miss on a phone. */
+    @media (pointer: coarse) {
+      .config header button,
+      .help-dialog header button,
+      .socket-editor header button {
+        min-height: 40px;
+        min-width: 40px;
+      }
+    }
+
     .config header strong {
       font-size: 13px;
       font-weight: 500;
