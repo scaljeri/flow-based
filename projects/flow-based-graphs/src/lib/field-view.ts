@@ -142,11 +142,14 @@ export abstract class FieldView extends CanvasView {
   private fraction(value: number, low: number, high: number): number {
     if (this.worker.scale === 'log') {
       const span = Math.log(1 + high - low);
+      // A value below the range makes `value - low` negative and log() NaN,
+      // which painted the cell as no-value black; clamp to the floor.
+      const above = Math.max(0, value - low);
 
-      return span > 0 ? Math.log(1 + value - low) / span : 1;
+      return span > 0 ? Math.log(1 + above) / span : 1;
     }
 
-    return high > low ? (value - low) / (high - low) : 1;
+    return high > low ? Math.max(0, Math.min(1, (value - low) / (high - low))) : 1;
   }
 
   /** Stretch the field's own pixels over the canvas, unsmoothed. */

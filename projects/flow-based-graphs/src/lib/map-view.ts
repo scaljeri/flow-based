@@ -279,8 +279,10 @@ export abstract class MapView implements OnInit, AfterViewInit, OnDestroy {
      * half a cell further in each direction — otherwise the raster sits half
      * a cell up and to the left of where it belongs.
      */
-    const halfLat = (grid.latMax - grid.latMin) / (grid.rows - 1) / 2;
-    const halfLon = (grid.lonMax - grid.lonMin) / (grid.cols - 1) / 2;
+    // rows/cols of 1 make (n - 1) zero and the half-cell Infinity, which
+    // broke every bound below — a single-row raster blanked the map.
+    const halfLat = grid.rows > 1 ? (grid.latMax - grid.latMin) / (grid.rows - 1) / 2 : 0;
+    const halfLon = grid.cols > 1 ? (grid.lonMax - grid.lonMin) / (grid.cols - 1) / 2 : 0;
     const south = grid.latMin - halfLat;
     const north = grid.latMax + halfLat;
     const west = grid.lonMin - halfLon;
