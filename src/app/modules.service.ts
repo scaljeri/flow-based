@@ -433,16 +433,7 @@ export class ModulesService {
       if (existing?.enabled) {
         await this.enable(existing.id);
       } else if (own) {
-        /*
-         * A module that FAILS to load must not discard the flow. addFromUrl
-         * rethrows on a load failure (a 404 after a redeploy, an offline
-         * open), and two of enableFor's callers do not guard it — a shared
-         * link or an uploaded file was thrown away whole, with the wrong
-         * reason. The node draws as an empty box instead; the row carries the
-         * error. Other modules in the same flow still load.
-         */
-        await this.addFromUrl(target).catch(err =>
-          console.warn(`[flow-based] module ${target} failed to load; its nodes will be empty.`, err));
+        await this.addFromUrl(target);
       } else if (!existing) {
         this.remember({
           url: href,

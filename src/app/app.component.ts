@@ -678,8 +678,26 @@ export class AppComponent implements OnInit, AfterViewInit {
     try {
       const restored = deserializeFlowFromJson(await unpackJson(data));
 
-      await this.modules.enableFor(restored);
+      // A module that fails to load must NOT discard the flow: opening it with
+      // its bad-module nodes empty is what openStored does, and a shared link
+      // was instead thrown away whole under a 'link —' message that named the
+      // wrong cause. Parse errors below still discard — that flow is unusable.
+      let moduleError: string | null = null;
+
+      try {
+        await this.modules.enableFor(restored);
+      } catch (moduleErr) {
+        moduleError = `Some of this flow’s modules could not load — ${(moduleErr as Error).message}`;
+      }
+
       this.applyLoadedFlow(restored, null);
+
+      if (moduleError) {
+        this.zone.run(() => {
+          this.loadError = moduleError;
+          this.cdr.detectChanges();
+        });
+      }
 
       return true;
     } catch (err) {
@@ -1381,8 +1399,23 @@ export class AppComponent implements OnInit, AfterViewInit {
         restored.title = file.name.replace(/\.json$/i, '');
       }
 
-      await this.modules.enableFor(restored);
+      // A module failure opens the flow with empty nodes rather than
+      // discarding an uploaded file whole under a filename error (openStored's
+      // rule). A parse error below still discards — that file is unusable.
+      let moduleError: string | null = null;
+
+      try {
+        await this.modules.enableFor(restored);
+      } catch (moduleErr) {
+        moduleError = `Some of this flow’s modules could not load — ${(moduleErr as Error).message}`;
+      }
+
       this.applyLoadedFlow(restored, null);
+
+      if (moduleError) {
+        this.loadError = moduleError;
+        this.cdr.detectChanges();
+      }
 
       return true;
     } catch (err) {
